@@ -6,6 +6,9 @@ Style:
 - Strict module boundaries.
 - DDD-oriented layering.
 
+Implementation stack:
+- Defined in `Docs/Phase-0/STACK.md`
+
 Layering:
 - Presentation
 - API
@@ -21,4 +24,3 @@ Architecture rules:
 
 Evolution:
 - The architecture must allow later extraction of modules into services without rewriting the core domain.
-

@@ -3,6 +3,7 @@
 Source of truth:
 - `Plan.txt`
 - `ENGINEERING_BACKLOG.md`
+- `Docs/Phase-0/STACK.md`
 
 Project goal:
 - Build a configurable, multi-tenant legal practice management platform that is secure by default, production-oriented, and provider-agnostic.
@@ -18,3 +19,5 @@ Core non-negotiables:
 - External services are always accessed through adapters.
 - No public URLs for legal documents.
 
+Implementation stack:
+- Defined in `Docs/Phase-0/STACK.md`
