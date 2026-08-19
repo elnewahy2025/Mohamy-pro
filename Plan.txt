@@ -1,1106 +1,1151 @@
-بالنسبة لهذا النوع من الأنظمة، أنصح ألا نبدأ من شاشة العملاء أو القضايا. نبدأ من الأساس الذي سيحكم كل النظام لاحقاً.
-الخطة التالية هي الخطة التي سأستخدمها لو كنت مسؤولاً عن تنفيذ المشروع كمنتج تجاري حقيقي.
-1. المرحلة 0، تثبيت القرارات قبل البرمجة
-الهدف: منع إعادة البناء لاحقاً.
-نثبت:
-• Architecture
-• Technology Stack
-• Repository Structure
-• Database Strategy
-• Authentication Strategy
-• Authorization Model
-• Multi-Tenant Strategy
-• File Storage Strategy
-• Search Strategy
-• Queue Strategy
-• Integration Strategy
-• AI Strategy
-• Deployment Strategy
-• Testing Strategy
-• Localization Strategy
+# ملف الحقيقة لتنفيذ المنصة القانونية
+
+هذا الملف هو المرجع التنفيذي الوحيد للتسلسل المرحلي.
+
+القاعدة الأساسية:
+- كل مرحلة يجب أن تكون مكتملة بذاتها.
+- كل مرحلة يجب أن تكون قابلة للنشر في بيئة إنتاج حقيقية.
+- لا نبدأ المرحلة التالية إلا بعد تحقق شروط الإغلاق الحالية بالكامل.
+- أي ميزة تُبنى داخل مرحلة يجب أن تشمل: قاعدة بيانات، API، صلاحيات، اختبارات، سجلات، مراقبة، وتوثيق، بحسب ما ينطبق عليها.
+
+## قواعد غير قابلة للتفاوض
+
+- لا يوجد hardcoding لمكتب، أو محامٍ، أو دولة، أو specialty قانوني، أو نظام محاكم، أو workflow، أو نوع مستند، أو نموذج رسوم.
+- Tenant isolation يجب أن تُفرض من الخادم وليس من الواجهة.
+- Authorization يجب أن تكون في الـ backend وهي المرجع النهائي.
+- AI يجب أن تكون طبقة اختيارية، ولا تتحول إلى سجل قانوني رسمي إلا بعد موافقة بشرية صريحة.
+- أي تكامل خارجي يجب أن يمر عبر adapter/interface.
+- لا نستخدم public URLs للمستندات القانونية.
+- كل تغيير schema في الإنتاج يحتاج migration.
+- كل ميزة حرجة تجارياً تحتاج اختباراً آلياً.
+- كل مسار يلامس tenant أو security أو money أو legal record يحتاج audit.
+- واجهة المستخدم يجب أن تدعم RTL/LTR, i18n, accessibility, responsive layout.
+
+## تعريف "مكتمل" لكل مرحلة
+
+المرحلة تعتبر مكتملة فقط إذا تحقق الآتي:
+
+- جميع السيناريوهات الأساسية تعمل من النهاية إلى النهاية.
+- الـ API موثق في OpenAPI أو ما يعادله.
+- الـ data model والمهاجرات جاهزة.
+- الاختبارات الأساسية ناجحة: unit + integration + e2e أو ما يلزم حسب النطاق.
+- السجلات والتنبيهات والتتبع موجودة.
+- لا توجد dependence مباشرة على provider في domain.
+- لا توجد صلاحيات في الواجهة فقط.
+- يوجد rollback أو mitigation plan للطرح.
+- التوثيق المخصص للمرحلة محدث.
+
+## المراحل
+
+### المرحلة 0: تثبيت القرارات قبل البرمجة
+
+الهدف:
+- تثبيت قرارات المعمارية والتقنية قبل كتابة أي feature code.
+
+النطاق:
+- Architecture
+- Technology Stack
+- Repository Structure
+- Database Strategy
+- Authentication Strategy
+- Authorization Model
+- Multi-Tenant Strategy
+- File Storage Strategy
+- Search Strategy
+- Queue Strategy
+- Integration Strategy
+- AI Strategy
+- Deployment Strategy
+- Testing Strategy
+- Localization Strategy
+
 المخرجات:
-text
-PROJECT_REFERENCE.md
-ARCHITECTURE.md
-DOMAIN_MODEL.md
-DATABASE.md
-API.md
-SECURITY.md
-AUTHORIZATION.md
-MULTI_TENANCY.md
-AI_ARCHITECTURE.md
-INTEGRATION_HUB.md
-TESTING.md
-DEPLOYMENT.md
-ROADMAP.md
+- PROJECT_REFERENCE.md
+- ARCHITECTURE.md
+- DOMAIN_MODEL.md
+- DATABASE.md
+- API.md
+- SECURITY.md
+- AUTHORIZATION.md
+- MULTI_TENANCY.md
+- AI_ARCHITECTURE.md
+- INTEGRATION_HUB.md
+- TESTING.md
+- DEPLOYMENT.md
+- ROADMAP.md
 
-لا نبدأ Feature Development قبل اعتماد هذه الوثائق.
-1. المرحلة 1، إنشاء المشروع والـ Foundation
-نبني الهيكل الأساسي فقط.
-يشمل:
-• Monorepo
-• Backend
-• Frontend
-• Shared packages
-• Environment configuration
-• Docker
-• Database
-• Redis
-• Queue
-• Object Storage abstraction
-• Logging
-• Error handling
-• API versioning
-• OpenAPI
-• Health checks
-• CI/CD
-• Testing framework
-في نهاية المرحلة:
-text
-Application starts
-Database connects
-Redis connects
-Queue works
-Storage works
-API works
-Frontend works
-Tests run
-CI passes
+شروط الإغلاق:
+- اعتماد هذه الوثائق كمصدر قرار.
+- عدم بدء أي feature work قبل الاعتماد.
 
-1. المرحلة 2، Identity + Multi-Tenancy
-هذه أهم مرحلة في النظام.
-نبني:
-text
-User
-Membership
-Tenant
-Organization
-Branch
-Department
-Role
-Permission
-Direct Permission
-Denial
+### المرحلة 1: إنشاء المشروع والـ Foundation
 
-ثم:
-• Login
-• Logout
-• Password management
-• Email verification
-• MFA architecture
-• Session management
-• Device/session tracking
-• Tenant selection
-• Membership switching
-ثم Authorization Engine.
-مثال:
-text
-User
-↓
-Membership
-↓
-Role
-↓
-Permissions
-↓
-ABAC Rules
-↓
-Resource Access
+الهدف:
+- إنشاء أساس إنتاجي حقيقي يمكن البناء عليه بأمان.
+
+النطاق:
+- Monorepo
+- Backend
+- Frontend
+- Shared packages
+- Environment configuration
+- Docker
+- PostgreSQL
+- Redis
+- Queue
+- Object storage abstraction
+- Logging
+- Error handling
+- API versioning
+- OpenAPI
+- Health checks
+- CI/CD
+- Testing framework
+- Observability baseline
+- App shell للويب والإدارة
+
+المخرجات:
+- هيكل مشروع نهائي واضح.
+- backend layers: Presentation / API / Application / Domain / Infrastructure.
+- frontend shell مع routing أساسي وlayout.
+- docker compose أو ما يعادله لتشغيل الخدمات محلياً.
+- اتصال فعلي بقاعدة البيانات وRedis والـ queue والـ storage abstraction.
+- `/api/v1` skeleton مع health endpoints.
+- OpenAPI first pass.
+- pipeline CI يعمل.
+
+شروط الإغلاق:
+- التطبيق يبدأ بنجاح.
+- قاعدة البيانات تتصل.
+- Redis يتصل.
+- queue يعمل.
+- storage abstraction يعمل.
+- API يعمل.
+- الواجهة تعمل.
+- الاختبارات تعمل.
+- CI ينجح.
+
+### المرحلة 2: Identity + Multi-Tenancy
+
+الهدف:
+- بناء طبقة الهوية والعضوية والعزل بين tenants.
+
+النطاق:
+- User
+- Membership
+- Tenant
+- Organization
+- Branch
+- Department
+- Role
+- Permission
+- Direct Permission
+- Denial
+- Login
+- Logout
+- Password management
+- Email verification
+- MFA architecture
+- Session management
+- Device/session tracking
+- Tenant selection
+- Membership switching
+- RBAC + ABAC + resource-level authorization
+
+المخرجات:
+- Schema كاملة للهوية والعضوية.
+- Authentication flows كاملة.
+- Authorization engine داخل backend.
+- permission cache مع invalidation واضح.
+- tenant context derived from authenticated membership.
+- audit لأحداث الدخول والخروج وتبديل العضوية.
 
 اختبارات إلزامية:
-text
-Tenant A → Tenant A data = allowed
-Tenant A → Tenant B data = denied
-
-Lawyer → assigned case = allowed
-Lawyer → unauthorized case = denied
-
-Branch 1 user → Branch 2 restricted data = denied
-
-لا ننتقل قبل اجتياز هذه الاختبارات.
-1. المرحلة 3، Security Foundation
-نبني الأمن قبل البيانات القانونية.
-يشمل:
-• Password hashing
-• Session security
-• Refresh token rotation
-• MFA foundation
-• Rate limiting
-• CORS
-• CSRF protection where applicable
-• Security headers
-• Input validation
-• Output validation
-• Secrets management
-• Audit foundation
-• Security event logging
-ثم نختبر:
-• IDOR
-• Privilege escalation
-• Tenant escape
-• Unauthorized API calls
-• Session abuse
-• Rate-limit bypass
-1. المرحلة 4، Organization Configuration
-نبني Settings Engine.
-يشمل:
-text
-Organization
-Branches
-Departments
-Practice Areas
-Case Types
-Case Statuses
-Party Roles
-Court Types
-Document Types
-Task Types
-Fee Types
-Currencies
-Numbering
-Notification Preferences
-Branding
-Localization
-
-الفكرة هنا أن النظام يبدأ يصبح Configurable.
-مثلاً:
-المحامي يضيف Case Type جديد من Settings.
-لا يحتاج تعديل الكود.
-1. المرحلة 5، Client Management
-نبني Client Domain.
-يشمل:
-• Individual clients
-• Organizations
-• Contacts
-• Addresses
-• Identifiers
-• Relationships
-• Tags
-• Notes
-• Custom fields
-• Client status
-• Client documents
-• Client communications
-ثم:
-• Client list
-• Advanced filters
-• Client profile
-• Client timeline
-ثم API ثم tests ثم UI.
-1. المرحلة 6، Party Management
-نبني:
-text
-Party
-CaseParty
-PartyRole
-Relationship
-
-حتى لا يكون تصميم القضية محدوداً بمفهوم:
-Plaintiff / Defendant.
-هذا يسمح للنظام بالتعامل مع أي نوع قضية.
-1. المرحلة 7، Case Management
-الآن نبني قلب النظام.
-Case:
-text
-Case
-├── Client
-├── Parties
-├── Lawyers
-├── Team
-├── Court
-├── Jurisdiction
-├── Practice Area
-├── Case Type
-├── Status
-├── Priority
-├── Dates
-├── Custom Fields
-└── Timeline
-
-ثم:
-• Create case
-• Update case
-• Assign lawyers
-• Assign teams
-• Change status
-• Close case
-• Reopen case where authorized
-• Archive case
-كل عملية مهمة تدخل Audit.
-1. المرحلة 8، Court + Jurisdiction
-نبني:
-text
-Country
-Jurisdiction
-Court
-Court Type
-Court Department
-
-ثم نربطها بالقضايا.
-هذه المرحلة تجعل المنتج دولياً بدلاً من جعله مرتبطاً بدولة واحدة.
-1. المرحلة 9، Case Timeline
-نبني Event Timeline.
-كل شيء مهم يظهر في Timeline:
-text
-Case Created
-Client Added
-Party Added
-Document Uploaded
-Task Created
-Hearing Scheduled
-Deadline Created
-Status Changed
-Note Added
-Invoice Created
-Payment Received
-
-وهذا سيكون من أهم أجزاء UX.
-1. المرحلة 10، Workflow Engine
-هذه مرحلة كبيرة.
-نبني:
-text
-Workflow
-State
-Transition
-Condition
-Action
-Approval
-
-مثلاً:
-text
-New
-↓
-Review
-↓
-Documents Required
-↓
-Ready
-↓
-Filed
-↓
-Hearing
-↓
-Judgment
-↓
-Closed
-
-لكن المدير يستطيع إنشاء Workflow مختلف.
-ثم نضيف:
-• Automatic tasks
-• Automatic notifications
-• Required documents
-• Required fields
-• Approval
-• Escalation
-1. المرحلة 11، Hearing Management
-نبني:
-text
-Hearing
-
-يشمل:
-• Case
-• Court
-• Date
-• Time
-• Location
-• Assigned lawyer
-• Hearing type
-• Outcome
-• Notes
-• Documents
-• Next hearing
-ثم نربطه بالـ Calendar.
-1. المرحلة 12، Legal Deadline Engine
-لا نضع الـ deadlines داخل Calendar فقط.
-نبني:
-text
-Deadline
-Deadline Type
-Deadline Rule
-Reminder Rule
-Escalation Rule
-
-ثم:
-text
-Case
-↓
-Deadline
-↓
-Reminder
-↓
-Escalation
-
-والقواعد القانونية تكون Configurable حسب jurisdiction.
-1. المرحلة 13، Task Management
-نبني:
-• Tasks
-• Subtasks
-• Checklists
-• Assignments
-• Due dates
-• Priorities
-• Dependencies
-• Recurring tasks
-• SLA
-• Escalation
-ثم نربط Tasks بالـ Cases والـ Clients والـ Workflows.
-1. المرحلة 14، Document Management
-هذه مرحلة ضخمة ويجب تنفيذها بعناية.
-نبني:
-text
-Document
-Document Type
-Document Version
-Storage Object
-Document Access
-Document Tag
-Document Metadata
-
-ثم:
-• Upload
-• Preview
-• Download
-• Versioning
-• Replace
-• Archive
-• Share
-• Access control
-1. المرحلة 15، Document Security
-نضيف:
-text
-Upload
-↓
-Validation
-↓
-Malware Scan
-↓
-Storage
-↓
-Access Control
-↓
-Signed URL
-
-ثم:
-• File hash
-• Version integrity
-• Download logging
-• Sharing audit
-• Expiration
-1. المرحلة 16، OCR
-Pipeline:
-text
-Document
-↓
-OCR
-↓
-Text Extraction
-↓
-Classification
-↓
-Entity Extraction
-↓
-Human Review
-
-في البداية يكون OCR منفصلاً عن AI.
-ثم نربط AI لاحقاً.
-1. المرحلة 17، Search
-نبني Search Service.
-يبحث في:
-text
-Clients
-Cases
-Parties
-Documents
-Hearings
-Tasks
-Invoices
-Communications
-
-لكن مع Permission-aware search.
-هذه نقطة أمنية مهمة جداً.
-1. المرحلة 18، Document Templates
-نبني Template Engine:
-text
-Template
-↓
-Variables
-↓
-Case / Client Data
-↓
-Generated Document
-
-ثم:
-• DOCX
-• PDF
-• Versioning
-• Tenant templates
-• Approval
-1. المرحلة 19، Communications
-نبني Communication Hub:
-text
-Email
-Phone
-SMS
-WhatsApp
-Internal Messages
-Portal Messages
-
-ثم Integration Adapters.
-لا نربط Core مباشرة بمزود معين.
-1. المرحلة 20، Calendar Integrations
-نبدأ بـ Internal Calendar.
-ثم:
-• Google Calendar
-• Microsoft Calendar
-مع:
-• OAuth
-• Sync
-• Conflict handling
-• Retry
-• Webhooks
-• Audit
-1. المرحلة 21، Billing
-نبني:
-text
-Fee
-TimeEntry
-Expense
-Invoice
-Payment
-Credit
-Refund
-
-ثم:
-• Fixed fees
-• Hourly fees
-• Retainers
-• Milestones
-• Discounts
-• Taxes
-• Partial payments
-حسب Configuration.
-1. المرحلة 22، Time Tracking
-نبني:
-text
-Timer
-↓
-Time Entry
-↓
-Approval
-↓
-Billing
-↓
-Invoice
-
-مع:
-• Billable
-• Non-billable
-• Rates
-• User rates
-• Client rates
-• Case rates
-1. المرحلة 23، Client Portal
-بعد استقرار Core.
-Client Portal:
-text
-Login
-↓
-Client
-↓
-Authorized Cases
-
-ويشمل:
-• Cases
-• Documents
-• Hearings
-• Deadlines where appropriate
-• Messages
-• Appointments
-• Invoices
-• Payments
-• Requests
-• Intake
-مع عزل كامل عن Staff UI.
-1. المرحلة 24، Reporting Engine
-نبني Report Builder.
-بدلاً من إنشاء تقرير لكل حالة.
-المستخدم يحدد:
-text
-Data Source
-Fields
-Filters
-Grouping
-Sorting
-Date Range
-
-ثم:
-text
-Preview
-↓
-Save
-↓
-Export
-
-1. المرحلة 25، Dashboard Engine
-نبني Widgets.
-مثلاً:
-Lawyer:
-text
-My Cases
-Today's Hearings
-Upcoming Deadlines
-Overdue Tasks
-Recent Documents
-
-Manager:
-text
-Active Cases
-Team Workload
-Revenue
-Outstanding Invoices
-Deadlines
-
-1. المرحلة 26، Import / Export
-Import:
-text
-CSV
-Excel
-
-مع:
-text
-Upload
-↓
-Mapping
-↓
-Validation
-↓
-Preview
-↓
-Approval
-↓
-Import
-
-Export مع authorization وAudit.
-1. المرحلة 27، Notifications
-نبني Notification Engine.
-الأحداث:
-text
-Hearing Tomorrow
-Deadline Approaching
-Task Overdue
-New Document
-New Message
-Invoice Due
-Payment Received
-
-ثم:
-text
-In-App
-Email
-SMS
-WhatsApp
-Push
-
-1. المرحلة 28، Conflict of Interest
-نبنيها قبل Client Intake النهائي.
-Flow:
-text
-New Client
-↓
-Conflict Search
-↓
-Potential Matches
-↓
-Review
-↓
-Decision
-↓
-Audit
-
-ويجب أن يكون القرار واضحاً:
-text
-Clear
-Potential Conflict
-Conflict
-Rejected
-Requires Review
-
-1. المرحلة 29، Client Intake
-بعد Conflict Check:
-text
-Intake
-↓
-Information
-↓
-Documents
-↓
-Conflict
-↓
-Review
-↓
-Approval
-↓
-Client
-↓
-Case
-
-1. المرحلة 30، Advanced Configuration
-نضيف:
-• Custom Fields
-• Custom Forms
-• Conditional fields
-• Custom workflows
-• Custom dashboards
-• Custom reports
-• Custom numbering
-• Templates
-• Notification rules
-هنا يتحول النظام فعلياً إلى Platform.
-1. المرحلة 31، Integration Hub
-نبني abstraction موحد:
-text
-Integration
-├── Provider
-├── Credentials
-├── Status
-├── Permissions
-├── Webhooks
-├── Sync
-└── Logs
-
-ثم نضيف integrations واحدة تلو الأخرى.
-1. المرحلة 32، AI Foundation
-لا تبدأ بالـ AI Assistant مباشرة.
-أولاً:
-text
-AI Gateway
-AI Provider Interface
-Provider Adapters
-AI Policy
-Usage Tracking
-Cost Tracking
-Prompt Management
-AI Audit
-AI Observability
-
-ثم:
-text
-OpenAI
-Gemini
-Claude
-Local Models
-
-1. المرحلة 33، AI Orchestrator
-نبني:
-text
-Request
-↓
-Intent
-↓
-Authorization
-↓
-Context
-↓
-Agent
-↓
-Tools
-↓
-Model
-↓
-Validation
-↓
-Response
-
-1. المرحلة 34، AI Tools
-نبدأ بأدوات Read-only:
-text
-Search Clients
-Search Cases
-Read Case
-Search Documents
-Read Document
-Get Hearings
-Get Deadlines
-Get Tasks
-Get Invoices
-
-هذه أكثر أماناً من البدء بأدوات الكتابة.
-بعد استقرارها نضيف:
-text
-Create Task
-Create Note
-Prepare Document
-
-ثم لاحقاً العمليات الحساسة مع Human Confirmation.
-1. المرحلة 35، RAG
-Pipeline:
-text
-Documents
-↓
-OCR/Text
-↓
-Chunking
-↓
-Embeddings
-↓
-Vector Index
-↓
-Permission Filtering
-↓
-Retrieval
-↓
-AI
-
-ويجب اختبار Tenant Isolation داخل RAG.
-1. المرحلة 36، AI Agents
-نبدأ بعد استقرار Gateway:
-text
-Document Analysis Agent
-Case Summary Agent
-Legal Assistant Agent
-Data Extraction Agent
-
-ثم:
-text
-Deadline Assistant
-Research Assistant
-Drafting Assistant
-Reporting Assistant
-
-1. المرحلة 37، AI Evaluation
-لكل Agent:
-text
-Dataset
-↓
-Test
-↓
-Model
-↓
-Prompt Version
-↓
-Result
-↓
-Score
-
-ولا نطلق Agent جديداً بدون Evaluation.
-1. المرحلة 38، AI Human Approval
-أي عملية مؤثرة:
-text
-AI
-↓
-Proposal
-↓
-User Review
-↓
-Approval
-↓
-Execution
-
-لا تجعل AI ينفذ عمليات حساسة بشكل صامت.
-1. المرحلة 39، SaaS
-بعد استقرار المنتج الأساسي:
-text
-Plans
-Subscriptions
-Usage
-Limits
-Feature Flags
-Tenant Billing
-Platform Admin
-
-ثم:
-text
-Free
-Professional
-Business
-Enterprise
-
-حسب نموذج العمل النهائي.
-1. المرحلة 40، Platform Super Admin
-يبني:
-text
-Tenants
-Plans
-Subscriptions
-Usage
-Feature Flags
-System Health
-Security Events
-Platform Audit
-Integrations
-
-مع منع الوصول التلقائي إلى محتوى القضايا.
-1. المرحلة 41، Performance
-بعد اكتمال الوظائف الأساسية:
-• Database indexes
-• Query optimization
-• Redis caching
-• Search optimization
-• Queue optimization
-• File delivery optimization
-• Background processing
-• Pagination
-• Bulk operations
-لا نعمل premature optimization قبل وجود بيانات حقيقية.
-1. المرحلة 42، Security Audit
-نعمل Security Review شامل:
-text
-Authentication
-Authorization
-Tenant Isolation
-IDOR
-File Upload
-Search
-Export
-API
-Sessions
-Tokens
-Webhooks
-Integrations
-AI
-RAG
-Logs
-Backups
-
-ثم Penetration Testing قبل Production.
-1. المرحلة 43، Full Testing
-نختبر:
-text
-Unit
-Integration
-API
-E2E
-Security
-Authorization
-Tenant Isolation
-Workflow
-Documents
-Search
-Billing
-AI
-Performance
-Migration
-Backup/Restore
-
-1. المرحلة 44، Production Readiness
-قبل الإطلاق:
-text
-Production Environment
-SSL
-Secrets
-Database
-Redis
-Queue
-Storage
-Monitoring
-Logging
-Backups
-Alerts
-Error Tracking
-CI/CD
-Rollback
-Disaster Recovery
-
-ثم:
-text
-Staging
-↓
-Smoke Tests
-↓
-Security Tests
-↓
-Production
-
-1. المرحلة 45، Pilot
-لا تطلق النظام مباشرة لعدد كبير من المكاتب.
-ابدأ بـ Pilot محدود.
-نراقب:
-• Performance
-• Errors
-• UX
-• Missing workflows
-• Permission issues
-• Search quality
-• Document handling
-• Billing
-• Notifications
-ثم نصلح المشاكل قبل General Availability.
-1. ترتيب الأولويات
-لو أردت ترتيباً صارماً:
-text
-1. Architecture
-2. Repository
-3. Foundation
-4. Identity
-5. Multi-Tenancy
-6. Authorization
-7. Security
-8. Configuration
-9. Clients
-10. Parties
-11. Cases
-12. Courts
-13. Timeline
-14. Workflows
-15. Hearings
-16. Deadlines
-17. Tasks
-18. Documents
-19. OCR
-20. Search
-21. Templates
-22. Communications
-23. Calendar
-24. Billing
-25. Time Tracking
-26. Expenses
-27. Client Portal
-28. Reporting
-29. Dashboards
-30. Notifications
-31. Conflict Check
-32. Intake
-33. Custom Forms
-34. Integration Hub
-35. AI Foundation
-36. AI Tools
-37. RAG
-38. AI Agents
-39. AI Evaluation
-40. SaaS
-41. Super Admin
-42. Performance
-43. Security Audit
-44. Full QA
-45. Production
-46. Pilot
-
-1. ما لا أنصح به
-لا تبدأ بهذه الأشياء:
-text
-AI Chatbot
-Mobile App
-WhatsApp
-Advanced Analytics
-Microservices
-Complex Accounting
-Large Dashboard
-
-قبل بناء Core قوي.
-خصوصاً AI. وجود ChatGPT داخل التطبيق لا يجعل النظام ذكياً. جودة النظام تعتمد أولاً على Domain Model والـ permissions والـ document architecture والـ search والـ audit.
-1. نقطة مهمة جداً في مشروعك
-بما أنك تريد إعطاء المشروع لاحقاً إلى Manus أو Claude أو أي Coding Agent، سأقسم التنفيذ إلى Tasks صغيرة ومستقلة.
-مثلاً:
-text
-TASK-001
-Repository Foundation
-
-TASK-002
-Database Foundation
-
-TASK-003
-Authentication
-
-TASK-004
-Tenant Management
-
-TASK-005
-Membership Architecture
-
-TASK-006
-RBAC
-
-TASK-007
-ABAC
-
-TASK-008
-Authorization Engine
-
-TASK-009
-Audit System
-
-TASK-010
-Client Module
-
-وهكذا.
-كل Task يحتوي على:
-text
-Objective
-Scope
-Dependencies
-Files
-Database Changes
-API Changes
-UI Changes
-Security Requirements
-Authorization Requirements
-Tests
-Acceptance Criteria
-Definition of Done
-
-وهذا يقلل أخطاء AI Coding Agents بشكل كبير.
-1. المرحلة الأهم قبل إعطاء المشروع للـ AI
-بعد Architecture الحالي، لا أنصح بإعطاء Manus أمر:
-"Build the application."
-الأفضل أن تكون العملية:
-text
-Repository
-↓
-Read Architecture
-↓
-Analyze Existing Code
-↓
-Create Reference Documents
-↓
-Create Domain Model
-↓
-Create Database Design
-↓
-Create API Contracts
-↓
-Create Implementation Plan
-↓
-Create Task Registry
-↓
-Implement Phase 0
-↓
-Validate
-↓
-Implement Phase 1
-↓
-Validate
-↓
-...
-
-والـ AI لا ينتقل للمرحلة التالية إذا فشلت اختبارات المرحلة الحالية.
-1. ما أراه ناقصاً قبل بدء التنفيذ
-هناك 5 وثائق مهمة يجب إضافتها الآن إلى الملف السابق:
-text
-DOMAIN_MODEL.md
-DATABASE.md
-API_CONTRACTS.md
-TASK_REGISTRY.md
-AI_DEVELOPMENT_PROTOCOL.md
-
-وهذه أهم خطوة تالية في رأيي.
-بعد إعداد هذه الملفات، سيكون لدينا:
-text
-Architecture
-+
-Domain Model
-+
-Database
-+
-API Contracts
-+
-Security Model
-+
-AI Architecture
-+
-Implementation Plan
-+
-Task Registry
-+
-AI Coding Protocol
-
-عندها يصبح المشروع جاهزاً فعلياً للتنفيذ
+- Tenant A → Tenant A data = allowed
+- Tenant A → Tenant B data = denied
+- Lawyer → assigned case = allowed
+- Lawyer → unauthorized case = denied
+- Branch 1 user → Branch 2 restricted data = denied
+
+شروط الإغلاق:
+- نجاح كل الاختبارات أعلاه.
+- عدم وجود أي اعتماد على tenant_id من browser كمرجع ثقة.
+
+### المرحلة 3: Security Foundation
+
+الهدف:
+- تأسيس الأمن قبل توسيع البيانات القانونية.
+
+النطاق:
+- Password hashing
+- Session security
+- Refresh token rotation
+- MFA foundation
+- Rate limiting
+- CORS
+- CSRF protection where applicable
+- Security headers
+- Input validation
+- Output validation
+- Secrets management
+- Audit foundation
+- Security event logging
+- Optional IP restrictions
+- Security-aware error model
+
+اختبارات إلزامية:
+- IDOR
+- Privilege escalation
+- Tenant escape
+- Unauthorized API calls
+- Session abuse
+- Rate-limit bypass
+
+شروط الإغلاق:
+- لا توجد ثغرة معروفة في المسارات الحرجة.
+- تسجيل security events يعمل.
+- secrets خارج source control.
+
+### المرحلة 4: Organization Configuration + Platform Administration
+
+الهدف:
+- جعل المنصة قابلة للتهيئة بالكامل لكل tenant.
+
+النطاق:
+- Organization
+- Branches
+- Departments
+- Teams
+- Practice Areas
+- Case Types
+- Case Statuses
+- Party Roles
+- Court Types
+- Document Types
+- Task Types
+- Fee Types
+- Currencies
+- Numbering
+- Notification Preferences
+- Branding
+- Localization
+- Platform Administration
+- Subscription
+- Feature Flags
+- Usage metering
+
+المخرجات:
+- Settings engine كامل.
+- Admin UI لإدارة الإعدادات.
+- قابلية إضافة case type أو status أو numbering rule بدون تعديل الكود.
+- feature flags قابلة للتحكم على مستوى platform وtenant.
+- usage tracking للخطط والـ quotas.
+
+شروط الإغلاق:
+- يمكن تشغيل tenant حقيقي بإعدادات مختلفة دون لمس الكود.
+- يمكن تفعيل/تعطيل ميزات عبر flags أو subscription.
+
+### المرحلة 5: Client Management
+
+الهدف:
+- إدارة العملاء ككيان قانوني وتجاري كامل.
+
+النطاق:
+- Individual clients
+- Organizations
+- Contacts
+- Addresses
+- Identifiers
+- Relationships
+- Tags
+- Notes
+- Custom fields
+- Client status
+- Client documents
+- Client communications
+- Client list
+- Advanced filters
+- Client profile
+- Client timeline
+- Portal access
+- Consent records
+- Data retention status
+
+المخرجات:
+- CRUD كامل للعملاء.
+- API + UI + filtering + search.
+- timeline للعملاء.
+- audit لكل تغيير حساس.
+
+شروط الإغلاق:
+- يمكن إنشاء عميل فردي أو مؤسسة وإدارة ملفه بالكامل.
+- يمكن الوصول إليه فقط ضمن الصلاحيات الصحيحة.
+
+### المرحلة 6: Party Management
+
+الهدف:
+- فصل مفهوم الطرف القانوني عن العميل.
+
+النطاق:
+- Party
+- CaseParty
+- PartyRole
+- PartyRelationship
+- Configurable party roles
+
+المخرجات:
+- نموذج طرف يدعم plaintiff/defendant/claimant/respondent/witness/expert/company/government/other.
+- ربط الأطراف بالقضايا وبالعلاقات المتبادلة.
+
+شروط الإغلاق:
+- القضية لا تعتمد على plaintiff/defendant فقط.
+- يمكن تمثيل أي نوع طرف قانوني بدون تغيير schema لاحق.
+
+### المرحلة 7: Case Management
+
+الهدف:
+- بناء قلب النظام.
+
+النطاق:
+- Case
+- Case Number
+- Internal Number
+- Client
+- Parties
+- Lawyers
+- Team
+- Court
+- Jurisdiction
+- Practice Area
+- Case Type
+- Status
+- Priority
+- Open Date
+- Close Date
+- Hearings
+- Deadlines
+- Tasks
+- Documents
+- Communications
+- Notes
+- Time Entries
+- Expenses
+- Fees
+- Invoices
+- Workflow
+- Custom Fields
+- Timeline
+- Assign lawyers
+- Assign teams
+- Change status
+- Close case
+- Reopen case
+- Archive case
+
+المخرجات:
+- case list
+- case profile
+- case assignments
+- lifecycle actions كاملة
+- audit لكل عملية مهمة
+
+شروط الإغلاق:
+- case life cycle يعمل end-to-end.
+- كل تغيير مهم ينعكس في timeline و audit.
+
+### المرحلة 8: Court + Jurisdiction + Country Legal Configuration
+
+الهدف:
+- جعل المنصة دولية وقابلة للتكيّف مع أنظمة قانونية مختلفة.
+
+النطاق:
+- Country
+- Jurisdiction
+- Court
+- Court Type
+- Court Department
+- Court Location
+- External court identifiers
+- Legal system configuration
+- Procedure definitions
+- Deadline rules
+- Document types by country
+- Numbering rules
+- Local settings
+
+المخرجات:
+- model كامل للمحاكم والاختصاصات.
+- country/jurisdiction configuration layer.
+- extension pattern للقواعد المحلية.
+
+شروط الإغلاق:
+- يمكن إضافة jurisdiction جديد أو court type جديد عبر configuration.
+- لا توجد قواعد قانونية خاصة بدولة واحدة داخل core code.
+
+### المرحلة 9: Case Timeline
+
+الهدف:
+- توفير timeline موحد ومؤرخ لكل ما يهم القضية.
+
+النطاق:
+- Append-only timeline events
+- Case Created
+- Client Added
+- Party Added
+- Document Uploaded
+- Task Created
+- Hearing Scheduled
+- Deadline Created
+- Status Changed
+- Note Added
+- Invoice Created
+- Payment Received
+- Document Approved
+- Case Closed
+
+المخرجات:
+- timeline projection
+- event schema موحد
+- audit-friendly history
+
+شروط الإغلاق:
+- كل حدث مهم يظهر في timeline.
+- لا يمكن تعديل history كأنه لم يحدث.
+
+### المرحلة 10: Workflow Engine
+
+الهدف:
+- تمكين workflows قابلة للتهيئة على مستوى tenant وcase type.
+
+النطاق:
+- Workflow
+- State
+- Transition
+- Condition
+- Action
+- Approval
+- Required Fields
+- Required Documents
+- Notifications
+- Automatic tasks
+- Deadline creation
+- Webhooks
+- Escalation
+- Reassignment
+- SLA timers
+- Manual overrides with authorization
+
+المخرجات:
+- workflow definition engine
+- workflow execution engine
+- workflow admin UI
+- audit لكل transition
+
+شروط الإغلاق:
+- يمكن تعريف workflow مختلف لكل tenant أو case type.
+- كل transition يخضع للصلاحيات والتدقيق.
+
+### المرحلة 11: Hearing Management + Internal Calendar
+
+الهدف:
+- إدارة الجلسات وربطها بالتقويم الداخلي.
+
+النطاق:
+- Hearing
+- Case
+- Court
+- Date
+- Time
+- Location
+- Assigned lawyer
+- Hearing type
+- Outcome
+- Notes
+- Documents
+- Next hearing
+- Internal calendar
+
+المخرجات:
+- hearing scheduling
+- hearing details
+- calendar event creation
+- calendar permissions
+
+شروط الإغلاق:
+- يمكن تسجيل جلسة وربطها بالقضية والتقويم.
+- لا توجد فجوة صلاحيات بين hearing وcalendar.
+
+### المرحلة 12: Legal Deadline Engine
+
+الهدف:
+- فصل deadline القانوني عن event التقويمي العادي.
+
+النطاق:
+- Deadline
+- Deadline Type
+- Deadline Rule
+- Reminder Rule
+- Escalation Rule
+- Fixed deadlines
+- Relative deadlines
+- Rule-based deadlines
+- Manual deadlines
+- Recurring deadlines
+- Completion evidence
+
+المخرجات:
+- calculation engine حسب jurisdiction
+- reminder scheduler
+- escalation workflow
+
+شروط الإغلاق:
+- القواعد قابلة للتكوين حسب jurisdiction.
+- deadlines قابلة للتتبع والإثبات والإغلاق.
+
+### المرحلة 13: Task Management
+
+الهدف:
+- إدارة الأعمال اليومية المرتبطة بالقضايا والعملاء والـ workflows.
+
+النطاق:
+- Tasks
+- Subtasks
+- Checklists
+- Assignments
+- Due dates
+- Priorities
+- Dependencies
+- Recurring tasks
+- SLA
+- Escalation
+
+المخرجات:
+- task list
+- task detail
+- assignment model
+- overdue detection
+- workflow linking
+
+شروط الإغلاق:
+- tasks تعمل داخل إطار الصلاحيات والتدقيق.
+- يمكن ربطها بالقضية أو العميل أو workflow.
+
+### المرحلة 14: Document Management
+
+الهدف:
+- بناء إدارة مستندات قانونية بمستوى إنتاجي.
+
+النطاق:
+- Document
+- Document Type
+- Document Version
+- Storage Object
+- Document Access
+- Document Tag
+- Document Metadata
+- Upload
+- Preview
+- Download
+- Versioning
+- Replace
+- Archive
+- Share
+- Access control
+- Classification
+- Tagging
+- Retention policy
+
+المخرجات:
+- upload/download/preview
+- version history
+- metadata model
+- storage abstraction
+- permission-aware document access
+
+شروط الإغلاق:
+- لا يوجد overwrite صامت للنسخ التاريخية.
+- المستندات لا تستخدم public URLs.
+
+### المرحلة 15: Document Security
+
+الهدف:
+- تأمين pipeline المستندات من الرفع إلى التنزيل.
+
+النطاق:
+- Upload validation
+- File type validation
+- Size validation
+- Malware scan
+- Content validation
+- File hash
+- Signed URL
+- Download logging
+- Sharing audit
+- Expiration
+- Version integrity
+
+المخرجات:
+- secure document pipeline
+- controlled access mechanism
+- audit trail للتنزيل والمشاركة
+
+شروط الإغلاق:
+- لا يتم تخزين أو تقديم مستند قانوني بطريقة غير محكومة.
+- كل تنزيل أو مشاركة يمكن تتبعه.
+
+### المرحلة 16: OCR Pipeline
+
+الهدف:
+- استخراج النص والكيانات من المستندات بطريقة منفصلة عن AI.
+
+النطاق:
+- OCR
+- Text extraction
+- Classification
+- Entity extraction
+- Human review
+- Approved metadata
+
+المخرجات:
+- processing pipeline خلف queue
+- فصل واضح بين OCR output و human-approved data
+
+شروط الإغلاق:
+- OCR لا يُعامل كحقيقة نهائية بدون مراجعة بشرية عند الحاجة.
+
+### المرحلة 17: Search
+
+الهدف:
+- توفير بحث واعٍ بالصلاحيات عبر المنصة.
+
+النطاق:
+- Clients
+- Cases
+- Parties
+- Documents
+- Hearings
+- Tasks
+- Invoices
+- Communications
+- Courts
+- Deadlines
+- Permission-aware search
+- Search abstraction
+- Postgres + search index where needed
+
+المخرجات:
+- indexers/background jobs
+- filters/sorting/pagination
+- search API
+
+شروط الإغلاق:
+- لا يعود أي search result غير مصرّح به.
+- search cross-tenant ممنوع.
+
+### المرحلة 18: Document Templates
+
+الهدف:
+- بناء محرك قوالب لإنتاج مستندات قانونية قابلة للتخصيص.
+
+النطاق:
+- Template
+- Variables
+- Case / Client data
+- Validation
+- Document Generation
+- DOCX
+- PDF
+- Versioning
+- Tenant templates
+- Approval
+
+المخرجات:
+- template builder
+- generation jobs
+- template version history
+
+شروط الإغلاق:
+- القوالب مرتبطة بالـ tenant وبصلاحيات واضحة.
+
+### المرحلة 19: Communications
+
+الهدف:
+- إنشاء مركز اتصال موحد وقابل للتوسعة.
+
+النطاق:
+- Email
+- Phone
+- SMS
+- WhatsApp
+- Internal Messages
+- Portal Messages
+- Threading
+- Attachments
+- Case linking
+- Client linking
+- Delivery status
+- Error tracking
+- Consent management
+
+المخرجات:
+- communication hub
+- provider adapters
+- message history
+- inbound/outbound flow
+
+شروط الإغلاق:
+- core لا يتحدث مباشرة مع مزود معين.
+- كل message يمكن ربطه بعميل أو قضية أو مهمة.
+
+### المرحلة 20: Calendar Integrations
+
+الهدف:
+- ربط calendar الداخلي بالتقاويم الخارجية.
+
+النطاق:
+- Internal Calendar
+- Google Calendar
+- Microsoft Calendar
+- OAuth
+- Sync
+- Conflict handling
+- Retry
+- Webhooks
+- Audit
+
+المخرجات:
+- integration adapters
+- sync engine
+- calendar permissions
+
+شروط الإغلاق:
+- يمكن تفعيل/إيقاف الربط لكل tenant.
+- التعارضات والتكرار لها سياسة واضحة.
+
+### المرحلة 21: Billing + Expenses + Invoices + Payments + Finance Integration
+
+الهدف:
+- تمكين الفوترة والتحصيل بطريقة قانونية وتجارية سليمة.
+
+النطاق:
+- Fee
+- Time Entry billing linkage
+- Expense
+- Invoice
+- Payment
+- Credit
+- Refund
+- Fixed fees
+- Hourly fees
+- Retainers
+- Milestones
+- Discounts
+- Taxes where configured
+- Partial payments
+- Outstanding balances
+- Finance integration adapters
+- Accounting systems
+- Payment providers
+- Banks
+- Tax systems where applicable
+
+المخرجات:
+- billing ledger داخل النظام
+- invoice lifecycle
+- payment reconciliation
+- expense flow into invoices
+
+شروط الإغلاق:
+- لا يوجد double-charge أو double-payment دون حماية.
+- التكاملات المالية عبر adapters فقط.
+
+### المرحلة 22: Time Tracking
+
+الهدف:
+- بناء تتبع وقت صالح للفوترة والمراجعة.
+
+النطاق:
+- Timer
+- Manual entry
+- Time Entry
+- Approval
+- Billing
+- Invoice
+- Billable
+- Non-billable
+- Rates
+- User rates
+- Client rates
+- Case rates
+- Rounding rules
+
+المخرجات:
+- timer UI
+- manual entry UI
+- approval flow
+- billing export into invoices
+
+شروط الإغلاق:
+- الوقت القابل للفوترة لا يدخل الفاتورة إلا عبر قواعد واضحة.
+
+### المرحلة 23: Client Portal
+
+الهدف:
+- تقديم portal آمن ومحدود الصلاحيات للعملاء.
+
+النطاق:
+- Login
+- Secure invitation
+- Client
+- Authorized cases only
+- Documents
+- Hearings
+- Deadlines where appropriate
+- Messages
+- Appointments
+- Invoices
+- Payments
+- Intake forms
+
+المخرجات:
+- portal UI
+- portal auth/session flow
+- client-facing permissions
+
+شروط الإغلاق:
+- العميل لا يرى إلا ما هو مصرّح له.
+- portal لا يكسر tenant isolation.
+
+### المرحلة 24: Reporting Engine
+
+الهدف:
+- تمكين تقارير تشغيلية وقانونية قابلة للتهيئة.
+
+النطاق:
+- Report Definition
+- Data Source
+- Fields
+- Filters
+- Grouping
+- Sorting
+- Permissions
+- Date Range
+- Export Settings
+- Saved reports
+- Scheduled reports
+- CSV
+- Excel
+- PDF
+- Dashboard widgets data feed
+
+المخرجات:
+- report builder
+- scheduler
+- secure exports
+
+شروط الإغلاق:
+- كل تقرير يحترم tenant + authorization.
+
+### المرحلة 25: Dashboard Engine
+
+الهدف:
+- عرض حالة العمل بشكل واضح حسب الدور.
+
+النطاق:
+- Dashboard
+- Widgets
+- Layout
+- Filters
+- Refresh Policy
+- Permissions
+
+المخرجات:
+- lawyer dashboard
+- manager dashboard
+- responsive widgets
+
+شروط الإغلاق:
+- dashboard لا يعرض data غير مصرّح بها.
+- تجربة الاستخدام تدعم RTL/LTR.
+
+### المرحلة 26: Import / Export
+
+الهدف:
+- دعم نقل البيانات بشكل آمن وقابل للمراجعة.
+
+النطاق:
+- CSV
+- Excel
+- Future connectors
+- Schema detection
+- Field mapping
+- Validation
+- Preview
+- Approval
+- Background import
+- Result report
+- Error rows
+- Duplicate detection
+- Optional rollback strategy
+- Export authorization
+- Secure temporary storage
+- Controlled download
+- Audit
+
+المخرجات:
+- import jobs
+- export jobs
+- user-visible validation reports
+
+شروط الإغلاق:
+- الاستيراد والتصدير يعملان عبر queue وبصورة idempotent.
+
+### المرحلة 27: Notifications
+
+الهدف:
+- إدارة التنبيهات والمذكرات عبر قنوات متعددة.
+
+النطاق:
+- Event
+- Notification Rule
+- User Preferences
+- Channel
+- In-app
+- Email
+- SMS
+- WhatsApp
+- Push
+- Immediate notifications
+- Scheduled notifications
+- Reminder sequences
+- Escalations
+- Quiet hours
+
+المخرجات:
+- notification engine
+- preference center
+- event-driven delivery
+
+شروط الإغلاق:
+- الإشعارات لا تتجاوز تفضيلات المستخدم حيثما ينطبق.
+
+### المرحلة 28: Conflict of Interest
+
+الهدف:
+- منع تضارب المصالح قبل قبول العمل.
+
+النطاق:
+- Conflict Check
+- Requester
+- Client
+- Parties
+- Related Entities
+- Historical Matters
+- Search Results
+- Reviewer
+- Decision
+- Reason
+- Audit
+
+المخرجات:
+- conflict search flow
+- review and decision workflow
+- audit trail
+
+شروط الإغلاق:
+- conflict decision لا تتم بدون صلاحية وتدقيق.
+
+### المرحلة 29: Client Intake
+
+الهدف:
+- تحويل الاستفسار إلى عميل أو قضية بشكل منظم.
+
+النطاق:
+- Intake Request
+- Information Collection
+- Document Collection
+- Conflict Check
+- Review
+- Approval
+- Client Creation
+- Case Creation
+- Public intake form
+- Secure invitation
+- Portal intake
+- Conditional questions
+- File upload
+- Consent
+
+المخرجات:
+- intake forms
+- approval workflow
+- conversion into client/case
+
+شروط الإغلاق:
+- أي intake يمر بآلية تحقق وصلاحيات وتدقيق.
+
+### المرحلة 30: Audit / Compliance / Data Protection / Retention / Archiving
+
+الهدف:
+- تحويل التدقيق والامتثال وحفظ البيانات إلى وظائف منتجة كاملة.
+
+النطاق:
+- AuditEvent
+- Tenant
+- User
+- Membership
+- Action
+- Resource Type
+- Resource ID
+- Before
+- After
+- IP
+- Device
+- Session
+- Correlation ID
+- Timestamp
+- Access logs
+- Data classification
+- Retention policies
+- Archiving
+- Secure deletion where legally permitted
+- Privacy settings
+- Data subject workflows where required
+
+المخرجات:
+- append-only audit history for app users
+- retention and archiving engine
+- compliance reports
+
+شروط الإغلاق:
+- كل change حساس يترك أثره.
+- سياسات الاحتفاظ والتأريش والتخزين قابلة للتكوين حسب jurisdiction وtenant.
+
+### المرحلة 31: Integration Hub
+
+الهدف:
+- توحيد جميع التكاملات الخارجية خلف واجهة واحدة قابلة للاستبدال.
+
+النطاق:
+- Email
+- Calendar
+- SMS
+- WhatsApp
+- Storage
+- OCR
+- Search
+- Payment
+- Accounting
+- AI
+- Provider adapters
+- Integration Management
+- Webhooks
+- Signature validation
+- Replay protection
+- Timestamp validation
+- Idempotency
+- Retry policy
+
+المخرجات:
+- integration registry
+- tenant integration config
+- webhook ingestion/outbound delivery
+- adapter-based provider implementations
+
+شروط الإغلاق:
+- core لا يعرف تفاصيل provider-specific APIs.
+- كل webhook آمن ومؤرشف ومُعاد المحاولة عند الحاجة.
+
+### المرحلة 32: AI Layer
+
+الهدف:
+- إضافة الذكاء الاصطناعي كطبقة مساعدة اختيارية لا تكسر النظام القانوني.
+
+النطاق:
+- AI Gateway
+- AI Orchestrator
+- Agents
+- Prompts
+- Tools
+- Retrieval
+- Memory
+- Policies
+- Evaluations
+- Providers
+- OpenAI / Gemini / Claude / Local Models
+
+المخرجات:
+- AI access layer
+- policy enforcement for tenant data
+- human approval gates
+- RAG with permission-aware retrieval
+- evaluation harness
+
+شروط الإغلاق:
+- AI لا تتجاوز authorization.
+- AI output لا يتحول تلقائياً إلى legal record.
+- AI تبقى قابلة للتعطيل دون كسر core.
+
+### المرحلة 33: Operations + Backup + Disaster Recovery + Monitoring
+
+الهدف:
+- ضمان أن المنتج قابل للتشغيل، الاسترداد، والمراقبة في الإنتاج.
+
+النطاق:
+- Automated backups
+- Backup encryption
+- Retention policies
+- Restore testing
+- Disaster recovery procedure
+- RPO
+- RTO
+- Monitoring
+- Alerting
+- Log aggregation
+- Metrics
+- Tracing
+- Incident response
+- Release strategy
+- Environment separation
+
+المخرجات:
+- backup and restore runbooks
+- DR plan
+- operational dashboards
+- alerts for critical system behavior
+
+شروط الإغلاق:
+- لا يعتبر النسخ الاحتياطي ناجحاً حتى يتم اختبار restore فعلي.
+- يوجد مسار واضح للتعافي من الفشل.
+
+## المسارات المستمرة عبر كل المراحل
+
+- Database design: use PostgreSQL مع foreign keys, unique constraints, check constraints, and migrations.
+- Caching: Redis فقط كـ cache/session/rate limit/performance layer، وليس source of truth.
+- Concurrency: lock sequences, idempotency keys, queue deduplication, optimistic locking where يلزم.
+- API: `/api/v1` ثابت، ولا نكسر contracts بصمت.
+- Frontend: no business logic, no hardcoded authorization assumptions, no hardcoded translations.
+- Testing: كل مرحلة لها tests مناسبة، ومع المراحل الحرجة أضيف security and e2e coverage.
+- Documentation: أي قرار معماري أو تغيير سلوك مهم يُوثق.
+- Internationalization: العربية والإنجليزية على الأقل، مع RTL/LTR.
+- Accessibility: keyboard navigation, semantic markup, proper labels, error handling.
+- Observability: logs, metrics, traces, correlation IDs.
+- Security: secure defaults دائماً.
+- AI: always optional and permission-aware.
+
+## ترتيب التنفيذ العملي
+
+1. نثبت الوثائق والقرارات في المرحلة 0.
+2. نبني foundation في المرحلة 1.
+3. نُنجز الهوية والعزل والأمن أولاً.
+4. نفتح التهيئة والتنظيم.
+5. نبني العميل والطرف والقضية والمحكمة والجدول الزمني.
+6. نضيف workflows والجلسات والـ deadlines والمهام والمستندات.
+7. نكمل البحث والقوالب والتواصل والتقويم والفوترة والتقارير والبوابات.
+8. نثبت الامتثال والتكاملات وطبقة AI والعمليات النهائية.
+
+## المبدأ النهائي
+
+إذا كانت أي مرحلة لا تصلح لتشغيلها في بيئة إنتاج حقيقية، فهي ليست مكتملة.
+إذا كانت أي ميزة تعتمد على hardcoding أو bypass للصلاحيات أو tenant leak، فهي مرفوضة.
+إذا لم تكن المرحلة قابلة للقياس والاختبار والإعادة والتعافي، فهي ليست جاهزة للإطلاق.
