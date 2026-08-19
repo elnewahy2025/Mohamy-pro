@@ -6,7 +6,7 @@ Source of truth:
 - `Docs/Phase-0/STACK.md`
 
 Project goal:
-- Build a configurable, multi-tenant legal practice management platform that is secure by default, production-oriented, and provider-agnostic.
+- Build a configurable, multi-tenant legal practice management platform that is secure by default, production-oriented, provider-agnostic, and fully bilingual in English and Arabic with RTL/LTR support.
 
 Canonical domain term:
 - `Case` is the canonical legal record.
@@ -18,6 +18,7 @@ Core non-negotiables:
 - AI is optional and cannot bypass authorization.
 - External services are always accessed through adapters.
 - No public URLs for legal documents.
+- The product must support English and Arabic with full RTL/LTR behavior across the UI, forms, and messages.
 
 Implementation stack:
 - Defined in `Docs/Phase-0/STACK.md`

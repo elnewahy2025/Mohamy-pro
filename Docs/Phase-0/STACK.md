@@ -13,6 +13,10 @@ This is the implementation stack frozen for Phase 0 and Phase 1.
 - React Hook Form
 - Zod
 - `next-intl`
+- App Router
+- Server Components where useful
+- Client Components where interaction requires them
+- Generated TypeScript API client
 - RTL-first architecture
 
 ## Backend
@@ -24,6 +28,8 @@ This is the implementation stack frozen for Phase 0 and Phase 1.
 - Zod or `class-validator` for request validation
 - PostgreSQL
 - Prisma ORM as the default data-access layer
+- Prisma Migrate as the migration system
+- Expand/contract migration strategy
 
 ## Database
 
@@ -40,6 +46,12 @@ This is the implementation stack frozen for Phase 0 and Phase 1.
 - MinIO for self-hosted deployments
 - AWS S3 for cloud deployments
 - Storage access only through an abstraction layer
+- SHA-256 integrity hashes for stored documents
+- Signed URLs for controlled access
+- Versioning for mutable documents
+- Encryption at rest
+- Retention and legal hold support
+- Antivirus and malware scanning, starting with ClamAV
 
 ## Authentication
 
@@ -78,6 +90,88 @@ This is the implementation stack frozen for Phase 0 and Phase 1.
 - Separate Python AI service
 - AI Gateway in the core platform
 - AI Orchestrator behind the gateway
+- FastAPI for the Python service API
+- Pydantic for request and response models
+- `httpx` for outbound HTTP calls
+- SQLAlchemy only where persistence is needed
+- Optional LiteLLM for provider abstraction
+- Optional LangGraph only for agent workflows that genuinely require it
 - Permission-aware retrieval
 - Human approval before AI output becomes an official record
+- AI contracts defined by the platform, not by provider SDKs
 
+## Observability
+
+- OpenTelemetry
+- Prometheus
+- Grafana
+- Loki
+- Sentry
+- Correlation IDs across request and job lifecycles
+
+## Testing
+
+- Vitest for frontend unit tests
+- React Testing Library
+- Playwright
+- Jest for backend tests
+- Supertest
+- Testcontainers
+- Contract tests for API compatibility
+- Security tests for high-risk flows
+
+## Security Tooling
+
+- Semgrep or equivalent SAST
+- Trivy
+- Gitleaks
+- OWASP ZAP
+- Dependency scanning
+- SBOM generation
+
+## CI/CD
+
+- GitHub
+- GitHub Actions
+- Docker
+- Docker Compose for development
+- Pipeline order: commit, lint, type check, unit tests, integration tests, E2E, SAST, dependency scan, secret scan, container scan, build, deploy
+- Kubernetes only when deployment scale justifies it
+
+## Infrastructure
+
+- Docker
+- PostgreSQL
+- Redis
+- S3
+- Reverse proxy/load balancer
+- Secrets manager
+- Monitoring
+- Centralized logging
+- Automated backups
+- PostgreSQL backups with restore validation
+
+## API
+
+- REST
+- OpenAPI
+- `/api/v1`
+- Generated TypeScript client for frontend
+- Contract testing
+
+## Frontend Architecture
+
+- Next.js App Router
+- TanStack Query for server state
+- Generated API client
+- Zod for validation
+- React Hook Form for forms
+- English and Arabic support with full RTL/LTR behavior and locale-aware formatting
+- Do not duplicate business rules in frontend code
+
+## Architecture
+
+- Modular monolith first
+- Strong module boundaries
+- TypeScript for the business platform
+- Python only for AI/ML workloads

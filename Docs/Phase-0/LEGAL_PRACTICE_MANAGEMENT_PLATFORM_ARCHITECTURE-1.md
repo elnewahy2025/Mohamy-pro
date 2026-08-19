@@ -2071,6 +2071,7 @@ Support:
 # 66. Internationalization
 
 No hardcoded UI language.
+English and Arabic are first-class supported languages.
 
 Use:
 
@@ -2081,8 +2082,8 @@ t("cases.status.active")
 
 Support:
 
-- Arabic
 - English
+- Arabic
 - Future languages
 
 Support:
@@ -3469,7 +3470,7 @@ Audit
 Logging
 Tests
 Documentation
-i18n
+English and Arabic support with full RTL/LTR behavior
 Frontend
 Loading State
 Empty State
@@ -3545,7 +3546,7 @@ Documentation must be updated when architecture changes.
 - Error handling
 - API framework
 - Testing framework
-- i18n
+- Localization for English and Arabic with full RTL/LTR behavior
 - Design system
 
 ## Phase 1: Identity and Tenancy

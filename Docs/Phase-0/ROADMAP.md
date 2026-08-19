@@ -38,3 +38,6 @@ Phase order:
 - Phase 32: AI Layer
 - Phase 33: Operations + Backup + Disaster Recovery
 
+Phase 0 focus:
+- Freeze the bilingual product decision: English as the primary operational language and full Arabic RTL/LTR support across the product.
+- Freeze localization, UI language, date/number/currency formatting, and locale behavior before implementation starts.

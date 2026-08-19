@@ -18,7 +18,7 @@ This backlog is the implementation companion to `Plan.txt`. It has been revised 
 - No direct provider SDK calls inside domain modules.
 - No hardcoded country, court system, case type, workflow, fee model, or document type.
 - All money uses fixed precision decimal or integer minor units only.
-- Every user-facing screen must support empty/loading/error states, responsive layouts, RTL/LTR, and accessibility.
+- Every user-facing screen must support empty/loading/error states, responsive layouts, English and Arabic with full RTL/LTR behavior, and accessibility.
 - Every business-critical feature must have automated tests before release.
 - No AI memory is treated as a legal record.
 - No public legal-document URLs.
@@ -468,7 +468,7 @@ Backlog:
 - Show only authorized cases and related documents, hearings, deadlines where allowed, messages, appointments, invoices, and payments.
 - Add portal intake entry points where appropriate.
 - Add portal-specific permissions and audit logs.
-- Add responsive portal UI with RTL/LTR support.
+- Add responsive portal UI with English and Arabic support and full RTL/LTR behavior.
 - Add tests for case authorization and tenant isolation.
 
 Exit criteria:
@@ -628,4 +628,3 @@ Exit criteria:
 - Every phase must include a release note and rollback note.
 - Every phase must update docs and tests before merge.
 - Every phase must be validated against the non-negotiable rules in `Plan.txt`.
-

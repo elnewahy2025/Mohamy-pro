@@ -16,7 +16,7 @@
 - كل تغيير schema في الإنتاج يحتاج migration.
 - كل ميزة حرجة تجارياً تحتاج اختباراً آلياً.
 - كل مسار يلامس tenant أو security أو money أو legal record يحتاج audit.
-- الواجهة تدعم RTL/LTR, i18n, accessibility, responsive layout.
+- الواجهة تدعم الإنجليزية والعربية، مع RTL/LTR كامل، i18n، accessibility، responsive layout.
 
 ## قرارات يجب تثبيتها في Phase 0
 
@@ -116,6 +116,7 @@
 - Deployment Strategy
 - Testing Strategy
 - Localization Strategy
+- Bilingual content strategy: English as the primary operational language and full RTL Arabic support across the product.
 - Threat Model
 
 المخرجات:
@@ -167,6 +168,7 @@
 - اتصال فعلي بقاعدة البيانات وRedis والـ queue والـ storage abstraction.
 - `/api/v1` skeleton مع health endpoints.
 - OpenAPI first pass.
+- Frontend shell and shared UI foundation that support English and full RTL Arabic from day one.
 - pipeline CI يعمل.
 - automated backup job مع restore smoke test.
 
@@ -1035,7 +1037,7 @@
 
 شروط الإغلاق:
 - dashboard لا يعرض data غير مصرّح بها.
-- تجربة الاستخدام تدعم RTL/LTR.
+- تجربة الاستخدام تدعم الإنجليزية والعربية بالكامل، مع RTL/LTR.
 
 ### المرحلة 29: Client Intake
 
@@ -1235,7 +1237,7 @@
 - Frontend: no business logic, no hardcoded authorization assumptions, no hardcoded translations.
 - Testing: كل مرحلة لها tests مناسبة، ومع المراحل الحرجة أضيف security and e2e coverage.
 - Documentation: أي قرار معماري أو تغيير سلوك مهم يُوثق.
-- Internationalization: العربية والإنجليزية على الأقل، مع RTL/LTR.
+- Internationalization: العربية والإنجليزية على الأقل، مع دعم كامل للـ RTL/LTR في كل الشاشات والرسائل والنماذج.
 - Accessibility: keyboard navigation, semantic markup, proper labels, error handling.
 - Observability: logs, metrics, traces, correlation IDs.
 - Security: secure defaults دائماً.
