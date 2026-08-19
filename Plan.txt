@@ -1,36 +1,83 @@
-# ملف الحقيقة لتنفيذ المنصة القانونية
+# ملف الحقيقة لتنفيذ المنصة القانونية - Revision 2
 
 هذا الملف هو المرجع التنفيذي الوحيد للتسلسل المرحلي.
 
-القاعدة الأساسية:
+## قواعد عامة
+
 - كل مرحلة يجب أن تكون مكتملة بذاتها.
 - كل مرحلة يجب أن تكون قابلة للنشر في بيئة إنتاج حقيقية.
 - لا نبدأ المرحلة التالية إلا بعد تحقق شروط الإغلاق الحالية بالكامل.
 - أي ميزة تُبنى داخل مرحلة يجب أن تشمل: قاعدة بيانات، API، صلاحيات، اختبارات، سجلات، مراقبة، وتوثيق، بحسب ما ينطبق عليها.
-
-## قواعد غير قابلة للتفاوض
-
-- لا يوجد hardcoding لمكتب، أو محامٍ، أو دولة، أو specialty قانوني، أو نظام محاكم، أو workflow، أو نوع مستند، أو نموذج رسوم.
-- Tenant isolation يجب أن تُفرض من الخادم وليس من الواجهة.
-- Authorization يجب أن تكون في الـ backend وهي المرجع النهائي.
-- AI يجب أن تكون طبقة اختيارية، ولا تتحول إلى سجل قانوني رسمي إلا بعد موافقة بشرية صريحة.
-- أي تكامل خارجي يجب أن يمر عبر adapter/interface.
+- tenant isolation تُفرض من الخادم، لا من الواجهة.
+- authorization في الـ backend هي المرجع النهائي.
+- AI طبقة اختيارية، ولا تتحول إلى سجل قانوني رسمي إلا بعد موافقة بشرية صريحة.
+- أي تكامل خارجي يمر عبر adapter/interface فقط.
 - لا نستخدم public URLs للمستندات القانونية.
 - كل تغيير schema في الإنتاج يحتاج migration.
 - كل ميزة حرجة تجارياً تحتاج اختباراً آلياً.
 - كل مسار يلامس tenant أو security أو money أو legal record يحتاج audit.
-- واجهة المستخدم يجب أن تدعم RTL/LTR, i18n, accessibility, responsive layout.
+- الواجهة تدعم RTL/LTR, i18n, accessibility, responsive layout.
 
-## تعريف "مكتمل" لكل مرحلة
+## قرارات يجب تثبيتها في Phase 0
+
+هذه القرارات يجب أن تكون صريحة قبل التنفيذ:
+
+- `Case` هو السجل القانوني canonical.
+- يمكن استخدام `Matter` كاسم عرض فقط إذا لزم، لكن schema وdomain terms تبقى `Case`.
+- الهيكل التنظيمي المعتمد:
+  - `Tenant` = حدود العزل والأمان والفوترة الأساسية.
+  - `Organization` = حدود التشغيل داخل tenant.
+  - `Branch` = حدود الموقع/المكتب.
+  - `Department` = حدود الفريق التشغيلي.
+  - `Team` = كيان assignment مرن تحت policies محددة.
+- tenant context يُشتق من authenticated membership فقط.
+- database-level tenant enforcement يجب أن يكون جزءاً من التصميم حيثما كان مناسباً.
+- authorization model = RBAC + ABAC + resource-level authorization + explicit denials.
+- integration contracts وidempotency وqueue standards وtransactional outbox يجب أن تُعرّف مبكراً.
+- backup baseline يجب أن يبدأ من Phase 1.
+- audit foundation يجب أن يبدأ من Phase 2/3.
+- conflict check foundation يجب أن يبدأ قبل acceptance لأي matter/case.
+- money representation = fixed precision decimal أو integer minor units فقط.
+- workflow definitions وdeadline rules يجب أن تكون versioned.
+- AI memory لا تساوي legal record ولا knowledge base ولا case data.
+- data classification وdata residency وprovider capability model يجب أن تكون محددة مبكراً.
+
+## وثائق Phase 0
+
+- PROJECT_REFERENCE.md
+- ARCHITECTURE.md
+- DOMAIN_MODEL.md
+- DATABASE.md
+- API.md
+- SECURITY.md
+- AUTHORIZATION.md
+- AUTHORIZATION_MATRIX.md
+- MULTI_TENANCY.md
+- PHASE_DEPENDENCIES.md
+- THREAT_MODEL.md
+- AI_ARCHITECTURE.md
+- INTEGRATION_HUB.md
+- INTEGRATION_CONTRACTS.md
+- DATA_CLASSIFICATION.md
+- DATA_RESIDENCY.md
+- PROVIDER_CAPABILITY_MATRIX.md
+- TESTING.md
+- API_COMPATIBILITY.md
+- OBSERVABILITY.md
+- MIGRATION_POLICY.md
+- DEPLOYMENT.md
+- ROADMAP.md
+
+## تعريف "مكتمل"
 
 المرحلة تعتبر مكتملة فقط إذا تحقق الآتي:
 
-- جميع السيناريوهات الأساسية تعمل من النهاية إلى النهاية.
+- جميع السيناريوهات الأساسية تعمل end-to-end.
 - الـ API موثق في OpenAPI أو ما يعادله.
 - الـ data model والمهاجرات جاهزة.
 - الاختبارات الأساسية ناجحة: unit + integration + e2e أو ما يلزم حسب النطاق.
 - السجلات والتنبيهات والتتبع موجودة.
-- لا توجد dependence مباشرة على provider في domain.
+- لا توجد dependency مباشرة على provider في domain.
 - لا توجد صلاحيات في الواجهة فقط.
 - يوجد rollback أو mitigation plan للطرح.
 - التوثيق المخصص للمرحلة محدث.
@@ -46,33 +93,36 @@
 - Architecture
 - Technology Stack
 - Repository Structure
+- Domain naming
+- Tenant/Organization/Branch/Department boundaries
 - Database Strategy
 - Authentication Strategy
 - Authorization Model
+- Authorization Matrix
 - Multi-Tenant Strategy
 - File Storage Strategy
 - Search Strategy
 - Queue Strategy
-- Integration Strategy
+- Transactional Outbox Strategy
+- Idempotency Strategy
+- Integration Contracts
 - AI Strategy
+- Data Classification Strategy
+- Data Residency Strategy
+- Provider Capability Strategy
+- API Compatibility Strategy
+- Feature Flag Safety Strategy
+- Backup/Restore baseline
 - Deployment Strategy
 - Testing Strategy
 - Localization Strategy
+- Threat Model
 
 المخرجات:
-- PROJECT_REFERENCE.md
-- ARCHITECTURE.md
-- DOMAIN_MODEL.md
-- DATABASE.md
-- API.md
-- SECURITY.md
-- AUTHORIZATION.md
-- MULTI_TENANCY.md
-- AI_ARCHITECTURE.md
-- INTEGRATION_HUB.md
-- TESTING.md
-- DEPLOYMENT.md
-- ROADMAP.md
+- الوثائق المذكورة أعلاه مع ADRs مقبولة ومراجعة.
+- تعريف صريح لـ Case/Matter.
+- تعريف صريح لحدود tenant/organization/branch/department/team.
+- تعريف صريح لسياسة migration، idempotency، outbox، queue, API compatibility، backup baseline.
 
 شروط الإغلاق:
 - اعتماد هذه الوثائق كمصدر قرار.
@@ -89,6 +139,7 @@
 - Frontend
 - Shared packages
 - Environment configuration
+- Secrets loading
 - Docker
 - PostgreSQL
 - Redis
@@ -102,7 +153,11 @@
 - CI/CD
 - Testing framework
 - Observability baseline
-- App shell للويب والإدارة
+- Queue standards
+- Outbox table and dispatcher skeleton
+- Idempotency registry skeleton
+- Backup baseline and restore smoke test
+- Architecture fitness tests baseline
 
 المخرجات:
 - هيكل مشروع نهائي واضح.
@@ -113,6 +168,7 @@
 - `/api/v1` skeleton مع health endpoints.
 - OpenAPI first pass.
 - pipeline CI يعمل.
+- automated backup job مع restore smoke test.
 
 شروط الإغلاق:
 - التطبيق يبدأ بنجاح.
@@ -124,6 +180,7 @@
 - الواجهة تعمل.
 - الاختبارات تعمل.
 - CI ينجح.
+- backup/restore smoke test ينجح.
 
 ### المرحلة 2: Identity + Multi-Tenancy
 
@@ -137,6 +194,7 @@
 - Organization
 - Branch
 - Department
+- Team
 - Role
 - Permission
 - Direct Permission
@@ -151,14 +209,15 @@
 - Tenant selection
 - Membership switching
 - RBAC + ABAC + resource-level authorization
+- Permission cache with invalidation
 
 المخرجات:
 - Schema كاملة للهوية والعضوية.
 - Authentication flows كاملة.
 - Authorization engine داخل backend.
-- permission cache مع invalidation واضح.
-- tenant context derived from authenticated membership.
+- tenant context مشتق من authenticated membership.
 - audit لأحداث الدخول والخروج وتبديل العضوية.
+- policy-based permissions قابلة للاختبار.
 
 اختبارات إلزامية:
 - Tenant A → Tenant A data = allowed
@@ -171,13 +230,14 @@
 - نجاح كل الاختبارات أعلاه.
 - عدم وجود أي اعتماد على tenant_id من browser كمرجع ثقة.
 
-### المرحلة 3: Security Foundation
+### المرحلة 3: Security Foundation + Audit Foundation
 
 الهدف:
-- تأسيس الأمن قبل توسيع البيانات القانونية.
+- تأسيس الأمن والتدقيق قبل توسيع البيانات القانونية.
 
 النطاق:
 - Password hashing
+- Password policy
 - Session security
 - Refresh token rotation
 - MFA foundation
@@ -190,8 +250,9 @@
 - Secrets management
 - Audit foundation
 - Security event logging
-- Optional IP restrictions
-- Security-aware error model
+- Data classification v1
+- Security testing pipeline
+- Threat model implementation hooks
 
 اختبارات إلزامية:
 - IDOR
@@ -200,11 +261,13 @@
 - Unauthorized API calls
 - Session abuse
 - Rate-limit bypass
+- Security scanning in CI: SAST, dependency scan, secret scan, container scan, SBOM, license scan
 
 شروط الإغلاق:
 - لا توجد ثغرة معروفة في المسارات الحرجة.
 - تسجيل security events يعمل.
 - secrets خارج source control.
+- audit foundation يغطي auth, membership, permissions, sensitive access.
 
 ### المرحلة 4: Organization Configuration + Platform Administration
 
@@ -229,21 +292,20 @@
 - Notification Preferences
 - Branding
 - Localization
-- Platform Administration
+- Feature flags with safe defaults
 - Subscription
-- Feature Flags
 - Usage metering
+- Platform Administration
 
 المخرجات:
 - Settings engine كامل.
 - Admin UI لإدارة الإعدادات.
 - قابلية إضافة case type أو status أو numbering rule بدون تعديل الكود.
 - feature flags قابلة للتحكم على مستوى platform وtenant.
-- usage tracking للخطط والـ quotas.
 
 شروط الإغلاق:
 - يمكن تشغيل tenant حقيقي بإعدادات مختلفة دون لمس الكود.
-- يمكن تفعيل/تعطيل ميزات عبر flags أو subscription.
+- feature flags ليست بديلاً عن authorization.
 
 ### المرحلة 5: Client Management
 
@@ -261,15 +323,16 @@
 - Notes
 - Custom fields
 - Client status
+- Client source
+- Consent records
+- Data retention status
+- Portal access flags
 - Client documents
 - Client communications
 - Client list
 - Advanced filters
 - Client profile
 - Client timeline
-- Portal access
-- Consent records
-- Data retention status
 
 المخرجات:
 - CRUD كامل للعملاء.
@@ -281,10 +344,38 @@
 - يمكن إنشاء عميل فردي أو مؤسسة وإدارة ملفه بالكامل.
 - يمكن الوصول إليه فقط ضمن الصلاحيات الصحيحة.
 
-### المرحلة 6: Party Management
+### المرحلة 6: Conflict Check Foundation
 
 الهدف:
-- فصل مفهوم الطرف القانوني عن العميل.
+- بناء فحص تضارب المصالح قبل acceptance لأي matter/case.
+
+النطاق:
+- Conflict Check request
+- Requester
+- Client
+- Parties
+- Related Entities
+- Historical Matters
+- Search-backed conflict analysis
+- Reviewer
+- Decision
+- Reason
+- Audit
+- Acceptance gate
+
+المخرجات:
+- conflict check API
+- reviewer workflow
+- block/allow decision with audit
+- integration with intake later
+
+شروط الإغلاق:
+- لا يمكن قبول matter/case جديد قبل المرور بآلية conflict check المناسبة.
+
+### المرحلة 7: Party Management
+
+الهدف:
+- فصل legal parties عن clients ودعم أي بنية قانونية.
 
 النطاق:
 - Party
@@ -294,20 +385,19 @@
 - Configurable party roles
 
 المخرجات:
-- نموذج طرف يدعم plaintiff/defendant/claimant/respondent/witness/expert/company/government/other.
-- ربط الأطراف بالقضايا وبالعلاقات المتبادلة.
+- party model يدعم plaintiff/defendant/claimant/respondent/witness/expert/company/government/other.
+- linking APIs إلى cases وإلى أطراف أخرى.
 
 شروط الإغلاق:
 - القضية لا تعتمد على plaintiff/defendant فقط.
-- يمكن تمثيل أي نوع طرف قانوني بدون تغيير schema لاحق.
 
-### المرحلة 7: Case Management
+### المرحلة 8: Matter / Case Management
 
 الهدف:
 - بناء قلب النظام.
 
 النطاق:
-- Case
+- Case as canonical legal record
 - Case Number
 - Internal Number
 - Client
@@ -353,7 +443,7 @@
 - case life cycle يعمل end-to-end.
 - كل تغيير مهم ينعكس في timeline و audit.
 
-### المرحلة 8: Court + Jurisdiction + Country Legal Configuration
+### المرحلة 9: Court, Jurisdiction, and Country Legal Configuration
 
 الهدف:
 - جعل المنصة دولية وقابلة للتكيّف مع أنظمة قانونية مختلفة.
@@ -368,7 +458,7 @@
 - External court identifiers
 - Legal system configuration
 - Procedure definitions
-- Deadline rules
+- Deadline rules metadata
 - Document types by country
 - Numbering rules
 - Local settings
@@ -382,7 +472,7 @@
 - يمكن إضافة jurisdiction جديد أو court type جديد عبر configuration.
 - لا توجد قواعد قانونية خاصة بدولة واحدة داخل core code.
 
-### المرحلة 9: Case Timeline
+### المرحلة 10: Case Timeline
 
 الهدف:
 - توفير timeline موحد ومؤرخ لكل ما يهم القضية.
@@ -412,13 +502,18 @@
 - كل حدث مهم يظهر في timeline.
 - لا يمكن تعديل history كأنه لم يحدث.
 
-### المرحلة 10: Workflow Engine
+### المرحلة 11: Workflow Engine
 
 الهدف:
 - تمكين workflows قابلة للتهيئة على مستوى tenant وcase type.
 
 النطاق:
 - Workflow
+- Workflow Version
+- Effective From
+- Effective To
+- Published At
+- Retired At
 - State
 - Transition
 - Condition
@@ -445,7 +540,7 @@
 - يمكن تعريف workflow مختلف لكل tenant أو case type.
 - كل transition يخضع للصلاحيات والتدقيق.
 
-### المرحلة 11: Hearing Management + Internal Calendar
+### المرحلة 12: Hearing Management + Internal Calendar
 
 الهدف:
 - إدارة الجلسات وربطها بالتقويم الداخلي.
@@ -475,7 +570,7 @@
 - يمكن تسجيل جلسة وربطها بالقضية والتقويم.
 - لا توجد فجوة صلاحيات بين hearing وcalendar.
 
-### المرحلة 12: Legal Deadline Engine
+### المرحلة 13: Legal Deadline Engine
 
 الهدف:
 - فصل deadline القانوني عن event التقويمي العادي.
@@ -484,6 +579,9 @@
 - Deadline
 - Deadline Type
 - Deadline Rule
+- Rule Version
+- Effective From
+- Effective To
 - Reminder Rule
 - Escalation Rule
 - Fixed deadlines
@@ -500,9 +598,9 @@
 
 شروط الإغلاق:
 - القواعد قابلة للتكوين حسب jurisdiction.
-- deadlines قابلة للتتبع والإثبات والإغلاق.
+- deadlines قابلة للتتبع والإثبات والإغلاق مع حفظ rule version.
 
-### المرحلة 13: Task Management
+### المرحلة 14: Task Management
 
 الهدف:
 - إدارة الأعمال اليومية المرتبطة بالقضايا والعملاء والـ workflows.
@@ -530,7 +628,7 @@
 - tasks تعمل داخل إطار الصلاحيات والتدقيق.
 - يمكن ربطها بالقضية أو العميل أو workflow.
 
-### المرحلة 14: Document Management
+### المرحلة 15: Document Management
 
 الهدف:
 - بناء إدارة مستندات قانونية بمستوى إنتاجي.
@@ -543,6 +641,7 @@
 - Document Access
 - Document Tag
 - Document Metadata
+- DocumentShare
 - Upload
 - Preview
 - Download
@@ -551,9 +650,6 @@
 - Archive
 - Share
 - Access control
-- Classification
-- Tagging
-- Retention policy
 
 المخرجات:
 - upload/download/preview
@@ -566,7 +662,7 @@
 - لا يوجد overwrite صامت للنسخ التاريخية.
 - المستندات لا تستخدم public URLs.
 
-### المرحلة 15: Document Security
+### المرحلة 16: Document Security
 
 الهدف:
 - تأمين pipeline المستندات من الرفع إلى التنزيل.
@@ -575,14 +671,18 @@
 - Upload validation
 - File type validation
 - Size validation
-- Malware scan
 - Content validation
+- Malware scan
+- Encryption in transit
+- Encryption at rest
+- Key management
+- Key rotation
 - File hash
-- Signed URL
+- Signed URL generation
+- Signed URL TTL and revocation
 - Download logging
 - Sharing audit
 - Expiration
-- Version integrity
 
 المخرجات:
 - secure document pipeline
@@ -593,7 +693,7 @@
 - لا يتم تخزين أو تقديم مستند قانوني بطريقة غير محكومة.
 - كل تنزيل أو مشاركة يمكن تتبعه.
 
-### المرحلة 16: OCR Pipeline
+### المرحلة 17: OCR Pipeline
 
 الهدف:
 - استخراج النص والكيانات من المستندات بطريقة منفصلة عن AI.
@@ -613,7 +713,7 @@
 شروط الإغلاق:
 - OCR لا يُعامل كحقيقة نهائية بدون مراجعة بشرية عند الحاجة.
 
-### المرحلة 17: Search
+### المرحلة 18: Search
 
 الهدف:
 - توفير بحث واعٍ بالصلاحيات عبر المنصة.
@@ -622,16 +722,16 @@
 - Clients
 - Cases
 - Parties
+- Courts
 - Documents
-- Hearings
 - Tasks
+- Hearings
+- Deadlines
 - Invoices
 - Communications
-- Courts
-- Deadlines
+- Search index sensitivity model
 - Permission-aware search
 - Search abstraction
-- Postgres + search index where needed
 
 المخرجات:
 - indexers/background jobs
@@ -642,7 +742,7 @@
 - لا يعود أي search result غير مصرّح به.
 - search cross-tenant ممنوع.
 
-### المرحلة 18: Document Templates
+### المرحلة 19: Document Templates
 
 الهدف:
 - بناء محرك قوالب لإنتاج مستندات قانونية قابلة للتخصيص.
@@ -667,7 +767,76 @@
 شروط الإغلاق:
 - القوالب مرتبطة بالـ tenant وبصلاحيات واضحة.
 
-### المرحلة 19: Communications
+### المرحلة 20: Time Tracking
+
+الهدف:
+- Capture billable time accurately and safely.
+
+النطاق:
+- Timer
+- Manual entry
+- Time Entry
+- Approval
+- Billable
+- Non-billable
+- Rates
+- User rates
+- Client rates
+- Case rates
+- Rounding rules
+
+المخرجات:
+- timer UI
+- manual entry UI
+- approval flow
+- billing-ready time entry model
+
+شروط الإغلاق:
+- Approved time entries can flow cleanly into invoices.
+
+### المرحلة 21: Billing + Finance
+
+الهدف:
+- Make the platform financially usable in production.
+
+النطاق:
+- Fee
+- Expense
+- Invoice
+- Payment
+- Credit
+- Refund
+- Immutable financial transactions
+- Transaction IDs
+- Idempotency keys
+- Payment provider references
+- Reconciliation states
+- Invoice versions
+- Currency precision
+- Exchange rates where applicable
+- Tax calculation version
+- Fixed fees
+- Hourly fees
+- Retainers
+- Milestones
+- Discounts
+- Taxes where configured
+- Partial payments
+- Outstanding balances
+- Finance integration adapters
+
+المخرجات:
+- billing ledger داخل النظام
+- invoice lifecycle
+- payment reconciliation
+- expense flow into invoices
+
+شروط الإغلاق:
+- لا يوجد double-charge أو double-payment دون حماية.
+- transactions غير قابلة للتعديل بشكل destructive.
+- money uses fixed precision decimals or integer minor units only.
+
+### المرحلة 22: Communications
 
 الهدف:
 - إنشاء مركز اتصال موحد وقابل للتوسعة.
@@ -697,7 +866,7 @@
 - core لا يتحدث مباشرة مع مزود معين.
 - كل message يمكن ربطه بعميل أو قضية أو مهمة.
 
-### المرحلة 20: Calendar Integrations
+### المرحلة 23: Calendar Integrations
 
 الهدف:
 - ربط calendar الداخلي بالتقاويم الخارجية.
@@ -722,73 +891,7 @@
 - يمكن تفعيل/إيقاف الربط لكل tenant.
 - التعارضات والتكرار لها سياسة واضحة.
 
-### المرحلة 21: Billing + Expenses + Invoices + Payments + Finance Integration
-
-الهدف:
-- تمكين الفوترة والتحصيل بطريقة قانونية وتجارية سليمة.
-
-النطاق:
-- Fee
-- Time Entry billing linkage
-- Expense
-- Invoice
-- Payment
-- Credit
-- Refund
-- Fixed fees
-- Hourly fees
-- Retainers
-- Milestones
-- Discounts
-- Taxes where configured
-- Partial payments
-- Outstanding balances
-- Finance integration adapters
-- Accounting systems
-- Payment providers
-- Banks
-- Tax systems where applicable
-
-المخرجات:
-- billing ledger داخل النظام
-- invoice lifecycle
-- payment reconciliation
-- expense flow into invoices
-
-شروط الإغلاق:
-- لا يوجد double-charge أو double-payment دون حماية.
-- التكاملات المالية عبر adapters فقط.
-
-### المرحلة 22: Time Tracking
-
-الهدف:
-- بناء تتبع وقت صالح للفوترة والمراجعة.
-
-النطاق:
-- Timer
-- Manual entry
-- Time Entry
-- Approval
-- Billing
-- Invoice
-- Billable
-- Non-billable
-- Rates
-- User rates
-- Client rates
-- Case rates
-- Rounding rules
-
-المخرجات:
-- timer UI
-- manual entry UI
-- approval flow
-- billing export into invoices
-
-شروط الإغلاق:
-- الوقت القابل للفوترة لا يدخل الفاتورة إلا عبر قواعد واضحة.
-
-### المرحلة 23: Client Portal
+### المرحلة 24: Client Portal
 
 الهدف:
 - تقديم portal آمن ومحدود الصلاحيات للعملاء.
@@ -805,7 +908,7 @@
 - Appointments
 - Invoices
 - Payments
-- Intake forms
+- Intake entry points where appropriate
 
 المخرجات:
 - portal UI
@@ -816,7 +919,73 @@
 - العميل لا يرى إلا ما هو مصرّح له.
 - portal لا يكسر tenant isolation.
 
-### المرحلة 24: Reporting Engine
+### المرحلة 25: Import / Export
+
+الهدف:
+- دعم نقل البيانات بشكل آمن وقابل للمراجعة.
+
+النطاق:
+- CSV
+- Excel
+- Future connectors
+- Schema detection
+- Field mapping
+- Validation
+- Preview
+- Approval
+- Background import
+- Result report
+- Error rows
+- Duplicate detection
+- Optional rollback strategy
+- Export authorization
+- Export policy
+- Maximum export size
+- Sensitive-field restrictions
+- Secure temporary storage
+- Controlled download
+- Watermarking where appropriate
+- Expiration
+- Audit
+
+المخرجات:
+- import jobs
+- export jobs
+- user-visible validation reports
+
+شروط الإغلاق:
+- الاستيراد والتصدير يعملان عبر queue وبصورة idempotent.
+
+### المرحلة 26: Notifications
+
+الهدف:
+- إدارة التنبيهات والمذكرات عبر قنوات متعددة.
+
+النطاق:
+- Event
+- Notification Rule
+- User Preferences
+- Channel
+- In-app
+- Email
+- SMS
+- WhatsApp
+- Push
+- Immediate notifications
+- Scheduled notifications
+- Reminder sequences
+- Escalations
+- Quiet hours
+
+المخرجات:
+- notification engine
+- preference center
+- event-driven delivery
+
+شروط الإغلاق:
+- الإشعارات لا تتجاوز تفضيلات المستخدم حيثما ينطبق.
+
+### المرحلة 27: Reporting
 
 الهدف:
 - تمكين تقارير تشغيلية وقانونية قابلة للتهيئة.
@@ -846,7 +1015,7 @@
 شروط الإغلاق:
 - كل تقرير يحترم tenant + authorization.
 
-### المرحلة 25: Dashboard Engine
+### المرحلة 28: Dashboard
 
 الهدف:
 - عرض حالة العمل بشكل واضح حسب الدور.
@@ -868,93 +1037,6 @@
 - dashboard لا يعرض data غير مصرّح بها.
 - تجربة الاستخدام تدعم RTL/LTR.
 
-### المرحلة 26: Import / Export
-
-الهدف:
-- دعم نقل البيانات بشكل آمن وقابل للمراجعة.
-
-النطاق:
-- CSV
-- Excel
-- Future connectors
-- Schema detection
-- Field mapping
-- Validation
-- Preview
-- Approval
-- Background import
-- Result report
-- Error rows
-- Duplicate detection
-- Optional rollback strategy
-- Export authorization
-- Secure temporary storage
-- Controlled download
-- Audit
-
-المخرجات:
-- import jobs
-- export jobs
-- user-visible validation reports
-
-شروط الإغلاق:
-- الاستيراد والتصدير يعملان عبر queue وبصورة idempotent.
-
-### المرحلة 27: Notifications
-
-الهدف:
-- إدارة التنبيهات والمذكرات عبر قنوات متعددة.
-
-النطاق:
-- Event
-- Notification Rule
-- User Preferences
-- Channel
-- In-app
-- Email
-- SMS
-- WhatsApp
-- Push
-- Immediate notifications
-- Scheduled notifications
-- Reminder sequences
-- Escalations
-- Quiet hours
-
-المخرجات:
-- notification engine
-- preference center
-- event-driven delivery
-
-شروط الإغلاق:
-- الإشعارات لا تتجاوز تفضيلات المستخدم حيثما ينطبق.
-
-### المرحلة 28: Conflict of Interest
-
-الهدف:
-- منع تضارب المصالح قبل قبول العمل.
-
-النطاق:
-- Conflict Check
-- Requester
-- Client
-- Parties
-- Related Entities
-- Historical Matters
-- Search Results
-- Reviewer
-- Decision
-- Reason
-- Audit
-
-المخرجات:
-- conflict search flow
-- review and decision workflow
-- audit trail
-
-شروط الإغلاق:
-- conflict decision لا تتم بدون صلاحية وتدقيق.
-
 ### المرحلة 29: Client Intake
 
 الهدف:
@@ -964,7 +1046,7 @@
 - Intake Request
 - Information Collection
 - Document Collection
-- Conflict Check
+- Conflict check
 - Review
 - Approval
 - Client Creation
@@ -975,6 +1057,11 @@
 - Conditional questions
 - File upload
 - Consent
+- Rate limiting
+- Bot protection
+- Anti-automation controls
+- No tenant enumeration
+- No user enumeration
 
 المخرجات:
 - intake forms
@@ -983,8 +1070,9 @@
 
 شروط الإغلاق:
 - أي intake يمر بآلية تحقق وصلاحيات وتدقيق.
+- لا يمكن قبول matter/case قبل conflict check المناسب.
 
-### المرحلة 30: Audit / Compliance / Data Protection / Retention / Archiving
+### المرحلة 30: Audit + Compliance + Retention + Legal Hold
 
 الهدف:
 - تحويل التدقيق والامتثال وحفظ البيانات إلى وظائف منتجة كاملة.
@@ -1005,23 +1093,30 @@
 - Correlation ID
 - Timestamp
 - Access logs
+- Export logs
 - Data classification
 - Retention policies
 - Archiving
+- LegalHold
+- LegalHoldScope
+- LegalHoldResource
 - Secure deletion where legally permitted
 - Privacy settings
 - Data subject workflows where required
+- Compliance reporting
+- Data residency enforcement hooks
 
 المخرجات:
 - append-only audit history for app users
 - retention and archiving engine
+- legal hold preventing purge/deletion
 - compliance reports
 
 شروط الإغلاق:
 - كل change حساس يترك أثره.
 - سياسات الاحتفاظ والتأريش والتخزين قابلة للتكوين حسب jurisdiction وtenant.
 
-### المرحلة 31: Integration Hub
+### المرحلة 31: Integration Hub Completion
 
 الهدف:
 - توحيد جميع التكاملات الخارجية خلف واجهة واحدة قابلة للاستبدال.
@@ -1038,22 +1133,24 @@
 - Accounting
 - AI
 - Provider adapters
-- Integration Management
+- Integration management
 - Webhooks
 - Signature validation
 - Replay protection
 - Timestamp validation
 - Idempotency
 - Retry policy
+- Provider capability matrix
 
 المخرجات:
 - integration registry
 - tenant integration config
 - webhook ingestion/outbound delivery
 - adapter-based provider implementations
+- provider status, limits, region, retention metadata
 
 شروط الإغلاق:
-- core لا يعرف تفاصيل provider-specific APIs.
+- core modules never depend directly on provider-specific APIs.
 - كل webhook آمن ومؤرشف ومُعاد المحاولة عند الحاجة.
 
 ### المرحلة 32: AI Layer
@@ -1073,28 +1170,39 @@
 - Evaluations
 - Providers
 - OpenAI / Gemini / Claude / Local Models
+- AI data classification
+- Prompt injection defense
+- Tool authorization
+- Output validation
+- Human approval gates
+- Model version tracking
+- Prompt version tracking
+- RAG source references
+- AI request audit
+- AI response audit
+- AI tool-call audit
 
 المخرجات:
 - AI access layer
 - policy enforcement for tenant data
 - human approval gates
-- RAG with permission-aware retrieval
+- permission-aware retrieval
 - evaluation harness
 
 شروط الإغلاق:
 - AI لا تتجاوز authorization.
 - AI output لا يتحول تلقائياً إلى legal record.
+- AI memory منفصلة عن legal record وcase data.
 - AI تبقى قابلة للتعطيل دون كسر core.
 
-### المرحلة 33: Operations + Backup + Disaster Recovery + Monitoring
+### المرحلة 33: Operations + Backup + Disaster Recovery
 
 الهدف:
 - ضمان أن المنتج قابل للتشغيل، الاسترداد، والمراقبة في الإنتاج.
 
 النطاق:
-- Automated backups
-- Backup encryption
-- Retention policies
+- Automated encrypted backups
+- Backup retention
 - Restore testing
 - Disaster recovery procedure
 - RPO
@@ -1102,11 +1210,11 @@
 - Monitoring
 - Alerting
 - Log aggregation
-- Metrics
 - Tracing
 - Incident response
 - Release strategy
 - Environment separation
+- Operational smoke tests
 
 المخرجات:
 - backup and restore runbooks
@@ -1115,14 +1223,14 @@
 - alerts for critical system behavior
 
 شروط الإغلاق:
-- لا يعتبر النسخ الاحتياطي ناجحاً حتى يتم اختبار restore فعلي.
-- يوجد مسار واضح للتعافي من الفشل.
+- Restore has been tested successfully.
+- Critical operational alerts are in place.
 
 ## المسارات المستمرة عبر كل المراحل
 
-- Database design: use PostgreSQL مع foreign keys, unique constraints, check constraints, and migrations.
-- Caching: Redis فقط كـ cache/session/rate limit/performance layer، وليس source of truth.
-- Concurrency: lock sequences, idempotency keys, queue deduplication, optimistic locking where يلزم.
+- Database design: PostgreSQL مع foreign keys, unique constraints, check constraints, indexes, and migrations.
+- Cache: Redis ليس source of truth.
+- Concurrency: transactions, unique constraints, idempotency keys, queue deduplication, optimistic locking where needed.
 - API: `/api/v1` ثابت، ولا نكسر contracts بصمت.
 - Frontend: no business logic, no hardcoded authorization assumptions, no hardcoded translations.
 - Testing: كل مرحلة لها tests مناسبة، ومع المراحل الحرجة أضيف security and e2e coverage.
@@ -1132,17 +1240,44 @@
 - Observability: logs, metrics, traces, correlation IDs.
 - Security: secure defaults دائماً.
 - AI: always optional and permission-aware.
+- Release: each phase needs rollback or mitigation plan and staging validation.
 
-## ترتيب التنفيذ العملي
+## الترتيب التنفيذي النهائي
 
-1. نثبت الوثائق والقرارات في المرحلة 0.
-2. نبني foundation في المرحلة 1.
-3. نُنجز الهوية والعزل والأمن أولاً.
-4. نفتح التهيئة والتنظيم.
-5. نبني العميل والطرف والقضية والمحكمة والجدول الزمني.
-6. نضيف workflows والجلسات والـ deadlines والمهام والمستندات.
-7. نكمل البحث والقوالب والتواصل والتقويم والفوترة والتقارير والبوابات.
-8. نثبت الامتثال والتكاملات وطبقة AI والعمليات النهائية.
+1. Phase 0 - Decision Freeze
+2. Phase 1 - Foundation
+3. Phase 2 - Identity + Multi-Tenancy
+4. Phase 3 - Security Foundation + Audit Foundation
+5. Phase 4 - Organization Configuration
+6. Phase 5 - Client Management
+7. Phase 6 - Conflict Check Foundation
+8. Phase 7 - Party Management
+9. Phase 8 - Matter / Case Management
+10. Phase 9 - Court, Jurisdiction, and Country Legal Configuration
+11. Phase 10 - Case Timeline
+12. Phase 11 - Workflow Engine
+13. Phase 12 - Hearing Management + Internal Calendar
+14. Phase 13 - Legal Deadline Engine
+15. Phase 14 - Task Management
+16. Phase 15 - Document Management
+17. Phase 16 - Document Security
+18. Phase 17 - OCR Pipeline
+19. Phase 18 - Search
+20. Phase 19 - Document Templates
+21. Phase 20 - Time Tracking
+22. Phase 21 - Billing + Finance
+23. Phase 22 - Communications
+24. Phase 23 - Calendar Integrations
+25. Phase 24 - Client Portal
+26. Phase 25 - Import / Export
+27. Phase 26 - Notifications
+28. Phase 27 - Reporting
+29. Phase 28 - Dashboard
+30. Phase 29 - Client Intake
+31. Phase 30 - Audit + Compliance + Retention + Legal Hold
+32. Phase 31 - Integration Hub Completion
+33. Phase 32 - AI Layer
+34. Phase 33 - Operations + Backup + Disaster Recovery
 
 ## المبدأ النهائي
 

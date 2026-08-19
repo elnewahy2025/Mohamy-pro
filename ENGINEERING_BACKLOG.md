@@ -1,10 +1,15 @@
 # Engineering Backlog
 
-This backlog turns `Plan.txt` into an execution list. It is organized phase by phase and assumes:
+This backlog is the implementation companion to `Plan.txt`. It has been revised to match the dependency model in the architecture review:
 
-- Every phase is production-grade for its own scope.
-- Every phase ships with migrations, tests, docs, logging, and rollback strategy where applicable.
-- No phase starts before the previous phase exit criteria are met.
+- earlier integration contracts
+- earlier audit foundation
+- earlier backup baseline
+- explicit authorization and phase dependency docs
+- conflict-check before acceptance
+- time tracking before billing
+- versioned workflows and deadline rules
+- stronger document, search, export, AI, and operations controls
 
 ## Cross-cutting rules
 
@@ -12,24 +17,31 @@ This backlog turns `Plan.txt` into an execution list. It is organized phase by p
 - Tenant isolation must be enforced in DB, repository, service, search, cache, job, storage, export, and integration layers.
 - No direct provider SDK calls inside domain modules.
 - No hardcoded country, court system, case type, workflow, fee model, or document type.
+- All money uses fixed precision decimal or integer minor units only.
 - Every user-facing screen must support empty/loading/error states, responsive layouts, RTL/LTR, and accessibility.
 - Every business-critical feature must have automated tests before release.
+- No AI memory is treated as a legal record.
+- No public legal-document URLs.
 
 ## Phase 0. Decision freeze
 
 Goal:
-- Lock architecture, platform choices, and delivery standards before implementation starts.
+- Lock the architectural decisions, domain terms, and non-negotiable platform policies before implementation starts.
 
 Backlog:
-- Write and review `PROJECT_REFERENCE.md`.
-- Finalize `ARCHITECTURE.md` with module boundaries and layering rules.
-- Finalize `DOMAIN_MODEL.md` for identity, tenancy, cases, clients, parties, documents, billing, and integrations.
-- Finalize `DATABASE.md` with PostgreSQL strategy, key tables, constraints, and migration policy.
-- Finalize `API.md` with `/api/v1`, response formats, error model, pagination, filtering, and idempotency rules.
-- Finalize `SECURITY.md`, `AUTHORIZATION.md`, and `MULTI_TENANCY.md`.
-- Finalize `AI_ARCHITECTURE.md` and `INTEGRATION_HUB.md`.
-- Finalize `TESTING.md`, `DEPLOYMENT.md`, and `ROADMAP.md`.
-- Record ADRs for stack, deployment model, cache, queue, storage, and AI boundaries.
+- Finalize `PROJECT_REFERENCE.md`.
+- Finalize `ARCHITECTURE.md` with strict module boundaries and layering rules.
+- Finalize `DOMAIN_MODEL.md` with the canonical `Case` model and the tenant/organization/branch/department/team hierarchy.
+- Finalize `DATABASE.md` with PostgreSQL strategy, row-level enforcement where appropriate, constraints, and migration policy.
+- Finalize `API.md` with `/api/v1`, response formats, error model, pagination, filtering, search, and idempotency rules.
+- Finalize `SECURITY.md`, `AUTHORIZATION.md`, and `AUTHORIZATION_MATRIX.md`.
+- Finalize `MULTI_TENANCY.md` and `PHASE_DEPENDENCIES.md`.
+- Finalize `THREAT_MODEL.md`.
+- Finalize `AI_ARCHITECTURE.md`, `INTEGRATION_HUB.md`, and `INTEGRATION_CONTRACTS.md`.
+- Finalize `DATA_CLASSIFICATION.md`, `DATA_RESIDENCY.md`, and `PROVIDER_CAPABILITY_MATRIX.md`.
+- Finalize `TESTING.md`, `API_COMPATIBILITY.md`, `OBSERVABILITY.md`, `MIGRATION_POLICY.md`, `DEPLOYMENT.md`, and `ROADMAP.md`.
+- Record ADRs for stack, deployment model, cache, queue, storage, integration contracts, AI boundaries, and backup baseline.
+- Freeze the domain term decision: `Case` is canonical; `Matter` is only an optional UI alias.
 
 Exit criteria:
 - All baseline docs approved.
@@ -53,12 +65,18 @@ Backlog:
 - Add CI pipeline for lint, test, build, and migration validation.
 - Add baseline unit and integration test harnesses.
 - Add initial observability hooks for logs and metrics.
+- Define queue standards: naming, priorities, retries, dead-letter queues, deduplication, correlation IDs.
+- Add transactional outbox table and dispatcher skeleton.
+- Add idempotency registry skeleton.
+- Add automated encrypted backup job and restore smoke test.
+- Add architecture fitness tests for provider imports, tenant context, and module boundaries.
 
 Exit criteria:
 - Application boots locally and in CI.
 - Database, Redis, queue, and storage all connect.
 - API and frontend both run.
 - Tests and CI pass.
+- Backup and restore smoke test passes.
 
 ## Phase 2. Identity and multi-tenancy
 
@@ -66,7 +84,7 @@ Goal:
 - Build authentication, membership, and tenant isolation as the system core.
 
 Backlog:
-- Design and migrate `User`, `Membership`, `Tenant`, `Organization`, `Branch`, `Department`, `Role`, `Permission`, `DirectPermission`, and `Denial`.
+- Design and migrate `User`, `Membership`, `Tenant`, `Organization`, `Branch`, `Department`, `Team`, `Role`, `Permission`, `DirectPermission`, and `Denial`.
 - Implement login, logout, password reset, password change, and email verification.
 - Implement MFA architecture and recovery flow scaffolding.
 - Implement session management and device/session tracking.
@@ -75,6 +93,7 @@ Backlog:
 - Add permission cache with explicit invalidation.
 - Enforce branch and department restrictions in authorization checks.
 - Add login/logout/membership-switch audit events.
+- Add authorization policy primitives such as `CanViewCase`, `CanDownloadDocument`, and `CanApproveInvoice`.
 - Build backend tests for tenant A vs tenant B access, assigned case access, and branch restrictions.
 
 Exit criteria:
@@ -82,7 +101,7 @@ Exit criteria:
 - All tenant isolation tests pass.
 - A user with multiple memberships can switch safely.
 
-## Phase 3. Security foundation
+## Phase 3. Security foundation + audit foundation
 
 Goal:
 - Harden the platform before business data is added.
@@ -94,15 +113,18 @@ Backlog:
 - Add input validation and output validation standards.
 - Implement refresh token rotation.
 - Add security event logging and audit foundation.
+- Add data classification v1 for documents, exports, AI, and portal access.
 - Add secrets management rules for local, staging, and production.
 - Add tests for IDOR, privilege escalation, tenant escape, rate-limit bypass, and unauthorized API calls.
 - Add secure session invalidation and session revocation flows.
+- Add security scanning to CI: SAST, dependency scanning, secret scanning, container scanning, SBOM generation, and license scanning.
 - Add baseline threat modeling notes for critical endpoints.
 
 Exit criteria:
 - Security test suite passes.
 - No raw secrets in source control.
 - Core auth flows are protected against the listed abuse cases.
+- Audit events exist for authentication, membership, permission, and sensitive access changes.
 
 ## Phase 4. Organization configuration and platform administration
 
@@ -113,7 +135,7 @@ Backlog:
 - Build settings storage and admin APIs for organization, branches, departments, teams, practice areas, case types, case statuses, party roles, court types, document types, task types, fee types, currencies, numbering rules, notification preferences, branding, and localization.
 - Add platform administration screens.
 - Add subscription model scaffolding.
-- Add feature flags service and UI.
+- Add feature flags service and UI with safe defaults, audit, owner, reason, and expiration.
 - Add usage metering model and reporting.
 - Add tenant bootstrap and default configuration seeding.
 - Add tests to ensure configurations can change without schema or code changes.
@@ -142,7 +164,22 @@ Exit criteria:
 - Clients can be created, updated, searched, and audited end-to-end.
 - All client access is tenant-scoped and permission-aware.
 
-## Phase 6. Party management
+## Phase 6. Conflict check foundation
+
+Goal:
+- Build conflict checking before any matter/case acceptance.
+
+Backlog:
+- Implement conflict request, requester, client, parties, related entities, historical matters, reviewer, decision, reason, and audit.
+- Implement search-backed conflict analysis for relevant entities and historical relationships.
+- Add acceptance gate so intake cannot proceed until conflict check completes.
+- Add reviewer workflow and decision UI/API.
+- Add tests for mandatory checks, denial paths, and authorization.
+
+Exit criteria:
+- No matter/case can be accepted before the required conflict process completes.
+
+## Phase 7. Party management
 
 Goal:
 - Separate legal parties from clients and support arbitrary legal role structures.
@@ -157,10 +194,10 @@ Backlog:
 Exit criteria:
 - A case can represent arbitrary legal party structures without code changes.
 
-## Phase 7. Case management
+## Phase 8. Matter / Case management
 
 Goal:
-- Build the core matter/case workflow.
+- Build the core legal record.
 
 Backlog:
 - Implement case identity, case number, internal number, status, priority, open/close dates, and custom fields.
@@ -175,7 +212,7 @@ Backlog:
 Exit criteria:
 - A case can be operated as a production matter record from creation to archive.
 
-## Phase 8. Court, jurisdiction, and country legal configuration
+## Phase 9. Court, jurisdiction, and country legal configuration
 
 Goal:
 - Make the product adaptable to multiple legal systems.
@@ -183,14 +220,14 @@ Goal:
 Backlog:
 - Implement `Country`, `Jurisdiction`, `Court`, `CourtType`, `CourtDepartment`, and external court identifiers.
 - Add location and jurisdiction metadata.
-- Add country-specific procedure definitions, deadline rules, document types, numbering rules, and local settings.
+- Add country-specific procedure definitions, deadline rule metadata, document types, numbering rules, and local settings.
 - Add admin UI for country and jurisdiction configuration.
 - Add tests proving country configuration does not require code changes.
 
 Exit criteria:
 - A new jurisdiction can be modeled entirely by configuration and extension data.
 
-## Phase 9. Case timeline
+## Phase 10. Case timeline
 
 Goal:
 - Create a unified append-only event timeline.
@@ -205,23 +242,25 @@ Backlog:
 Exit criteria:
 - Important events are visible in timeline and cannot be rewritten silently.
 
-## Phase 10. Workflow engine
+## Phase 11. Workflow engine
 
 Goal:
 - Enable configurable legal workflows per tenant and case type.
 
 Backlog:
-- Implement workflow definition model: states, transitions, conditions, actions, approvals, required fields, required documents, notifications, deadlines, webhooks, escalations, and SLA timers.
+- Implement workflow definition model with states, transitions, conditions, actions, approvals, required fields, required documents, notifications, deadlines, webhooks, escalations, and SLA timers.
+- Add workflow versioning with effective-from, effective-to, published-at, and retired-at fields.
 - Implement workflow execution engine.
 - Add manual override authorization rules.
 - Add workflow admin UI and APIs.
 - Add background actions for automatic tasks and reminders.
-- Add tests for transition validity, escalation, and authorization.
+- Add tests for transition validity, version binding, escalation, and authorization.
 
 Exit criteria:
 - Different tenants can run different workflows safely.
+- Historical executions always reference the exact workflow version used.
 
-## Phase 11. Hearing management and internal calendar
+## Phase 12. Hearing management and internal calendar
 
 Goal:
 - Manage hearings and internal calendar events.
@@ -236,23 +275,24 @@ Backlog:
 Exit criteria:
 - Hearings can be scheduled and reflected in the calendar without authorization leaks.
 
-## Phase 12. Legal deadline engine
+## Phase 13. Legal deadline engine
 
 Goal:
 - Compute and manage deadlines as a dedicated legal subsystem.
 
 Backlog:
-- Implement deadline entity, deadline type, deadline rule, reminder rule, escalation rule, and completion evidence.
+- Implement deadline entity, deadline type, deadline rule, rule version, reminder rule, escalation rule, and completion evidence.
 - Support fixed, relative, rule-based, manual, and recurring deadlines.
 - Implement jurisdiction-based deadline calculation.
 - Add reminder and escalation job scheduling.
 - Add UI for deadline creation and review.
-- Add tests for date calculation and reminder behavior.
+- Add tests for date calculation, reminder behavior, and rule-version preservation.
 
 Exit criteria:
 - Deadline calculation is configurable by jurisdiction and validated by tests.
+- Historical deadlines preserve the exact rule version used.
 
-## Phase 13. Task management
+## Phase 14. Task management
 
 Goal:
 - Support operational work with task control and escalation.
@@ -267,13 +307,14 @@ Backlog:
 Exit criteria:
 - Tasks can be created, assigned, escalated, and completed with audit history.
 
-## Phase 14. Document management
+## Phase 15. Document management
 
 Goal:
 - Build the document system as a first-class legal data store.
 
 Backlog:
 - Implement document metadata, type, owner, case/client links, versions, storage object, OCR result pointer, classification, access policy, retention policy, and audit history.
+- Add `DocumentShare` as an explicit entity with permission, expiry, revocation, watermark policy, and audit reference.
 - Add upload, preview, download, replace, share, archive, and versioning flows.
 - Implement secure object storage integration through abstraction.
 - Add document tagging and search indexing hooks.
@@ -283,14 +324,16 @@ Backlog:
 Exit criteria:
 - Documents are versioned and never overwritten silently.
 
-## Phase 15. Document security
+## Phase 16. Document security
 
 Goal:
 - Secure the document pipeline end to end.
 
 Backlog:
 - Implement upload validation, file type validation, size validation, content validation, malware scanning, and file hashing.
-- Implement signed URL generation and expiration.
+- Implement encryption in transit and at rest.
+- Implement key management and key rotation.
+- Implement signed URL generation with short TTL, resource binding, tenant binding, and revocation.
 - Add download logging and sharing audit.
 - Enforce retention and archival rules.
 - Add approval status for security-sensitive documents.
@@ -300,7 +343,7 @@ Exit criteria:
 - No public legal-document URLs exist.
 - Every file access is controlled and logged.
 
-## Phase 16. OCR pipeline
+## Phase 17. OCR pipeline
 
 Goal:
 - Extract text and metadata without mixing OCR output with approved data.
@@ -315,13 +358,14 @@ Backlog:
 Exit criteria:
 - OCR runs asynchronously and reviewed data is distinguishable from raw OCR output.
 
-## Phase 17. Search
+## Phase 18. Search
 
 Goal:
 - Deliver permission-aware global and local search.
 
 Backlog:
 - Define search abstraction and indexing strategy.
+- Treat the search index as sensitive data with tenant, auth, deletion, and retention rules.
 - Index clients, cases, parties, courts, documents, tasks, hearings, deadlines, invoices, and communications.
 - Add search filters, sorting, pagination, and relevance handling.
 - Add permission checks before result return.
@@ -331,7 +375,7 @@ Backlog:
 Exit criteria:
 - Search never returns cross-tenant or unauthorized data.
 
-## Phase 18. Document templates
+## Phase 19. Document templates
 
 Goal:
 - Produce templated legal documents safely and traceably.
@@ -346,7 +390,42 @@ Backlog:
 Exit criteria:
 - Generated documents are traceable to template version and source data.
 
-## Phase 19. Communications
+## Phase 20. Time tracking
+
+Goal:
+- Capture billable time accurately and safely.
+
+Backlog:
+- Implement timer and manual time entry flows.
+- Add billable/non-billable flags, rounding rules, and rates by user/client/case.
+- Implement approval workflow.
+- Link approved time to billing and invoicing.
+- Add timer, entry, and approval UI.
+- Add tests for rate application and approval behavior.
+
+Exit criteria:
+- Approved time entries can flow cleanly into invoices.
+
+## Phase 21. Billing + finance
+
+Goal:
+- Make the platform financially usable in production.
+
+Backlog:
+- Implement fee models: fixed, hourly, retainer, milestone, discounts, taxes, partial payments, credits, refunds.
+- Implement immutable financial transactions with transaction IDs, idempotency keys, payment provider references, reconciliation states, invoice versions, and tax calculation version.
+- Implement expense capture and invoice linkage.
+- Implement invoice lifecycle and payment reconciliation.
+- Add payment provider adapters and accounting integration adapters.
+- Add outstanding balance and ledger views.
+- Add billing, invoice, and payment audit events.
+- Add tests for double-charge prevention, payment reconciliation, and money precision.
+
+Exit criteria:
+- Billing and payment records are reliable and traceable.
+- Historical financial corrections are modeled as new compensating transactions.
+
+## Phase 22. Communications
 
 Goal:
 - Unify outbound and inbound communications.
@@ -362,7 +441,7 @@ Backlog:
 Exit criteria:
 - Communications are tracked and linked without provider lock-in.
 
-## Phase 20. Calendar integrations
+## Phase 23. Calendar integrations
 
 Goal:
 - Connect the internal calendar to external providers.
@@ -379,40 +458,7 @@ Backlog:
 Exit criteria:
 - Calendar sync is recoverable and tenant-configurable.
 
-## Phase 21. Billing, expenses, invoices, payments, finance integration
-
-Goal:
-- Make the platform financially usable in production.
-
-Backlog:
-- Implement fee models: fixed, hourly, retainer, milestone, discounts, taxes, partial payments, credits, refunds.
-- Implement expense capture and invoice linkage.
-- Implement invoice lifecycle and payment reconciliation.
-- Add payment provider adapters and accounting integration adapters.
-- Add outstanding balance and ledger views.
-- Add billing, invoice, and payment audit events.
-- Add tests for double-charge prevention and payment reconciliation.
-
-Exit criteria:
-- Billing and payment records are reliable and traceable.
-
-## Phase 22. Time tracking
-
-Goal:
-- Capture billable time accurately and safely.
-
-Backlog:
-- Implement timer and manual time entry flows.
-- Add billable/non-billable flags, rounding rules, and rates by user/client/case.
-- Implement approval workflow.
-- Link approved time to billing and invoicing.
-- Add timer, entry, and approval UI.
-- Add tests for rate application and approval behavior.
-
-Exit criteria:
-- Approved time entries can flow cleanly into invoices.
-
-## Phase 23. Client portal
+## Phase 24. Client portal
 
 Goal:
 - Expose a secure client-facing surface.
@@ -428,7 +474,36 @@ Backlog:
 Exit criteria:
 - The client can see only authorized data and perform only authorized actions.
 
-## Phase 24. Reporting engine
+## Phase 25. Import and export
+
+Goal:
+- Move data safely in and out of the platform.
+
+Backlog:
+- Implement CSV and Excel import pipeline with schema detection, field mapping, validation, preview, approval, and background processing.
+- Implement duplicate detection and optional rollback strategy.
+- Implement export authorization, filtering, maximum size limits, sensitive-field restrictions, secure temporary storage, controlled download, watermarking where appropriate, expiration, and audit.
+- Add import/export progress views and result reports.
+- Add tests for invalid rows, duplicate handling, and authorization.
+
+Exit criteria:
+- Import and export run asynchronously and are fully auditable.
+
+## Phase 26. Notifications
+
+Goal:
+- Deliver a configurable notification system.
+
+Backlog:
+- Implement notification events, rules, user preferences, channels, quiet hours, reminder sequences, and escalations.
+- Support in-app, email, SMS, WhatsApp, and push channels.
+- Add notification UI for preferences and history.
+- Add tests for rule evaluation and quiet-hour suppression.
+
+Exit criteria:
+- Notifications honor preferences and permission boundaries.
+
+## Phase 27. Reporting
 
 Goal:
 - Provide configurable operational and legal reporting.
@@ -444,7 +519,7 @@ Backlog:
 Exit criteria:
 - Reports respect tenant boundaries and permissions.
 
-## Phase 25. Dashboard engine
+## Phase 28. Dashboard
 
 Goal:
 - Deliver role-based operational dashboards.
@@ -459,49 +534,6 @@ Backlog:
 Exit criteria:
 - Dashboards are usable, secure, and localized.
 
-## Phase 26. Import and export
-
-Goal:
-- Move data safely in and out of the platform.
-
-Backlog:
-- Implement CSV and Excel import pipeline with schema detection, field mapping, validation, preview, approval, and background processing.
-- Implement duplicate detection and optional rollback strategy.
-- Implement export authorization, filtering, secure temporary storage, controlled download, and audit.
-- Add import/export progress views and result reports.
-- Add tests for invalid rows, duplicate handling, and authorization.
-
-Exit criteria:
-- Import and export run asynchronously and are fully auditable.
-
-## Phase 27. Notifications
-
-Goal:
-- Deliver a configurable notification system.
-
-Backlog:
-- Implement notification events, rules, user preferences, channels, quiet hours, reminder sequences, and escalations.
-- Support in-app, email, SMS, WhatsApp, and push channels.
-- Add notification UI for preferences and history.
-- Add tests for rule evaluation and quiet-hour suppression.
-
-Exit criteria:
-- Notifications honor preferences and permission boundaries.
-
-## Phase 28. Conflict of interest
-
-Goal:
-- Support conflict checks before representation begins.
-
-Backlog:
-- Implement conflict request, requester, client, parties, related entities, historical matters, search results, reviewer, decision, reason, and audit.
-- Add conflict search across relevant entities and historical relationships.
-- Add reviewer workflow and decision UI.
-- Add tests for mandatory checks and authorization.
-
-Exit criteria:
-- Conflict decisions are auditable and permission-controlled.
-
 ## Phase 29. Client intake
 
 Goal:
@@ -510,14 +542,15 @@ Goal:
 Backlog:
 - Implement intake request, information collection, document collection, conflict check, review, approval, client creation, and case creation flows.
 - Add public intake form, secure invitation, and portal intake paths.
-- Add conditional questions, file upload, and consent collection.
+- Add conditional questions, file upload, consent collection, rate limiting, bot protection, and anti-automation controls.
+- Add abuse prevention: no tenant enumeration, no user enumeration.
 - Add intake admin UI and workflow hooks.
-- Add tests for intake approval and case creation.
+- Add tests for intake approval, case creation, and conflict gate enforcement.
 
 Exit criteria:
 - Intake can safely become a client and/or case with full audit trail.
 
-## Phase 30. Audit, compliance, data protection, retention, archiving
+## Phase 30. Audit, compliance, retention, legal hold
 
 Goal:
 - Make governance, retention, and compliance operational.
@@ -527,14 +560,16 @@ Backlog:
 - Add access logs and export logs.
 - Implement data classification and retention policies.
 - Implement archiving lifecycle and secure deletion where legally permitted.
+- Add `LegalHold`, `LegalHoldScope`, and `LegalHoldResource`.
 - Add privacy settings and data subject workflow scaffolding where applicable.
 - Add compliance reporting views.
 - Add tests for audit immutability and retention enforcement.
 
 Exit criteria:
 - Sensitive actions are always auditable and retention policies are enforceable.
+- Legal holds prevent deletion or retention purge of protected records.
 
-## Phase 31. Integration hub
+## Phase 31. Integration hub completion
 
 Goal:
 - Normalize all external systems behind adapters.
@@ -545,6 +580,7 @@ Backlog:
 - Store credentials as references, never in clear text.
 - Add webhook ingestion and outbound webhook delivery with signature validation, replay protection, timestamp validation, idempotency, and retries.
 - Add integration monitoring and error dashboards.
+- Add provider capability metadata: version, region, limits, auth method, webhook support, retention, status.
 - Add tests for adapter failure and retry behavior.
 
 Exit criteria:
@@ -559,12 +595,14 @@ Backlog:
 - Implement AI gateway and orchestration layer.
 - Implement prompt, tools, retrieval, policies, memory, provider, and evaluation modules.
 - Add permission-aware retrieval and tenant isolation for AI data access.
-- Add human approval gates before any AI output becomes a record.
+- Add AI data classification, prompt injection defense, tool authorization, output validation, and human approval gates.
+- Add model version tracking, prompt version tracking, RAG source references, and AI request/response/tool-call audit.
 - Add AI assistant surfaces in the frontend only where useful.
 - Add evaluation and safety tests.
 
 Exit criteria:
 - AI can assist without bypassing authorization or becoming a legal source of truth.
+- AI memory remains distinct from legal records and case data.
 
 ## Phase 33. Operations, backup, and disaster recovery
 
