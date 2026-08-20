@@ -4,7 +4,22 @@ Mohamy Pro is a foundation for secure legal operations. The repository is a pnpm
 
 ## Local prerequisites
 
-The supported local development environment is Windows 11, PowerShell, Docker Desktop, Node.js 22, and pnpm 11.22.0.
+The supported local development environment is Windows 11, PowerShell, Docker Desktop, Node.js 22, and pnpm 11.22.0. The root `package.json` declares `pnpm@11.22.0` as the package manager; do not use npm, npx, yarn, or ad hoc package-manager commands for this repository.
+
+At the beginning of every PowerShell session, from the actual repository root, dot-source the helper so the current session uses the correct global pnpm executable:
+
+```powershell
+. .\scripts\ensure-pnpm.ps1
+pnpm --version
+```
+
+Before any pull, inspect and preserve local work:
+
+```powershell
+git status --short
+```
+
+Never reset, restore, stash, delete, or overwrite local changes without explicit approval. After a clean synchronization, run `pnpm install --frozen-lockfile`, `pnpm --filter api exec prisma generate`, and `pnpm --filter api exec prisma migrate deploy`.
 
 The Mohamy Compose file deliberately uses isolated host ports so it can coexist with the existing Health ERP and Vision ERP stacks:
 
