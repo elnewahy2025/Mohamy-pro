@@ -4,6 +4,8 @@ packages:
   - 'packages/*'
   - 'integrations/*'
   - 'ai/*'
+overrides:
+  deepmerge-ts: 8.0.1
 allowBuilds:
   '@parcel/watcher': true
   '@prisma/engines': true

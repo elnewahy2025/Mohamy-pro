@@ -101,6 +101,7 @@ describe('outbox delivery semantics', () => {
     expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'message-1', status: 'PROCESSING', leaseToken: 'lease-1' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data: expect.objectContaining({ status: 'DEAD_LETTER' }),
       }),
     );

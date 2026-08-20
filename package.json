@@ -12,7 +12,9 @@
     "db:validate": "pnpm --filter api exec prisma validate",
     "db:generate": "pnpm --filter api exec prisma generate",
     "db:deploy": "pnpm --filter api exec prisma migrate deploy",
-    "db:check": "pnpm --filter api run db:check"
+    "db:check": "pnpm --filter api run db:check",
+    "architecture:check": "node scripts/check-architecture.mjs",
+    "license:check": "node scripts/check-licenses.mjs"
   },
   "keywords": [],
   "author": "",

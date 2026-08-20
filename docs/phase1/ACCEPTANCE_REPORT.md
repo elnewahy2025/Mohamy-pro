@@ -14,7 +14,7 @@ The API now includes validated environment configuration, structured Pino loggin
 
 The frontend is implemented under `apps/web` with Next.js 16 App Router, React 19, Tailwind CSS, a shadcn-compatible UI primitive, TanStack Query, React Hook Form, Zod, `next-intl`, accessible navigation, responsive layout, English and Arabic message catalogs, locale-prefixed routing, and automatic LTR/RTL document direction. See [`FRONTEND_STACK_MIGRATION.md`](FRONTEND_STACK_MIGRATION.md) for Finding 3 evidence. Shared API contracts remain under `packages/contracts`.
 
-The repository now contains the Phase 1 Prisma schema and baseline migration, additive outbox delivery migration, CI validation, environment template, observability baseline documentation, a Windows PostgreSQL backup script, and a disposable restore smoke test. Finding 2 now has a dedicated worker entrypoint, explicit handler registry, lease/retry/dead-letter state transitions, and focused delivery tests; see [`OUTBOX_DELIVERY_DESIGN.md`](OUTBOX_DELIVERY_DESIGN.md).
+The repository now contains the Phase 1 Prisma schema and baseline migration, additive outbox delivery migration, infrastructure-backed CI, environment template, observability baseline documentation, a Windows PostgreSQL backup script, and a disposable restore smoke test. Finding 2 now has a dedicated worker entrypoint, explicit handler registry, lease/retry/dead-letter state transitions, and focused delivery tests; see [`OUTBOX_DELIVERY_DESIGN.md`](OUTBOX_DELIVERY_DESIGN.md). Finding 4 now has dedicated quality, dependency-review, security, container, and DAST jobs; see [`CI_PIPELINE_EXPANSION.md`](CI_PIPELINE_EXPANSION.md).
 
 ## Verified in the development environment
 
@@ -29,7 +29,10 @@ The repository now contains the Phase 1 Prisma schema and baseline migration, ad
 | API production build | Passed |
 | Frontend unit tests | Passed: 1 file, 2 tests covering bilingual message parity and direction labels |
 | Frontend production build | Passed with Next.js 16.3.1 App Router |
-| Git diff check and clean working tree | Passed |
+| Git diff check | Passed |
+| CI workflow structure and required controls | Passed locally; external GitHub Actions run still required |
+| Architecture-fitness check | Passed |
+| License policy check | Passed across 16 license categories |
 
 The sandbox cannot directly execute Docker Desktop or PowerShell on the user’s local PC. Therefore, the following final local smoke checks must be run on the Windows machine where the three Mohamy containers are already running.
 
