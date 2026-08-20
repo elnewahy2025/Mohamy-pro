@@ -56,6 +56,10 @@ export class S3ObjectStorageService implements ObjectStorageService, OnModuleIni
     this.logger.log(`Object storage bucket ${this.bucket} is ready`);
   }
 
+  async healthCheck(): Promise<void> {
+    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+  }
+
   async putObject(input: PutObjectInput): Promise<void> {
     await this.client.send(new PutObjectCommand({
       Bucket: this.bucket,

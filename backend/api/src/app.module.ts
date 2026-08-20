@@ -11,6 +11,7 @@ import { QueueModule } from './infrastructure/queue/queue.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { OutboxModule } from './infrastructure/outbox/outbox.module';
 import { IdempotencyModule } from './infrastructure/idempotency/idempotency.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { IdempotencyModule } from './infrastructure/idempotency/idempotency.modu
     StorageModule,
     OutboxModule,
     IdempotencyModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
