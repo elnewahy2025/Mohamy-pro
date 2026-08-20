@@ -40,8 +40,11 @@ try {
         throw 'Backup import failed.'
     }
 
-    $tableCheck = (& docker compose -f $composePath exec -T postgres psql -U mohamy -d $databaseName -tAc "SELECT to_regclass('public.\"Health\"') IS NOT NULL;").Trim()
-    if ($LASTEXITCODE -ne 0 -or $tableCheck -ne 't') {
+    $healthTableQuery = 'SELECT to_regclass(''public."Health"'') IS NOT NULL;'
+    $tableCheckOutput = & docker compose -f $composePath exec -T postgres psql -U mohamy -d $databaseName -tAc $healthTableQuery
+    $tableCheckExitCode = $LASTEXITCODE
+    $tableCheck = ($tableCheckOutput | Out-String).Trim()
+    if ($tableCheckExitCode -ne 0 -or $tableCheck -ne 't') {
         throw 'Restore validation failed: the Health table was not found.'
     }
 
