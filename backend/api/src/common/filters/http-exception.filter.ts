@@ -30,32 +30,42 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const correlationId = getCorrelationId(request);
     const timestamp = new Date().toISOString();
 
-    const status = exception instanceof HttpException
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
-    const rawResponse = exception instanceof HttpException
-      ? exception.getResponse()
-      : undefined;
-    const rawMessage = typeof rawResponse === 'object' && rawResponse !== null && 'message' in rawResponse
-      ? rawResponse.message
-      : typeof rawResponse === 'string'
-        ? rawResponse
-        : undefined;
-    const message: string | string[] = status >= 500
-      ? 'Internal server error'
-      : typeof rawMessage === 'string'
-        ? rawMessage
-        : Array.isArray(rawMessage) && rawMessage.every((item): item is string => typeof item === 'string')
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+    const rawResponse =
+      exception instanceof HttpException ? exception.getResponse() : undefined;
+    const rawMessage =
+      typeof rawResponse === 'object' &&
+      rawResponse !== null &&
+      'message' in rawResponse
+        ? rawResponse.message
+        : typeof rawResponse === 'string'
+          ? rawResponse
+          : undefined;
+    const message: string | string[] =
+      status >= 500
+        ? 'Internal server error'
+        : typeof rawMessage === 'string'
           ? rawMessage
-          : 'Request failed';
+          : Array.isArray(rawMessage) &&
+              rawMessage.every(
+                (item): item is string => typeof item === 'string',
+              )
+            ? rawMessage
+            : 'Request failed';
 
     if (status >= 500) {
-      this.logger.error({
-        correlationId,
-        method: request.method,
-        path: request.originalUrl,
-        exception,
-      }, 'Unhandled request exception');
+      this.logger.error(
+        {
+          correlationId,
+          method: request.method,
+          path: request.originalUrl,
+          exception,
+        },
+        'Unhandled request exception',
+      );
     }
 
     const body: ErrorResponseBody = {

@@ -2,32 +2,77 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+env:
+  PNPM_VERSION: 11.22.0
+  DATABASE_URL: postgresql://mohamy:mohamy_password@localhost:5432/mohamy_pro?schema=public
+  NODE_ENV: test
+  REDIS_URL: redis://localhost:6379
+  S3_ENDPOINT: http://localhost:9000
+  S3_ACCESS_KEY: minioadmin
+  S3_SECRET_KEY: minioadmin
+  S3_BUCKET: mohamy-ci
+  CORS_ORIGINS: http://localhost:5173
 
 jobs:
-  build-and-test:
+  quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mohamy
+          POSTGRES_PASSWORD: mohamy_password
+          POSTGRES_DB: mohamy_pro
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mohamy -d mohamy_pro"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          
-      - name: Install pnpm
-        run: npm install -g pnpm
-        
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - name: Install dependencies
-        run: pnpm install
-        
-      - name: Run lint
-        run: echo "Linting passed"
-        
-      - name: Run type check
-        run: echo "Type check passed"
-        
-      - name: Run tests
-        run: echo "Tests passed"
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Prisma schema
+        run: pnpm --filter api exec prisma validate
+
+      - name: Generate Prisma Client
+        run: pnpm --filter api exec prisma generate
+
+      - name: Apply migrations
+        run: pnpm --filter api exec prisma migrate deploy
+
+      - name: Lint API
+        run: pnpm --filter api exec eslint "src/**/*.ts"
+
+      - name: Test API
+        run: pnpm --filter api exec jest --runInBand
+
+      - name: Build API
+        run: pnpm --filter api run build
+
+      - name: Test frontend
+        run: pnpm --filter @mohamy/web test
+
+      - name: Build frontend
+        run: pnpm --filter @mohamy/web run build

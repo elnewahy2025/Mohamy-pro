@@ -19,22 +19,42 @@ export class HealthController {
   @Get('ready')
   @Version('1')
   @ApiOperation({ summary: 'Readiness probe for all required infrastructure' })
-  @ApiResponse({ status: 200, description: 'All required dependencies are ready.' })
-  @ApiResponse({ status: 503, description: 'One or more dependencies are unavailable.' })
-  async getReadiness(@Res({ passthrough: true }) response: Response): Promise<ReadinessResponse> {
+  @ApiResponse({
+    status: 200,
+    description: 'All required dependencies are ready.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'One or more dependencies are unavailable.',
+  })
+  async getReadiness(
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<ReadinessResponse> {
     const result = await this.health.getReadiness();
-    response.status(result.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
+    response.status(
+      result.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE,
+    );
     return result;
   }
 
   @Get()
   @Version('1')
   @ApiOperation({ summary: 'Aggregate health response' })
-  @ApiResponse({ status: 200, description: 'All required dependencies are ready.' })
-  @ApiResponse({ status: 503, description: 'One or more dependencies are unavailable.' })
-  async getHealth(@Res({ passthrough: true }) response: Response): Promise<ReadinessResponse> {
+  @ApiResponse({
+    status: 200,
+    description: 'All required dependencies are ready.',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'One or more dependencies are unavailable.',
+  })
+  async getHealth(
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<ReadinessResponse> {
     const result = await this.health.getReadiness();
-    response.status(result.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
+    response.status(
+      result.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE,
+    );
     return result;
   }
 }

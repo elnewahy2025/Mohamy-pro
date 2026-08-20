@@ -17,7 +17,9 @@ export class IdempotencyService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findValid(key: string): Promise<IdempotencyKey | null> {
-    const record = await this.prisma.idempotencyKey.findUnique({ where: { key } });
+    const record = await this.prisma.idempotencyKey.findUnique({
+      where: { key },
+    });
     if (!record) {
       return null;
     }
@@ -61,5 +63,8 @@ export class IdempotencyService {
 }
 
 function isUniqueViolation(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
 }

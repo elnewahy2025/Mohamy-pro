@@ -43,7 +43,9 @@ export class HealthService {
       this.runCheck('objectStorage', () => this.storage.healthCheck()),
     ]);
     const checkMap = Object.fromEntries(checks);
-    const healthy = Object.values(checkMap).every((check) => check.status === 'up');
+    const healthy = Object.values(checkMap).every(
+      (check) => check.status === 'up',
+    );
 
     return {
       status: healthy ? 'ok' : 'degraded',
@@ -59,13 +61,19 @@ export class HealthService {
     const startedAt = performance.now();
     try {
       await operation();
-      return [name, { status: 'up', durationMs: Math.round(performance.now() - startedAt) }];
+      return [
+        name,
+        { status: 'up', durationMs: Math.round(performance.now() - startedAt) },
+      ];
     } catch (error) {
-      return [name, {
-        status: 'down',
-        durationMs: Math.round(performance.now() - startedAt),
-        error: error instanceof Error ? error.name : 'UnknownError',
-      }];
+      return [
+        name,
+        {
+          status: 'down',
+          durationMs: Math.round(performance.now() - startedAt),
+          error: error instanceof Error ? error.name : 'UnknownError',
+        },
+      ];
     }
   }
 }

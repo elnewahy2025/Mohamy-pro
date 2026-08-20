@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Queue, type JobsOptions, type Job } from 'bullmq';
 import { RedisService } from '../redis/redis.service';
 
@@ -39,7 +44,13 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getCounts(): Promise<Record<string, number>> {
-    return this.queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+    return this.queue.getJobCounts(
+      'waiting',
+      'active',
+      'completed',
+      'failed',
+      'delayed',
+    );
   }
 
   async onModuleDestroy(): Promise<void> {

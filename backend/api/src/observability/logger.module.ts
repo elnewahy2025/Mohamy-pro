@@ -10,13 +10,18 @@ import type { NodeEnvironment } from '../config/env.validation';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const environment = config.get<NodeEnvironment>('NODE_ENV', 'development');
+        const environment = config.get<NodeEnvironment>(
+          'NODE_ENV',
+          'development',
+        );
         return {
           pinoHttp: {
             level: environment === 'production' ? 'info' : 'debug',
             genReqId: (request: { headers: Record<string, unknown> }) => {
               const value = request.headers['x-correlation-id'];
-              return typeof value === 'string' && value.length > 0 ? value : randomUUID();
+              return typeof value === 'string' && value.length > 0
+                ? value
+                : randomUUID();
             },
             redact: {
               paths: [
@@ -27,9 +32,13 @@ import type { NodeEnvironment } from '../config/env.validation';
               ],
               censor: '[REDACTED]',
             },
-            transport: environment === 'development'
-              ? { target: 'pino-pretty', options: { colorize: false, singleLine: true } }
-              : undefined,
+            transport:
+              environment === 'development'
+                ? {
+                    target: 'pino-pretty',
+                    options: { colorize: false, singleLine: true },
+                  }
+                : undefined,
           },
         };
       },

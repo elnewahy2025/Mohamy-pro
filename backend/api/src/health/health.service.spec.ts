@@ -1,3 +1,7 @@
+jest.mock('../infrastructure/database/prisma.service', () => ({
+  PrismaService: class PrismaService {},
+}));
+
 import { HealthService } from './health.service';
 
 describe('HealthService', () => {
@@ -11,7 +15,13 @@ describe('HealthService', () => {
     jest.clearAllMocks();
     prisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }]);
     redis.ping.mockResolvedValue('PONG');
-    queue.getCounts.mockResolvedValue({ waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 });
+    queue.getCounts.mockResolvedValue({
+      waiting: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      delayed: 0,
+    });
     storage.healthCheck.mockResolvedValue(undefined);
     service = new HealthService(
       prisma as never,
@@ -39,12 +49,17 @@ describe('HealthService', () => {
   });
 
   it('reports degraded readiness without exposing infrastructure error messages', async () => {
-    redis.ping.mockRejectedValue(new Error('redis password must not appear in API output'));
+    redis.ping.mockRejectedValue(
+      new Error('redis password must not appear in API output'),
+    );
 
     const result = await service.getReadiness();
 
     expect(result.status).toBe('degraded');
-    expect(result.checks.redis).toMatchObject({ status: 'down', error: 'Error' });
+    expect(result.checks.redis).toMatchObject({
+      status: 'down',
+      error: 'Error',
+    });
     expect(JSON.stringify(result)).not.toContain('redis password');
   });
 });

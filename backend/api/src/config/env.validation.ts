@@ -21,7 +21,9 @@ function readString(value: unknown): string | undefined {
 function readPort(value: unknown, fallback: number): number {
   const parsed = Number(value ?? fallback);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
-    throw new Error(`PORT must be an integer between 1 and 65535; received ${String(value)}`);
+    throw new Error(
+      `PORT must be an integer between 1 and 65535; received ${String(value)}`,
+    );
   }
   return parsed;
 }
@@ -39,23 +41,24 @@ export function validateEnvironment(
     throw new Error('DATABASE_URL is required');
   }
 
-  const defaults = nodeEnv === 'production'
-    ? {
-        REDIS_URL: undefined,
-        S3_ENDPOINT: undefined,
-        S3_ACCESS_KEY: undefined,
-        S3_SECRET_KEY: undefined,
-        S3_BUCKET: undefined,
-        CORS_ORIGINS: undefined,
-      }
-    : {
-        REDIS_URL: 'redis://localhost:56379',
-        S3_ENDPOINT: 'http://localhost:59000',
-        S3_ACCESS_KEY: 'minioadmin',
-        S3_SECRET_KEY: 'minioadmin',
-        S3_BUCKET: 'mohamy-development',
-        CORS_ORIGINS: 'http://localhost:5173',
-      };
+  const defaults =
+    nodeEnv === 'production'
+      ? {
+          REDIS_URL: undefined,
+          S3_ENDPOINT: undefined,
+          S3_ACCESS_KEY: undefined,
+          S3_SECRET_KEY: undefined,
+          S3_BUCKET: undefined,
+          CORS_ORIGINS: undefined,
+        }
+      : {
+          REDIS_URL: 'redis://localhost:56379',
+          S3_ENDPOINT: 'http://localhost:59000',
+          S3_ACCESS_KEY: 'minioadmin',
+          S3_SECRET_KEY: 'minioadmin',
+          S3_BUCKET: 'mohamy-development',
+          CORS_ORIGINS: 'http://localhost:5173',
+        };
 
   const values = {
     REDIS_URL: readString(raw.REDIS_URL) ?? defaults.REDIS_URL,

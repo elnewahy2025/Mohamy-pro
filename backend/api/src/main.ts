@@ -14,7 +14,9 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(Logger));
   app.use(helmet());
   app.enableCors({
-    origin: config.get<string>('CORS_ORIGINS', 'http://localhost:5173').split(','),
+    origin: config
+      .get<string>('CORS_ORIGINS', 'http://localhost:5173')
+      .split(','),
     credentials: true,
   });
   app.setGlobalPrefix('api');
@@ -22,17 +24,21 @@ async function bootstrap(): Promise<void> {
     type: VersioningType.URI,
     defaultVersion: '1',
   });
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-    transformOptions: { enableImplicitConversion: true },
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
   app.useGlobalFilters(new HttpExceptionFilter());
 
   const openApiConfig = new DocumentBuilder()
     .setTitle('Mohamy Pro API')
-    .setDescription('Production API foundation for the Mohamy legal operations platform.')
+    .setDescription(
+      'Production API foundation for the Mohamy legal operations platform.',
+    )
     .setVersion('1.0.0')
     .addBearerAuth()
     .build();

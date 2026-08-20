@@ -1,11 +1,19 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ValidatedEnvironment } from '../../config/env.validation';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
 
   constructor(config: ConfigService<ValidatedEnvironment, true>) {
@@ -29,9 +37,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 }
 
 function loggerForPoolError(error: Error): void {
-  console.error(JSON.stringify({
-    event: 'postgres_pool_error',
-    message: error.message,
-    timestamp: new Date().toISOString(),
-  }));
+  console.error(
+    JSON.stringify({
+      event: 'postgres_pool_error',
+      message: error.message,
+      timestamp: new Date().toISOString(),
+    }),
+  );
 }

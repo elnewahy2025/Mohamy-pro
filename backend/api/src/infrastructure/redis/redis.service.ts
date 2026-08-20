@@ -1,5 +1,10 @@
 import Redis from 'ioredis';
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ValidatedEnvironment } from '../../config/env.validation';
 
