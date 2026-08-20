@@ -2,11 +2,11 @@
 
 ## Published revision
 
-The full Phase 1 foundation is published to `main` at commit `5ff1edda`:
+The latest Phase 1 foundation fixes are published to `main` at commit `d2ffd8dc`:
 
-<https://github.com/elnewahy2025/Mohamy-pro/commit/5ff1edda>
+<https://github.com/elnewahy2025/Mohamy-pro/commit/d2ffd8dc>
 
-The repository working tree is clean and synchronized with `origin/main`.
+The repository working tree was clean at the time of the audit. See [`AUDIT_REPORT.md`](AUDIT_REPORT.md) for the requirement-by-requirement closure review. Phase 1 is currently **implemented foundation / not yet closed** until the listed blockers are resolved or formally deferred.
 
 ## Implemented foundation
 
@@ -74,4 +74,4 @@ The restore smoke test must report success and must leave the primary `mohamy_pr
 
 ## Phase boundary
 
-No Phase 2 feature work should begin until the local smoke checks above pass, particularly the readiness endpoint and restore smoke test. Phase 2 begins with Identity and Multi-Tenancy only after this Phase 1 acceptance gate is approved.
+No Phase 2 feature work should begin until the local smoke checks above pass, particularly the corrected restore smoke test, and the blockers listed in [`AUDIT_REPORT.md`](AUDIT_REPORT.md) are resolved or formally accepted. Phase 2 begins with Identity and Multi-Tenancy only after this Phase 1 acceptance gate is approved.
