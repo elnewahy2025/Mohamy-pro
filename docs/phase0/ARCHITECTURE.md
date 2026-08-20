@@ -7,7 +7,7 @@ Style:
 - DDD-oriented layering.
 
 Implementation stack:
-- Defined in `Docs/Phase-0/STACK.md`
+- Defined in `docs/phase0/STACK.md`
 
 Layering:
 - Presentation

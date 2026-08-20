@@ -3,7 +3,7 @@
 Source of truth:
 - `Plan.txt`
 - `ENGINEERING_BACKLOG.md`
-- `Docs/Phase-0/STACK.md`
+- `docs/phase0/STACK.md`
 
 Project goal:
 - Build a configurable, multi-tenant legal practice management platform that is secure by default, production-oriented, provider-agnostic, and fully bilingual in English and Arabic with RTL/LTR support.
@@ -21,4 +21,4 @@ Core non-negotiables:
 - The product must support English and Arabic with full RTL/LTR behavior across the UI, forms, and messages.
 
 Implementation stack:
-- Defined in `Docs/Phase-0/STACK.md`
+- Defined in `docs/phase0/STACK.md`

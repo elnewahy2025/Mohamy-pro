@@ -78,4 +78,4 @@ pnpm --filter @mohamy/web run build
 & .\infrastructure\backup\restore-smoke.ps1 -BackupFile .\infrastructure\backup\artifacts\mohamy_pro-YYYYMMDD-HHMMSS.sql
 ```
 
-See `infrastructure/backup/README.md` for Windows Task Scheduler setup and the exact safety boundaries of the restore smoke test.
+See [`docs/phase1/BACKUP_BASELINE.md`](docs/phase1/BACKUP_BASELINE.md) for Windows Task Scheduler setup and the exact safety boundaries of the restore smoke test.
