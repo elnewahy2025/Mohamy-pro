@@ -4,3 +4,7 @@ packages:
   - 'packages/*'
   - 'integrations/*'
   - 'ai/*'
+allowBuilds:
+  '@prisma/engines': true
+  prisma: true
+  unrs-resolver: true

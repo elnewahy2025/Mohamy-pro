@@ -13,6 +13,7 @@ This backlog is the implementation companion to `Plan.txt`. It has been revised 
 
 ## Cross-cutting rules
 
+- The required local development environment is Windows 11, PowerShell, and VS Code. All local scripts and tooling must be cross-platform or PowerShell-native.
 - Backend authorization is always authoritative.
 - Tenant isolation must be enforced in DB, repository, service, search, cache, job, storage, export, and integration layers.
 - No direct provider SDK calls inside domain modules.

@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Phase 1: Health check table to prove migrations work
+model Health {
+  id        String   @id @default(uuid())
+  status    String   @default("OK")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Phase 1: Transactional outbox table skeleton
+model OutboxMessage {
+  id            String   @id @default(uuid())
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json
+  status        String   @default("PENDING") // PENDING, PROCESSED, FAILED
+  error         String?
+  createdAt     DateTime @default(now())
+  processedAt   DateTime?
+}
+
+// Phase 1: Idempotency registry skeleton
+model IdempotencyKey {
+  key            String   @id
+  userId         String?
+  tenantId       String?
+  requestPath    String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+}
