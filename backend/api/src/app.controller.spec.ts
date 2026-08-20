@@ -14,9 +14,13 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('service info', () => {
+    it('should return the API service contract', () => {
+      expect(appController.getServiceInfo()).toMatchObject({
+        service: 'mohamy-pro-api',
+        status: 'ok',
+        version: '1',
+      });
     });
   });
 });

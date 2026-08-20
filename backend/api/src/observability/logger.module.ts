@@ -1,0 +1,40 @@
+import { randomUUID } from 'node:crypto';
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { LoggerModule } from 'nestjs-pino';
+import type { NodeEnvironment } from '../config/env.validation';
+
+@Module({
+  imports: [
+    LoggerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const environment = config.get<NodeEnvironment>('NODE_ENV', 'development');
+        return {
+          pinoHttp: {
+            level: environment === 'production' ? 'info' : 'debug',
+            genReqId: (request: { headers: Record<string, unknown> }) => {
+              const value = request.headers['x-correlation-id'];
+              return typeof value === 'string' && value.length > 0 ? value : randomUUID();
+            },
+            redact: {
+              paths: [
+                'req.headers.authorization',
+                'req.headers.cookie',
+                'req.headers["x-api-key"]',
+                'res.headers["set-cookie"]',
+              ],
+              censor: '[REDACTED]',
+            },
+            transport: environment === 'development'
+              ? { target: 'pino-pretty', options: { colorize: false, singleLine: true } }
+              : undefined,
+          },
+        };
+      },
+    }),
+  ],
+  exports: [LoggerModule],
+})
+export class ApplicationLoggerModule {}
