@@ -6,7 +6,7 @@ The latest Phase 1 foundation fixes are published to `main` at commit `d2ffd8dc`
 
 <https://github.com/elnewahy2025/Mohamy-pro/commit/d2ffd8dc>
 
-The repository working tree was clean at the time of the audit. See [`AUDIT_REPORT.md`](AUDIT_REPORT.md) for the requirement-by-requirement closure review. Phase 1 is currently **implemented foundation / not yet closed** until the listed blockers are resolved or formally deferred.
+The repository working tree was clean at the time of the audit. See [`AUDIT_REPORT.md`](AUDIT_REPORT.md) for the requirement-by-requirement closure review and [`MIGRATION_BASELINE_RECONCILIATION.md`](MIGRATION_BASELINE_RECONCILIATION.md) for Finding 1 evidence and the remaining Windows database-validation gate. Phase 1 is currently **implemented foundation / not yet closed** until the listed blockers are resolved or formally deferred.
 
 ## Implemented foundation
 
@@ -44,6 +44,7 @@ pnpm install --frozen-lockfile
 Copy-Item .\backend\api\.env.example .\backend\api\.env -Force
 pnpm --filter api exec prisma generate
 pnpm --filter api exec prisma migrate deploy
+pnpm db:check
 ```
 
 Start the API in one PowerShell window:

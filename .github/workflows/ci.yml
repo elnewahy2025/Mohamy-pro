@@ -62,6 +62,9 @@ jobs:
       - name: Apply migrations
         run: pnpm --filter api exec prisma migrate deploy
 
+      - name: Verify migration history
+        run: pnpm db:check
+
       - name: Lint API
         run: pnpm --filter api exec eslint "src/**/*.ts"
 

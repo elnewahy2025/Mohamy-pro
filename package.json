@@ -11,7 +11,8 @@
     "build": "pnpm --filter api run build && pnpm --filter @mohamy/web run build",
     "db:validate": "pnpm --filter api exec prisma validate",
     "db:generate": "pnpm --filter api exec prisma generate",
-    "db:deploy": "pnpm --filter api exec prisma migrate deploy"
+    "db:deploy": "pnpm --filter api exec prisma migrate deploy",
+    "db:check": "pnpm --filter api run db:check"
   },
   "keywords": [],
   "author": "",
