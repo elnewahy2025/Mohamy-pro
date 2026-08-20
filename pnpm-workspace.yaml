@@ -6,5 +6,6 @@ packages:
   - 'ai/*'
 allowBuilds:
   '@prisma/engines': true
+  '@scarf/scarf': true
   prisma: true
   unrs-resolver: true
