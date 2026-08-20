@@ -1,0 +1,78 @@
+{
+  "brand": "Mohamy Pro",
+  "productTagline": "Legal operations, with clarity.",
+  "common": {
+    "language": "Language",
+    "menu": "Open navigation menu",
+    "close": "Close navigation menu",
+    "primaryNavigation": "Primary navigation",
+    "currentWorkspace": "Current workspace",
+    "secureDocuments": "Legal documents are never exposed through public URLs."
+  },
+  "navigation": {
+    "overview": "Overview",
+    "operations": "Operations",
+    "integrations": "Integrations",
+    "settings": "Settings"
+  },
+  "overview": {
+    "eyebrow": "Phase 1 foundation",
+    "title": "A calm command center for legal work.",
+    "description": "The platform foundation is ready for secure, observable legal operations across teams and organizations.",
+    "viewHealth": "Open system health",
+    "visualLabel": "Platform foundation illustration",
+    "visualSystem": "SYSTEM / 01",
+    "visualTitle": "Secure by foundation",
+    "databaseOnline": "Database online",
+    "queueReady": "Queue ready",
+    "timezone": "UTC+03",
+    "statusLabel": "Foundation status",
+    "statusValue": "Operational",
+    "statusDetail": "PostgreSQL · Redis · Object storage",
+    "apiLabel": "API",
+    "apiValue": "v1",
+    "apiDetail": "Versioned contract with OpenAPI",
+    "dataLabel": "Data layer",
+    "dataValue": "Ready",
+    "dataDetail": "Migration-first PostgreSQL foundation",
+    "roadmap": "Roadmap",
+    "nextStepTitle": "Next build focus",
+    "nextStepBody": "Identity and multi-tenancy will establish secure membership boundaries before business workflows are introduced.",
+    "nextStepNumber": "02"
+  },
+  "operations": {
+    "eyebrow": "Operations",
+    "title": "An operational foundation you can trust.",
+    "description": "Every core capability has an explicit contract, a checkable state, and a safe path to scale.",
+    "items": {
+      "health": { "title": "Health and observability", "description": "Clear readiness checks for every required service." },
+      "async": { "title": "Asynchronous processing", "description": "A queue foundation with bounded retries and durable handoff." },
+      "events": { "title": "Event safety", "description": "Outbox and idempotency foundations to prevent duplication and loss." }
+    }
+  },
+  "integrations": {
+    "eyebrow": "Integrations",
+    "title": "Services with clear boundaries.",
+    "description": "Integrations pass through independent layers, keeping secrets and private links outside the client.",
+    "tableLabel": "Service status",
+    "headers": { "service": "Service", "role": "Role", "status": "Status", "port": "Port" },
+    "services": {
+      "postgres": { "role": "Primary relational data", "status": "Ready", "port": "55432" },
+      "redis": { "role": "Cache and queue transport", "status": "Ready", "port": "56379" },
+      "minio": { "role": "Private object storage", "status": "Ready", "port": "59000" }
+    }
+  },
+  "settings": {
+    "eyebrow": "Settings",
+    "title": "Language belongs in the foundation.",
+    "description": "Language and direction can change from day one without changing navigation or accessibility behavior.",
+    "chooseLanguage": "Choose your preferred interface language.",
+    "accessibilityTitle": "Accessibility is part of the default",
+    "accessibilityBody": "Keyboard navigation, semantic labels, and contrast-aware colors are supported by this shell.",
+    "accessibilityEnabled": "Accessibility is enabled",
+    "english": "English",
+    "arabic": "العربية",
+    "ltr": "LTR",
+    "rtl": "RTL"
+  }
+}

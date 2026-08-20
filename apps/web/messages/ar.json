@@ -1,0 +1,78 @@
+{
+  "brand": "محامي برو",
+  "productTagline": "إدارة قانونية بوضوح.",
+  "common": {
+    "language": "اللغة",
+    "menu": "فتح قائمة التنقل",
+    "close": "إغلاق قائمة التنقل",
+    "primaryNavigation": "التنقل الرئيسي",
+    "currentWorkspace": "مساحة العمل الحالية",
+    "secureDocuments": "لا تُعرض المستندات القانونية عبر روابط عامة."
+  },
+  "navigation": {
+    "overview": "نظرة عامة",
+    "operations": "العمليات",
+    "integrations": "التكاملات",
+    "settings": "الإعدادات"
+  },
+  "overview": {
+    "eyebrow": "أساس المرحلة الأولى",
+    "title": "مركز قيادة هادئ للعمل القانوني.",
+    "description": "أصبح أساس المنصة جاهزاً لعمليات قانونية آمنة وقابلة للمراقبة عبر الفرق والمؤسسات.",
+    "viewHealth": "فتح حالة النظام",
+    "visualLabel": "رسم توضيحي لأساس المنصة",
+    "visualSystem": "النظام / 01",
+    "visualTitle": "أمان يبدأ من الأساس",
+    "databaseOnline": "قاعدة البيانات متصلة",
+    "queueReady": "الطابور جاهز",
+    "timezone": "UTC+03",
+    "statusLabel": "حالة الأساس",
+    "statusValue": "يعمل بكفاءة",
+    "statusDetail": "PostgreSQL · Redis · تخزين الكائنات",
+    "apiLabel": "واجهة API",
+    "apiValue": "v1",
+    "apiDetail": "عقد إصدار مع OpenAPI",
+    "dataLabel": "طبقة البيانات",
+    "dataValue": "جاهزة",
+    "dataDetail": "أساس PostgreSQL يعتمد على الترحيلات",
+    "roadmap": "خارطة الطريق",
+    "nextStepTitle": "محور البناء التالي",
+    "nextStepBody": "ستؤسس الهوية وتعدد المؤسسات لحدود عضوية آمنة قبل إضافة مسارات العمل التجارية.",
+    "nextStepNumber": "02"
+  },
+  "operations": {
+    "eyebrow": "العمليات",
+    "title": "أساس تشغيلي يمكن الوثوق به.",
+    "description": "كل مكوّن أساسي له عقد واضح، حالة قابلة للفحص، ومسار آمن للتوسع.",
+    "items": {
+      "health": { "title": "الصحة والمراقبة", "description": "نقاط فحص جاهزية واضحة لكل خدمة مطلوبة." },
+      "async": { "title": "المعالجة غير المتزامنة", "description": "أساس طوابير مع إعادة محاولة محدودة وتسليم دائم." },
+      "events": { "title": "سلامة الأحداث", "description": "أساس Outbox وIdempotency لمنع التكرار والفقدان." }
+    }
+  },
+  "integrations": {
+    "eyebrow": "التكاملات",
+    "title": "الخدمات تعمل ضمن حدود واضحة.",
+    "description": "تمر التكاملات عبر طبقات مستقلة، مع إبقاء الأسرار والروابط الخاصة خارج الواجهة.",
+    "tableLabel": "حالة الخدمات",
+    "headers": { "service": "الخدمة", "role": "الدور", "status": "الحالة", "port": "المنفذ" },
+    "services": {
+      "postgres": { "role": "البيانات العلائقية الأساسية", "status": "جاهز", "port": "55432" },
+      "redis": { "role": "التخزين المؤقت ونقل الطوابير", "status": "جاهز", "port": "56379" },
+      "minio": { "role": "تخزين كائنات خاص", "status": "جاهز", "port": "59000" }
+    }
+  },
+  "settings": {
+    "eyebrow": "الإعدادات",
+    "title": "اللغة جزء من الأساس.",
+    "description": "يمكن تبديل اللغة والاتجاه من اليوم الأول دون تغيير مسارات التنقل أو قابلية الوصول.",
+    "chooseLanguage": "اختر لغة الواجهة المفضلة.",
+    "accessibilityTitle": "قابلية الوصول مفعلة",
+    "accessibilityBody": "التنقل بلوحة المفاتيح، والتسميات الدلالية، والألوان ذات التباين المناسب مدعومة في هذه الواجهة.",
+    "accessibilityEnabled": "قابلية الوصول مفعلة",
+    "english": "English",
+    "arabic": "العربية",
+    "ltr": "LTR",
+    "rtl": "RTL"
+  }
+}

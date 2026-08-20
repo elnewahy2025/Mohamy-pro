@@ -12,7 +12,7 @@ The repository working tree was clean at the time of the audit. See [`AUDIT_REPO
 
 The API now includes validated environment configuration, structured Pino logging, correlation IDs, redacted sensitive headers, standardized HTTP errors, Helmet security headers, CORS configuration, URI API versioning, OpenAPI documentation, PostgreSQL access through the Prisma 7 PostgreSQL adapter, Redis, BullMQ, private S3-compatible object storage, transactional outbox persistence and dispatch, idempotency registry operations, liveness and readiness endpoints, and deterministic unit tests.
 
-The frontend shell is implemented under `apps/web` with React, Vite, accessible navigation, responsive layout, English and Arabic resources, automatic LTR/RTL switching, persistent locale preference, and basic routes for overview, operations, integrations, and settings. Shared API contracts are under `packages/contracts`.
+The frontend is implemented under `apps/web` with Next.js 16 App Router, React 19, Tailwind CSS, a shadcn-compatible UI primitive, TanStack Query, React Hook Form, Zod, `next-intl`, accessible navigation, responsive layout, English and Arabic message catalogs, locale-prefixed routing, and automatic LTR/RTL document direction. See [`FRONTEND_STACK_MIGRATION.md`](FRONTEND_STACK_MIGRATION.md) for Finding 3 evidence. Shared API contracts remain under `packages/contracts`.
 
 The repository now contains the Phase 1 Prisma schema and baseline migration, additive outbox delivery migration, CI validation, environment template, observability baseline documentation, a Windows PostgreSQL backup script, and a disposable restore smoke test. Finding 2 now has a dedicated worker entrypoint, explicit handler registry, lease/retry/dead-letter state transitions, and focused delivery tests; see [`OUTBOX_DELIVERY_DESIGN.md`](OUTBOX_DELIVERY_DESIGN.md).
 
@@ -27,8 +27,8 @@ The repository now contains the Phase 1 Prisma schema and baseline migration, ad
 | API ESLint gate | Passed; no errors |
 | API unit tests | Passed: 3 suites, 7 tests before Finding 2; Finding 2 focused tests now pass: 5 tests, with the full API suite passing: 3 suites, 9 tests |
 | API production build | Passed |
-| Frontend unit tests | Passed: 1 file, 1 test |
-| Frontend production build | Passed |
+| Frontend unit tests | Passed: 1 file, 2 tests covering bilingual message parity and direction labels |
+| Frontend production build | Passed with Next.js 16.3.1 App Router |
 | Git diff check and clean working tree | Passed |
 
 The sandbox cannot directly execute Docker Desktop or PowerShell on the user’s local PC. Therefore, the following final local smoke checks must be run on the Windows machine where the three Mohamy containers are already running.
