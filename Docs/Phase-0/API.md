@@ -1,18 +1,50 @@
-# API
+# API Specification
 
-Base version:
+## 1. Base Version
 - `/api/v1`
 
-API rules:
-- OpenAPI required.
-- Consistent response envelope.
-- Consistent error model.
-- Pagination, filtering, sorting, and search supported where applicable.
-- Idempotency required for applicable write operations.
-- Request IDs and correlation IDs required.
-- No stack traces or infrastructure internals exposed to users.
+## 2. Standard Response Envelope
+All successful API responses must be wrapped in the following JSON envelope:
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "requestId": "req-12345",
+    "timestamp": "2026-08-20T12:00:00Z",
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 100
+    }
+  }
+}
+```
 
-Compatibility:
-- v1 contracts must not break silently.
-- Deprecation and sunset policies must be explicit.
+## 3. Standard Error Model
+All error responses must use standard HTTP status codes and the following JSON envelope:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "The provided input is invalid.",
+    "details": [
+      { "field": "email", "issue": "Must be a valid email address" }
+    ]
+  },
+  "meta": {
+    "requestId": "req-12345",
+    "timestamp": "2026-08-20T12:00:00Z"
+  }
+}
+```
 
+## 4. Idempotency
+All `POST`, `PUT`, and `PATCH` requests must include an `Idempotency-Key` header (UUIDv4). The server will cache the response for 24 hours. Subsequent requests with the same key will return the cached response without re-executing the logic.
+
+## 5. Compatibility & Deprecation
+- `/api/v1` is a stable contract.
+- Breaking changes (removing fields, changing types, adding required parameters) require bumping the version to `/api/v2`.
+- Deprecated endpoints must return a `Deprecation: true` header.
+- Sunset policy: Deprecated endpoints will be supported for exactly 6 months from the date of deprecation before being removed.

@@ -74,6 +74,7 @@ This is the implementation stack frozen for Phase 0 and Phase 1.
 
 - PostgreSQL transactional outbox
 - Redis Streams initially or RabbitMQ later if messaging requirements justify it
+- No Kafka during initial development; prefer PostgreSQL + Outbox + BullMQ
 
 ## Integration Hub
 
@@ -96,6 +97,7 @@ This is the implementation stack frozen for Phase 0 and Phase 1.
 - SQLAlchemy only where persistence is needed
 - Optional LiteLLM for provider abstraction
 - Optional LangGraph only for agent workflows that genuinely require it
+- Do not make LangChain the foundation of the entire AI layer
 - Permission-aware retrieval
 - Human approval before AI output becomes an official record
 - AI contracts defined by the platform, not by provider SDKs
@@ -123,6 +125,7 @@ This is the implementation stack frozen for Phase 0 and Phase 1.
 ## Security Tooling
 
 - Semgrep or equivalent SAST
+- DAST (Dynamic Application Security Testing)
 - Trivy
 - Gitleaks
 - OWASP ZAP
@@ -158,6 +161,7 @@ This is the implementation stack frozen for Phase 0 and Phase 1.
 - `/api/v1`
 - Generated TypeScript client for frontend
 - Contract testing
+- No GraphQL; REST is required for explicit business resource mapping
 
 ## Frontend Architecture
 
