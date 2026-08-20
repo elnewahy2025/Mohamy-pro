@@ -22,7 +22,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
-    await this.client.connect();
+    // BullMQ may begin using the shared client during Nest initialization.
+    // PING is safe whether the client is waiting, connecting, or already ready.
     await this.client.ping();
     this.logger.log('Redis connection established');
   }
