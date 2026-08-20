@@ -12,19 +12,24 @@ model Health {
   status    String   @default("OK")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }
 
 // Phase 1: Transactional outbox table skeleton
 model OutboxMessage {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   aggregateType String
   aggregateId   String
   eventType     String
   payload       Json
-  status        String   @default("PENDING") // PENDING, PROCESSED, FAILED
+  status        String    @default("PENDING") // PENDING, PROCESSING, PROCESSED, FAILED
   error         String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
   processedAt   DateTime?
+
+  @@index([status, createdAt])
+  @@index([aggregateType, aggregateId])
 }
 
 // Phase 1: Idempotency registry skeleton
@@ -37,4 +42,7 @@ model IdempotencyKey {
   responseBody   Json
   createdAt      DateTime @default(now())
   expiresAt      DateTime
+
+  @@index([expiresAt])
+  @@index([tenantId, userId])
 }
