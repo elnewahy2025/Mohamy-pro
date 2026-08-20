@@ -23,12 +23,18 @@ model OutboxMessage {
   aggregateId   String
   eventType     String
   payload       Json
-  status        String    @default("PENDING") // PENDING, PROCESSING, PROCESSED, FAILED
-  error         String?
-  createdAt     DateTime  @default(now())
-  processedAt   DateTime?
+  status         String    @default("PENDING") // PENDING, PROCESSING, PROCESSED, FAILED, DEAD_LETTER
+  error          String?
+  attempts       Int       @default(0)
+  availableAt    DateTime  @default(now())
+  claimedAt      DateTime?
+  leaseToken     String?
+  deadLetteredAt DateTime?
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
 
-  @@index([status, createdAt])
+  @@index([status, availableAt, createdAt])
+  @@index([status, claimedAt])
   @@index([aggregateType, aggregateId])
 }
 

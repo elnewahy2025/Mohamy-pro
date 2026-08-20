@@ -22,8 +22,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     this.queue = new Queue<QueuePayload>(APPLICATION_QUEUE_NAME, {
       connection: redis.getClient(),
       defaultJobOptions: {
-        attempts: 5,
-        backoff: { type: 'exponential', delay: 1_000 },
+        attempts: 1,
         removeOnComplete: { age: 86_400, count: 1_000 },
         removeOnFail: { age: 604_800, count: 5_000 },
       },

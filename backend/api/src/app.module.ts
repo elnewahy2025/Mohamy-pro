@@ -10,6 +10,7 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { OutboxModule } from './infrastructure/outbox/outbox.module';
+import { OutboxDispatcher } from './infrastructure/outbox/outbox.dispatcher';
 import { IdempotencyModule } from './infrastructure/idempotency/idempotency.module';
 import { HealthModule } from './health/health.module';
 
@@ -27,7 +28,7 @@ import { HealthModule } from './health/health.module';
     HealthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, OutboxDispatcher],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

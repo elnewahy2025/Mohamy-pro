@@ -14,7 +14,7 @@ The API now includes validated environment configuration, structured Pino loggin
 
 The frontend shell is implemented under `apps/web` with React, Vite, accessible navigation, responsive layout, English and Arabic resources, automatic LTR/RTL switching, persistent locale preference, and basic routes for overview, operations, integrations, and settings. Shared API contracts are under `packages/contracts`.
 
-The repository now contains the Phase 1 Prisma schema and baseline migration, CI validation, environment template, observability baseline documentation, a Windows PostgreSQL backup script, and a disposable restore smoke test.
+The repository now contains the Phase 1 Prisma schema and baseline migration, additive outbox delivery migration, CI validation, environment template, observability baseline documentation, a Windows PostgreSQL backup script, and a disposable restore smoke test. Finding 2 now has a dedicated worker entrypoint, explicit handler registry, lease/retry/dead-letter state transitions, and focused delivery tests; see [`OUTBOX_DELIVERY_DESIGN.md`](OUTBOX_DELIVERY_DESIGN.md).
 
 ## Verified in the development environment
 
@@ -25,7 +25,7 @@ The repository now contains the Phase 1 Prisma schema and baseline migration, CI
 | Prisma Client generation | Passed |
 | Schema-to-empty migration SQL generation | Passed |
 | API ESLint gate | Passed; no errors |
-| API unit tests | Passed: 2 suites, 4 tests |
+| API unit tests | Passed: 3 suites, 7 tests before Finding 2; Finding 2 focused tests now pass: 5 tests, with the full API suite passing: 3 suites, 9 tests |
 | API production build | Passed |
 | Frontend unit tests | Passed: 1 file, 1 test |
 | Frontend production build | Passed |
@@ -45,6 +45,8 @@ Copy-Item .\backend\api\.env.example .\backend\api\.env -Force
 pnpm --filter api exec prisma generate
 pnpm --filter api exec prisma migrate deploy
 pnpm db:check
+pnpm --filter api run build
+pnpm --filter api exec jest --runInBand
 ```
 
 Start the API in one PowerShell window:
