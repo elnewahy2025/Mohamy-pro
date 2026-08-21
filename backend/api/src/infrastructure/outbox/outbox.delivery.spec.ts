@@ -45,7 +45,7 @@ describe('outbox delivery semantics', () => {
     expect(enqueue).toHaveBeenCalledWith(
       'outbox.dispatch',
       { outboxMessageId: 'message-1', attempt: 1 },
-      { jobId: 'outbox:message-1' },
+      { jobId: 'outbox-message-1' },
     );
     expect(markProcessed).not.toHaveBeenCalled();
   });

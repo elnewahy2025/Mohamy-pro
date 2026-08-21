@@ -120,7 +120,7 @@ export class OutboxService {
             outboxMessageId: message.id,
             attempt: message.attempts,
           },
-          { jobId: `outbox:${message.id}` },
+          { jobId: `outbox-${message.id}` },
         );
       } catch (error) {
         await this.recordFailure(
