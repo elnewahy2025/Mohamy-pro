@@ -20,7 +20,7 @@ function Invoke-Docker {
     param([Parameter(Mandatory = $true)][string[]]$Arguments)
     & docker @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Docker command failed with exit code $LASTEXITCODE: docker $($Arguments -join ' ')"
+        throw "Docker command failed with exit code ${LASTEXITCODE}: docker $($Arguments -join ' ')"
     }
 }
 
