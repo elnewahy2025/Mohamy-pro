@@ -18,8 +18,8 @@ The outbox worker resolves the handler, invokes it while the message is leased i
 
 ## Repository Evidence
 
-The handler unit tests cover valid persistence and malformed-payload rejection. The complete API build, Prisma generation, ESLint, and 9 unit suites with 23 tests passed after registration. Windows runtime evidence now shows a uniquely identified event reaching `PROCESSED` with `attempts=1` and a non-null `processedAt`, while the target Health row changed to `DEGRADED`. The generated test rows still require the documented cleanup verification.
+The handler unit tests cover valid persistence and malformed-payload rejection. The complete API build, Prisma generation, ESLint, and current 10 unit suites with 28 tests passed after registration. Windows runtime evidence shows a uniquely identified event reaching `PROCESSED` with `attempts=1` and a non-null `processedAt`, while the target Health row changed to `DEGRADED`. Cleanup verification returned zero remaining matching outbox and health rows.
 
 ## Runtime Verification Boundary
 
-The Windows runtime test used a uniquely identified `Health` row and `OutboxMessage`, allowed the existing API dispatcher and dedicated worker to process the event, and queried both rows. The expected evidence was obtained: `OutboxMessage.status=PROCESSED`, `attempts=1`, a non-null `processedAt`, and `Health.status=DEGRADED`. Cleanup must remove only those uniquely identified test rows and verify both counts are zero. The test must not edit `_prisma_migrations`, reset the database, remove volumes, or touch unrelated containers.
+The Windows runtime test used a uniquely identified `Health` row and `OutboxMessage`, allowed the existing API dispatcher and dedicated worker to process the event, and queried both rows. The expected evidence was obtained: `OutboxMessage.status=PROCESSED`, `attempts=1`, a non-null `processedAt`, and `Health.status=DEGRADED`. Cleanup removed only those uniquely identified test rows and verified both remaining counts were zero. The test did not edit `_prisma_migrations`, reset the database, remove volumes, or touch unrelated containers.
