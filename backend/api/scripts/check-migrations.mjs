@@ -3,6 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import process from "node:process";
 import pg from "pg";
+import { classifyMigrationRows } from "./migration-checker-core.mjs";
 
 const { Client } = pg;
 const migrationsDirectory = resolve(process.cwd(), "prisma/migrations");
@@ -39,15 +40,12 @@ try {
     'SELECT migration_name, checksum, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY started_at, migration_name',
   );
 
-  const appliedMigrations = new Map();
-  const incompleteMigrations = [];
-  for (const row of result.rows) {
-    if (row.rolled_back_at || !row.finished_at) {
-      incompleteMigrations.push(row.migration_name);
-      continue;
-    }
-    appliedMigrations.set(row.migration_name, row.checksum);
-  }
+  const {
+    appliedMigrations,
+    checksumConflicts,
+    incompleteMigrations,
+    supersededAttempts,
+  } = classifyMigrationRows(result.rows);
 
   const unknownApplied = [...appliedMigrations.keys()].filter(
     (migrationName) => !repositoryMigrations.has(migrationName),
@@ -63,7 +61,12 @@ try {
     (migrationName) => !appliedMigrations.has(migrationName),
   );
 
-  if (unknownApplied.length || checksumMismatches.length || incompleteMigrations.length) {
+  if (
+    unknownApplied.length ||
+    checksumMismatches.length ||
+    checksumConflicts.length ||
+    incompleteMigrations.length
+  ) {
     console.error("Migration history drift detected.");
     if (unknownApplied.length) {
       console.error(`Applied migrations missing from repository: ${unknownApplied.join(", ")}`);
@@ -75,13 +78,26 @@ try {
         );
       }
     }
+    if (checksumConflicts.length) {
+      for (const conflict of checksumConflicts) {
+        console.error(
+          `Multiple successful checksums for ${conflict.migrationName}: ${conflict.checksums.join(", ")}`,
+        );
+      }
+    }
     if (incompleteMigrations.length) {
-      console.error(`Incomplete or rolled-back migrations: ${incompleteMigrations.join(", ")}`);
+      console.error(`Incomplete or unresolved migrations: ${incompleteMigrations.join(", ")}`);
     }
     if (pending.length) {
       console.error(`Pending repository migrations: ${pending.join(", ")}`);
     }
     process.exit(1);
+  }
+
+  if (supersededAttempts.length) {
+    console.log(
+      `Superseded failed migration attempts retained in history: ${supersededAttempts.join(", ")}.`,
+    );
   }
 
   if (pending.length) {
