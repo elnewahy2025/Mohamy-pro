@@ -8,7 +8,7 @@ The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](..
 
 ## Current published revisions
 
-The latest published revision is [`cf515a74`](https://github.com/elnewahy2025/Mohamy-pro/commit/cf515a74), which makes outbox retry job IDs unique per attempt after Windows advanced-recovery evidence exposed the prior collision. The storage-runtime runner and ClamAV response fix are recorded at [`52161fed`](https://github.com/elnewahy2025/Mohamy-pro/commit/52161fed) and [`63b85105`](https://github.com/elnewahy2025/Mohamy-pro/commit/63b85105). Earlier observability, storage, outbox, and worker revisions remain listed below.
+The latest published revision is [`d483f259`](https://github.com/elnewahy2025/Mohamy-pro/commit/d483f259), which records the approved Option B qualified Phase 2 entry policy and publishes the Phase 2 entry and implementation-plan documents. The preceding Phase 1 closure revision [`7e468746`](https://github.com/elnewahy2025/Mohamy-pro/commit/7e468746) makes the outbox retry job IDs unique per attempt after Windows advanced-recovery evidence exposed the prior collision. The storage-runtime runner and ClamAV response fix are recorded at [`52161fed`](https://github.com/elnewahy2025/Mohamy-pro/commit/52161fed) and [`63b85105`](https://github.com/elnewahy2025/Mohamy-pro/commit/63b85105). Earlier observability, storage, outbox, and worker revisions remain listed below.
 
 - [`59273a6b`](https://github.com/elnewahy2025/Mohamy-pro/commit/59273a6b): global correlation middleware registration.
 - [`a7e043cb`](https://github.com/elnewahy2025/Mohamy-pro/commit/a7e043cb): visible worker startup logging.
