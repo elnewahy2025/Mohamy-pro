@@ -25,4 +25,6 @@ Storage remains behind the `OBJECT_STORAGE` abstraction. The storage adapter nev
 
 ## Verification Boundary
 
+The provider-level runtime gate is defined in [`STORAGE_RUNTIME_EVIDENCE_PLAN.md`](STORAGE_RUNTIME_EVIDENCE_PLAN.md). Official MinIO documentation requires a key-management boundary for SSE-S3/SSE-KMS; the current local Compose instance has no configured KMS/KES and therefore cannot close the production-encryption requirement.
+
 The current repository evidence proves Prisma schema validity, API build, ESLint, 9 unit suites, and 23 tests. Windows migration/schema evidence is recorded, but it does not yet prove a real object upload, version ID returned by MinIO, object-lock retention response, server-side encryption response, or ClamAV scan response. Those tests must use an isolated storage bucket and must not touch unrelated Health-ERP/Vision-ERP resources or the user’s primary production database.
