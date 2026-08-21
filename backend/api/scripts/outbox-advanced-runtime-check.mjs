@@ -41,7 +41,8 @@ function redisConnection(url) {
 
 async function readOutbox(client, id) {
   const result = await client.query(
-    `SELECT "status", "attempts", "availableAt", "claimedAt", "leaseToken", "error", "processedAt"
+    `SELECT "status", "attempts", "availableAt", "claimedAt", "leaseToken", "error", "processedAt",
+            EXTRACT(EPOCH FROM ("availableAt" - CURRENT_TIMESTAMP)) * 1000 AS "availableDelayMs"
      FROM "OutboxMessage" WHERE "id" = $1`,
     [id],
   );
@@ -72,11 +73,10 @@ async function main() {
       () => readOutbox(database, retryId),
       (row) => row?.status === 'FAILED' && row.attempts === 1,
     );
-    const firstFailureAt = Date.now();
-    const retryAvailableAt = new Date(firstFailure.availableAt).getTime();
-    if (!Number.isFinite(retryAvailableAt) || retryAvailableAt <= firstFailureAt) {
+    const retryDelayMs = Number(firstFailure.availableDelayMs);
+    if (!Number.isFinite(retryDelayMs) || retryDelayMs <= 0) {
       throw new Error(
-        `Retry failure did not schedule a future availableAt time; observedAt=${new Date(firstFailureAt).toISOString()} availableAt=${String(firstFailure.availableAt)} parsed=${String(retryAvailableAt)} status=${firstFailure.status} attempts=${firstFailure.attempts}`,
+        `Retry failure did not schedule a future availableAt time; availableAt=${String(firstFailure.availableAt)} availableDelayMs=${String(firstFailure.availableDelayMs)} status=${firstFailure.status} attempts=${firstFailure.attempts}`,
       );
     }
     const secondFailure = await waitFor(
@@ -138,7 +138,7 @@ async function main() {
       throw new Error(`Duplicate delivery changed processed state: ${JSON.stringify(duplicateFinal)}`);
     }
 
-    console.log(`retry_backoff_status=PASS|first_available_at_future=true|second_attempts=${secondFailure.attempts}`);
+    console.log(`retry_backoff_status=PASS|first_available_at_future=true|delay_ms=${Math.round(retryDelayMs)}|second_attempts=${secondFailure.attempts}`);
     console.log(`lease_expiry_status=PASS|reclaimed_attempts=${reclaimed.attempts}|final_status=${leaseFinal.status}`);
     console.log(`duplicate_delivery_status=PASS|job_states=${duplicateJobs.join(',')}|processed_attempts=${duplicateFinal.attempts}`);
   } finally {
