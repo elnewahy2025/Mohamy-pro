@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Module } from '@nestjs/common';
+import { Module, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import type { NodeEnvironment } from '../config/env.validation';
@@ -15,6 +15,7 @@ import type { NodeEnvironment } from '../config/env.validation';
           'development',
         );
         return {
+          forRoutes: [{ path: '{*path}', method: RequestMethod.ALL }],
           pinoHttp: {
             level: environment === 'production' ? 'info' : 'debug',
             genReqId: (request: { headers: Record<string, unknown> }) => {
