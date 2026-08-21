@@ -119,23 +119,32 @@ All externally facing identifiers must be non-sequential. All administrative and
 
 Phase 2 cannot begin application implementation until the audit-hold decisions above are recorded and accepted. It is not complete when the schema exists or when login works in a single happy path. It is complete only when the identity and tenancy dependency chain is implemented, secured, tested, runtime-verified, documented, and reviewed against this plan. The evidence must demonstrate that tenant context is derived from membership and that no tenant escape, privilege escalation, IDOR, denial bypass, or unauthorized membership switch remains in the covered surface.
 
-Phase 3 Security Foundation and Audit Foundation cannot begin until this Phase 2 completion gate is approved. The future Linux KMS/object-storage production gate remains separate: Phase 2 implementation may proceed under Option B, but no unqualified production deployment claim is permitted until that gate is implemented and verified.
+Phase 3 Security Foundation and Audit Foundation cannot begin until this Phase 2 completion gate is approved. After the approved preflight decision set and corrected-plan re-audit are complete, Phase 2 implementation may proceed under Option B. The future Linux KMS/object-storage production gate remains separate, and no unqualified production deployment claim is permitted until that gate is implemented and verified.
 
 ## References
 
 1. [`PHASE2_ENTRY_DECISION.md`](PHASE2_ENTRY_DECISION.md)
-2. [`Phase 0 domain model`](../phase0/DOMAIN_MODEL.md)
-3. [`Phase 0 multi-tenancy`](../phase0/MULTI_TENANCY.md)
-4. [`Phase 0 authorization`](../phase0/AUTHORIZATION.md)
-5. [`Phase 0 authorization matrix`](../phase0/AUTHORIZATION_MATRIX.md)
-6. [`Phase 0 stack`](../phase0/STACK.md)
-7. [`Phase 0 API contract`](../phase0/API.md)
-8. [`Phase 0 database policy`](../phase0/DATABASE.md)
-9. [`Phase 0 threat model`](../phase0/THREAT_MODEL.md)
-10. [`Phase 0 testing policy`](../phase0/TESTING.md)
-11. [`Phase 0 observability policy`](../phase0/OBSERVABILITY.md)
-12. [`Phase 0 phase dependencies`](../phase0/PHASE_DEPENDENCIES.md)
-13. [`Phase 1 final closure review`](../phase1/FINAL_CLOSURE_REVIEW.md)
-14. [`Phase 1 security controls baseline`](../phase1/SECURITY_CONTROLS_BASELINE.md)
-15. [`Current Phase 1 Prisma schema`](../../backend/api/prisma/schema.prisma)
-16. [`Engineering governance skill`](../../skills/engineering-governance/SKILL.md)
+2. [`PHASE2_PLAN_AUDIT.md`](PHASE2_PLAN_AUDIT.md)
+3. [`AUTHENTICATION_ARCHITECTURE_DECISION.md`](AUTHENTICATION_ARCHITECTURE_DECISION.md)
+4. [`ACCOUNT_LIFECYCLE_DECISION.md`](ACCOUNT_LIFECYCLE_DECISION.md)
+5. [`TENANT_MEMBERSHIP_SWITCHING_DECISION.md`](TENANT_MEMBERSHIP_SWITCHING_DECISION.md)
+6. [`API_ENVELOPE_IDEMPOTENCY_DECISION.md`](API_ENVELOPE_IDEMPOTENCY_DECISION.md)
+7. [`RLS_TENANT_ENFORCEMENT_DECISION.md`](RLS_TENANT_ENFORCEMENT_DECISION.md)
+8. [`AUDIT_EVENT_FOUNDATION_DECISION.md`](AUDIT_EVENT_FOUNDATION_DECISION.md)
+9. [`ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md`](ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md)
+10. [`INTEGRATION_TEST_TOPOLOGY.md`](INTEGRATION_TEST_TOPOLOGY.md)
+11. [`Phase 0 domain model`](../phase0/DOMAIN_MODEL.md)
+12. [`Phase 0 multi-tenancy`](../phase0/MULTI_TENANCY.md)
+13. [`Phase 0 authorization`](../phase0/AUTHORIZATION.md)
+14. [`Phase 0 authorization matrix`](../phase0/AUTHORIZATION_MATRIX.md)
+15. [`Phase 0 stack`](../phase0/STACK.md)
+16. [`Phase 0 API contract`](../phase0/API.md)
+17. [`Phase 0 database policy`](../phase0/DATABASE.md)
+18. [`Phase 0 threat model`](../phase0/THREAT_MODEL.md)
+19. [`Phase 0 testing policy`](../phase0/TESTING.md)
+20. [`Phase 0 observability policy`](../phase0/OBSERVABILITY.md)
+21. [`Phase 0 phase dependencies`](../phase0/PHASE_DEPENDENCIES.md)
+22. [`Phase 1 final closure review`](../phase1/FINAL_CLOSURE_REVIEW.md)
+23. [`Phase 1 security controls baseline`](../phase1/SECURITY_CONTROLS_BASELINE.md)
+24. [`Current Phase 1 Prisma schema`](../../backend/api/prisma/schema.prisma)
+25. [`Engineering governance skill`](../../skills/engineering-governance/SKILL.md)

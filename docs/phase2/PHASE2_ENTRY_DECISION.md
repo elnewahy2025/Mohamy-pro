@@ -22,7 +22,7 @@ This is a deliberate policy exception to the previous pause condition. It does *
 | Phase 1 implementation | Closed with evidence |
 | Phase 1 Windows runtime gates | Closed with evidence |
 | Phase 1 deployment production boundary | Open; future Linux KMS/object-storage plane required for unqualified production deployment |
-| Phase 2 Identity and Multi-Tenancy | Authorized for preflight, architecture decisions, and plan correction; application coding is held until the Phase 2 plan-audit exit criteria are accepted |
+| Phase 2 Identity and Multi-Tenancy | Authorized for implementation after the owner-approved preflight decision set and corrected-plan re-audit; qualified Windows-Docker boundary remains in force |
 | Unqualified production release | Not authorized by this decision |
 
 ## What This Approval Allows
@@ -31,11 +31,11 @@ Phase 2 may perform preflight, architecture decisions, plan correction, and then
 
 Phase 2 work must preserve the Phase 1 controls. It must not disable validation, rate limiting, security headers, correlation, metrics authorization, OpenTelemetry instrumentation, outbox state safety, storage fail-closed behavior, migration checks, or bilingual English/Arabic LTR/RTL behavior to simplify implementation.
 
-## Mandatory plan-audit hold before application coding
+## Corrected-plan re-audit result
 
-A fresh repository audit found P1 planning ambiguities in OIDC/provider configuration, token transport, account lifecycle ownership, tenant switching/bootstrap, API envelopes, HTTP idempotency, RLS decisions, and Phase 2 audit-event persistence. Those decisions are recorded as mandatory gates in [`PHASE2_IMPLEMENTATION_PLAN.md`](PHASE2_IMPLEMENTATION_PLAN.md), and the findings are recorded in [`PHASE2_PLAN_AUDIT.md`](PHASE2_PLAN_AUDIT.md).
+The fresh repository audit found P1 planning ambiguities in OIDC/provider configuration, token transport, account lifecycle ownership, tenant switching/bootstrap, API envelopes, HTTP idempotency, RLS decisions, and Phase 2 audit-event persistence. The owner-approved decisions are now recorded in [`PHASE2_IMPLEMENTATION_PLAN.md`](PHASE2_IMPLEMENTATION_PLAN.md) and the findings/resolutions are recorded in [`PHASE2_PLAN_AUDIT.md`](PHASE2_PLAN_AUDIT.md).
 
-Until every P1 decision is explicitly resolved, accepted, and linked to implementation, test, and evidence owners, the project may perform preflight and architecture work but must not begin Phase 2 application code. This is a quality hold within the Option B entry authorization, not a withdrawal of the qualified Phase 2 authorization.
+The corrected-plan re-audit confirms that the planning ambiguities are resolved for implementation entry. Phase 2 application coding is authorized under the qualified Windows-Docker boundary. Every implementation requirement still requires its own design-to-runtime evidence chain; this authorization does not claim that any Phase 2 code or runtime workflow already exists.
 
 ## What This Approval Does Not Allow
 
@@ -65,7 +65,7 @@ Until that gate is complete, the exact production wording remains:
 The following rules govern Phase 2 and prevent conflict with Phase 0 and Phase 1:
 
 1. The Windows-Docker environment is the current development and verification environment, not an approved unqualified production deployment.
-2. Phase 2 application coding begins only after the mandatory plan-audit hold is accepted; preflight and architecture work may proceed before then.
+2. Phase 2 application coding begins only after the corrected-plan re-audit is published; this requirement is now satisfied by [`PHASE2_PLAN_AUDIT.md`](PHASE2_PLAN_AUDIT.md).
 3. Every Phase 2 requirement must have a traceable design, implementation, integration path, test, runtime evidence, and documented acceptance result.
 4. Identity, membership, tenant, and authorization code must be enforced at the backend and database boundaries; frontend-only checks are insufficient.
 5. Tenant context must not be inferred from a client-controlled field without authenticated membership and authorization verification.

@@ -53,7 +53,7 @@ The approved infrastructure constraint is Windows Docker only. [`WINDOWS_DOCKER_
 
 ## Phase boundary
 
-The final Phase 1 decision is **Phase 1 implementation and Windows runtime gates closed; deployment production boundary open**. The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md), so Phase 2 Identity and Multi-Tenancy is authorized for preflight and architecture work under the qualified Windows-Docker development boundary. Application coding is held until the P1 findings in [`../phase2/PHASE2_PLAN_AUDIT.md`](../phase2/PHASE2_PLAN_AUDIT.md) are resolved and accepted. All remaining observability, idempotency, audit, and deployment items have explicit owners, target re-entry gates, rationale, risk, and acceptance impact; they are not silently treated as passed. Phase 3 remains blocked until Phase 2 is fully implemented, tested, evidenced, and approved.
+The final Phase 1 decision is **Phase 1 implementation and Windows runtime gates closed; deployment production boundary open**. The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md), and the owner-approved preflight decision set plus corrected-plan re-audit in [`../phase2/PHASE2_PLAN_AUDIT.md`](../phase2/PHASE2_PLAN_AUDIT.md) authorize Phase 2 Identity and Multi-Tenancy implementation under the qualified Windows-Docker development boundary. All remaining observability, idempotency, audit, and deployment items have explicit owners, target re-entry gates, rationale, risk, and acceptance impact; they are not silently treated as passed. Phase 3 remains blocked until Phase 2 is fully implemented, tested, evidenced, and approved.
 
 ## Canonical references
 

@@ -2,7 +2,9 @@
 
 **Audit date:** 2026-08-22
 
-**Repository revision audited:** `ca27d82853d428f2da3067f14c5f5388add6ae4d` (`main`, clean and synchronized with `origin/main` in the audited clone)
+**Repository revision audited:** `ca27d82853d428f2da3067f14c5f5388add6ae4d` (`main`, clean and synchronized with `origin/main` before the approved preflight decision set was added)
+
+**Re-audit status:** Corrected preflight decision set reviewed after owner approval on 2026-08-22; documentation changes are pending publication in the current working tree.
 
 **Audit scope:** Phase 0 decisions, Phase 1 acceptance and deployment-boundary documents, the Phase 2 entry and implementation-plan documents, current Prisma schema, backend bootstrap and tests, frontend shell/providers, shared contracts, package dependencies, environment validation, idempotency service, migrations, and repository placeholder/security scan.
 
@@ -10,9 +12,9 @@
 
 The Phase 2 plan is directionally correct and preserves the approved Option B boundary, but the first version was **not sufficiently precise to begin implementation without risking omissions**. The audit found several P1 and P2 planning gaps. These are plan defects, not evidence that Phase 2 application code is already implemented.
 
-The plan has been corrected in the same audit cycle to make the following mandatory before feature coding: authentication-provider and token-transport decisions, account lifecycle ownership, exact tenant-switch semantics, the HTTP response-contract migration, the idempotency lifecycle, RLS policy decisions, the minimum Phase 2 audit-event store, real OIDC integration evidence, and explicit abuse/data-lifecycle requirements.
+The plan has been corrected in the same audit cycle. The owner-approved preflight decision set now makes the following mandatory before feature coding: authentication-provider and token-transport decisions, account lifecycle ownership, exact tenant-switch semantics, the HTTP response-contract migration, the idempotency lifecycle, RLS policy decisions, the minimum Phase 2 audit-event store, real OIDC integration evidence, and explicit abuse/data-lifecycle requirements.
 
-> **Audited authorization:** Phase 2 remains authorized to begin only after the corrected plan is accepted as the implementation baseline. No Phase 2 application code was started by this audit.
+> **Audited authorization:** The corrected plan is accepted as the Phase 2 implementation baseline under Option B. Phase 2 application coding is authorized to begin after publication of this re-audit documentation. No Phase 2 application code was started during the audit itself.
 
 ## Evidence-based strengths
 
@@ -44,24 +46,37 @@ The plan has been corrected in the same audit cycle to make the following mandat
 | `P2-DATA-001` | P2 | The plan mentions lifecycle states and timestamps but does not define soft deletion, cascade restrictions, uniqueness under disabled/deleted records, retention, data minimization, classification, residency, or personal-data export/deletion boundaries for identity records. [`DATABASE.md`](../phase0/DATABASE.md) [`DATA_CLASSIFICATION.md`](../phase0/DATA_CLASSIFICATION.md) [`DATA_RESIDENCY.md`](../phase0/DATA_RESIDENCY.md) | Add an identity-data lifecycle matrix covering active/suspended/disabled/deleted states, foreign-key/cascade behavior, uniqueness, retention, residency, data minimization, export, and legally permitted deletion. |
 | `P2-TEST-001` | P2 | The plan requires valid OIDC login but its test matrix does not explicitly require a real provider/container integration or an approved signed-token test boundary. The current e2e suite has no auth or tenant tests, and the frontend has only a message-tree test. [`app.e2e-spec.ts`](../../backend/api/test/app.e2e-spec.ts) | Add an executable test topology: real Keycloak/OIDC integration for provider behavior, deterministic signed-token unit tests for pure validation, real PostgreSQL/Redis integration for membership and idempotency, API e2e tenant-escape tests, and frontend auth/tenant/RTL tests. State which tests may use isolated mocks and ensure no mock is production-wired. |
 
+## Resolution of findings
+
+| Finding group | Resolution evidence | Re-audit result |
+|---|---|---|
+| `P2-AUTH-001` and `P2-AUTH-002` | [`AUTHENTICATION_ARCHITECTURE_DECISION.md`](AUTHENTICATION_ARCHITECTURE_DECISION.md) and [`ACCOUNT_LIFECYCLE_DECISION.md`](ACCOUNT_LIFECYCLE_DECISION.md) freeze Keycloak, Authorization Code + PKCE, server-mediated sessions, MFA, provider ownership, invitations, recovery, revocation, and real-provider testing. | `RESOLVED FOR PLANNING; IMPLEMENTATION EVIDENCE REQUIRED` |
+| `P2-TENANT-001` and `P2-TENANT-002` | [`TENANT_MEMBERSHIP_SWITCHING_DECISION.md`](TENANT_MEMBERSHIP_SWITCHING_DECISION.md) rejects browser tenant authority, defines the only switch operation, bootstrap, invitations, lifecycle, zero/multiple membership, Platform Admin boundaries, and audit behavior. | `RESOLVED FOR PLANNING; IMPLEMENTATION EVIDENCE REQUIRED` |
+| `P2-API-001` and `P2-IDEMP-001` | [`API_ENVELOPE_IDEMPOTENCY_DECISION.md`](API_ENVELOPE_IDEMPOTENCY_DECISION.md) freezes envelopes, operational exceptions, request fingerprints, actor/tenant/method/route scope, replay/conflict/concurrency semantics, 24-hour retention, and atomic mutation/outbox completion. | `RESOLVED FOR PLANNING; IMPLEMENTATION EVIDENCE REQUIRED` |
+| `P2-SEC-001` | [`RLS_TENANT_ENFORCEMENT_DECISION.md`](RLS_TENANT_ENFORCEMENT_DECISION.md) contains the table-by-table RLS/compensating-control matrix, transaction-local context, pool safety, worker context, and Platform Admin rules. | `RESOLVED FOR PLANNING; IMPLEMENTATION EVIDENCE REQUIRED` |
+| `P2-AUDIT-001` | [`AUDIT_EVENT_FOUNDATION_DECISION.md`](AUDIT_EVENT_FOUNDATION_DECISION.md) defines the Phase 2 PostgreSQL append-only store, event vocabulary, transaction/outbox linkage, redaction, seven-year retention, legal hold, and immutable permissions. | `RESOLVED FOR PLANNING; IMPLEMENTATION EVIDENCE REQUIRED` |
+| `P2-SEC-002`, `P2-SEC-003`, `P2-DATA-001`, and `P2-TEST-001` | [`ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md`](ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md) freezes deterministic limits, enumeration resistance, identity classification, residency, retention, deletion, legal hold, and abuse evidence. [`INTEGRATION_TEST_TOPOLOGY.md`](INTEGRATION_TEST_TOPOLOGY.md) requires real Keycloak, PostgreSQL, Redis, API, worker, browser, Windows, and hosted-CI evidence with no production mocks. | `RESOLVED FOR PLANNING; IMPLEMENTATION EVIDENCE REQUIRED` |
+
+The re-audit confirms that the planning ambiguities are resolved and that all decision documents carry the owner’s standing approval. This does not claim that the implementation exists or that any Phase 2 runtime test has passed. Those are Phase 2 implementation gates.
+
 ## Current audit status
 
 | Category | Status |
 |---|---|
-| Phase 0 alignment | `PASS WITH CORRECTIONS` |
+| Phase 0 alignment | `PASS; DECISIONS TRACEABLE` |
 | Phase 1 boundary alignment | `PASS` |
-| Current implementation readiness | `FOUNDATION ONLY; PHASE 2 CODE MISSING` |
-| Authentication design completeness | `P1 CORRECTIONS REQUIRED` |
-| Tenant-context design completeness | `P1 CORRECTIONS REQUIRED` |
-| API contract/idempotency readiness | `P1 CORRECTIONS REQUIRED` |
-| Audit/RLS design completeness | `P1 CORRECTIONS REQUIRED` |
-| Security/test traceability | `P2 CORRECTIONS REQUIRED` |
-| Authorization to write Phase 2 code | `HOLD UNTIL CORRECTED PLAN IS ACCEPTED` |
+| Current implementation readiness | `FOUNDATION ONLY; PHASE 2 CODE NOT YET STARTED` |
+| Authentication design completeness | `PASS FOR PRE-CODING BASELINE` |
+| Tenant-context design completeness | `PASS FOR PRE-CODING BASELINE` |
+| API contract/idempotency readiness | `PASS FOR PRE-CODING BASELINE` |
+| Audit/RLS design completeness | `PASS FOR PRE-CODING BASELINE` |
+| Security/test traceability | `PASS FOR PRE-CODING BASELINE` |
+| Authorization to write Phase 2 code | `AUTHORIZED AFTER DOCUMENT PUBLICATION` |
 | Unqualified production readiness | `NOT APPROVED` |
 
 ## Required re-audit exit criteria
 
-The corrected plan must explicitly resolve every P1 finding, link each requirement to implementation files and tests, and identify the exact runtime evidence command. Before application code begins, the repository must have an accepted architecture decision for provider/token transport, an idempotency lifecycle design, a deterministic tenant-switch rule, an API-envelope migration decision, an RLS table matrix, an audit-event persistence decision, and an executable OIDC test topology.
+The corrected plan has explicitly resolved every P1 finding through owner-approved architecture decisions, linked each requirement to its future implementation/test/evidence owner, and identified the required runtime topology. The re-audit exit criteria are satisfied for **planning authorization**. Application implementation must now create the actual schema, guards, services, endpoints, frontend flows, migrations, tests, runtime evidence, and final acceptance records described by the approved decisions. No implementation result is inferred from the planning approval.
 
 ## References
 
