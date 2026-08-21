@@ -2,9 +2,9 @@
 
 **Audit date:** 2026-08-22
 
-**Repository revision audited:** `ca27d82853d428f2da3067f14c5f5388add6ae4d` (`main`, clean and synchronized with `origin/main` before the approved preflight decision set was added)
+**Repository revision audited:** `bd4b4ba0` (`main`, published and synchronized with `origin/main`)
 
-**Re-audit status:** Corrected preflight decision set reviewed after owner approval on 2026-08-22; documentation changes are pending publication in the current working tree.
+**Re-audit status:** Corrected preflight decision set reviewed after owner approval on 2026-08-22 and published in commit `bd4b4ba0`.
 
 **Audit scope:** Phase 0 decisions, Phase 1 acceptance and deployment-boundary documents, the Phase 2 entry and implementation-plan documents, current Prisma schema, backend bootstrap and tests, frontend shell/providers, shared contracts, package dependencies, environment validation, idempotency service, migrations, and repository placeholder/security scan.
 
