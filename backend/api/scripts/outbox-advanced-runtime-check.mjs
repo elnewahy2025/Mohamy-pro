@@ -74,8 +74,10 @@ async function main() {
     );
     const firstFailureAt = Date.now();
     const retryAvailableAt = new Date(firstFailure.availableAt).getTime();
-    if (retryAvailableAt <= firstFailureAt) {
-      throw new Error('Retry failure did not schedule a future availableAt time');
+    if (!Number.isFinite(retryAvailableAt) || retryAvailableAt <= firstFailureAt) {
+      throw new Error(
+        `Retry failure did not schedule a future availableAt time; observedAt=${new Date(firstFailureAt).toISOString()} availableAt=${String(firstFailure.availableAt)} parsed=${String(retryAvailableAt)} status=${firstFailure.status} attempts=${firstFailure.attempts}`,
+      );
     }
     const secondFailure = await waitFor(
       'retry second attempt',
