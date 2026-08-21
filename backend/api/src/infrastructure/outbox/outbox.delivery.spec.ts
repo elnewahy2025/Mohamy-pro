@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { Job } from 'bullmq';
 import type { OutboxMessage } from '@prisma/client';
 import { OutboxHandlerRegistry } from './outbox-handler.registry';
@@ -22,6 +23,10 @@ const message: OutboxMessage = {
 };
 
 describe('outbox delivery semantics', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('does not mark a message processed when only queue submission succeeds', async () => {
     const enqueue = jest.fn().mockResolvedValue({ id: 'outbox:message-1' });
     const prisma = {
@@ -108,6 +113,9 @@ describe('outbox delivery semantics', () => {
   });
 
   it('records a failure and does not mark a message processed when its handler throws', async () => {
+    const loggerError = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const outbox = {
       getById: jest.fn().mockResolvedValue(message),
       markProcessed: jest.fn(),
@@ -137,6 +145,15 @@ describe('outbox delivery semantics', () => {
       'message-1',
       'handler failed',
       'lease-1',
+    );
+    expect(loggerError).toHaveBeenCalledWith(
+      {
+        outboxMessageId: 'message-1',
+        eventType: 'test.created',
+        errorName: 'Error',
+        errorMessage: 'handler failed',
+      },
+      'Outbox handler failed; retry or dead-letter state recorded',
     );
   });
 });
