@@ -178,7 +178,7 @@ $kmsLogs = (& docker logs $kmsName 2>&1 | Out-String).Trim()
 $script:rootApiKey = Get-FirstApiKey -Text $kmsLogs
 
 $enclaveOutput = Invoke-KmsCli -CommandArguments @('add-enclave', 'mohamy-aistor', '-a', $script:rootApiKey, '-k')
-$identityOutput = Invoke-KmsCli -CommandArguments @('add-identity', 'mohamy-aistor-service', '--enclave', 'mohamy-aistor', '--admin', '-k')
+$identityOutput = Invoke-KmsCli -CommandArguments @('add-identity', '--enclave', 'mohamy-aistor', '--admin', '-k')
 $script:serviceApiKey = Get-LastApiKey -Text $identityOutput
 [void](Invoke-KmsCli -CommandArguments @('add-key', 'mohamy-default-key', '--enclave', 'mohamy-aistor', '--type', 'AES256', '-k'))
 
