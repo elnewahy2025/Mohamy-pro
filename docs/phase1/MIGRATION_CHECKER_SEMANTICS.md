@@ -27,8 +27,8 @@ The database rows are ordered by `started_at` and `migration_name`, matching the
 
 | Requirement | Source | Implementation | Tests | Evidence | Status |
 |---|---|---|---|---|---|
-| Detect missing repository migrations | Phase 1 migration reconciliation requirement | `backend/api/scripts/check-migrations.mjs` | Focused checker tests plus Windows database run | `unknownApplied` evaluation | PASS in code and focused tests; Windows rerun pending |
-| Detect repository checksum drift | Phase 1 migration reconciliation requirement | `backend/api/scripts/check-migrations.mjs` | Focused classifier checksum-conflict test; live checker rerun pending | `checksumMismatches` and `checksumConflicts` evaluation | PASS in code and focused tests; Windows rerun pending |
+| Detect missing repository migrations | Phase 1 migration reconciliation requirement | `backend/api/scripts/check-migrations.mjs` | Focused checker tests plus Windows database run | `unknownApplied` evaluation | BLOCKED by the unknown applied Windows migration; code and focused tests pass |
+| Detect repository checksum drift | Phase 1 migration reconciliation requirement | `backend/api/scripts/check-migrations.mjs` | Focused classifier checksum-conflict test; live checker rerun pending | `checksumMismatches` and `checksumConflicts` evaluation | BLOCKED by the unknown applied Windows migration; code and focused tests pass |
 | Reject unresolved latest migration attempts | Engineering governance database-integrity requirement | `backend/api/scripts/migration-checker-core.mjs` | Latest rolled-back and unfinished-row tests | `incompleteMigrations` evaluation | PASS in code and focused tests |
 | Accept a failed attempt superseded by a later successful attempt | Observed Windows Prisma history and non-destructive reconciliation requirement | `backend/api/scripts/migration-checker-core.mjs` | Superseded-attempt test | `supersededAttempts` informational result | PASS in code and focused tests |
 | Avoid database mutation | Engineering governance and remediation constraints | Checker performs only a `SELECT` query | Read-only implementation inspection | No `INSERT`, `UPDATE`, `DELETE`, `resolve`, or reset operation | PASS by inspection; runtime evidence pending |
@@ -39,7 +39,7 @@ This correction changes only checker interpretation. It does not change migratio
 
 ## Verification status
 
-The five focused classifier tests were executed from `backend/api` with Node's built-in test runner and passed. The corrected checker has not yet been rerun against the user's Windows PostgreSQL database, so Phase 1 migration reconciliation remains **partially verified** until that command produces evidence and the repaired index query is confirmed.
+The five focused classifier tests were executed from `backend/api` with Node's built-in test runner and passed. The corrected checker was rerun against the user's Windows PostgreSQL database. It correctly stopped on the unknown applied `20260820144702_init` migration and no longer reported the superseded rolled-back `00000000000000_init` attempt as unresolved. The repaired index query was also confirmed, with ten live indexes. Phase 1 migration reconciliation remains **partially verified and blocked** because the unknown migration history is not reproducible from the repository.
 
 ## References
 
