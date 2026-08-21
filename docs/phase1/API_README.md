@@ -169,6 +169,7 @@ The following statements are deliberately limited to the foundation evidence:
 - [`Alerting baseline`](ALERTING_BASELINE.md)
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
+- [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
 

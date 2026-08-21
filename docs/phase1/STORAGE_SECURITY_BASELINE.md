@@ -11,7 +11,7 @@
 | Encryption at rest | `S3_ENCRYPTION_MODE` supports `AES256` and `aws:kms`; the adapter sends the corresponding server-side encryption fields on every object write. Production rejects `NONE`. | Environment validation tests passed; production S3/KMS runtime evidence remains pending. |
 | Retention and legal hold | `StorageObject.retentionUntil` and `legalHold` are persisted. Deletion is rejected while a legal hold is active or retention has not expired. S3 Object Lock is required for production when these controls are enabled. | Repository build/tests passed; object-lock behavior requires a real object-lock-enabled bucket and isolated Windows verification. |
 | Malware scanning | `ClamAvMalwareScanner` uses ClamAV `INSTREAM`; when enabled, a source path is required and the scan completes before the permanent S3 write. Infected or unavailable scans fail closed. | Code is connected and build/lint verified; real ClamAV clean/infected/unavailable cases are not yet executed. |
-| Metadata persistence | Migration `20260821160000_storage_security_metadata` creates the `StorageObject` table and bounded indexes for malware state and retention/legal hold. | Prisma schema validation and client generation passed; Windows `prisma migrate deploy` for this new migration remains pending. |
+| Metadata persistence | Migration `20260821160000_storage_security_metadata` creates the `StorageObject` table and bounded indexes for malware state and retention/legal hold. | Prisma schema validation/client generation passed; Windows migration deployment and the 14-column `StorageObject` schema query passed. See [`STORAGE_WINDOWS_VERIFICATION.md`](STORAGE_WINDOWS_VERIFICATION.md). |
 
 ## Production Configuration
 
@@ -25,4 +25,4 @@ Storage remains behind the `OBJECT_STORAGE` abstraction. The storage adapter nev
 
 ## Verification Boundary
 
-The current repository evidence proves Prisma schema validity, API build, ESLint, 7 unit suites, and 19 tests. It does not yet prove a real object upload, version ID returned by MinIO, object-lock retention response, server-side encryption response, or ClamAV scan response. Those tests must use an isolated storage bucket and must not touch unrelated Health-ERP/Vision-ERP resources or the user’s primary production database.
+The current repository evidence proves Prisma schema validity, API build, ESLint, 7 unit suites, and 19 tests. Windows migration/schema evidence is now recorded, but it does not yet prove a real object upload, version ID returned by MinIO, object-lock retention response, server-side encryption response, or ClamAV scan response. Those tests must use an isolated storage bucket and must not touch unrelated Health-ERP/Vision-ERP resources or the user’s primary production database.

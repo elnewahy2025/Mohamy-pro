@@ -69,6 +69,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Alerting baseline`](ALERTING_BASELINE.md)
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
+- [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
