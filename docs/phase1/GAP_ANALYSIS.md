@@ -26,7 +26,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | Backup and restore smoke | `PASS` | Backup was created, restored into a temporary database, validated, and cleaned up without replacing the primary database. |
 | Frontend foundation | `PASS WITH SCOPE LIMIT` | Next.js App Router, English/Arabic locale support, RTL/LTR direction, responsive layout, and accessibility foundations are present. Business workflows are outside this foundation scope. |
 | Generated API client | `DOCUMENTED DEFERRAL` | [`GENERATED_CLIENT_DECISION.md`](GENERATED_CLIENT_DECISION.md) records why a client is not useful on the foundation-only API and defines the Phase 2 consumer gate. |
-| HTTP idempotency integration | `PARTIAL` | The persistence registry exists; complete request interception, replay, conflict, expiry, scope, and concurrency behavior are not evidenced. |
+| HTTP idempotency integration | `DOCUMENTED DEFERRAL` | [`IDEMPOTENCY_DECISION.md`](IDEMPOTENCY_DECISION.md) records the implemented persistence helper, the current read-only route boundary, and the required real-consumer re-entry gate. |
 | Basic object storage | `PASS WITH SCOPE LIMIT` | Bucket readiness, basic object operations, signed download URLs, and private access are implemented and readiness-tested. |
 | Storage security controls | `PARTIALLY VERIFIED` | Storage metadata, SHA-256 hashing, configured versioning/encryption, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and covered by repository build/unit tests. The new migration, MinIO versioning behavior, object-lock behavior, and real ClamAV scan remain Windows/deployment evidence gates. |
 | Structured logging and correlation IDs | `PASS` | Production logs, correlation IDs, sensitive-header redaction, and runtime startup are evidenced. |
@@ -45,7 +45,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 1. Metrics and distributed tracing are implemented at application level, but collector-received spans and hosted retention/alert-routing evidence remain unverified.
 2. Storage-security controls are implemented at application level, but real S3/MinIO versioning, object-lock, encryption, and ClamAV runtime evidence remain open.
 3. The registered outbox success handler and advanced recovery paths are not fully demonstrated through a real Windows dispatcher-to-worker workflow.
-4. HTTP idempotency interceptor/request lifecycle behavior remains unverified.
+4. HTTP idempotency is a documented deferral until a state-changing business endpoint exists; its real-consumer re-entry gate remains owned by the first mutation endpoint’s phase.
 5. The legacy database state is accepted and documented, but the machine-local migration remains non-reproducible and must not be silently rewritten.
 6. Final documentation cross-links and the consolidated Phase 1 closure review remain open.
 
@@ -74,6 +74,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Security controls baseline`](SECURITY_CONTROLS_BASELINE.md)
 - [`CSRF applicability decision`](CSRF_DECISION.md)
 - [`Generated API client decision`](GENERATED_CLIENT_DECISION.md)
+- [`HTTP idempotency decision`](IDEMPOTENCY_DECISION.md)
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)

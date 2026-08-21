@@ -73,7 +73,7 @@ The migration checker must continue to block that legacy database rather than hi
 | Storage integrity/security | `PARTIALLY VERIFIED` | SHA-256 metadata, S3 versioning/encryption configuration, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and repository-tested. Apply the new migration and capture Windows MinIO/versioning/object-lock/ClamAV evidence before closure. |
 | Outbox success path | `PASS` | [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md) records Windows dispatcher-to-worker evidence: `PROCESSED`, `attempts=1`, non-null `processedAt`, `Health.status=DEGRADED`, and zero matching rows after cleanup. |
 | Outbox advanced recovery | `PARTIAL` | Execute and retain retry-backoff, lease expiry, duplicate-delivery, and graceful-shutdown evidence. |
-| Idempotency HTTP integration | `PARTIAL` | Prove interceptor/request lifecycle behavior, replay, conflict, expiry, scope, and concurrency semantics. |
+| Idempotency HTTP integration | `DOCUMENTED DEFERRAL` | [`IDEMPOTENCY_DECISION.md`](./IDEMPOTENCY_DECISION.md) records the implemented persistence helper, the current read-only route boundary, and the required real-consumer re-entry gate. |
 | Generated API client | `DOCUMENTED DEFERRAL` | [`GENERATED_CLIENT_DECISION.md`](./GENERATED_CLIENT_DECISION.md) records the approved Phase 1 scope decision and Phase 2 re-entry gate. |
 | Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | [`SECURITY_CONTROLS_BASELINE.md`](./SECURITY_CONTROLS_BASELINE.md) records implementation, unit tests, and Windows 429 evidence. [`CSRF_DECISION.md`](./CSRF_DECISION.md) records why CSRF is not applicable to the current read-only, non-cookie API and defines the future re-entry gate. |
 | Local e2e | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](./E2E_WINDOWS_VERIFICATION.md) records the Windows run against real PostgreSQL, Redis, and MinIO with 1 suite and 4 tests passed. |
@@ -113,6 +113,7 @@ Phase 1 may be declared closed only when every remaining blocker is either imple
 - [`Security controls baseline`](SECURITY_CONTROLS_BASELINE.md)
 - [`CSRF applicability decision`](CSRF_DECISION.md)
 - [`Generated API client decision`](GENERATED_CLIENT_DECISION.md)
+- [`HTTP idempotency decision`](IDEMPOTENCY_DECISION.md)
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
