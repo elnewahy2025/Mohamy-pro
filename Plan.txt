@@ -6,7 +6,7 @@
 
 - كل مرحلة يجب أن تكون مكتملة بذاتها.
 - كل مرحلة يجب أن تكون قابلة للنشر في بيئة إنتاج حقيقية.
-- لا نبدأ المرحلة التالية إلا بعد تحقق شروط الإغلاق الحالية بالكامل.
+- لا نبدأ المرحلة التالية إلا بعد تحقق شروط الإغلاق الحالية بالكامل، باستثناء تعديل Option B المعتمد في 2026-08-21: يمكن بدء Phase 2 للتنفيذ تحت حدود Windows-Docker المؤهلة، مع بقاء شرط الإغلاق الكامل ومنع ادعاء الجاهزية الإنتاجية غير المشروطة.
 - بيئة التطوير المعتمدة حصرياً هي: Windows 11، PowerShell، و Visual Studio Code. جميع السكربتات والأوامر يجب أن تدعم هذه البيئة.
 - أي ميزة تُبنى داخل مرحلة يجب أن تشمل: قاعدة بيانات، API، صلاحيات، اختبارات، سجلات، مراقبة، وتوثيق، بحسب ما ينطبق عليها.
 - tenant isolation تُفرض من الخادم، لا من الواجهة.
@@ -18,6 +18,10 @@
 - كل ميزة حرجة تجارياً تحتاج اختباراً آلياً.
 - كل مسار يلامس tenant أو security أو money أو legal record يحتاج audit.
 - الواجهة تدعم الإنجليزية والعربية، مع RTL/LTR كامل، i18n، accessibility، responsive layout.
+
+## Approved Option B amendment — 2026-08-21
+
+The project owner approved Option B. Phase 2 Identity and Multi-Tenancy implementation may begin using Windows Docker as the development and verification environment while the Phase 1 deployment production boundary remains open. This is an entry exception only. It does not change the definition of a complete phase, does not authorize an unqualified production release, and does not allow Phase 3 to begin before Phase 2 is fully implemented, tested, evidenced, documented, and approved. The future Linux KMS/object-storage production plane remains mandatory before any unqualified production-readiness claim.
 
 ## قرارات يجب تثبيتها في Phase 0
 
@@ -1287,3 +1291,7 @@
 إذا كانت أي مرحلة لا تصلح لتشغيلها في بيئة إنتاج حقيقية، فهي ليست مكتملة.
 إذا كانت أي ميزة تعتمد على hardcoding أو bypass للصلاحيات أو tenant leak، فهي مرفوضة.
 إذا لم تكن المرحلة قابلة للقياس والاختبار والإعادة والتعافي، فهي ليست جاهزة للإطلاق.
+
+## توضيح Option B
+
+يسمح الاستثناء المعتمد ببدء Phase 2 تحت بيئة Windows-Docker المؤهلة، لكنه لا يساوي بين بدء التنفيذ وبين الجاهزية الإنتاجية. تظل شروط اكتمال كل مرحلة، واختبارات العزل والصلاحيات، والتوثيق، والتعافي، ومنع أي ادعاء إنتاجي غير مشروط إلزامية. ولا تبدأ Phase 3 قبل اعتماد إغلاق Phase 2 بالكامل.

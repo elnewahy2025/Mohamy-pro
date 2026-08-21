@@ -4,7 +4,7 @@
 
 **Phase 1 implementation and Windows runtime gates closed; deployment production boundary open.** The repository foundation, hosted CI, Windows e2e, rate limiting, outbox success and advanced recovery, application metrics, collector receipt, isolated storage-security runtime, and clean API/worker shutdown evidence are recorded. The approved deployment constraint is Windows Docker only, with no paid cloud service, Linux host, or Kubernetes host. The governing boundary prohibits an unqualified production deployment claim for a workstation-only single-host object-storage/key-management plane. [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md) and [`FINAL_CLOSURE_REVIEW.md`](FINAL_CLOSURE_REVIEW.md) are authoritative for this decision.
 
-Phase 2 remains paused; no Identity and Multi-Tenancy work is authorized by this review.
+The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md): Phase 2 Identity and Multi-Tenancy implementation may proceed under the qualified Windows-Docker development boundary. This does not authorize an unqualified production deployment claim.
 
 ## Current published revisions
 

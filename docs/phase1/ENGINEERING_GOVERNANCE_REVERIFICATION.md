@@ -85,9 +85,9 @@ At the current repository review point, `main` is at commit `cf515a74`, matching
 
 **Deployment production boundary: OPEN under the approved Windows-Docker-only constraint.**
 
-**Phase 2: PAUSED.**
+**Phase 2: AUTHORIZED TO BEGIN UNDER QUALIFIED DEPLOYMENT BOUNDARY.** See [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md).
 
-The verified foundation satisfies the Windows-provable implementation and runtime gates. The engineering-governance skill prohibits converting configuration into hosted retention, alert delivery, durable trace-backend, or API-originated trace-continuity evidence. Those limits are explicitly documented with owners and re-entry gates in [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md).
+The verified foundation satisfies the Windows-provable implementation and runtime gates. The engineering-governance skill prohibits converting configuration into hosted retention, alert delivery, durable trace-backend, or API-originated trace-continuity evidence. Those limits are explicitly documented with owners and re-entry gates in [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md). The project owner approved Option B, authorizing Phase 2 implementation under the qualified Windows-Docker boundary while keeping the future Linux KMS/object-storage deployment gate mandatory for any unqualified production claim.
 
 ## References
 

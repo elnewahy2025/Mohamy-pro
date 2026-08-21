@@ -53,7 +53,7 @@ The approved infrastructure constraint is Windows Docker only. [`WINDOWS_DOCKER_
 
 ## Phase boundary
 
-Phase 2 remains paused. The current evidence proves a functioning foundation runtime and application-level storage-security controls, not a complete legal-operations platform. The final Phase 1 decision is **Phase 1 implementation and Windows runtime gates closed; deployment production boundary open**. All remaining observability, idempotency, audit, and deployment items have explicit owners, target re-entry gates, rationale, risk, and acceptance impact; they are not silently treated as passed.
+The final Phase 1 decision is **Phase 1 implementation and Windows runtime gates closed; deployment production boundary open**. The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md), so Phase 2 Identity and Multi-Tenancy implementation may begin under the qualified Windows-Docker development boundary. All remaining observability, idempotency, audit, and deployment items have explicit owners, target re-entry gates, rationale, risk, and acceptance impact; they are not silently treated as passed. Phase 3 remains blocked until Phase 2 is fully implemented, tested, evidenced, and approved.
 
 ## Canonical references
 
@@ -84,6 +84,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Observability closure decision`](OBSERVABILITY_CLOSURE_DECISION.md)
 - [`Windows Docker-only closure boundary`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md)
 - [`Final closure review`](FINAL_CLOSURE_REVIEW.md)
+- [`Phase 2 entry decision`](../phase2/PHASE2_ENTRY_DECISION.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)

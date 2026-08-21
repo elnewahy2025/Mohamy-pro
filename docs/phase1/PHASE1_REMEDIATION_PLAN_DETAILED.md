@@ -4,7 +4,7 @@
 
 This plan addresses every Phase 1 item classified as **PARTIAL, INCOMPLETE, BLOCKED, UNVERIFIED, IMPLEMENTED/EVIDENCE-GATED, or CONFLICTING** in [`ENGINEERING_GOVERNANCE_REVERIFICATION.md`](ENGINEERING_GOVERNANCE_REVERIFICATION.md). It is governed by [`skills/engineering-governance/SKILL.md`](../../skills/engineering-governance/SKILL.md), the authoritative Phase 1 closure rules in [`Plan.txt`](../../Plan.txt), and the frozen Phase 0 policies.
 
-The plan is a **remediation plan only**. It does not declare any item implemented, tested, production-ready, or closed before the relevant code, dependency chain, runtime workflow, and evidence are actually verified. Phase 2 remains paused until the final closure gate in this document is passed.
+The plan is a **remediation plan only**. It does not declare any item implemented, tested, production-ready, or closed before the relevant code, dependency chain, runtime workflow, and evidence are actually verified. The project owner approved Option B after the final Phase 1 closure review: Phase 2 may begin implementation under the qualified Windows-Docker boundary, while unqualified production deployment remains prohibited until the future Linux KMS/object-storage gate is verified. This plan’s evidence and completion requirements remain mandatory.
 
 > Every workstream must trace the requirement through design, implementation, integration, test, execution, and evidence. A missing stage is a closure blocker.
 
@@ -372,7 +372,7 @@ Sensitive values must never be stored in evidence artifacts. Redact passwords, t
 
 ## 17. Final plan outcome
 
-The expected result is not merely a green local unit-test run. The expected result is a Phase 1 foundation whose implementation, dependency chains, runtime behavior, security controls, documentation, and evidence agree with one another. Until that state is demonstrated, the only valid status is **Phase 1 not closed; Phase 2 paused**.
+The expected result is not merely a green local unit-test run. The expected result is a Phase 1 foundation whose implementation, dependency chains, runtime behavior, security controls, documentation, and evidence agree with one another. Until that state is demonstrated, the only valid status is **Phase 1 not closed**. After the final review, the current status is **Phase 1 implementation and Windows runtime gates closed; deployment production boundary open**, with Phase 2 authorized under the approved qualified-entry decision in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md).
 
 ## References
 

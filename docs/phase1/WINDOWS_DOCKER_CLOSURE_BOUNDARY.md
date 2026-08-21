@@ -28,6 +28,10 @@ Phase 1 will not use the phrase **fully production-ready without qualification**
 
 The user’s requirement of “no partial gaps” is satisfied by closing every provable Windows gate and explicitly rejecting an unsupported production claim; it is not satisfied by relabeling an evaluation-only deployment as production.
 
+## Approved Option B Amendment
+
+On 2026-08-21, the project owner approved Option B as recorded in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md). Phase 2 Identity and Multi-Tenancy implementation may proceed under the qualified Windows-Docker development and verification boundary while the deployment production boundary remains open. This amendment changes the Phase 2 entry condition only; it does not change the exact production decision above, does not authorize an unqualified production release, and does not remove the mandatory future Linux KMS/object-storage verification gate.
+
 ## Required Windows-only evidence before the final decision
 
 The Windows-provable runtime work is evidenced: the outbox advanced-recovery runner returned exit code 0, isolated ClamAV clean and fail-closed behavior passed, and isolated AIStor/KMS versioning, Object Lock/legal-hold, SHA-256/size, and `aws:kms` behavior passed. The remaining closure work is documentation reconciliation, final security/link/diff review, and the consolidated acceptance decision. Hosted retention, alert routing, durable trace-backend delivery, and API-originated trace continuity remain explicit deployment or first-mutation re-entry gates. The AIStor/KMS license file at `C:\Users\ahmed\Desktop\minio.license` remains outside Git and must never be displayed or copied into the repository.

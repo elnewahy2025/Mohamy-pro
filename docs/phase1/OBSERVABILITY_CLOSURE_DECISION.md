@@ -51,7 +51,7 @@ The following gates are mandatory when their owning scope becomes available:
 
 ## Acceptance Impact
 
-This decision closes the **Phase 1 implementation and Windows runtime gates** for observability metrics, collector receipt, privacy-safe telemetry, and the application instrumentation currently in scope. It does not close the supported production deployment boundary. Phase 2 remains paused until the final Phase 1 documentation and repository review are complete.
+This decision closes the **Phase 1 implementation and Windows runtime gates** for observability metrics, collector receipt, privacy-safe telemetry, and the application instrumentation currently in scope. It does not close the supported production deployment boundary. The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md), so Phase 2 may begin implementation under the qualified Windows-Docker development boundary. Durable backend delivery, hosted retention/alert routing, API-originated continuity after the first mutation endpoint, and the future Linux KMS/object-storage production gate remain mandatory re-entry conditions for an unqualified production claim.
 
 ## References
 

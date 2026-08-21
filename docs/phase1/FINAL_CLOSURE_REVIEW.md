@@ -10,7 +10,7 @@
 
 This is the only accurate decision under the approved **Windows Docker only** constraint. The application foundation and every Windows-provable runtime control are evidenced. The result is not an unqualified “fully production-ready” deployment claim because a workstation-only, single-host object-storage/key-management stack cannot prove production-grade availability, host separation, or disaster recovery.[^1]
 
-**Phase 2 remains paused.** The current evidence closes Phase 1 implementation and Windows runtime gates, but it does not authorize Identity and Multi-Tenancy work to begin while the approved deployment boundary remains open and the user’s requirement prohibits passing an unsupported production claim.
+The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md). **Phase 2 Identity and Multi-Tenancy implementation is authorized to begin under the qualified Windows-Docker development boundary.** This approval does not authorize an unqualified production deployment claim and does not remove the future Linux KMS/object-storage production gate.
 
 ## Acceptance Traceability
 
@@ -82,7 +82,7 @@ The following items are not silently passed and are not blockers to the **Window
 
 **Production readiness:** The application foundation is closed for the approved Windows runtime gates. **Unqualified deployment production readiness is not approved** because the Windows-Docker-only storage/KMS plane remains outside the supported production deployment boundary.
 
-**Phase 2:** Paused. No Identity and Multi-Tenancy work is authorized by this review.
+**Phase 2:** Authorized to begin implementation under the qualified boundary recorded in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md). Phase 3 remains blocked until Phase 2 is fully implemented, tested, evidenced, and approved.
 
 ## References
 
