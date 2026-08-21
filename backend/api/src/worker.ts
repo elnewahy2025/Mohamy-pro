@@ -1,6 +1,9 @@
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { MetricsService } from './observability/metrics.service';
+import { WorkerMetricsServer } from './observability/worker-metrics-server';
 import { shutdownTelemetry, startTelemetry } from './observability/tracing';
 
 async function bootstrap(): Promise<void> {
@@ -12,12 +15,19 @@ async function bootstrap(): Promise<void> {
     bufferLogs: false,
   });
   application.enableShutdownHooks();
+  const metrics = application.get(MetricsService);
+  const workerMetricsServer = new WorkerMetricsServer(
+    application.get(ConfigService),
+    metrics,
+  );
+  await workerMetricsServer.start();
   logger.log('Outbox worker process started');
 
   let shuttingDown = false;
   const shutdown = async (): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
+    await workerMetricsServer.close();
     await application.close();
     await shutdownTelemetry();
   };

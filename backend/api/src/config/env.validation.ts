@@ -19,6 +19,7 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   CLAMAV_PORT: number;
   CORS_ORIGINS: string;
   METRICS_ENABLED: boolean;
+  WORKER_METRICS_PORT: number;
   METRICS_AUTH_TOKEN?: string;
   OTEL_ENABLED: boolean;
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
@@ -128,6 +129,7 @@ export function validateEnvironment(
   const kmsKeyId = readString(raw.S3_KMS_KEY_ID);
   const otelEndpoint = readString(raw.OTEL_EXPORTER_OTLP_ENDPOINT);
   const metricsEnabled = readBoolean(raw.METRICS_ENABLED, true);
+  const workerMetricsPort = readPort(raw.WORKER_METRICS_PORT, 3002);
   const otelEnabled = readBoolean(raw.OTEL_ENABLED, Boolean(otelEndpoint));
   const metricsAuthToken = readString(raw.METRICS_AUTH_TOKEN);
   const otelServiceName =
@@ -204,6 +206,7 @@ export function validateEnvironment(
     CLAMAV_PORT: values.CLAMAV_PORT,
     CORS_ORIGINS: requiredValue('CORS_ORIGINS', values.CORS_ORIGINS),
     METRICS_ENABLED: values.METRICS_ENABLED,
+    WORKER_METRICS_PORT: workerMetricsPort,
     ...(values.METRICS_AUTH_TOKEN
       ? { METRICS_AUTH_TOKEN: values.METRICS_AUTH_TOKEN }
       : {}),

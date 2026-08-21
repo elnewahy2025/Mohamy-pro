@@ -10,6 +10,7 @@ describe('validateEnvironment telemetry settings', () => {
     const environment = validateEnvironment(baseEnvironment);
 
     expect(environment.METRICS_ENABLED).toBe(true);
+    expect(environment.WORKER_METRICS_PORT).toBe(3002);
     expect(environment.OTEL_ENABLED).toBe(false);
     expect(environment.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
     expect(environment.OTEL_SERVICE_NAME).toBe('mohamy-api');

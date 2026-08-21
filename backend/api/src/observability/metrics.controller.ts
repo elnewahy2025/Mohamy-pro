@@ -1,4 +1,3 @@
-import { timingSafeEqual } from 'node:crypto';
 import {
   Controller,
   Get,
@@ -10,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import type { ValidatedEnvironment } from '../config/env.validation';
+import { isMetricsAuthorized } from './metrics-access';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import {
   QueueService,
@@ -39,7 +39,7 @@ export class MetricsController {
       return;
     }
 
-    if (!this.isAuthorized(request)) {
+    if (!isMetricsAuthorized(this.config, request)) {
       response.status(HttpStatus.FORBIDDEN).json({
         statusCode: HttpStatus.FORBIDDEN,
         error: 'Forbidden',
@@ -64,37 +64,4 @@ export class MetricsController {
     response.setHeader('Content-Type', this.metrics.registry.contentType);
     response.status(HttpStatus.OK).send(await this.metrics.render());
   }
-
-  private isAuthorized(request: Request): boolean {
-    const configuredToken = this.config.get<string>('METRICS_AUTH_TOKEN');
-    if (configuredToken) {
-      const suppliedToken = this.readSuppliedToken(request);
-      if (!suppliedToken) return false;
-      const expected = Buffer.from(configuredToken, 'utf8');
-      const supplied = Buffer.from(suppliedToken, 'utf8');
-      return (
-        expected.length === supplied.length &&
-        timingSafeEqual(expected, supplied)
-      );
-    }
-
-    if (this.config.get<string>('NODE_ENV') === 'production') return false;
-    return isLoopback(request.ip);
-  }
-
-  private readSuppliedToken(request: Request): string | undefined {
-    const authorization = request.headers.authorization;
-    if (
-      typeof authorization === 'string' &&
-      authorization.startsWith('Bearer ')
-    ) {
-      return authorization.slice('Bearer '.length).trim();
-    }
-    const header = request.headers['x-metrics-token'];
-    return typeof header === 'string' ? header.trim() : undefined;
-  }
-}
-
-function isLoopback(ip: string | undefined): boolean {
-  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
 }
