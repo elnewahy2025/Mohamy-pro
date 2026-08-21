@@ -30,7 +30,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | Basic object storage | `PASS WITH SCOPE LIMIT` | Bucket readiness, basic object operations, signed download URLs, and private access are implemented and readiness-tested. |
 | Storage security controls | `PARTIALLY VERIFIED` | Storage metadata, SHA-256 hashing, configured versioning/encryption, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and covered by repository build/unit tests. The new migration, MinIO versioning behavior, object-lock behavior, and real ClamAV scan remain Windows/deployment evidence gates. |
 | Structured logging and correlation IDs | `PASS` | Production logs, correlation IDs, sensitive-header redaction, and runtime startup are evidenced. |
-| Metrics and tracing | `PARTIALLY VERIFIED` | API and dedicated worker Prometheus registries, protected API/worker endpoints, OpenTelemetry API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, explicit outbox spans, and W3C queue propagation are implemented. Build and unit tests pass; the new worker endpoint and collector-received spans still require Windows/deployment evidence. |
+| Metrics and tracing | `PARTIALLY VERIFIED` | [`OTEL_WINDOWS_VERIFICATION.md`](OTEL_WINDOWS_VERIFICATION.md) records collector receipt from both API and worker, including real worker/database spans. Windows API/worker metrics and rate-limit evidence also pass. API-to-worker parent/child continuity and hosted retention/alert routing remain open. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, OpenTelemetry Collector, and critical Prometheus alert configurations are present. Hosted retention enforcement and alert routing are not runtime-verified; audit/security event persistence remains explicitly owned by later roadmap phases. |
 | Input validation and security headers | `PASS` | Global validation, whitelist/forbid behavior, Helmet, CORS configuration, and redaction are implemented. |
 | Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | Redis-backed atomic rate limiting is unit-tested and Windows-verified with raw 200/200/429 headers and `Retry-After`. [`CSRF_DECISION.md`](CSRF_DECISION.md) records that the current read-only, non-cookie API has no applicable CSRF surface and defines the future re-entry gate. |
@@ -42,7 +42,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 
 ## Remaining blockers for unconditional Phase 1 closure
 
-1. Metrics and distributed tracing are implemented at application level, but collector-received spans and hosted retention/alert-routing evidence remain unverified.
+1. Metrics and distributed tracing are implemented and collector receipt from both API and worker is evidenced, but API-to-worker trace continuity and hosted retention/alert-routing evidence remain unverified.
 2. Storage-security controls are implemented at application level, but real S3/MinIO versioning, object-lock, encryption, and ClamAV runtime evidence remain open.
 3. The registered outbox success handler and advanced recovery paths are not fully demonstrated through a real Windows dispatcher-to-worker workflow.
 4. HTTP idempotency is a documented deferral until a state-changing business endpoint exists; its real-consumer re-entry gate remains owned by the first mutation endpoint’s phase.
@@ -77,6 +77,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`HTTP idempotency decision`](IDEMPOTENCY_DECISION.md)
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
+- [`Windows OpenTelemetry verification`](OTEL_WINDOWS_VERIFICATION.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)

@@ -68,7 +68,7 @@ The migration checker must continue to block that legacy database rather than hi
 |---|---|---|
 | Hosted GitHub Actions run | `PASS` | [`HOSTED_CI_VERIFICATION.md`](./HOSTED_CI_VERIFICATION.md) records successful quality, static security, container, and DAST jobs at commit `85333579`; coverage, SBOM, SARIF, and ZAP artifacts were retained. The pull-request-only dependency-review job was correctly skipped on the push event. |
 | Prometheus metrics | `PASS WITH SCOPE LIMIT` | Protected API `/api/metrics` and dedicated worker `/metrics` registries, bounded labels, unit tests, and build are present. Windows captured the API scrape, outbox success path, worker port `3002`, and a non-empty worker job-duration histogram. Hosted retention and alert-routing evidence remain required. |
-| OpenTelemetry tracing | `PARTIALLY VERIFIED` | API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, outbox spans, W3C propagation, unit tests, and build are present. A real collector-received API-to-worker trace remains unverified. |
+| OpenTelemetry tracing | `PARTIALLY VERIFIED` | [`OTEL_WINDOWS_VERIFICATION.md`](./OTEL_WINDOWS_VERIFICATION.md) records collector receipt from both `mohamy-api` and `mohamy-worker`, including real worker/database spans. API-to-worker parent/child continuity remains unproven because the test producer was direct SQL rather than an API mutation. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, collector, and critical Prometheus alert configurations are committed. Hosted backend retention and alert-routing evidence remain required; audit/security event persistence follows the authoritative later-phase ownership. |
 | Storage integrity/security | `PARTIALLY VERIFIED` | SHA-256 metadata, S3 versioning/encryption configuration, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and repository-tested. Apply the new migration and capture Windows MinIO/versioning/object-lock/ClamAV evidence before closure. |
 | Outbox success path | `PASS` | [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md) records Windows dispatcher-to-worker evidence: `PROCESSED`, `attempts=1`, non-null `processedAt`, `Health.status=DEGRADED`, and zero matching rows after cleanup. |
@@ -116,6 +116,7 @@ Phase 1 may be declared closed only when every remaining blocker is either imple
 - [`HTTP idempotency decision`](IDEMPOTENCY_DECISION.md)
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
+- [`Windows OpenTelemetry verification`](OTEL_WINDOWS_VERIFICATION.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
