@@ -1,5 +1,7 @@
 # Phase 1 Rule #3 Compliance Audit
 
+> **Historical snapshot notice:** This audit records the pre-remediation state. Its findings are preserved for traceability but are superseded by the current [`ACCEPTANCE_REPORT.md`](ACCEPTANCE_REPORT.md), [`GAP_ANALYSIS.md`](GAP_ANALYSIS.md), [`E2E_WINDOWS_VERIFICATION.md`](E2E_WINDOWS_VERIFICATION.md), [`HOSTED_CI_VERIFICATION.md`](HOSTED_CI_VERIFICATION.md), and [`SECURITY_CONTROLS_BASELINE.md`](SECURITY_CONTROLS_BASELINE.md). The current closure decision remains governed by those documents and the engineering-governance requirements.
+
 ## Executive conclusion
 
 This audit rechecked every Phase 1 finding against the project’s newly saved Rule #3. The review inspected the authoritative audit and closure rules, the current source dependency chains, the CI workflow, the migration and outbox implementations, the frontend runtime, the test/build outputs, the final Git state, and targeted searches for unsafe placeholders, mocks, stubs, hardcoded credentials, and disabled controls.

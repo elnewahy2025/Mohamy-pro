@@ -4,7 +4,7 @@
 
 The API workspace is `backend/api` in the Mohamy Pro monorepo. It is a NestJS 11 application using Prisma 7 with PostgreSQL, Redis, BullMQ, MinIO through the S3-compatible adapter, structured Pino logging, correlation IDs, URI versioning, OpenAPI, validation, security headers, health checks, transactional outbox persistence, and a dedicated outbox worker.
 
-This document describes the **Phase 1 foundation boundary**. Identity, authentication, tenant isolation, authorization, legal-case workflows, and document security remain outside the current API surface. Application metrics, OpenTelemetry instrumentation, correlation propagation, retention configuration, and critical alert rules are implemented but remain deployment-evidence-gated. Business audit/security event persistence remains owned by later roadmap phases.
+This document describes the **Phase 1 foundation boundary**. Identity, authentication, tenant isolation, authorization, legal-case workflows, and document security remain outside the current API surface. Application metrics, correlation propagation, rate limiting, and the hosted quality/security workflow have current repository and runtime evidence. OpenTelemetry collector delivery, hosted retention/alert routing, storage-provider security behavior, advanced outbox recovery, and HTTP idempotency lifecycle remain independently evidence-gated. Business audit/security event persistence remains owned by later roadmap phases.
 
 ## Local infrastructure
 
@@ -128,7 +128,7 @@ pnpm --filter api run test:cov
 pnpm --filter api run test:e2e
 ```
 
-The recorded Windows baseline includes a successful API build and 3 passing unit suites with 9 passing tests before the observability changes. The current repository verification passes Prisma validation, the API build, ESLint, and 9 unit suites with 23 tests, including metrics authorization, environment validation, W3C queue propagation, storage integrity, and the real outbox handler. The e2e suite requires the real PostgreSQL, Redis, and MinIO services and must fail clearly when its infrastructure is unavailable; it must not silently substitute fake services. Current sandbox e2e execution is blocked by missing `DATABASE_URL` and unavailable Docker, so Windows re-execution remains required.
+The current Windows verification passes the API build, ESLint, 10 unit suites with 28 tests, and the e2e suite with 1 suite and 4 tests. The e2e suite requires real PostgreSQL, Redis, and MinIO services and does not silently substitute fake services. Hosted CI independently passed the quality, integration, e2e, static security, container, and DAST jobs with retained artifacts; see [`HOSTED_CI_VERIFICATION.md`](HOSTED_CI_VERIFICATION.md).
 
 ## Backup and restore smoke test
 
@@ -152,11 +152,11 @@ The following statements are deliberately limited to the foundation evidence:
 
 - Authentication, memberships, tenant isolation, RBAC/ABAC, and resource authorization are not part of the current API surface.
 - The idempotency registry exists as a persistence component; a complete HTTP idempotency lifecycle is not claimed until its interceptor, scope, replay, conflict, and concurrency behavior are implemented and tested.
-- The object-storage adapter now computes SHA-256 and byte-count metadata, persists storage metadata, enables configured S3 versioning, applies configured server-side encryption, enforces retention/legal-hold deletion checks, and requires a configured ClamAV scan before permanent storage when malware scanning is enabled. Windows migration/startup verification for the new storage migration and MinIO versioning behavior remains required; local development intentionally leaves object lock, encryption, and malware scanning disabled.
+- The object-storage adapter now computes SHA-256 and byte-count metadata, persists storage metadata, enables configured S3 versioning, applies configured server-side encryption, enforces retention/legal-hold deletion checks, and requires a configured ClamAV scan before permanent storage when malware scanning is enabled. The storage migration is deployed on Windows; isolated MinIO versioning, object-lock, encryption, and real ClamAV runtime evidence remain required. Local development intentionally leaves object lock, encryption, and malware scanning disabled.
 - The outbox worker and failure/dead-letter path are runtime-verified, and a real `health.status.updated` handler is now registered and unit-tested. The current API has no producer endpoint for this event, so a dispatcher-to-worker `PROCESSED` workflow still requires Windows runtime evidence; see [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md).
-- Structured logs, correlation IDs, Prometheus application metrics, separate API/worker metrics registries, OpenTelemetry bootstrap/instrumentation, retention configuration, and critical alert rules are implemented. Windows API metrics/readiness scrape evidence is recorded; the new worker metrics listener still requires a fresh Windows scrape. Collector delivery and hosted retention/alert-routing evidence remain open. Seven-year audit/security event persistence is explicitly owned by later roadmap phases and is not represented as a Phase 1 business-audit implementation.
-- The generated API client decision remains evidence-gated; the current frontend and shared contracts must not be described as a generated OpenAPI client without generated artifacts and consumer tests.
-- GitHub Actions hosted execution and retained security artifacts remain required before production-readiness closure.
+- Structured logs, correlation IDs, Prometheus application metrics, separate API/worker metrics registries, OpenTelemetry bootstrap/instrumentation, retention configuration, and critical alert rules are implemented. Windows API and worker metrics scrape evidence is recorded. Collector delivery and hosted retention/alert-routing evidence remain open. Seven-year audit/security event persistence is explicitly owned by later roadmap phases and is not represented as a Phase 1 business-audit implementation.
+- The generated API client is an approved Phase 1 deferral because the current OpenAPI surface contains only foundation operations; [`GENERATED_CLIENT_DECISION.md`](GENERATED_CLIENT_DECISION.md) defines the Phase 2 re-entry gate.
+- GitHub Actions hosted execution and retained security artifacts are verified for the recorded revision; [`HOSTED_CI_VERIFICATION.md`](HOSTED_CI_VERIFICATION.md) records the run and artifact expiry evidence.
 
 ## Canonical Phase 1 references
 
@@ -174,12 +174,18 @@ The following statements are deliberately limited to the foundation evidence:
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)
+- [`Windows e2e verification`](E2E_WINDOWS_VERIFICATION.md)
+- [`Security controls baseline`](SECURITY_CONTROLS_BASELINE.md)
+- [`CSRF applicability decision`](CSRF_DECISION.md)
+- [`Generated API client decision`](GENERATED_CLIENT_DECISION.md)
+- [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
+- [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
 
 ## Status
 
-The API, worker, migration deployment, health, OpenAPI, backup, restore, and controlled outbox failure-path checks have current Windows evidence. Phase 1 is not declared closed until the remaining storage/security, observability, hosted-CI, generated-client, architecture/version, e2e, and final documentation gates are either implemented and evidenced or explicitly approved as documented deferrals.
+The API, worker, migration deployment, health, OpenAPI, backup, restore, rate-limit, Windows e2e, hosted CI, and controlled outbox failure-path checks have current evidence. Phase 1 is not declared closed until the remaining storage-provider security, collector/retention/alerting, outbox recovery/success, idempotency lifecycle, legacy-state traceability, and final documentation gates are either implemented and evidenced or explicitly approved as documented deferrals.
 
 ## References
 

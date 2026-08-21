@@ -1,4 +1,8 @@
-# Phase 1 Expert Audit Report
+# Phase 1 Expert Audit
+
+> **Historical snapshot notice:** This audit records the repository state before the subsequent Phase 1 remediation and verification commits. Its negative findings are preserved for traceability but are superseded by the current [`ACCEPTANCE_REPORT.md`](ACCEPTANCE_REPORT.md), [`GAP_ANALYSIS.md`](GAP_ANALYSIS.md), [`E2E_WINDOWS_VERIFICATION.md`](E2E_WINDOWS_VERIFICATION.md), [`HOSTED_CI_VERIFICATION.md`](HOSTED_CI_VERIFICATION.md), and [`SECURITY_CONTROLS_BASELINE.md`](SECURITY_CONTROLS_BASELINE.md). It must not be read as the current implementation status.
+
+ Report
 
 ## Executive conclusion
 
