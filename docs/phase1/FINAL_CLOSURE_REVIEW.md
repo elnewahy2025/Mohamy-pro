@@ -10,7 +10,7 @@
 
 This is the only accurate decision under the approved **Windows Docker only** constraint. The application foundation and every Windows-provable runtime control are evidenced. The result is not an unqualified “fully production-ready” deployment claim because a workstation-only, single-host object-storage/key-management stack cannot prove production-grade availability, host separation, or disaster recovery.[^1]
 
-The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md). **Phase 2 Identity and Multi-Tenancy implementation is authorized to begin under the qualified Windows-Docker development boundary.** This approval does not authorize an unqualified production deployment claim and does not remove the future Linux KMS/object-storage production gate.
+The project owner approved Option B in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md). **Phase 2 Identity and Multi-Tenancy is authorized for preflight and architecture work under the qualified Windows-Docker development boundary; application coding is held until the fresh plan-audit exit criteria are accepted.** This approval does not authorize an unqualified production deployment claim and does not remove the future Linux KMS/object-storage production gate. The findings are recorded in [`../phase2/PHASE2_PLAN_AUDIT.md`](../phase2/PHASE2_PLAN_AUDIT.md).
 
 ## Acceptance Traceability
 
@@ -82,7 +82,7 @@ The following items are not silently passed and are not blockers to the **Window
 
 **Production readiness:** The application foundation is closed for the approved Windows runtime gates. **Unqualified deployment production readiness is not approved** because the Windows-Docker-only storage/KMS plane remains outside the supported production deployment boundary.
 
-**Phase 2:** Authorized to begin implementation under the qualified boundary recorded in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md). Phase 3 remains blocked until Phase 2 is fully implemented, tested, evidenced, and approved.
+**Phase 2:** Authorized for preflight and architecture work under the qualified boundary. Application coding remains held until the P1 plan-audit findings in [`../phase2/PHASE2_PLAN_AUDIT.md`](../phase2/PHASE2_PLAN_AUDIT.md) are resolved and accepted. Phase 3 remains blocked until Phase 2 is fully implemented, tested, evidenced, and approved.
 
 ## References
 

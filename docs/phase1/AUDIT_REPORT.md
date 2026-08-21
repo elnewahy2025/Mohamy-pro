@@ -8,7 +8,7 @@
 
 Phase 1 has a working local foundation, but it is **not fully closed under the project’s own definition of complete**. The repository builds, the API compiles, the basic unit tests pass, the local Docker services are reachable, the API liveness/readiness/OpenAPI smoke checks were observed as successful, and the backup/import workflow was exercised. However, the audit found material gaps in the frozen Phase 0 stack and testing requirements, one stale e2e test that currently fails, a queue/outbox delivery-semantics defect, incomplete CI coverage, and an acceptance report whose revision is outdated.
 
-Phase 2 must remain paused until these findings are either implemented, explicitly re-scoped in the governing documents, or formally accepted as deferred work. The exact Phase 1 definition requires the application to start, database/Redis/queue/storage to work, API and frontend to work, tests and CI to pass, and backup/restore smoke testing to succeed. The repository currently proves only part of that definition.
+At the time of this historical snapshot, Phase 2 was paused while these findings awaited remediation. That snapshot-era status is superseded by the current [`FINAL_CLOSURE_REVIEW.md`](FINAL_CLOSURE_REVIEW.md) and the approved qualified-entry decision in [`../phase2/PHASE2_ENTRY_DECISION.md`](../phase2/PHASE2_ENTRY_DECISION.md). The original negative findings remain preserved for traceability and must not be read as current implementation status.
 
 ## Audit sources
 
