@@ -124,7 +124,13 @@ export class S3ObjectStorageService
       }
     }
 
-    this.logger.log(`Object storage bucket ${this.bucket} is ready`);
+    this.logger.log(
+      `Object storage bucket ${this.bucket} is ready; versioning=${
+        this.versioningEnabled ? 'enabled' : 'disabled'
+      }, objectLock=${this.objectLockEnabled ? 'enabled' : 'disabled'}, encryption=${
+        this.encryptionMode
+      }, malwareScanning=${this.malwareScanner.enabled ? 'enabled' : 'disabled'}`,
+    );
   }
 
   async healthCheck(): Promise<void> {
