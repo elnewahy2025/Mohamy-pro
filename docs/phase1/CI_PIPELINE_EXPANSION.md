@@ -42,7 +42,7 @@ The workflow structure validator confirms that all required jobs, infrastructure
 
 This correction does not claim that the full authentication, authorization, tenant-isolation, document-access, search-access, billing, webhook, or high-risk security test matrix is complete. Those domain flows do not exist in the Phase 1 foundation and must be added with their corresponding product modules. The CI now provides the execution and enforcement surface for those tests when they are introduced.
 
-The hosted CI gate is closed for the recorded revision. Windows migration, API/worker, e2e, and rate-limit gates are separately recorded in the Phase 1 evidence documents. Storage-provider runtime, collector/retention/alerting, outbox recovery/success, idempotency lifecycle, and final documentation gates remain open. Phase 2 remains paused.
+The hosted CI gate is closed for the recorded revision. Windows migration, API/worker, e2e, rate-limit, isolated storage-security, outbox success/recovery, and collector-receipt gates are separately recorded in the Phase 1 evidence documents. Durable trace-backend delivery, hosted retention/alert routing, API-originated trace continuity without a mutation endpoint, idempotency lifecycle, and final documentation review remain explicit scope or re-entry gates. Phase 2 remains paused pending the consolidated closure review.
 
 ## References
 

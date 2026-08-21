@@ -39,7 +39,7 @@ This correction changes only checker interpretation. It does not change migratio
 
 ## Verification status
 
-The five focused classifier tests were executed from `backend/api` with Node's built-in test runner and passed. The corrected checker was rerun against the user's Windows PostgreSQL database. It correctly stopped on the unknown applied `20260820144702_init` migration and no longer reported the superseded rolled-back `00000000000000_init` attempt as unresolved. The repaired index query was also confirmed, with ten live indexes. Phase 1 migration reconciliation remains **partially verified and blocked** because the unknown migration history is not reproducible from the repository.
+The five focused classifier tests were executed from `backend/api` with Node's built-in test runner and passed. The corrected checker was rerun against the user's Windows PostgreSQL database. It correctly stopped on the unknown applied `20260820144702_init` migration and no longer reported the superseded rolled-back `00000000000000_init` attempt as unresolved. The repaired index query was also confirmed, with ten live indexes. Phase 1 migration reconciliation is **PASS WITH ACCEPTED LEGACY STATE**: the repository migration chain is reproducible on the disposable database, while the pre-existing Windows history is intentionally preserved and remains non-reproducible from Git. The checker must continue to block that specific legacy database state rather than hide the difference.
 
 ## References
 

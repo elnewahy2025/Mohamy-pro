@@ -29,13 +29,13 @@ The existing English and Arabic content, responsive shell, navigation, accessibi
 
 This finding addresses the frozen frontend stack divergence. The audit’s separate generated OpenAPI-client gap remains a distinct contract/CI item and has not been silently represented as complete by this migration. The frontend currently consumes localized application content and does not invent business rules or claim backend data it does not fetch.
 
-Finding 1 remains open pending the user’s Windows database migration validation. Finding 2 is implemented at repository level and still requires Windows Redis/PostgreSQL integration evidence. Phase 2 product work remains paused.
+Finding 1 is closed with the accepted legacy Windows migration state documented in [`MIGRATION_BASELINE_RECONCILIATION.md`](MIGRATION_BASELINE_RECONCILIATION.md) and the clean disposable migration evidence. Finding 2 is closed for the Phase 1 Windows runtime boundary through the real PostgreSQL/Redis e2e, readiness, rate-limit, and outbox evidence. The generated API-client decision remains a separate documented deferral. Phase 2 product work remains paused.
 
 ## References
 
 1. [`Frozen Phase 0 stack`](../phase0/STACK.md)
 2. [`Phase 1 audit report`](AUDIT_REPORT.md)
-3. [`Phase 1 remediation plan`](REMEDIATION_PLAN.md)
+3. [`Phase 1 remediation plan`](PHASE1_REMEDIATION_PLAN_DETAILED.md)
 4. [`Frontend package`](../../apps/web/package.json)
 5. [`Localized App Router layout`](../../apps/web/src/app/[locale]/layout.tsx)
 6. [`Locale routing`](../../apps/web/src/i18n/routing.ts)

@@ -19,7 +19,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | Redis, BullMQ, and worker startup | `PASS` | Production worker connected to PostgreSQL, Redis, queue, and outbox infrastructure and logged readiness. |
 | Outbox enqueue and dead-letter path | `PASS` | A uniquely identified unknown event was submitted using a BullMQ-safe job ID, consumed by the real worker, moved to `DEAD_LETTER`, and removed; cleanup was verified with zero matching rows. |
 | Outbox success path | `PASS` | [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md) records Windows dispatcher-to-worker evidence: `PROCESSED`, `attempts=1`, non-null `processedAt`, `Health.status=DEGRADED`, and zero matching rows after cleanup. |
-| Outbox advanced recovery | `PARTIAL` | Unit tests cover state transitions; real retry-backoff, lease expiry, duplicate delivery, graceful shutdown, and success-handler workflows remain unexecuted. |
+| Outbox advanced recovery | `PASS WITH GRACEFUL-SHUTDOWN GATE OPEN` | [`OUTBOX_ADVANCED_WINDOWS_VERIFICATION.md`](OUTBOX_ADVANCED_WINDOWS_VERIFICATION.md) records real retry-backoff, lease expiry, unique per-attempt IDs, duplicate delivery, and cleanup. Graceful shutdown remains the only unverified sub-gate. |
 | API production startup | `PASS` | `dist/src/main.js` starts and connects to PostgreSQL, Redis, queue, and MinIO. The previous wildcard route warnings were removed. |
 | Health and readiness | `PASS` | Windows production runtime returned HTTP 200 for liveness and readiness; all four dependencies reported `up`. |
 | OpenAPI | `PASS` | `/api/docs-json` returned HTTP 200 with the current versioned routes. |
@@ -28,32 +28,32 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | Generated API client | `DOCUMENTED DEFERRAL` | [`GENERATED_CLIENT_DECISION.md`](GENERATED_CLIENT_DECISION.md) records why a client is not useful on the foundation-only API and defines the Phase 2 consumer gate. |
 | HTTP idempotency integration | `DOCUMENTED DEFERRAL` | [`IDEMPOTENCY_DECISION.md`](IDEMPOTENCY_DECISION.md) records the implemented persistence helper, the current read-only route boundary, and the required real-consumer re-entry gate. |
 | Basic object storage | `PASS WITH SCOPE LIMIT` | Bucket readiness, basic object operations, signed download URLs, and private access are implemented and readiness-tested. |
-| Storage security controls | `PARTIALLY VERIFIED` | Storage metadata, SHA-256 hashing, configured versioning/encryption, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and covered by repository build/unit tests. The new migration, MinIO versioning behavior, object-lock behavior, and real ClamAV scan remain Windows/deployment evidence gates. |
+| Storage security controls | `PASS WITH WINDOWS-ONLY DEPLOYMENT SCOPE` | [`STORAGE_WINDOWS_VERIFICATION.md`](STORAGE_WINDOWS_VERIFICATION.md) records the applied migration, real isolated versioning, SHA-256/size metadata, observed `aws:kms`, Object Lock/legal-hold enforcement, clean ClamAV scanning, and fail-closed behavior. The Windows-only deployment boundary remains explicit. |
 | Structured logging and correlation IDs | `PASS` | Production logs, correlation IDs, sensitive-header redaction, and runtime startup are evidenced. |
-| Metrics and tracing | `PARTIALLY VERIFIED` | [`OTEL_WINDOWS_VERIFICATION.md`](OTEL_WINDOWS_VERIFICATION.md) records collector receipt from both API and worker, including real worker/database spans. Windows API/worker metrics and rate-limit evidence also pass. API-to-worker parent/child continuity and hosted retention/alert routing remain open. |
-| Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, OpenTelemetry Collector, and critical Prometheus alert configurations are present. Hosted retention enforcement and alert routing are not runtime-verified; audit/security event persistence remains explicitly owned by later roadmap phases. |
+| Metrics and tracing | `PASS WITH EXPLICIT SCOPE LIMIT` | [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md) and [`OTEL_WINDOWS_VERIFICATION.md`](OTEL_WINDOWS_VERIFICATION.md) record Windows API/worker metrics and collector receipt from both services, including real worker/database spans. API-originated parent/child continuity, durable backend delivery, hosted retention, and alert routing remain explicit re-entry gates. |
+| Retention and alerting | `CONFIGURED; DEPLOYMENT RUNTIME OPEN` | [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md), [`RETENTION_POLICY.md`](RETENTION_POLICY.md), and [`ALERTING_BASELINE.md`](ALERTING_BASELINE.md) define the retention and critical-alert contracts. Hosted enforcement and routing are explicitly deployment-owned gates; audit/security event persistence remains owned by later roadmap phases. |
 | Input validation and security headers | `PASS` | Global validation, whitelist/forbid behavior, Helmet, CORS configuration, and redaction are implemented. |
 | Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | Redis-backed atomic rate limiting is unit-tested and Windows-verified with raw 200/200/429 headers and `Retry-After`. [`CSRF_DECISION.md`](CSRF_DECISION.md) records that the current read-only, non-cookie API has no applicable CSRF surface and defines the future re-entry gate. |
 | Authentication and authorization | `DEFERRED BY ROADMAP` | Identity, membership, tenant isolation, RBAC/ABAC, and resource authorization belong to later phases and are not claimed here. |
 | Hosted CI/security artifacts | `PASS` | [`HOSTED_CI_VERIFICATION.md`](HOSTED_CI_VERIFICATION.md) records successful quality, static security, container, and DAST jobs with retained coverage, SBOM, SARIF, and ZAP artifacts. |
 | Local e2e | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](E2E_WINDOWS_VERIFICATION.md) records the Windows run against real PostgreSQL, Redis, and MinIO: 1 suite and 4 tests passed. |
 | Architecture fitness | `ACCEPTED` | [`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md) records PostgreSQL 16, separate API/worker processes, and reserved `integrations/*` and `ai/*` scopes. |
-| Documentation | `PARTIAL` | Phase 1 evidence, security, architecture, acceptance, and migration documents are updated; final cross-document link review and publication remain required. |
+| Documentation | `PASS` | [`FINAL_CLOSURE_REVIEW.md`](FINAL_CLOSURE_REVIEW.md) records zero broken Phase 1 relative links, stale-claim reconciliation, security scans, regression commands, complete changed-path review, and the exact final decision. |
 
-## Remaining blockers for unconditional Phase 1 closure
+## Remaining deployment and re-entry boundaries
 
 The approved infrastructure constraint is Windows Docker only. [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md) is the governing record: Windows can close genuine runtime and application-control gates, but a workstation-only single-host object-storage/key-management stack must not be represented as an unqualified production deployment.
 
-1. Metrics and distributed tracing are implemented and collector receipt from both API and worker is evidenced, but API-to-worker trace continuity and hosted retention/alert-routing evidence remain unverified.
-2. Storage-security controls are implemented at application level, but isolated Windows evidence for versioning, Object Lock, encryption behavior, and ClamAV clean/fail-closed scanning remains open. The supported production deployment boundary remains explicitly unclaimable under Windows Docker only.
-3. The registered outbox success handler and advanced recovery paths are not fully demonstrated through a real Windows dispatcher-to-worker workflow.
+1. Metrics and distributed tracing implementation plus Windows collector receipt are evidenced. API-originated trace continuity, durable backend delivery, hosted retention enforcement, and alert routing are explicit deployment or first-mutation re-entry gates documented in [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md).
+2. Storage-security controls and isolated Windows runtime behavior are evidenced for versioning, Object Lock, observed KMS encryption, and ClamAV clean/fail-closed scanning. The supported production deployment boundary remains explicitly unclaimable as an unqualified workstation-only production deployment under Windows Docker only.
+3. The registered outbox success path, advanced retry/reclamation/duplicate workflows, cleanup, and graceful shutdown are evidenced on Windows; the shutdown evidence is user-reported rather than a retained terminal transcript.
 4. HTTP idempotency is a documented deferral until a state-changing business endpoint exists; its real-consumer re-entry gate remains owned by the first mutation endpoint’s phase.
 5. The legacy database state is accepted and documented, but the machine-local migration remains non-reproducible and must not be silently rewritten.
-6. Final documentation cross-links and the consolidated Phase 1 closure review remain open.
+6. Final documentation cross-links and the consolidated Phase 1 closure review are closed in [`FINAL_CLOSURE_REVIEW.md`](FINAL_CLOSURE_REVIEW.md).
 
 ## Phase boundary
 
-Phase 2 remains paused. The current evidence proves a functioning foundation runtime and application-level storage-security controls, not a complete legal-operations platform. Phase 1 may close only when every remaining item is implemented and evidenced or has an explicit documented deferral with owner, target phase, rationale, risk, and acceptance impact.
+Phase 2 remains paused. The current evidence proves a functioning foundation runtime and application-level storage-security controls, not a complete legal-operations platform. The final Phase 1 decision is **Phase 1 implementation and Windows runtime gates closed; deployment production boundary open**. All remaining observability, idempotency, audit, and deployment items have explicit owners, target re-entry gates, rationale, risk, and acceptance impact; they are not silently treated as passed.
 
 ## Canonical references
 
@@ -72,6 +72,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)
+- [`Outbox advanced Windows verification`](OUTBOX_ADVANCED_WINDOWS_VERIFICATION.md)
 - [`Windows e2e verification`](E2E_WINDOWS_VERIFICATION.md)
 - [`Security controls baseline`](SECURITY_CONTROLS_BASELINE.md)
 - [`CSRF applicability decision`](CSRF_DECISION.md)
@@ -80,7 +81,9 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`Windows OpenTelemetry verification`](OTEL_WINDOWS_VERIFICATION.md)
+- [`Observability closure decision`](OBSERVABILITY_CLOSURE_DECISION.md)
 - [`Windows Docker-only closure boundary`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md)
+- [`Final closure review`](FINAL_CLOSURE_REVIEW.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)

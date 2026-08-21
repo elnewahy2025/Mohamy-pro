@@ -1,6 +1,6 @@
 # Phase 1 Storage Runtime Evidence Plan
 
-**Status:** Open runtime gate; no production-encryption claim made
+**Status:** Windows isolated runtime gate closed with explicit deployment-boundary scope; no unqualified production-encryption claim made
 
 ## Evidence Boundary
 
@@ -14,12 +14,12 @@ The official MinIO documentation states that SSE-S3 and SSE-KMS depend on an ext
 
 | Control | Required evidence | Current status |
 |---|---|---|
-| Versioning | Isolated bucket upload returns a non-empty version ID and bucket versioning reports `Enabled` | Open |
-| Object lock | Bucket was created with object lock; future retention and legal-hold calls succeed; deletion is rejected while protected | Open |
-| Encryption | Upload response and object metadata show the configured server-side encryption mode, with KMS/key-manager boundary recorded | Open; local Compose is insufficient |
-| Integrity | Stored `sha256` and `sizeBytes` equal the uploaded bytes | Repository-tested; runtime adapter evidence open |
-| Malware scanning | Clean ClamAV scan completes before storage; unavailable ClamAV fails closed when scanning is enabled | Open |
-| Cleanup | Verification objects and isolated bucket/container are removed without touching the primary development bucket or unrelated projects | Open |
+| Versioning | Isolated bucket upload returns non-empty version IDs and bucket versioning reports enabled | PASS; recorded in `STORAGE_WINDOWS_VERIFICATION.md` |
+| Object lock | Bucket was created with object lock; future retention and legal-hold calls succeed; deletion is rejected while protected | PASS; legal-hold deletion rejection recorded |
+| Encryption | Upload response and object metadata show the configured server-side encryption mode, with KMS/key-manager boundary recorded | PASS in isolated AIStor/KMS runtime; local Compose remains insufficient |
+| Integrity | Stored `sha256` and `sizeBytes` equal the uploaded bytes | PASS; runtime SHA-256 and size evidence recorded |
+| Malware scanning | Clean ClamAV scan completes before storage; unavailable ClamAV fails closed when scanning is enabled | PASS; clean and fail-closed results recorded |
+| Cleanup | Verification objects and isolated bucket/container are removed without touching the primary development bucket or unrelated projects | PASS; runner cleanup returned exit code 0 and unrelated containers were preserved |
 
 ## Terminal Boundary for the Windows Run
 
@@ -29,7 +29,7 @@ The API and worker may be restarted only after the storage verification environm
 
 ## Decision
 
-Until these provider-level results are captured, the Phase 1 status remains **partially verified** for storage security. No workaround, static development key, or unit-test-only result will be promoted to production-readiness evidence.
+The provider-level Windows results are captured in [`STORAGE_WINDOWS_VERIFICATION.md`](STORAGE_WINDOWS_VERIFICATION.md). Storage security is **verified for the isolated Windows runtime with explicit deployment scope**. The workstation-only single-host object-storage/key-management plane is not promoted to an unqualified production deployment claim, and no static development key or unit-test-only result is used as production evidence.
 
 ## References
 

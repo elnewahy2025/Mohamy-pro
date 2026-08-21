@@ -95,7 +95,7 @@ These Finding 1 criteria are now evidenced. This does not close the overall Phas
 ## References
 
 1. [`Phase 1 audit report`](AUDIT_REPORT.md)
-2. [`Phase 1 remediation plan`](REMEDIATION_PLAN.md)
+2. [`Phase 1 remediation plan`](PHASE1_REMEDIATION_PLAN_DETAILED.md)
 3. [`Phase 1 acceptance report`](ACCEPTANCE_REPORT.md)
 4. [`Migration checker semantics`](MIGRATION_CHECKER_SEMANTICS.md)
 5. [`Live schema and index review`](MIGRATION_INDEX_REVIEW.md)

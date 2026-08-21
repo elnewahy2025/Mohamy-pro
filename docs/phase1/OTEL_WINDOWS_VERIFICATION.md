@@ -1,6 +1,6 @@
 # Windows OpenTelemetry Verification
 
-**Status:** Partially verified
+**Status:** Windows collector receipt verified; API-to-worker continuity and durable backend delivery remain unverified
 
 **Date:** 2026-08-21
 
@@ -43,7 +43,7 @@ The collector also reported API resources with `service.name: Str(mohamy-api)` a
 
 The outbox event was inserted directly into PostgreSQL with SQL rather than being created by an API request. Consequently, this run proves collector receipt for both service streams and real worker/database instrumentation, but it does not prove that an API request’s trace ID is the parent of the worker trace. W3C queue serialization/extraction remains unit-tested; a real API-originated mutation-to-worker trace requires a state-changing producer endpoint, which does not exist in the Phase 1 read-only API.
 
-The result is therefore **partially verified**. No full API-to-worker trace-continuity claim is made. The collector and temporary API/worker processes were stopped after evidence collection; the verification rows were cleaned with both remaining counts equal to zero.
+The result is **Windows collector receipt verified with an explicit continuity and backend-delivery boundary**. No full API-to-worker trace-continuity claim is made. The collector and temporary API/worker processes were stopped after evidence collection; the verification rows were cleaned with both remaining counts equal to zero. The API-to-worker continuity, durable backend query, hosted retention, and alert-routing re-entry gates are consolidated in [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md).
 
 ## Canonical References
 

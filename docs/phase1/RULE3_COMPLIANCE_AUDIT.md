@@ -109,7 +109,7 @@ This report deliberately makes no production-readiness claim. The repository has
 
 1. [`Authoritative Phase 1 audit`](AUDIT_REPORT.md)
 2. [`Phase 1 acceptance report`](ACCEPTANCE_REPORT.md)
-3. [`Phase 1 remediation plan`](REMEDIATION_PLAN.md)
+3. [`Phase 1 remediation plan`](PHASE1_REMEDIATION_PLAN_DETAILED.md)
 4. [`Phase 0 stack`](../phase0/STACK.md)
 5. [`Phase 0 testing policy`](../phase0/TESTING.md)
 6. [`Phase 0 observability policy`](../phase0/OBSERVABILITY.md)

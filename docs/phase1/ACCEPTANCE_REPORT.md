@@ -2,13 +2,13 @@
 
 ## Decision
 
-Phase 1 is **not yet closed**. The repository foundation, hosted CI, Windows e2e, rate limiting, outbox success path, application metrics, and collector-receipt evidence are recorded. The approved deployment constraint is Windows Docker only, with no paid cloud service, Linux host, or Kubernetes host. The final decision must close every Windows-provable gate and must not claim an unqualified production deployment for a workstation-only single-host object-storage/key-management plane. [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md) is the governing boundary.
+**Phase 1 implementation and Windows runtime gates closed; deployment production boundary open.** The repository foundation, hosted CI, Windows e2e, rate limiting, outbox success and advanced recovery, application metrics, collector receipt, isolated storage-security runtime, and clean API/worker shutdown evidence are recorded. The approved deployment constraint is Windows Docker only, with no paid cloud service, Linux host, or Kubernetes host. The governing boundary prohibits an unqualified production deployment claim for a workstation-only single-host object-storage/key-management plane. [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md) and [`FINAL_CLOSURE_REVIEW.md`](FINAL_CLOSURE_REVIEW.md) are authoritative for this decision.
 
-Phase 2 remains paused.
+Phase 2 remains paused; no Identity and Multi-Tenancy work is authorized by this review.
 
 ## Current published revisions
 
-The latest published revision is [`bfb0dde1`](https://github.com/elnewahy2025/Mohamy-pro/commit/bfb0dde1), which aligns the in-process e2e bootstrap with production and verifies correlation IDs and OpenAPI publication. The preceding [`573e6ede`](https://github.com/elnewahy2025/Mohamy-pro/commit/573e6ede) commit enforces production rate limiting and records the Phase 1 security and architecture decisions. Earlier observability, storage, outbox, and worker revisions remain listed below.
+The latest published revision is [`cf515a74`](https://github.com/elnewahy2025/Mohamy-pro/commit/cf515a74), which makes outbox retry job IDs unique per attempt after Windows advanced-recovery evidence exposed the prior collision. The storage-runtime runner and ClamAV response fix are recorded at [`52161fed`](https://github.com/elnewahy2025/Mohamy-pro/commit/52161fed) and [`63b85105`](https://github.com/elnewahy2025/Mohamy-pro/commit/63b85105). Earlier observability, storage, outbox, and worker revisions remain listed below.
 
 - [`59273a6b`](https://github.com/elnewahy2025/Mohamy-pro/commit/59273a6b): global correlation middleware registration.
 - [`a7e043cb`](https://github.com/elnewahy2025/Mohamy-pro/commit/a7e043cb): visible worker startup logging.
@@ -33,7 +33,7 @@ The frontend foundation is under `apps/web` and uses Next.js App Router, React, 
 | Prisma Client generation | `PASS` | Prisma Client `7.9.1` generated successfully. |
 | Prisma migration deployment | `PASS` | Windows output found 4 migrations and no pending migrations after Prisma Client generation. |
 | API build | `PASS` | `nest build` completed without errors after the runtime fixes. |
-| API unit suite | `PASS` | Windows output: 10 suites and 28 tests passed, including rate limiting, metrics authorization and bounded labels, storage integrity, environment validation, W3C queue propagation, and the real outbox handler. |
+| API unit suite | `PASS` | Latest repository verification: 11 suites and 32 tests passed, including ClamAV response normalization, rate limiting, metrics authorization and bounded labels, storage integrity, environment validation, W3C queue propagation, and the real outbox handler. |
 | Outbox focused suite | `PASS` | Failure logging is asserted while expected test output is suppressed. |
 | Migration classifier suite | `PASS` | Five focused classifier cases passed in repository verification. |
 | API lint | `PASS` | Changed API files passed repository lint verification. |
@@ -52,7 +52,7 @@ The frontend foundation is under `apps/web` and uses Next.js App Router, React, 
 | Restore smoke | `PASS` | Temporary restore database was created, SQL restored, table/index validation completed, and the temporary database was cleaned up. |
 | Legacy database preservation | `PASS` | The primary Windows migration table remained unchanged; no metadata edit, reset, volume deletion, or unrelated-container operation was performed. |
 | Clean migration chain | `PASS` | A disposable database on port `55433` received only the 3 repository migrations; `db:check` returned exit code 0. |
-| Real outbox enqueue/consume | `PASS WITH HARNESS EXIT-CODE DEFECT` | The job was enqueued with the corrected BullMQ-safe ID, consumed by the production worker, and reached `DEAD_LETTER` with the expected unknown-handler error. Cleanup returned `DELETE 1`, and a separate read-only query verified zero matching rows. The wrapper then returned non-zero because it compared the `RETURNING` output to the raw ID while PostgreSQL also emitted the command tag. A clean rerun of the corrected wrapper is still required. |
+| Real outbox enqueue/consume | `PASS` | The job was enqueued with the corrected per-attempt BullMQ-safe ID, consumed by the production worker, and reached the expected terminal state with cleanup verified. |
 | Local API e2e suite | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](./E2E_WINDOWS_VERIFICATION.md) records Windows output: 1 suite and 4 tests passed for liveness, readiness, metrics, and OpenAPI. |
 | Rate-limit enforcement | `PASS` | [`SECURITY_CONTROLS_BASELINE.md`](./SECURITY_CONTROLS_BASELINE.md) records Windows raw-header evidence: 200/200/429 with limit 2, remaining 1/0/0, and `Retry-After: 20`. |
 
@@ -67,30 +67,30 @@ The migration checker must continue to block that legacy database rather than hi
 | Blocker | Status | Required closure action |
 |---|---|---|
 | Hosted GitHub Actions run | `PASS` | [`HOSTED_CI_VERIFICATION.md`](./HOSTED_CI_VERIFICATION.md) records successful quality, static security, container, and DAST jobs at commit `85333579`; coverage, SBOM, SARIF, and ZAP artifacts were retained. The pull-request-only dependency-review job was correctly skipped on the push event. |
-| Prometheus metrics | `PASS WITH SCOPE LIMIT` | Protected API `/api/metrics` and dedicated worker `/metrics` registries, bounded labels, unit tests, and build are present. Windows captured the API scrape, outbox success path, worker port `3002`, and a non-empty worker job-duration histogram. Hosted retention and alert-routing evidence remain required. |
-| OpenTelemetry tracing | `PARTIALLY VERIFIED` | [`OTEL_WINDOWS_VERIFICATION.md`](./OTEL_WINDOWS_VERIFICATION.md) records collector receipt from both `mohamy-api` and `mohamy-worker`, including real worker/database spans. API-to-worker parent/child continuity remains unproven because the test producer was direct SQL rather than an API mutation. |
-| Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, collector, and critical Prometheus alert configurations are committed. Hosted backend retention and alert-routing evidence remain required; audit/security event persistence follows the authoritative later-phase ownership. |
-| Storage integrity/security | `OPEN WINDOWS GATES` | SHA-256 metadata, S3 versioning/encryption configuration, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and repository-tested. Windows must capture isolated ClamAV clean/fail-closed behavior and the actual local MinIO versioning/Object Lock/encryption behavior. The supported production deployment boundary is governed by [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md). |
+| Prometheus metrics | `PASS WITH WINDOWS SCOPE LIMIT` | [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md) and the Windows metrics evidence record protected API `/api/metrics` and dedicated worker `/metrics` runtime output, bounded labels, and real metric families. Hosted retention and alert routing remain deployment re-entry gates. |
+| OpenTelemetry tracing | `PASS WITH EXPLICIT SCOPE LIMIT` | [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md) and [`OTEL_WINDOWS_VERIFICATION.md`](./OTEL_WINDOWS_VERIFICATION.md) record collector receipt from both services and real worker/database spans. API-originated parent/child continuity, durable backend query, and hosted delivery remain explicit re-entry gates. |
+| Retention and alerting | `CONFIGURED; DEPLOYMENT RUNTIME OPEN` | [`OBSERVABILITY_CLOSURE_DECISION.md`](OBSERVABILITY_CLOSURE_DECISION.md), [`RETENTION_POLICY.md`](RETENTION_POLICY.md), and [`ALERTING_BASELINE.md`](ALERTING_BASELINE.md) define the 30-day Loki, 90-day Prometheus, and critical alert contracts. Effective hosted retention and alert delivery remain owned deployment gates. |
+| Storage integrity/security | `PASS WITH WINDOWS-ONLY DEPLOYMENT SCOPE` | [`STORAGE_WINDOWS_VERIFICATION.md`](STORAGE_WINDOWS_VERIFICATION.md) records isolated clean and fail-closed ClamAV runs, distinct versions, SHA-256/size metadata, observed `aws:kms`, and Object Lock/legal-hold enforcement. The supported production deployment boundary remains governed by [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md). |
 | Outbox success path | `PASS` | [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md) records Windows dispatcher-to-worker evidence: `PROCESSED`, `attempts=1`, non-null `processedAt`, `Health.status=DEGRADED`, and zero matching rows after cleanup. |
-| Outbox advanced recovery | `PARTIAL` | Execute and retain retry-backoff, lease expiry, duplicate-delivery, and graceful-shutdown evidence. |
+| Outbox advanced recovery | `PASS` | [`OUTBOX_ADVANCED_WINDOWS_VERIFICATION.md`](OUTBOX_ADVANCED_WINDOWS_VERIFICATION.md) records retry/backoff, lease expiry, unique retry IDs, duplicate delivery, zero-row cleanup, and the user's Windows report that both production processes returned to PowerShell without error after Ctrl+C. The shutdown evidence is user-reported rather than a retained terminal transcript. |
 | Idempotency HTTP integration | `DOCUMENTED DEFERRAL` | [`IDEMPOTENCY_DECISION.md`](./IDEMPOTENCY_DECISION.md) records the implemented persistence helper, the current read-only route boundary, and the required real-consumer re-entry gate. |
 | Generated API client | `DOCUMENTED DEFERRAL` | [`GENERATED_CLIENT_DECISION.md`](./GENERATED_CLIENT_DECISION.md) records the approved Phase 1 scope decision and Phase 2 re-entry gate. |
 | Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | [`SECURITY_CONTROLS_BASELINE.md`](./SECURITY_CONTROLS_BASELINE.md) records implementation, unit tests, and Windows 429 evidence. [`CSRF_DECISION.md`](./CSRF_DECISION.md) records why CSRF is not applicable to the current read-only, non-cookie API and defines the future re-entry gate. |
 | Local e2e | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](./E2E_WINDOWS_VERIFICATION.md) records the Windows run against real PostgreSQL, Redis, and MinIO with 1 suite and 4 tests passed. |
 | Architecture decisions | `ACCEPTED` | [`ARCHITECTURE_DECISIONS.md`](./ARCHITECTURE_DECISIONS.md) records PostgreSQL 16, separate API/worker processes, and reserved workspace scopes. |
-| Final documentation | `OPEN` | Phase 1 evidence and decision documents are published; final cross-document link review, Windows-only boundary review, and consolidated closure decision remain open. |
+| Final documentation | `PASS` | [`FINAL_CLOSURE_REVIEW.md`](FINAL_CLOSURE_REVIEW.md) records the complete diff review, zero broken Phase 1 relative links, stale-claim reconciliation, security scans, regression commands, known limitations, and the exact final decision. |
 
 ## Evidence boundaries
 
 The current foundation does not claim authentication, membership, tenant isolation, RBAC/ABAC, resource authorization, legal-case workflows, document-security pipeline controls, billing, AI, or compliance retention. Those are later-phase responsibilities or explicit open items. A real `health.status.updated` handler is registered, but the current API has no producer endpoint; the outbox success path therefore still requires a controlled Windows dispatcher-to-worker workflow.
 
-The current object-storage implementation adds SHA-256 and byte-count metadata, configured S3 versioning and server-side encryption, retention/legal-hold deletion checks, and a ClamAV scan boundary that fails closed when enabled. Repository build/unit verification passed; the new migration, Windows MinIO behavior, object-lock behavior, and real ClamAV scan remain unverified. Complete download/share audit remains outside the current foundation API.
+The current object-storage implementation adds SHA-256 and byte-count metadata, configured S3 versioning and server-side encryption, retention/legal-hold deletion checks, and a ClamAV scan boundary that fails closed when enabled. The repository build/unit verification and isolated Windows storage-security runtime evidence are recorded in [`STORAGE_WINDOWS_VERIFICATION.md`](STORAGE_WINDOWS_VERIFICATION.md). Complete download/share audit remains outside the current foundation API.
 
-The current observability evidence proves structured production logs, correlation IDs, redaction, health probes, application metric/tracing implementation, bounded W3C job propagation, and repository build/unit execution. It does not yet prove Windows runtime scrape output, collector-received spans, hosted retention enforcement, or alert delivery.
+The current observability evidence proves structured production logs, correlation IDs, redaction, health probes, application metric/tracing implementation, bounded W3C job propagation, Windows API/worker metric runtime output, and collector receipt from both services. It does not prove API-to-worker parent/child continuity from a real API mutation, hosted retention enforcement, or external alert delivery; those limits are documented as scope decisions rather than silently treated as passes.
 
 ## Required final closure conditions
 
-Phase 1 may be declared closed only when every Windows-provable blocker is implemented and evidenced or explicitly approved as a documented deferral containing an owner, target phase, rationale, risk, and acceptance impact. The final review must include the complete Git diff, the hosted CI result, the corrected outbox wrapper with exit code 0, the Windows-Docker closure boundary, and the updated documentation links. An unqualified production-ready claim is prohibited while the deployment target remains Windows Docker only.
+The final review completed the required Windows-provable evidence, hosted CI review, corrected outbox wrapper with exit code 0, isolated storage-security runtime evidence, complete documentation-link check, security scans, and complete changed-path diff review. The remaining observability and deployment limitations are documented with owners, target re-entry gates, rationale, risk, and acceptance impact. The final decision is **Phase 1 implementation and Windows runtime gates closed; deployment production boundary open**. An unqualified production-ready claim remains prohibited while the deployment target is Windows Docker only.
 
 ## Canonical references
 
@@ -109,6 +109,7 @@ Phase 1 may be declared closed only when every Windows-provable blocker is imple
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)
+- [`Outbox advanced Windows verification`](OUTBOX_ADVANCED_WINDOWS_VERIFICATION.md)
 - [`Windows e2e verification`](E2E_WINDOWS_VERIFICATION.md)
 - [`Security controls baseline`](SECURITY_CONTROLS_BASELINE.md)
 - [`CSRF applicability decision`](CSRF_DECISION.md)
@@ -117,7 +118,9 @@ Phase 1 may be declared closed only when every Windows-provable blocker is imple
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`Windows OpenTelemetry verification`](OTEL_WINDOWS_VERIFICATION.md)
+- [`Observability closure decision`](OBSERVABILITY_CLOSURE_DECISION.md)
 - [`Windows Docker-only closure boundary`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md)
+- [`Final closure review`](FINAL_CLOSURE_REVIEW.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)

@@ -63,7 +63,7 @@ The system must fail closed for unknown event types, unavailable Redis, unavaila
 ## References
 
 1. [`Phase 1 audit report`](AUDIT_REPORT.md)
-2. [`Phase 1 remediation plan`](REMEDIATION_PLAN.md)
+2. [`Phase 1 remediation plan`](PHASE1_REMEDIATION_PLAN_DETAILED.md)
 3. [`Current outbox service`](../../backend/api/src/infrastructure/outbox/outbox.service.ts)
 4. [`Current outbox dispatcher`](../../backend/api/src/infrastructure/outbox/outbox.dispatcher.ts)
 5. [`Current queue service`](../../backend/api/src/infrastructure/queue/queue.service.ts)
