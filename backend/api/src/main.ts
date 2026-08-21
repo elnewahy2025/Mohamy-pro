@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
@@ -12,6 +13,8 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService);
 
   app.useLogger(app.get(Logger));
+  const correlationIdMiddleware = app.get(CorrelationIdMiddleware);
+  app.use(correlationIdMiddleware.use.bind(correlationIdMiddleware));
   app.use(helmet());
   app.enableCors({
     origin: config
