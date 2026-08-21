@@ -11,6 +11,9 @@ describe('validateEnvironment telemetry settings', () => {
 
     expect(environment.METRICS_ENABLED).toBe(true);
     expect(environment.WORKER_METRICS_PORT).toBe(3002);
+    expect(environment.RATE_LIMIT_ENABLED).toBe(true);
+    expect(environment.RATE_LIMIT_WINDOW_SECONDS).toBe(60);
+    expect(environment.RATE_LIMIT_MAX_REQUESTS).toBe(300);
     expect(environment.OTEL_ENABLED).toBe(false);
     expect(environment.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
     expect(environment.OTEL_SERVICE_NAME).toBe('mohamy-api');
@@ -30,10 +33,46 @@ describe('validateEnvironment telemetry settings', () => {
     expect(environment.OTEL_SERVICE_NAME).toBe('mohamy-test-api');
   });
 
+  it('rejects malformed rate-limit settings', () => {
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        RATE_LIMIT_WINDOW_SECONDS: 0,
+      }),
+    ).toThrow('RATE_LIMIT_WINDOW_SECONDS must be an integer');
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        RATE_LIMIT_MAX_REQUESTS: 'many',
+      }),
+    ).toThrow('RATE_LIMIT_MAX_REQUESTS must be an integer');
+  });
+
   it('rejects malformed telemetry booleans', () => {
     expect(() =>
       validateEnvironment({ ...baseEnvironment, METRICS_ENABLED: 'sometimes' }),
     ).toThrow('Expected a boolean value');
+  });
+
+  it('requires rate limiting in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        NODE_ENV: 'production',
+        RATE_LIMIT_ENABLED: false,
+        REDIS_URL: 'redis://redis.invalid:6379',
+        S3_ENDPOINT: 'https://storage.invalid',
+        S3_ACCESS_KEY: 'access-key-for-test',
+        S3_SECRET_KEY: 'secret-key-for-test',
+        S3_BUCKET: 'mohamy-production',
+        CORS_ORIGINS: 'https://app.invalid',
+        S3_VERSIONING_ENABLED: true,
+        S3_OBJECT_LOCK_ENABLED: true,
+        S3_ENCRYPTION_MODE: 'AES256',
+        MALWARE_SCAN_ENABLED: true,
+        CLAMAV_HOST: 'clamav.invalid',
+      }),
+    ).toThrow('RATE_LIMIT_ENABLED must be true in production');
   });
 
   it('requires storage security controls in production', () => {

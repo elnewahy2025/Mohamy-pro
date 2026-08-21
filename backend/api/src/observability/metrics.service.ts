@@ -267,6 +267,7 @@ function normalizeErrorType(errorType: string): string {
   if (normalized === 'database') return 'database';
   if (normalized === 'queue') return 'queue';
   if (normalized === 'outbox') return 'outbox';
+  if (normalized === 'rate_limit') return 'rate_limit';
   return 'other';
 }
 

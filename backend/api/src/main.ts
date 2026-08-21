@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { MetricsMiddleware } from './observability/metrics.middleware';
 import { MetricsService } from './observability/metrics.service';
+import { RateLimitMiddleware } from './security/rate-limit.middleware';
 import { shutdownTelemetry, startTelemetry } from './observability/tracing';
 
 async function bootstrap(): Promise<void> {
@@ -22,12 +23,14 @@ async function bootstrap(): Promise<void> {
   app.use(correlationIdMiddleware.use.bind(correlationIdMiddleware));
   const metricsMiddleware = app.get(MetricsMiddleware);
   app.use(metricsMiddleware.use.bind(metricsMiddleware));
+  const rateLimitMiddleware = app.get(RateLimitMiddleware);
+  app.use(rateLimitMiddleware.use.bind(rateLimitMiddleware));
   app.use(helmet());
   app.enableCors({
     origin: config
       .get<string>('CORS_ORIGINS', 'http://localhost:5173')
       .split(','),
-    credentials: true,
+    credentials: false,
   });
   app.setGlobalPrefix('api');
   app.enableVersioning({

@@ -20,6 +20,9 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   CORS_ORIGINS: string;
   METRICS_ENABLED: boolean;
   WORKER_METRICS_PORT: number;
+  RATE_LIMIT_ENABLED: boolean;
+  RATE_LIMIT_WINDOW_SECONDS: number;
+  RATE_LIMIT_MAX_REQUESTS: number;
   METRICS_AUTH_TOKEN?: string;
   OTEL_ENABLED: boolean;
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
@@ -55,6 +58,21 @@ function readStorageEncryptionMode(value: unknown): StorageEncryptionMode {
     return value;
   }
   throw new Error('S3_ENCRYPTION_MODE must be NONE, AES256, or aws:kms');
+}
+
+function readPositiveInteger(
+  value: unknown,
+  fallback: number,
+  name: string,
+  maximum: number,
+): number {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > maximum) {
+    throw new Error(
+      `${name} must be an integer between 1 and ${maximum}; received ${String(value)}`,
+    );
+  }
+  return parsed;
 }
 
 function readPort(value: unknown, fallback: number): number {
@@ -130,6 +148,19 @@ export function validateEnvironment(
   const otelEndpoint = readString(raw.OTEL_EXPORTER_OTLP_ENDPOINT);
   const metricsEnabled = readBoolean(raw.METRICS_ENABLED, true);
   const workerMetricsPort = readPort(raw.WORKER_METRICS_PORT, 3002);
+  const rateLimitEnabled = readBoolean(raw.RATE_LIMIT_ENABLED, true);
+  const rateLimitWindowSeconds = readPositiveInteger(
+    raw.RATE_LIMIT_WINDOW_SECONDS,
+    60,
+    'RATE_LIMIT_WINDOW_SECONDS',
+    3_600,
+  );
+  const rateLimitMaxRequests = readPositiveInteger(
+    raw.RATE_LIMIT_MAX_REQUESTS,
+    300,
+    'RATE_LIMIT_MAX_REQUESTS',
+    100_000,
+  );
   const otelEnabled = readBoolean(raw.OTEL_ENABLED, Boolean(otelEndpoint));
   const metricsAuthToken = readString(raw.METRICS_AUTH_TOKEN);
   const otelServiceName =
@@ -137,6 +168,9 @@ export function validateEnvironment(
     (raw.WORKER_PROCESS === 'true' ? 'mohamy-worker' : 'mohamy-api');
 
   if (nodeEnv === 'production') {
+    if (!rateLimitEnabled) {
+      throw new Error('RATE_LIMIT_ENABLED must be true in production');
+    }
     if (!storageVersioningEnabled) {
       throw new Error('S3_VERSIONING_ENABLED must be true in production');
     }
@@ -207,6 +241,9 @@ export function validateEnvironment(
     CORS_ORIGINS: requiredValue('CORS_ORIGINS', values.CORS_ORIGINS),
     METRICS_ENABLED: values.METRICS_ENABLED,
     WORKER_METRICS_PORT: workerMetricsPort,
+    RATE_LIMIT_ENABLED: rateLimitEnabled,
+    RATE_LIMIT_WINDOW_SECONDS: rateLimitWindowSeconds,
+    RATE_LIMIT_MAX_REQUESTS: rateLimitMaxRequests,
     ...(values.METRICS_AUTH_TOKEN
       ? { METRICS_AUTH_TOKEN: values.METRICS_AUTH_TOKEN }
       : {}),

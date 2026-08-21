@@ -14,6 +14,7 @@ import { OutboxDispatcher } from './infrastructure/outbox/outbox.dispatcher';
 import { IdempotencyModule } from './infrastructure/idempotency/idempotency.module';
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './observability/metrics.module';
+import { RateLimitMiddleware } from './security/rate-limit.middleware';
 
 @Module({
   imports: [
@@ -30,6 +31,11 @@ import { MetricsModule } from './observability/metrics.module';
     MetricsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, OutboxDispatcher, CorrelationIdMiddleware],
+  providers: [
+    AppService,
+    OutboxDispatcher,
+    CorrelationIdMiddleware,
+    RateLimitMiddleware,
+  ],
 })
 export class AppModule {}

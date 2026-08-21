@@ -15,6 +15,7 @@ describe('MetricsService', () => {
     service.setOutboxStateCounts({ PENDING: 2, DEAD_LETTER: 1 });
     service.observeWorkerJob('outbox.dispatch', 19);
     service.recordApplicationError('server_error');
+    service.recordApplicationError('rate_limit');
 
     const output = await service.render();
 
@@ -28,6 +29,7 @@ describe('MetricsService', () => {
     expect(output).toContain('mohamy_outbox_state_count');
     expect(output).toContain('mohamy_worker_job_duration_seconds');
     expect(output).toContain('mohamy_application_errors_total');
+    expect(output).toContain('error_type="rate_limit"');
     expect(output).not.toContain('status_code="700"');
   });
 
