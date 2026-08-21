@@ -2,7 +2,7 @@
 
 ## Decision
 
-Phase 1 is **not yet closed**. The repository foundation and the principal Windows runtime gates are working, and the application-level observability controls are now implemented. Production-readiness closure still requires hosted CI evidence, the remaining security and storage controls, Windows runtime evidence for the current metrics/tracing changes, final documentation review, and a clean exit-code-complete outbox runtime test.
+Phase 1 is **not yet closed**. The repository foundation, hosted CI, Windows e2e, rate limiting, outbox success path, application metrics, and collector-receipt evidence are recorded. The approved deployment constraint is Windows Docker only, with no paid cloud service, Linux host, or Kubernetes host. The final decision must close every Windows-provable gate and must not claim an unqualified production deployment for a workstation-only single-host object-storage/key-management plane. [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md) is the governing boundary.
 
 Phase 2 remains paused.
 
@@ -70,7 +70,7 @@ The migration checker must continue to block that legacy database rather than hi
 | Prometheus metrics | `PASS WITH SCOPE LIMIT` | Protected API `/api/metrics` and dedicated worker `/metrics` registries, bounded labels, unit tests, and build are present. Windows captured the API scrape, outbox success path, worker port `3002`, and a non-empty worker job-duration histogram. Hosted retention and alert-routing evidence remain required. |
 | OpenTelemetry tracing | `PARTIALLY VERIFIED` | [`OTEL_WINDOWS_VERIFICATION.md`](./OTEL_WINDOWS_VERIFICATION.md) records collector receipt from both `mohamy-api` and `mohamy-worker`, including real worker/database spans. API-to-worker parent/child continuity remains unproven because the test producer was direct SQL rather than an API mutation. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, collector, and critical Prometheus alert configurations are committed. Hosted backend retention and alert-routing evidence remain required; audit/security event persistence follows the authoritative later-phase ownership. |
-| Storage integrity/security | `PARTIALLY VERIFIED` | SHA-256 metadata, S3 versioning/encryption configuration, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and repository-tested. Apply the new migration and capture Windows MinIO/versioning/object-lock/ClamAV evidence before closure. |
+| Storage integrity/security | `OPEN WINDOWS GATES` | SHA-256 metadata, S3 versioning/encryption configuration, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and repository-tested. Windows must capture isolated ClamAV clean/fail-closed behavior and the actual local MinIO versioning/Object Lock/encryption behavior. The supported production deployment boundary is governed by [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md). |
 | Outbox success path | `PASS` | [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md) records Windows dispatcher-to-worker evidence: `PROCESSED`, `attempts=1`, non-null `processedAt`, `Health.status=DEGRADED`, and zero matching rows after cleanup. |
 | Outbox advanced recovery | `PARTIAL` | Execute and retain retry-backoff, lease expiry, duplicate-delivery, and graceful-shutdown evidence. |
 | Idempotency HTTP integration | `DOCUMENTED DEFERRAL` | [`IDEMPOTENCY_DECISION.md`](./IDEMPOTENCY_DECISION.md) records the implemented persistence helper, the current read-only route boundary, and the required real-consumer re-entry gate. |
@@ -78,7 +78,7 @@ The migration checker must continue to block that legacy database rather than hi
 | Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | [`SECURITY_CONTROLS_BASELINE.md`](./SECURITY_CONTROLS_BASELINE.md) records implementation, unit tests, and Windows 429 evidence. [`CSRF_DECISION.md`](./CSRF_DECISION.md) records why CSRF is not applicable to the current read-only, non-cookie API and defines the future re-entry gate. |
 | Local e2e | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](./E2E_WINDOWS_VERIFICATION.md) records the Windows run against real PostgreSQL, Redis, and MinIO with 1 suite and 4 tests passed. |
 | Architecture decisions | `ACCEPTED` | [`ARCHITECTURE_DECISIONS.md`](./ARCHITECTURE_DECISIONS.md) records PostgreSQL 16, separate API/worker processes, and reserved workspace scopes. |
-| Final documentation | `PARTIAL` | Phase 1 evidence and decision documents are published; final cross-document link review and consolidated closure decision remain open. |
+| Final documentation | `OPEN` | Phase 1 evidence and decision documents are published; final cross-document link review, Windows-only boundary review, and consolidated closure decision remain open. |
 
 ## Evidence boundaries
 
@@ -90,7 +90,7 @@ The current observability evidence proves structured production logs, correlatio
 
 ## Required final closure conditions
 
-Phase 1 may be declared closed only when every remaining blocker is either implemented and evidenced or explicitly approved as a documented deferral containing an owner, target phase, rationale, risk, and acceptance impact. The final review must include the complete Git diff, the hosted CI result, the corrected outbox wrapper with exit code 0, and the updated documentation links.
+Phase 1 may be declared closed only when every Windows-provable blocker is implemented and evidenced or explicitly approved as a documented deferral containing an owner, target phase, rationale, risk, and acceptance impact. The final review must include the complete Git diff, the hosted CI result, the corrected outbox wrapper with exit code 0, the Windows-Docker closure boundary, and the updated documentation links. An unqualified production-ready claim is prohibited while the deployment target remains Windows Docker only.
 
 ## Canonical references
 
@@ -117,6 +117,7 @@ Phase 1 may be declared closed only when every remaining blocker is either imple
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`Windows OpenTelemetry verification`](OTEL_WINDOWS_VERIFICATION.md)
+- [`Windows Docker-only closure boundary`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)

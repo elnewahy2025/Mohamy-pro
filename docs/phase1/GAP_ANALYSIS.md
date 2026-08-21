@@ -42,8 +42,10 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 
 ## Remaining blockers for unconditional Phase 1 closure
 
+The approved infrastructure constraint is Windows Docker only. [`WINDOWS_DOCKER_CLOSURE_BOUNDARY.md`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md) is the governing record: Windows can close genuine runtime and application-control gates, but a workstation-only single-host object-storage/key-management stack must not be represented as an unqualified production deployment.
+
 1. Metrics and distributed tracing are implemented and collector receipt from both API and worker is evidenced, but API-to-worker trace continuity and hosted retention/alert-routing evidence remain unverified.
-2. Storage-security controls are implemented at application level, but real S3/MinIO versioning, object-lock, encryption, and ClamAV runtime evidence remain open.
+2. Storage-security controls are implemented at application level, but isolated Windows evidence for versioning, Object Lock, encryption behavior, and ClamAV clean/fail-closed scanning remains open. The supported production deployment boundary remains explicitly unclaimable under Windows Docker only.
 3. The registered outbox success handler and advanced recovery paths are not fully demonstrated through a real Windows dispatcher-to-worker workflow.
 4. HTTP idempotency is a documented deferral until a state-changing business endpoint exists; its real-consumer re-entry gate remains owned by the first mutation endpoint’s phase.
 5. The legacy database state is accepted and documented, but the machine-local migration remains non-reproducible and must not be silently rewritten.
@@ -78,6 +80,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`Windows OpenTelemetry verification`](OTEL_WINDOWS_VERIFICATION.md)
+- [`Windows Docker-only closure boundary`](WINDOWS_DOCKER_CLOSURE_BOUNDARY.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
