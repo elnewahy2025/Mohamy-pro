@@ -10,12 +10,35 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   S3_SECRET_KEY: string;
   S3_BUCKET: string;
   CORS_ORIGINS: string;
+  METRICS_ENABLED: boolean;
+  METRICS_AUTH_TOKEN?: string;
+  OTEL_ENABLED: boolean;
+  OTEL_EXPORTER_OTLP_ENDPOINT?: string;
+  OTEL_SERVICE_NAME: string;
 }
 
 function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0
     ? value.trim()
     : undefined;
+}
+
+function readBoolean(value: unknown, fallback: boolean): boolean {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (value.toLowerCase() === 'true') return true;
+    if (value.toLowerCase() === 'false') return false;
+  }
+  const received =
+    value === null
+      ? 'null'
+      : typeof value === 'string' ||
+          typeof value === 'number' ||
+          typeof value === 'boolean'
+        ? value
+        : typeof value;
+  throw new Error(`Expected a boolean value; received ${received}`);
 }
 
 function readPort(value: unknown, fallback: number): number {
@@ -60,6 +83,14 @@ export function validateEnvironment(
           CORS_ORIGINS: 'http://localhost:5173',
         };
 
+  const otelEndpoint = readString(raw.OTEL_EXPORTER_OTLP_ENDPOINT);
+  const metricsEnabled = readBoolean(raw.METRICS_ENABLED, true);
+  const otelEnabled = readBoolean(raw.OTEL_ENABLED, Boolean(otelEndpoint));
+  const metricsAuthToken = readString(raw.METRICS_AUTH_TOKEN);
+  const otelServiceName =
+    readString(raw.OTEL_SERVICE_NAME) ??
+    (raw.WORKER_PROCESS === 'true' ? 'mohamy-worker' : 'mohamy-api');
+
   const values = {
     REDIS_URL: readString(raw.REDIS_URL) ?? defaults.REDIS_URL,
     S3_ENDPOINT: readString(raw.S3_ENDPOINT) ?? defaults.S3_ENDPOINT,
@@ -67,6 +98,11 @@ export function validateEnvironment(
     S3_SECRET_KEY: readString(raw.S3_SECRET_KEY) ?? defaults.S3_SECRET_KEY,
     S3_BUCKET: readString(raw.S3_BUCKET) ?? defaults.S3_BUCKET,
     CORS_ORIGINS: readString(raw.CORS_ORIGINS) ?? defaults.CORS_ORIGINS,
+    METRICS_ENABLED: metricsEnabled,
+    METRICS_AUTH_TOKEN: metricsAuthToken,
+    OTEL_ENABLED: otelEnabled,
+    OTEL_EXPORTER_OTLP_ENDPOINT: otelEndpoint,
+    OTEL_SERVICE_NAME: otelServiceName,
   };
 
   const requiredValue = (key: string, value: string | undefined): string => {
@@ -87,5 +123,14 @@ export function validateEnvironment(
     S3_SECRET_KEY: requiredValue('S3_SECRET_KEY', values.S3_SECRET_KEY),
     S3_BUCKET: requiredValue('S3_BUCKET', values.S3_BUCKET),
     CORS_ORIGINS: requiredValue('CORS_ORIGINS', values.CORS_ORIGINS),
+    METRICS_ENABLED: values.METRICS_ENABLED,
+    ...(values.METRICS_AUTH_TOKEN
+      ? { METRICS_AUTH_TOKEN: values.METRICS_AUTH_TOKEN }
+      : {}),
+    OTEL_ENABLED: values.OTEL_ENABLED,
+    ...(values.OTEL_EXPORTER_OTLP_ENDPOINT
+      ? { OTEL_EXPORTER_OTLP_ENDPOINT: values.OTEL_EXPORTER_OTLP_ENDPOINT }
+      : {}),
+    OTEL_SERVICE_NAME: values.OTEL_SERVICE_NAME,
   };
 }

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Module, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
+import { trace } from '@opentelemetry/api';
 import type { NodeEnvironment } from '../config/env.validation';
 
 @Module({
@@ -18,6 +19,15 @@ import type { NodeEnvironment } from '../config/env.validation';
           forRoutes: [{ path: '{*path}', method: RequestMethod.ALL }],
           pinoHttp: {
             level: environment === 'production' ? 'info' : 'debug',
+            customProps: () => {
+              const span = trace.getActiveSpan();
+              if (!span) return {};
+              const spanContext = span.spanContext();
+              return {
+                traceId: spanContext.traceId,
+                spanId: spanContext.spanId,
+              };
+            },
             genReqId: (request: { headers: Record<string, unknown> }) => {
               const value = request.headers['x-correlation-id'];
               return typeof value === 'string' && value.length > 0

@@ -59,6 +59,13 @@ describe('Phase 1 API contract (e2e)', () => {
     });
   });
 
+  it('publishes protected Prometheus metrics at the documented path', async () => {
+    const response = await http().get('/api/metrics').expect(200);
+
+    expect(response.text).toContain('mohamy_http_requests_total');
+    expect(response.text).toContain('mohamy_outbox_state_count');
+  });
+
   it('publishes the OpenAPI document at the documented path', async () => {
     const response = await http().get('/api/docs-json').expect(200);
 

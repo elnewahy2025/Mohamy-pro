@@ -1,20 +1,27 @@
+import 'reflect-metadata';
 import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
-import { AppModule } from './app.module';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { MetricsMiddleware } from './observability/metrics.middleware';
+import { MetricsService } from './observability/metrics.service';
+import { shutdownTelemetry, startTelemetry } from './observability/tracing';
 
 async function bootstrap(): Promise<void> {
+  startTelemetry();
+  const { AppModule } = await import('./app.module.js');
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const config = app.get(ConfigService);
 
   app.useLogger(app.get(Logger));
   const correlationIdMiddleware = app.get(CorrelationIdMiddleware);
   app.use(correlationIdMiddleware.use.bind(correlationIdMiddleware));
+  const metricsMiddleware = app.get(MetricsMiddleware);
+  app.use(metricsMiddleware.use.bind(metricsMiddleware));
   app.use(helmet());
   app.enableCors({
     origin: config
@@ -35,7 +42,7 @@ async function bootstrap(): Promise<void> {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new HttpExceptionFilter(app.get(MetricsService)));
 
   const openApiConfig = new DocumentBuilder()
     .setTitle('Mohamy Pro API')
@@ -52,6 +59,22 @@ async function bootstrap(): Promise<void> {
 
   const port = config.get<number>('PORT', 3000);
   await app.listen(port, '0.0.0.0');
+
+  let shuttingDown = false;
+  const shutdown = async (): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    await app.close();
+    await shutdownTelemetry();
+  };
+  process.once('SIGTERM', () => void shutdown());
+  process.once('SIGINT', () => void shutdown());
 }
 
-void bootstrap();
+void bootstrap().catch(async (error: unknown) => {
+  const message =
+    error instanceof Error ? (error.stack ?? error.message) : String(error);
+  console.error(`API failed to start: ${message}`);
+  await shutdownTelemetry();
+  process.exitCode = 1;
+});

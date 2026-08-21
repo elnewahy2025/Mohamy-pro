@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { getCorrelationId } from '../middleware/correlation-id.middleware';
+import { MetricsService } from '../../observability/metrics.service';
 
 interface ErrorResponseBody {
   statusCode: number;
@@ -22,6 +23,8 @@ interface ErrorResponseBody {
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
+
+  constructor(private readonly metrics?: MetricsService) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
@@ -55,6 +58,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
               )
             ? rawMessage
             : 'Request failed';
+
+    if (status >= 400) {
+      this.metrics?.recordApplicationError(
+        status >= 500 ? 'server_error' : 'client_error',
+      );
+    }
 
     if (status >= 500) {
       this.logger.error(

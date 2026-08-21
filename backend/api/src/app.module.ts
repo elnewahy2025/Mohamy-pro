@@ -13,6 +13,7 @@ import { OutboxModule } from './infrastructure/outbox/outbox.module';
 import { OutboxDispatcher } from './infrastructure/outbox/outbox.dispatcher';
 import { IdempotencyModule } from './infrastructure/idempotency/idempotency.module';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './observability/metrics.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { HealthModule } from './health/health.module';
     OutboxModule,
     IdempotencyModule,
     HealthModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService, OutboxDispatcher, CorrelationIdMiddleware],

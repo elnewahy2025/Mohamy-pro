@@ -1,0 +1,32 @@
+groups:
+  - name: mohamy-critical-operational
+    rules:
+      - alert: MohamyApiDown
+        expr: up{job="mohamy-api"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: mohamy-api
+        annotations:
+          summary: Mohamy API scrape target is down
+          description: Prometheus cannot scrape the Mohamy API metrics endpoint for five minutes.
+
+      - alert: MohamyReadinessFailing
+        expr: min by (job) (mohamy_readiness_status{job="mohamy-api"}) < 1
+        for: 5m
+        labels:
+          severity: critical
+          service: mohamy-api
+        annotations:
+          summary: Mohamy API dependency readiness is failing
+          description: At least one declared API dependency has reported readiness down for five minutes.
+
+      - alert: MohamyQueueBacklogHigh
+        expr: sum by (queue_name) (mohamy_queue_depth{job="mohamy-api", state=~"waiting|delayed"}) > 100
+        for: 10m
+        labels:
+          severity: critical
+          service: mohamy-api
+        annotations:
+          summary: Mohamy application queue backlog is high
+          description: Waiting and delayed jobs exceeded 100 for ten minutes.

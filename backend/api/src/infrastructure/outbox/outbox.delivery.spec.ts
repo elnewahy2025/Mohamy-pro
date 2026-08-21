@@ -151,7 +151,8 @@ describe('outbox delivery semantics', () => {
         outboxMessageId: 'message-1',
         eventType: 'test.created',
         errorName: 'Error',
-        errorMessage: 'handler failed',
+        errorMessage:
+          'Outbox handler failed; retry or dead-letter state recorded',
       },
       'Outbox handler failed; retry or dead-letter state recorded',
     );

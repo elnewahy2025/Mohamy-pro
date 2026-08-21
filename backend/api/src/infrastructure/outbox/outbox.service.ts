@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Prisma, type OutboxMessage } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { QueueService } from '../queue/queue.service';
+import { MetricsService } from '../../observability/metrics.service';
 
 export interface CreateOutboxMessageInput {
   aggregateType: string;
@@ -27,6 +28,7 @@ export class OutboxService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queue: QueueService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   create(
@@ -48,7 +50,7 @@ export class OutboxService {
     const now = new Date();
     const leaseCutoff = new Date(now.getTime() - OUTBOX_LEASE_MS);
 
-    return this.prisma.$transaction(async (transaction) => {
+    const claimed = await this.prisma.$transaction(async (transaction) => {
       await transaction.outboxMessage.updateMany({
         where: {
           status: 'PROCESSING',
@@ -108,6 +110,8 @@ export class OutboxService {
       }
       return claimed;
     });
+    await this.refreshOutboxMetrics();
+    return claimed;
   }
 
   async dispatchBatch(): Promise<number> {
@@ -143,6 +147,7 @@ export class OutboxService {
         );
       }
     }
+    await this.refreshOutboxMetrics();
     return messages.length;
   }
 
@@ -161,6 +166,7 @@ export class OutboxService {
         error: null,
       },
     });
+    if (result.count === 1) await this.refreshOutboxMetrics();
     return result.count === 1;
   }
 
@@ -209,7 +215,21 @@ export class OutboxService {
             error: safeError,
           },
     });
+    if (result.count === 1) await this.refreshOutboxMetrics();
     return result.count === 1;
+  }
+
+  private async refreshOutboxMetrics(): Promise<void> {
+    if (!this.metrics) return;
+    const grouped = await this.prisma.outboxMessage.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    });
+    this.metrics.setOutboxStateCounts(
+      Object.fromEntries(
+        grouped.map((item) => [item.status, item._count._all]),
+      ),
+    );
   }
 
   private retryDelayMs(attempt: number): number {

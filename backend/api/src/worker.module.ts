@@ -6,6 +6,7 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { OutboxModule } from './infrastructure/outbox/outbox.module';
 import { OutboxWorker } from './infrastructure/outbox/outbox.worker';
+import { MetricsModule } from './observability/metrics.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { OutboxWorker } from './infrastructure/outbox/outbox.worker';
     RedisModule,
     QueueModule,
     OutboxModule,
+    MetricsModule,
   ],
   providers: [OutboxWorker],
 })

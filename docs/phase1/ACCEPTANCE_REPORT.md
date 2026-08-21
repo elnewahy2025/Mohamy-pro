@@ -1,137 +1,118 @@
 # Phase 1 Foundation Acceptance Report
 
-## Published revision
+## Decision
 
-The latest migration-checker correction is published to `main` at commit `170e09e3`:
+Phase 1 is **not yet closed**. The repository foundation and the principal Windows runtime gates are working, and the application-level observability controls are now implemented. Production-readiness closure still requires hosted CI evidence, the remaining security and storage controls, Windows runtime evidence for the current metrics/tracing changes, final documentation review, and a clean exit-code-complete outbox runtime test.
 
-<https://github.com/elnewahy2025/Mohamy-pro/commit/170e09e3>
+Phase 2 remains paused.
 
-The published correction makes the checker evaluate migration rows by migration name and current ordered state. A rolled-back attempt followed by a later successful attempt is retained as historical information rather than incorrectly reported as unresolved. A latest rolled-back or unfinished attempt, contradictory successful checksums, unknown successful migrations, pending repository migrations, and checksum drift remain blocking results.
+## Current published revisions
 
-Phase 1 is **not closed**. The user's Windows database has one successfully applied migration, `20260820144702_init`, whose SQL is absent from the repository and whose SHA-256 checksum differs from the canonical repository migration. This is a genuine migration-history reproducibility blocker and has not been bypassed.
+The latest published revision is [`be62ec16`](https://github.com/elnewahy2025/Mohamy-pro/commit/be62ec16), which corrects BullMQ job IDs by replacing the invalid colon separator with a safe hyphen. The current runtime remediation chain also includes:
+
+- [`59273a6b`](https://github.com/elnewahy2025/Mohamy-pro/commit/59273a6b): global correlation middleware registration.
+- [`a7e043cb`](https://github.com/elnewahy2025/Mohamy-pro/commit/a7e043cb): visible worker startup logging.
+- [`335223cd`](https://github.com/elnewahy2025/Mohamy-pro/commit/335223cd): named `nestjs-pino` wildcard route.
+- [`f7ffe731`](https://github.com/elnewahy2025/Mohamy-pro/commit/f7ffe731): assertion and test-only suppression for the expected outbox failure log.
+- [`f1f0606f`](https://github.com/elnewahy2025/Mohamy-pro/commit/f1f0606f): correct `dist/src` production entrypoint paths.
+- [`170e09e3`](https://github.com/elnewahy2025/Mohamy-pro/commit/170e09e3): correct migration-checker handling of superseded failed attempts.
+- [`1238debe`](https://github.com/elnewahy2025/Mohamy-pro/commit/1238debe): forward-only baseline index repair migration.
 
 ## Implemented foundation
 
-The API includes validated environment configuration, structured Pino logging, correlation IDs, redacted sensitive headers, standardized HTTP errors, Helmet security headers, CORS configuration, URI API versioning, OpenAPI documentation, PostgreSQL access through the Prisma 7 PostgreSQL adapter, Redis, BullMQ, private S3-compatible object storage, transactional outbox persistence and dispatch, idempotency registry operations, liveness and readiness endpoints, and deterministic unit tests.
+The API includes validated environment configuration, PostgreSQL access through Prisma 7, Redis, BullMQ, private S3-compatible object storage, structured Pino logging, correlation IDs, standardized errors, Helmet security headers, CORS configuration, URI versioning, OpenAPI, global validation, health checks, Prometheus application metrics, OpenTelemetry bootstrap/instrumentation, W3C API-to-worker propagation, transactional outbox persistence and dispatch, idempotency registry persistence, and a dedicated worker process.
 
-The frontend is implemented under `apps/web` with Next.js 16 App Router, React 19, Tailwind CSS, a shadcn-compatible UI primitive, TanStack Query, React Hook Form, Zod, `next-intl`, accessible navigation, responsive layout, English and Arabic message catalogs, locale-prefixed routing, and automatic LTR/RTL document direction. Shared API contracts remain under `packages/contracts`.
+The frontend foundation is under `apps/web` and uses Next.js App Router, React, Tailwind CSS, accessible navigation, responsive layout, English and Arabic catalogs, locale-prefixed routing, and automatic LTR/RTL direction. Shared contracts remain under `packages/contracts`.
 
-The repository contains the Phase 1 Prisma schema and baseline migration, additive outbox delivery migration, baseline-index repair migration, infrastructure-backed CI, environment configuration, observability baseline documentation, a Windows PostgreSQL backup script, and a disposable restore smoke test. Finding 2 has a dedicated worker entrypoint, explicit handler registry, lease/retry/dead-letter state transitions, and focused delivery tests. Finding 4 has dedicated quality, dependency-review, security, container, and DAST jobs.
+## Verified automated gates
 
-## Verified evidence
-
-| Check | Result | Evidence |
+| Gate | Result | Evidence |
 |---|---|---|
-| pnpm version | PASS | Windows output: `Done in 403ms using pnpm v11.22.0` |
-| Frozen pnpm install | PASS | Windows command completed successfully across all 6 workspace projects |
-| Prisma Client generation | PASS | Windows output confirms Prisma Client v7.9.1 generation |
-| Prisma migration deployment | PASS | Windows output: `3 migrations found`; `No pending migrations to apply` |
-| Migration checker execution | BLOCKED as intended | Checker reports unknown applied `20260820144702_init`; no false incomplete report for superseded `00000000000000_init` |
-| Migration-history classifier tests | PASS | 5 Node tests executed in `backend/api`: 5 passed, 0 failed |
-| Migration SQL comparison | PASS with blocker | Preserved local hash `8c9c8776…a4a07a`; canonical hash `439e9a21…d8d37`; byte-identical `False` |
-| Live Prisma schema diff | PASS with blocker | Read-only `migrate diff` reports legacy `OutboxMessage_status_createdAt_idx` outside the current datamodel |
-| Live application indexes | PASS | Windows query reports 10 indexes, including the five repaired/application indexes and primary-key indexes |
-| API ESLint gate | PASS in prior evidence | No errors in the recorded Phase 1 verification |
-| API unit tests | PASS in prior evidence | Recorded full API suite: 3 suites, 9 tests; focused outbox tests included |
-| API production build | PASS in prior evidence | Recorded build completed successfully |
-| Frontend unit tests | PASS in prior evidence | 1 file, 2 tests covering bilingual message parity and direction labels |
-| Frontend production build | PASS in prior evidence | Next.js 16.3.1 App Router build completed successfully |
-| CI workflow structure and required controls | PASS locally; hosted run pending | External GitHub Actions execution remains required |
-| Architecture-fitness check | PASS in prior evidence | Recorded architecture check completed successfully |
-| License policy check | PASS in prior evidence | Recorded check covered 16 license categories |
-| Windows API runtime | UNVERIFIED in this checkpoint | Liveness, readiness, OpenAPI, worker, and restore smoke evidence still required after migration reconciliation |
+| pnpm version | `PASS` | Windows output reported `11.22.0`. |
+| Frozen workspace install | `PASS` | All 6 workspace projects were already up to date. |
+| Prisma Client generation | `PASS` | Prisma Client `7.9.1` generated successfully. |
+| Prisma migration deployment | `PASS` | Three migrations found; no pending migrations on the Windows Mohamy database. |
+| API build | `PASS` | `nest build` completed without errors after the runtime fixes. |
+| API unit suite | `PASS` | Current repository run: 6 suites and 15 tests passed, including metrics, environment validation, and W3C queue propagation. The earlier Windows baseline was 3 suites and 9 tests before these changes. |
+| Outbox focused suite | `PASS` | Failure logging is asserted while expected test output is suppressed. |
+| Migration classifier suite | `PASS` | Five focused classifier cases passed in repository verification. |
+| API lint | `PASS` | Changed API files passed repository lint verification. |
+| Frontend tests/build | `PASS IN PRIOR EVIDENCE` | Existing Phase 1 evidence records bilingual parity/direction tests and a successful Next.js build. |
 
-## Windows migration evidence
+## Verified Windows runtime gates
 
-The Windows PostgreSQL migration table currently contains these records:
+| Gate | Result | Evidence |
+|---|---|---|
+| API production startup | `PASS` | API started from `dist/src/main.js`, connected to PostgreSQL, Redis, queue, and MinIO, and no longer emitted legacy route warnings. |
+| Worker production startup | `PASS` | Worker started from `dist/src/worker.js`; PostgreSQL, Redis, queue, and outbox readiness were logged. |
+| Liveness | `PASS` | `GET /api/v1/health/live` returned HTTP 200 with status `ok`. |
+| Readiness | `PASS` | `GET /api/v1/health/ready` returned HTTP 200; PostgreSQL, Redis, queue, and object storage were `up`. |
+| OpenAPI | `PASS` | `GET /api/docs-json` returned HTTP 200 and exposed versioned service and health routes. |
+| Backup creation | `PASS` | Backup created at `infrastructure/backup/artifacts/mohamy_pro-20260821-155845.sql`. |
+| Restore smoke | `PASS` | Temporary restore database was created, SQL restored, table/index validation completed, and the temporary database was cleaned up. |
+| Legacy database preservation | `PASS` | The primary Windows migration table remained unchanged; no metadata edit, reset, volume deletion, or unrelated-container operation was performed. |
+| Clean migration chain | `PASS` | A disposable database on port `55433` received only the 3 repository migrations; `db:check` returned exit code 0. |
+| Real outbox enqueue/consume | `PASS WITH HARNESS EXIT-CODE DEFECT` | The job was enqueued with the corrected BullMQ-safe ID, consumed by the production worker, and reached `DEAD_LETTER` with the expected unknown-handler error. Cleanup returned `DELETE 1`, and a separate read-only query verified zero matching rows. The wrapper then returned non-zero because it compared the `RETURNING` output to the raw ID while PostgreSQL also emitted the command tag. A clean rerun of the corrected wrapper is still required. |
 
-| Migration | Database state | Repository state | Assessment |
-|---|---|---|---|
-| `20260820144702_init` | Successful; checksum `8c9c8776…a4a07a` | Directory absent | BLOCKING unknown applied migration |
-| `00000000000000_init` | One rolled-back attempt followed by one successful record; checksum `439e9a21…d8d37` | Canonical directory present | Accepted by the corrected checker as a superseded attempt |
-| `20260820190000_outbox_delivery_semantics` | Successful | Directory present | Consistent |
-| `20260821000000_repair_baseline_indexes` | Successful | Directory present | Consistent |
+## Migration reconciliation
 
-The preserved machine-local migration and the canonical migration are not byte-identical. The comparison shows canonical-only schema/index statements, including `CREATE SCHEMA IF NOT EXISTS "public"` and the five baseline index statements. The machine-local migration therefore cannot be silently declared equivalent to the canonical migration.
+The clean disposable database proves that the three repository migrations are ordered, deployable, and internally consistent. The Windows database remains an explicitly accepted legacy state. It contains a successful applied migration named `20260820144702_init` whose SQL and checksum differ from the repository’s canonical `00000000000000_init` migration, plus the preserved rolled-back and successful canonical baseline records. The legacy database was not rewritten.
 
-The live database contains ten indexes. The current Prisma model and outbox claim query use `status/availableAt/createdAt`, `status/claimedAt`, and `aggregateType/aggregateId`. The extra `OutboxMessage_status_createdAt_idx` is a legacy index created by the repair migration and is not represented in the current Prisma datamodel. No `DROP INDEX` statement has been executed. Any cleanup must be a reviewed forward-only migration and must not be confused with resolving the unknown migration history.
+The migration checker must continue to block that legacy database rather than hiding the difference. The repository migration chain is reproducible on the disposable database; the existing Windows database history is not claimed to be reproducible from Git.
 
-## Finding 1 final decision
+## Production-readiness blockers
 
-Finding 1 is **reconciled under an explicit legacy-state decision**. The repository migration chain was tested on a separate disposable PostgreSQL 16 container at `localhost:55433` using database `mohamy_pro_disposable` and a generated disposable user. The three repository migrations were applied in order, and the migration checker returned exit code `0` with:
+| Blocker | Status | Required closure action |
+|---|---|---|
+| Hosted GitHub Actions run | `UNVERIFIED` | Run the actual workflow and review quality, migration, e2e, security, container, SBOM, DAST, and retained artifacts. |
+| Prometheus metrics | `PARTIALLY VERIFIED` | Application metric families, bounded labels, protected `/api/metrics`, unit tests, and build are present. Re-run current code on Windows with real PostgreSQL/Redis/MinIO and retain scrape output. |
+| OpenTelemetry tracing | `PARTIALLY VERIFIED` | API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, outbox spans, W3C propagation, unit tests, and build are present. A real collector-received API-to-worker trace remains unverified. |
+| Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, collector, and critical Prometheus alert configurations are committed. Hosted backend retention and alert-routing evidence remain required; audit/security event persistence follows the authoritative later-phase ownership. |
+| Storage integrity/security | `MISSING` | Address integrity metadata, object versioning, retention/legal hold, encryption configuration, malware scanning, and download/share audit requirements, or explicitly defer each control. |
+| Outbox success path | `UNVERIFIED` | Add a real business-domain handler and supported trigger before claiming `PROCESSED`; do not use a production mock. |
+| Outbox advanced recovery | `PARTIAL` | Execute and retain retry-backoff, lease expiry, duplicate-delivery, and graceful-shutdown evidence. |
+| Idempotency HTTP integration | `PARTIAL` | Prove interceptor/request lifecycle behavior, replay, conflict, expiry, scope, and concurrency semantics. |
+| Generated API client | `UNVERIFIED` | Generate a client from the committed OpenAPI contract and test a real frontend consumer, or document an approved scope decision. |
+| Rate limiting and CSRF | `UNVERIFIED` | Record the Phase 1 decision and execute applicable negative tests. |
+| Local e2e | `UNVERIFIED` | Run the API e2e suite against real Windows PostgreSQL, Redis, and MinIO services and retain output. |
+| Architecture decisions | `PARTIAL` | Record PostgreSQL version, API/worker orchestration, and reserved workspace-scope decisions. |
+| Final documentation | `PARTIAL` | Publish this report, the current gap analysis, the API guide, and the final cross-document link review together. |
 
-```text
-Migration history is consistent: 3 repository migration(s), 3 applied migration(s).
-```
+## Evidence boundaries
 
-The disposable migration table contained exactly these three successful repository migrations, with no rolled-back rows:
+The current foundation does not claim authentication, membership, tenant isolation, RBAC/ABAC, resource authorization, legal-case workflows, document-security pipeline controls, billing, AI, or compliance retention. Those are later-phase responsibilities or explicit open items. The current API has no business write endpoint or registered business handler, so the outbox success path cannot be inferred from the verified failure path.
 
-| Migration | Checksum |
-|---|---|
-| `00000000000000_init` | `439e9a21d4729db9a428201c5785e550bdbdb1a9d99e2d6791e63bfdd32d8d37` |
-| `20260820190000_outbox_delivery_semantics` | `1526db3205ed3587da4dc491e188752afc4f4b8f0e85cdb5f33c83615d55080d` |
-| `20260821000000_repair_baseline_indexes` | `06efcb199977f729721dd7f3ab70bdcff90b293f9f7b8fe3445df008ea08cb40` |
+The current object-storage evidence proves bucket readiness, basic object operations, signed download URL generation, and private access. It does not prove integrity enforcement, versioning, retention/legal hold, encryption-specific configuration, malware scanning, or complete access auditing.
 
-The disposable schema query reported the expected ten application indexes plus `_prisma_migrations_pkey`. The temporary container was then removed. The original Mohamy PostgreSQL, Redis, and MinIO services remained healthy on ports `55432`, `56379`, and `59000/59001`. The original `mohamy_pro` migration table remained unchanged, including the successfully applied machine-local `20260820144702_init` record and the rolled-back/successful canonical baseline records.
+The current observability evidence proves structured production logs, correlation IDs, redaction, health probes, application metric/tracing implementation, bounded W3C job propagation, and repository build/unit execution. It does not yet prove Windows runtime scrape output, collector-received spans, hosted retention enforcement, or alert delivery.
 
-The existing Windows database is therefore accepted as a documented **legacy state** and was not rewritten. This acceptance does not claim that its migration history is reproducible from the repository. The clean disposable result proves the repository migration chain independently; the legacy database remains a known limitation that must be preserved and disclosed.
+## Required final closure conditions
 
-## Rule #2-compliant Windows commands
+Phase 1 may be declared closed only when every remaining blocker is either implemented and evidenced or explicitly approved as a documented deferral containing an owner, target phase, rationale, risk, and acceptance impact. The final review must include the complete Git diff, the hosted CI result, the corrected outbox wrapper with exit code 0, and the updated documentation links.
 
-Run commands from the actual repository root and preserve local changes. The current local Compose modification and `ENGINEERING_BACKLOG.zip` must not be deleted, reset, stashed, or overwritten without explicit approval.
+## Canonical references
 
-```powershell
-Set-Location 'C:\Users\ahmed\Documents\GitHub\Mohamy-pro'
-$pnpmCmd = "$env:APPDATA\npm\pnpm.cmd"
-& $pnpmCmd --version
-& $pnpmCmd install --frozen-lockfile
-& $pnpmCmd --filter api exec prisma validate
-& $pnpmCmd --filter api exec prisma generate
-& $pnpmCmd --filter api exec prisma migrate status
-$env:DATABASE_URL = 'postgresql://mohamy:mohamy_password@localhost:55432/mohamy_pro?schema=public'
-& $pnpmCmd --filter api run db:check
-```
-
-The final command is expected to remain blocking until the unknown applied migration receives an explicit, reviewed resolution. Do not run `migrate reset`, `db push`, `migrate resolve`, direct edits to `_prisma_migrations`, table drops, volume deletion, or commands that recreate unrelated Docker containers.
-
-## Remaining Windows runtime gates
-
-After the migration-history decision is explicitly approved and the checker reaches the intended result, run the API build and tests through the absolute pnpm path, start the API and worker against the isolated PostgreSQL, Redis, and MinIO services, and verify liveness, readiness, OpenAPI, queue behavior, and backup/restore. The exact output must be added here before any production-readiness claim.
-
-```powershell
-& $pnpmCmd --filter api run build
-& $pnpmCmd --filter api exec jest --runInBand
-& $pnpmCmd --filter api start:dev
-```
-
-In a second PowerShell window:
-
-```powershell
-Invoke-RestMethod http://localhost:3000/api/v1/health/live
-Invoke-RestMethod http://localhost:3000/api/v1/health/ready
-(Invoke-WebRequest http://localhost:3000/api/docs-json).StatusCode
-```
-
-Run the backup and restore smoke test only after the API and infrastructure checks succeed:
-
-```powershell
-& .\infrastructure\backup\backup.ps1
-$backup = Get-ChildItem .\infrastructure\backup\artifacts\mohamy_pro-*.sql | Sort-Object LastWriteTime | Select-Object -Last 1
-& .\infrastructure\backup\restore-smoke.ps1 -BackupFile $backup.FullName
-```
-
-The restore smoke test must leave the primary `mohamy_pro` database and the existing Health-ERP and Vision-ERP containers unchanged.
-
-## Phase boundary
-
-No Phase 2 feature work should begin. Phase 1 remains **partially verified and blocked** by the non-reproducible applied migration `20260820144702_init`, the unreviewed legacy index cleanup, the hosted CI run, and the remaining Windows runtime evidence gates. Phase 2 begins only after the user reviews the complete evidence and explicitly approves Phase 1 closure.
-
-## References
-
-1. [`Phase 1 audit report`](AUDIT_REPORT.md)
-2. [`Phase 1 remediation plan`](REMEDIATION_PLAN.md)
-3. [`Migration baseline reconciliation`](MIGRATION_BASELINE_RECONCILIATION.md)
-4. [`Migration checker semantics`](MIGRATION_CHECKER_SEMANTICS.md)
-5. [`Live schema and index review`](MIGRATION_INDEX_REVIEW.md)
-6. [`Engineering governance skill`](../../skills/engineering-governance/SKILL.md)
-7. [`Published migration-checker correction`](https://github.com/elnewahy2025/Mohamy-pro/commit/170e09e3)
+- [`Phase 1 gap analysis`](GAP_ANALYSIS.md)
+- [`Detailed remediation plan`](PHASE1_REMEDIATION_PLAN_DETAILED.md)
+- [`API and worker operations guide`](API_README.md)
+- [`Migration reconciliation`](MIGRATION_BASELINE_RECONCILIATION.md)
+- [`Migration checker semantics`](MIGRATION_CHECKER_SEMANTICS.md)
+- [`Migration index review`](MIGRATION_INDEX_REVIEW.md)
+- [`Observability baseline`](OBSERVABILITY_BASELINE.md)
+- [`Observability requirements audit`](OBSERVABILITY_REQUIREMENTS_AUDIT.md)
+- [`Retention policy`](RETENTION_POLICY.md)
+- [`Alerting baseline`](ALERTING_BASELINE.md)
+- [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
+- [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
+- [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
+- [`Authoritative phase sequence`](../../Plan.txt)
+- [`Engineering governance skill`](../../skills/engineering-governance/SKILL.md)
+- [`GitHub repository`](https://github.com/elnewahy2025/Mohamy-pro)
+- [`Phase 1 CI workflow`](../../.github/workflows/ci.yml)
+- [`Phase 1 backup script`](../../infrastructure/backup/backup.ps1)
+- [`Phase 1 restore script`](../../infrastructure/backup/restore-smoke.ps1)
+- [`Phase 1 API bootstrap`](../../backend/api/src/main.ts)
+- [`Phase 1 worker bootstrap`](../../backend/api/src/worker.ts)
+- [`Phase 1 outbox service`](../../backend/api/src/infrastructure/outbox/outbox.service.ts)
+- [`Phase 1 object-storage service`](../../backend/api/src/infrastructure/storage/object-storage.service.ts)
+- [`Phase 1 package scripts`](../../backend/api/package.json)

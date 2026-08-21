@@ -13,4 +13,5 @@ allowBuilds:
   '@swc/core': true
   msgpackr-extract: true
   prisma: true
+  protobufjs: true
   unrs-resolver: true

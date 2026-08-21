@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, type NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
+import { correlationContext } from './correlation-context';
 
 export const CORRELATION_ID_HEADER = 'x-correlation-id';
 
@@ -12,7 +13,7 @@ export class CorrelationIdMiddleware implements NestMiddleware {
 
     request.headers[CORRELATION_ID_HEADER] = correlationId;
     response.setHeader(CORRELATION_ID_HEADER, correlationId);
-    next();
+    correlationContext.run({ correlationId }, next);
   }
 }
 
