@@ -2,7 +2,7 @@
 
 **Verification date:** 2026-08-21
 
-**Repository commits under test:** `23f83f6c` metrics-route correction, `e267a95e` acceptance-report reference update, and `c5891e09` real outbox success-handler registration.
+**Repository commits under test:** `23f83f6c` metrics-route correction, `c5891e09` real outbox success-handler registration, and `8174559f` dedicated worker metrics endpoint.
 
 ## Automated Gates
 
@@ -39,7 +39,7 @@ The captured metric output contains the required families and live values:
 | `mohamy_queue_depth` | `mohamy-application` queue reported waiting `0`, active `0`, completed `2`, failed `0`, delayed `0` after the success workflow. |
 | `mohamy_readiness_status` | `redis`, `queue`, `postgres`, and `objectStorage` each reported `1`. |
 | `mohamy_outbox_state_count` | `PENDING=0`, `PROCESSING=0`, `PROCESSED=1`, `FAILED=0`, and `DEAD_LETTER=0` were captured immediately after the successful outbox workflow and before cleanup. |
-| `mohamy_worker_job_duration_seconds` | The family was registered but empty on the API scrape even though the worker processed the outbox job. This exposed the expected separate-process Prometheus registry boundary; the worker metrics endpoint is being added on a separate port and requires its own runtime scrape. |
+| `mohamy_worker_job_duration_seconds` | The API registry is process-local and does not expose worker samples. The dedicated worker scrape at `http://localhost:3002/metrics` returned `200` and captured `mohamy_worker_job_duration_seconds_count{job_name="outbox.dispatch"} 1`. |
 | `mohamy_application_errors_total` | Family registered; no application error was recorded during this verification window. |
 
 The metrics response also included standard process and Node.js runtime metrics. No request bodies, credentials, document contents, financial details, or privileged communication content appeared in the captured application metric labels.
@@ -50,6 +50,6 @@ A uniquely identified `Health` row and `health.status.updated` outbox message we
 
 ## Evidence Boundaries
 
-This verification proves the current API metrics endpoint, database query instrumentation, queue/readiness/outbox gauges, API route registration, API startup, worker startup, readiness behavior, and the real outbox success path on Windows. It does not yet prove OpenTelemetry export to a reachable collector because the captured run used the local default with no collector evidence. The API scrape also cannot prove worker-local histogram samples; the new standalone worker metrics endpoint must be started and scraped. Hosted Prometheus/Loki retention and Alertmanager delivery remain separate deployment gates.
+This verification proves the current API metrics endpoint, database query instrumentation, queue/readiness/outbox gauges, separate worker metrics endpoint, API route registration, API startup, worker startup, readiness behavior, real outbox success path, and worker job histogram on Windows. It does not yet prove OpenTelemetry export to a reachable collector because the captured run used the local default with no collector evidence. Hosted Prometheus/Loki retention and Alertmanager delivery remain separate deployment gates.
 
-Phase 1 remains open until all other documented blockers have current evidence or an explicit, risk-bearing deferral under the authoritative roadmap.
+The worker metrics evidence is also recorded in [`WORKER_METRICS_WINDOWS_VERIFICATION.md`](WORKER_METRICS_WINDOWS_VERIFICATION.md). Phase 1 remains open until all other documented blockers have current evidence or an explicit, risk-bearing deferral under the authoritative roadmap.

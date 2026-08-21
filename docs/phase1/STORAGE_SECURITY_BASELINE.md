@@ -25,4 +25,4 @@ Storage remains behind the `OBJECT_STORAGE` abstraction. The storage adapter nev
 
 ## Verification Boundary
 
-The current repository evidence proves Prisma schema validity, API build, ESLint, 7 unit suites, and 19 tests. Windows migration/schema evidence is now recorded, but it does not yet prove a real object upload, version ID returned by MinIO, object-lock retention response, server-side encryption response, or ClamAV scan response. Those tests must use an isolated storage bucket and must not touch unrelated Health-ERP/Vision-ERP resources or the user’s primary production database.
+The current repository evidence proves Prisma schema validity, API build, ESLint, 9 unit suites, and 23 tests. Windows migration/schema evidence is recorded, but it does not yet prove a real object upload, version ID returned by MinIO, object-lock retention response, server-side encryption response, or ClamAV scan response. Those tests must use an isolated storage bucket and must not touch unrelated Health-ERP/Vision-ERP resources or the user’s primary production database.

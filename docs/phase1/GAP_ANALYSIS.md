@@ -68,6 +68,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Retention policy`](RETENTION_POLICY.md)
 - [`Alerting baseline`](ALERTING_BASELINE.md)
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
+- [`Worker metrics Windows verification`](WORKER_METRICS_WINDOWS_VERIFICATION.md)
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)

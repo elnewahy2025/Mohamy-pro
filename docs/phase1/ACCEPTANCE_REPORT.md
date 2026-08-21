@@ -65,7 +65,7 @@ The migration checker must continue to block that legacy database rather than hi
 | Blocker | Status | Required closure action |
 |---|---|---|
 | Hosted GitHub Actions run | `UNVERIFIED` | Run the actual workflow and review quality, migration, e2e, security, container, SBOM, DAST, and retained artifacts. |
-| Prometheus metrics | `PARTIALLY VERIFIED` | Protected API `/api/metrics` and dedicated worker `/metrics` registries, bounded labels, unit tests, and build are present. The API scrape and outbox success path are Windows-verified; fresh Windows evidence for the worker port `3002` remains required. |
+| Prometheus metrics | `PASS WITH SCOPE LIMIT` | Protected API `/api/metrics` and dedicated worker `/metrics` registries, bounded labels, unit tests, and build are present. Windows captured the API scrape, outbox success path, worker port `3002`, and a non-empty worker job-duration histogram. Hosted retention and alert-routing evidence remain required. |
 | OpenTelemetry tracing | `PARTIALLY VERIFIED` | API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, outbox spans, W3C propagation, unit tests, and build are present. A real collector-received API-to-worker trace remains unverified. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, collector, and critical Prometheus alert configurations are committed. Hosted backend retention and alert-routing evidence remain required; audit/security event persistence follows the authoritative later-phase ownership. |
 | Storage integrity/security | `PARTIALLY VERIFIED` | SHA-256 metadata, S3 versioning/encryption configuration, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and repository-tested. Apply the new migration and capture Windows MinIO/versioning/object-lock/ClamAV evidence before closure. |
@@ -103,6 +103,7 @@ Phase 1 may be declared closed only when every remaining blocker is either imple
 - [`Retention policy`](RETENTION_POLICY.md)
 - [`Alerting baseline`](ALERTING_BASELINE.md)
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
+- [`Worker metrics Windows verification`](WORKER_METRICS_WINDOWS_VERIFICATION.md)
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)
