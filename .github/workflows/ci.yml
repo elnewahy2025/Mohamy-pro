@@ -327,7 +327,7 @@ jobs:
           docker run --rm --network host \
             -v "$PWD/zap-output:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py -t http://127.0.0.1:3000/api/docs -r zap-report.html -J zap-report.json -m 2
+            zap-baseline.py -t http://127.0.0.1:3000/api/docs -r zap-report.html -J zap-report.json -m 2 -I
 
       - name: Stop pinned MinIO
         if: always()
