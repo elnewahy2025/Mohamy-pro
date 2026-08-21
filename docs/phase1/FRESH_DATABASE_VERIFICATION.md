@@ -16,7 +16,6 @@
 
 #### Step 1: Provision Disposable Database
 ```powershell
-$env:PGPASSWORD = 'mohamy_password'
 psql -h localhost -p 55432 -U mohamy -d postgres -c "CREATE DATABASE mohamy_test_fresh;"
 ```
 
@@ -24,7 +23,7 @@ psql -h localhost -p 55432 -U mohamy -d postgres -c "CREATE DATABASE mohamy_test
 
 #### Step 2: Apply Repository Migrations
 ```powershell
-$env:DATABASE_URL = 'postgresql://mohamy:mohamy_password@localhost:55432/mohamy_test_fresh?schema=public'
+# DATABASE_URL targeted the disposable test database; the credential is intentionally omitted from this evidence.
 pnpm --filter api exec prisma migrate deploy
 ```
 
@@ -43,7 +42,7 @@ All migrations have been successfully applied.
 
 #### Step 3: Verify with Migration Checker
 ```powershell
-$env:DATABASE_URL = 'postgresql://mohamy:mohamy_password@localhost:55432/mohamy_test_fresh?schema=public'
+# DATABASE_URL targeted the disposable test database; the credential is intentionally omitted from this evidence.
 pnpm --filter api run db:check
 ```
 
@@ -110,14 +109,14 @@ psql -h localhost -p 55432 -U mohamy -d postgres -c "DROP DATABASE mohamy_test_f
 
 **Finding 1, Closure Criterion #3:** "A clean disposable PostgreSQL database applies the complete repository migration directory successfully."
 
-This verification confirms:
+This verification confirms, within the captured query scope:
 - ✅ The 3 repository migrations are correct
 - ✅ They apply in the correct order (chronological by timestamp prefix)
 - ✅ They produce a valid schema with all expected tables
 - ✅ They produce all expected indexes (including legacy index from repair migration)
 - ✅ The migration history is reproducible from the repository alone
 - ✅ The migration checker confirms consistency (exit code 0)
-- ✅ A fresh database is identical to the production Windows database schema
+- ✅ Captured fresh-database table and index results are aligned with the recorded Windows results; full structural identity was not established
 
 ## Impact
 
