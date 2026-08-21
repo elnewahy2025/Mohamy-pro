@@ -6,7 +6,7 @@ import { WorkerModule } from './worker.module';
 async function bootstrap(): Promise<void> {
   const logger = new Logger('OutboxWorkerBootstrap');
   const application = await NestFactory.createApplicationContext(WorkerModule, {
-    bufferLogs: true,
+    bufferLogs: false,
   });
   application.enableShutdownHooks();
   logger.log('Outbox worker process started');
