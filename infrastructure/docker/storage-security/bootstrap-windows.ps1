@@ -154,7 +154,8 @@ $secretGrant = "${currentUser}:(R,W)"
 & icacls $kmsEnvPath /inheritance:r /grant:r $secretGrant | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Unable to restrict permissions on $kmsEnvPath" }
 
-if (-not (docker network inspect $networkName 2>$null)) {
+$existingNetwork = & docker network inspect $networkName 2>$null
+if ($LASTEXITCODE -ne 0) {
     Invoke-Docker -Arguments @('network', 'create', $networkName)
 }
 
