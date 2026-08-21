@@ -151,7 +151,7 @@ The following statements are deliberately limited to the foundation evidence:
 - Authentication, memberships, tenant isolation, RBAC/ABAC, and resource authorization are not part of the current API surface.
 - The idempotency registry exists as a persistence component; a complete HTTP idempotency lifecycle is not claimed until its interceptor, scope, replay, conflict, and concurrency behavior are implemented and tested.
 - The object-storage adapter now computes SHA-256 and byte-count metadata, persists storage metadata, enables configured S3 versioning, applies configured server-side encryption, enforces retention/legal-hold deletion checks, and requires a configured ClamAV scan before permanent storage when malware scanning is enabled. Windows migration/startup verification for the new storage migration and MinIO versioning behavior remains required; local development intentionally leaves object lock, encryption, and malware scanning disabled.
-- The outbox worker and failure/dead-letter path are runtime-verified. The current API has no business write endpoint or registered domain handler for a successful `PROCESSED` event, so a successful business-event workflow is not claimed.
+- The outbox worker and failure/dead-letter path are runtime-verified, and a real `health.status.updated` handler is now registered and unit-tested. The current API has no producer endpoint for this event, so a dispatcher-to-worker `PROCESSED` workflow still requires Windows runtime evidence; see [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md).
 - Structured logs, correlation IDs, Prometheus application metrics, OpenTelemetry bootstrap/instrumentation, retention configuration, and critical alert rules are implemented. Windows API metrics/readiness scrape evidence is recorded; collector delivery and hosted retention/alert-routing evidence remain open. Seven-year audit/security event persistence is explicitly owned by later roadmap phases and is not represented as a Phase 1 business-audit implementation.
 - The generated API client decision remains evidence-gated; the current frontend and shared contracts must not be described as a generated OpenAPI client without generated artifacts and consumer tests.
 - GitHub Actions hosted execution and retained security artifacts remain required before production-readiness closure.
@@ -170,6 +170,7 @@ The following statements are deliberately limited to the foundation evidence:
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
+- [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
 

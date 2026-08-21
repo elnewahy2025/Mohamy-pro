@@ -18,7 +18,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | Repository migrations | `PASS WITH ACCEPTED LEGACY STATE` | The three repository migrations apply cleanly on a disposable database and `db:check` returns exit code 0 there. The existing Windows database retains an older applied migration absent from Git; it was not rewritten and is documented as legacy. |
 | Redis, BullMQ, and worker startup | `PASS` | Production worker connected to PostgreSQL, Redis, queue, and outbox infrastructure and logged readiness. |
 | Outbox enqueue and dead-letter path | `PASS` | A uniquely identified unknown event was submitted using a BullMQ-safe job ID, consumed by the real worker, moved to `DEAD_LETTER`, and removed; cleanup was verified with zero matching rows. |
-| Outbox success path | `UNVERIFIED` | No current HTTP write endpoint or registered business-domain handler exists, so `PENDING → PROCESSING → PROCESSED` has not been demonstrated through a business event. |
+| Outbox success path | `PARTIALLY VERIFIED` | A real `health.status.updated` handler is registered and unit-tested; the current API has no producer endpoint, so the dispatcher-to-worker `PENDING → PROCESSING → PROCESSED` workflow remains a Windows runtime gate. |
 | Outbox advanced recovery | `PARTIAL` | Unit tests cover state transitions; real retry-backoff, lease expiry, duplicate delivery, graceful shutdown, and success-handler workflows remain unexecuted. |
 | API production startup | `PASS` | `dist/src/main.js` starts and connects to PostgreSQL, Redis, queue, and MinIO. The previous wildcard route warnings were removed. |
 | Health and readiness | `PASS` | Windows production runtime returned HTTP 200 for liveness and readiness; all four dependencies reported `up`. |
@@ -45,7 +45,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 1. Hosted GitHub Actions execution and retained quality/security artifacts are not verified.
 2. Metrics and distributed tracing are implemented at application level, but current Windows scrape/collector evidence and hosted retention/alert-routing evidence remain unverified.
 3. Storage-security controls are implemented at application level, but the new migration and real S3/MinIO/object-lock/ClamAV runtime evidence remain open.
-4. The outbox success path and advanced recovery paths are not fully demonstrated.
+4. The registered outbox success handler and advanced recovery paths are not fully demonstrated through a real Windows dispatcher-to-worker workflow.
 5. Generated API client artifacts and consumer tests are not evidenced.
 6. Rate limiting and CSRF decisions/tests remain open.
 7. The legacy database state is accepted and documented, but the machine-local migration remains non-reproducible and must not be silently rewritten.
@@ -70,6 +70,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
+- [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
