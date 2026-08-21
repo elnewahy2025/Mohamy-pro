@@ -25,7 +25,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | OpenAPI | `PASS` | `/api/docs-json` returned HTTP 200 with the current versioned routes. |
 | Backup and restore smoke | `PASS` | Backup was created, restored into a temporary database, validated, and cleaned up without replacing the primary database. |
 | Frontend foundation | `PASS WITH SCOPE LIMIT` | Next.js App Router, English/Arabic locale support, RTL/LTR direction, responsive layout, and accessibility foundations are present. Business workflows are outside this foundation scope. |
-| Generated API client | `UNVERIFIED` | Shared contracts exist, but generated OpenAPI client artifacts and consumer tests are not evidenced. |
+| Generated API client | `DOCUMENTED DEFERRAL` | [`GENERATED_CLIENT_DECISION.md`](GENERATED_CLIENT_DECISION.md) records why a client is not useful on the foundation-only API and defines the Phase 2 consumer gate. |
 | HTTP idempotency integration | `PARTIAL` | The persistence registry exists; complete request interception, replay, conflict, expiry, scope, and concurrency behavior are not evidenced. |
 | Basic object storage | `PASS WITH SCOPE LIMIT` | Bucket readiness, basic object operations, signed download URLs, and private access are implemented and readiness-tested. |
 | Storage security controls | `PARTIALLY VERIFIED` | Storage metadata, SHA-256 hashing, configured versioning/encryption, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and covered by repository build/unit tests. The new migration, MinIO versioning behavior, object-lock behavior, and real ClamAV scan remain Windows/deployment evidence gates. |
@@ -33,23 +33,22 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | Metrics and tracing | `PARTIALLY VERIFIED` | API and dedicated worker Prometheus registries, protected API/worker endpoints, OpenTelemetry API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, explicit outbox spans, and W3C queue propagation are implemented. Build and unit tests pass; the new worker endpoint and collector-received spans still require Windows/deployment evidence. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, OpenTelemetry Collector, and critical Prometheus alert configurations are present. Hosted retention enforcement and alert routing are not runtime-verified; audit/security event persistence remains explicitly owned by later roadmap phases. |
 | Input validation and security headers | `PASS` | Global validation, whitelist/forbid behavior, Helmet, CORS configuration, and redaction are implemented. |
-| Rate limiting and CSRF | `UNVERIFIED` | These controls are not evidenced for the current API surface. |
+| Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | Redis-backed atomic rate limiting is unit-tested and Windows-verified with raw 200/200/429 headers and `Retry-After`. [`CSRF_DECISION.md`](CSRF_DECISION.md) records that the current read-only, non-cookie API has no applicable CSRF surface and defines the future re-entry gate. |
 | Authentication and authorization | `DEFERRED BY ROADMAP` | Identity, membership, tenant isolation, RBAC/ABAC, and resource authorization belong to later phases and are not claimed here. |
 | Hosted CI/security artifacts | `UNVERIFIED` | The workflow definition contains quality, migration, e2e, security, container, SBOM, and DAST jobs, but a successful hosted run and artifact review are still required. |
-| Local e2e | `UNVERIFIED` | A complete Windows e2e run against the real services has not been captured. |
-| Architecture fitness | `PARTIAL` | Basic boundary checks exist, but API/worker orchestration, PostgreSQL version policy, and reserved workspace-scope decisions need explicit evidence. |
-| Documentation | `PARTIAL` | API, observability, retention, alerting, acceptance, and migration documents are updated in the working tree; final cross-document link review and publication remain required. |
+| Local e2e | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](E2E_WINDOWS_VERIFICATION.md) records the Windows run against real PostgreSQL, Redis, and MinIO: 1 suite and 4 tests passed. |
+| Architecture fitness | `ACCEPTED` | [`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md) records PostgreSQL 16, separate API/worker processes, and reserved `integrations/*` and `ai/*` scopes. |
+| Documentation | `PARTIAL` | Phase 1 evidence, security, architecture, acceptance, and migration documents are updated; final cross-document link review and publication remain required. |
 
 ## Remaining blockers for unconditional Phase 1 closure
 
 1. Hosted GitHub Actions execution and retained quality/security artifacts are not verified.
-2. Metrics and distributed tracing are implemented at application level, but current Windows scrape/collector evidence and hosted retention/alert-routing evidence remain unverified.
-3. Storage-security controls are implemented at application level, but the new migration and real S3/MinIO/object-lock/ClamAV runtime evidence remain open.
+2. Metrics and distributed tracing are implemented at application level, but collector-received spans and hosted retention/alert-routing evidence remain unverified.
+3. Storage-security controls are implemented at application level, but real S3/MinIO versioning, object-lock, encryption, and ClamAV runtime evidence remain open.
 4. The registered outbox success handler and advanced recovery paths are not fully demonstrated through a real Windows dispatcher-to-worker workflow.
-5. Generated API client artifacts and consumer tests are not evidenced.
-6. Rate limiting and CSRF decisions/tests remain open.
-7. The legacy database state is accepted and documented, but the machine-local migration remains non-reproducible and must not be silently rewritten.
-8. The final Phase 1 acceptance report and cross-document links must be updated after all evidence is collected.
+5. HTTP idempotency interceptor/request lifecycle behavior remains unverified.
+6. The legacy database state is accepted and documented, but the machine-local migration remains non-reproducible and must not be silently rewritten.
+7. Final documentation cross-links and the consolidated Phase 1 closure review remain open.
 
 ## Phase boundary
 
@@ -72,6 +71,11 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)
+- [`Windows e2e verification`](E2E_WINDOWS_VERIFICATION.md)
+- [`Security controls baseline`](SECURITY_CONTROLS_BASELINE.md)
+- [`CSRF applicability decision`](CSRF_DECISION.md)
+- [`Generated API client decision`](GENERATED_CLIENT_DECISION.md)
+- [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
