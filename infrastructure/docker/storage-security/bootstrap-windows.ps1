@@ -166,7 +166,7 @@ Invoke-Docker -Arguments @(
     '-v', "$kmsConfigPath`:/etc/minkms/config.yaml:ro",
     '-v', "$kmsRoot/data`:/mnt/minio-kms",
     '--env-file', $kmsEnvPath,
-    $kmsImage, '/mnt/minkms', '--config', '/etc/minkms/config.yaml'
+    $kmsImage, 'server', '/mnt/minkms', '--config', '/etc/minkms/config.yaml'
 )
 Start-Sleep -Seconds 5
 $kmsLogs = (& docker logs $kmsName 2>&1 | Out-String).Trim()
