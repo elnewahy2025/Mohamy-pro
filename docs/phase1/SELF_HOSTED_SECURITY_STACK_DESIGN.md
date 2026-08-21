@@ -9,10 +9,10 @@ The no-paid-service route will not use the archived `minio/kes` Docker image or 
 The proposed self-hosted route is therefore:
 
 ```text
-AIStor Free standalone object store
+AIStor Free standalone object store (quay.io/minio/aistor/minio)
         │  TLS-protected KMS API
         ▼
-MinIO KMS (free standalone license, if approved by the vendor license)
+MinIO KMS (quay.io/minio/aistor/minkms)
         │
         └── sealed root-key / key-management boundary
 
@@ -20,7 +20,7 @@ Mohamy API ── S3 API ── AIStor bucket with versioning + Object Lock
 Mohamy API ── INSTREAM ── ClamAV clamd
 ```
 
-The official MinIO pricing page describes a free standalone deployment for developers, researchers, enthusiasts, and small organizations [3]. The official download page lists MinIO KMS as an available add-on and provides the license-access path [4]. The deployment must still comply with the applicable license and must obtain the free license key if required; a free license is not the same as an unlicensed image.
+The official MinIO pricing page describes a free standalone deployment for developers, researchers, enthusiasts, and small organizations [3]. The official AIStor container instructions use `quay.io/minio/aistor/minio` and require a license file for AIStor Server; the free tier permits a single compute resource [4]. Current MinIO KMS releases use `quay.io/minio/aistor/minkms`; the current KMS documentation states that new releases no longer require a commercial license, while the container procedure is documented for local development and evaluation [5]. The user’s `C:\Users\ahmed\Desktop\minio.license` is treated as a secret input for AIStor only; it must never be copied into Git or displayed.
 
 ## Why Vault/KES Is Not the Default
 
@@ -52,7 +52,7 @@ A self-hosted deployment cannot be called production-ready merely because its co
 7. Retention and legal-hold deletion rejection verified against an isolated object version.
 8. Cleanup of only the isolated verification resources.
 
-The official MinIO guidance states that MinIO KMS requires TLS and recommends separating key-management hosts from encrypted object-store hosts [5]. The Windows Docker environment can provide a reproducible single-host self-hosted deployment for this phase, but the final report must distinguish **single-host self-hosted evidence** from a highly available multi-host deployment.
+The official MinIO guidance states that MinIO KMS requires TLS and recommends separating key-management hosts from encrypted object-store hosts [6]. The KMS container guide explicitly describes the single-node container procedure as local development/evaluation and directs production deployments to the Linux or Kubernetes procedures [5]. Therefore, Windows Docker can provide reproducible self-hosted runtime evidence, but a full production-readiness claim requires a supported Linux or Kubernetes host with persistent storage, backups, TLS, and operational recovery. The final report must not label a Windows-only Docker test as a production deployment.
 
 ## Current Blocker
 
@@ -64,6 +64,7 @@ The repository currently contains the legacy development `minio/minio` container
 2. [MinIO KES Docker repository](https://hub.docker.com/r/minio/kes)
 3. [MinIO AIStor pricing](https://www.min.io/pricing)
 4. [MinIO AIStor download and license access](https://www.min.io/download)
-5. [MinIO KMS installation and TLS requirements](https://docs.min.io/kms/installation/)
-6. [MinIO object-store Docker documentation](https://hub.docker.com/r/minio/minio)
-7. [ClamAV official Docker documentation](https://docs.clamav.net/manual/Installing/Docker.html)
+5. [MinIO KMS container installation and production boundary](https://docs.min.io/kms/installation/container/)
+6. [MinIO KMS installation and TLS requirements](https://docs.min.io/kms/installation/)
+7. [MinIO object-store Docker documentation](https://hub.docker.com/r/minio/minio)
+8. [ClamAV official Docker documentation](https://docs.clamav.net/manual/Installing/Docker.html)
