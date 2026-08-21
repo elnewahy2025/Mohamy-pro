@@ -322,8 +322,10 @@ jobs:
 
       - name: OWASP ZAP baseline scan
         run: |
+          mkdir -p zap-output
+          chmod 777 zap-output
           docker run --rm --network host \
-            -v "$PWD:/zap/wrk/:rw" \
+            -v "$PWD/zap-output:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py -t http://127.0.0.1:3000/api/docs -r zap-report.html -J zap-report.json -m 2
 
@@ -337,8 +339,8 @@ jobs:
         with:
           name: zap-report-${{ github.sha }}
           path: |
-            zap-report.html
-            zap-report.json
+            zap-output/zap-report.html
+            zap-output/zap-report.json
             api.log
           if-no-files-found: warn
           retention-days: 14
