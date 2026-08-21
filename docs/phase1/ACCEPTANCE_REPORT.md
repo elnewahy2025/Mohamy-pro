@@ -8,7 +8,7 @@ Phase 2 remains paused.
 
 ## Current published revisions
 
-The latest published revision is [`be62ec16`](https://github.com/elnewahy2025/Mohamy-pro/commit/be62ec16), which corrects BullMQ job IDs by replacing the invalid colon separator with a safe hyphen. The current runtime remediation chain also includes:
+The latest published revision is [`c0450682`](https://github.com/elnewahy2025/Mohamy-pro/commit/c0450682), which implements the Phase 1 metrics, OpenTelemetry, correlation-propagation, retention-configuration, alert-rule, and verification changes. The earlier runtime remediation chain also includes:
 
 - [`59273a6b`](https://github.com/elnewahy2025/Mohamy-pro/commit/59273a6b): global correlation middleware registration.
 - [`a7e043cb`](https://github.com/elnewahy2025/Mohamy-pro/commit/a7e043cb): visible worker startup logging.
