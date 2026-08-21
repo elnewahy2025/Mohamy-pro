@@ -1,4 +1,5 @@
 export type NodeEnvironment = 'development' | 'test' | 'production';
+export type StorageEncryptionMode = 'NONE' | 'AES256' | 'aws:kms';
 
 export interface ValidatedEnvironment extends Record<string, unknown> {
   NODE_ENV: NodeEnvironment;
@@ -9,6 +10,13 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   S3_ACCESS_KEY: string;
   S3_SECRET_KEY: string;
   S3_BUCKET: string;
+  S3_VERSIONING_ENABLED: boolean;
+  S3_OBJECT_LOCK_ENABLED: boolean;
+  S3_ENCRYPTION_MODE: StorageEncryptionMode;
+  S3_KMS_KEY_ID?: string;
+  MALWARE_SCAN_ENABLED: boolean;
+  CLAMAV_HOST?: string;
+  CLAMAV_PORT: number;
   CORS_ORIGINS: string;
   METRICS_ENABLED: boolean;
   METRICS_AUTH_TOKEN?: string;
@@ -39,6 +47,13 @@ function readBoolean(value: unknown, fallback: boolean): boolean {
         ? value
         : typeof value;
   throw new Error(`Expected a boolean value; received ${received}`);
+}
+
+function readStorageEncryptionMode(value: unknown): StorageEncryptionMode {
+  if (value === 'NONE' || value === 'AES256' || value === 'aws:kms') {
+    return value;
+  }
+  throw new Error('S3_ENCRYPTION_MODE must be NONE, AES256, or aws:kms');
 }
 
 function readPort(value: unknown, fallback: number): number {
@@ -72,6 +87,11 @@ export function validateEnvironment(
           S3_ACCESS_KEY: undefined,
           S3_SECRET_KEY: undefined,
           S3_BUCKET: undefined,
+          S3_VERSIONING_ENABLED: undefined,
+          S3_OBJECT_LOCK_ENABLED: undefined,
+          S3_ENCRYPTION_MODE: undefined,
+          MALWARE_SCAN_ENABLED: undefined,
+          CLAMAV_HOST: undefined,
           CORS_ORIGINS: undefined,
         }
       : {
@@ -80,9 +100,32 @@ export function validateEnvironment(
           S3_ACCESS_KEY: 'minioadmin',
           S3_SECRET_KEY: 'minioadmin',
           S3_BUCKET: 'mohamy-development',
+          S3_VERSIONING_ENABLED: true,
+          S3_OBJECT_LOCK_ENABLED: false,
+          S3_ENCRYPTION_MODE: 'NONE',
+          MALWARE_SCAN_ENABLED: false,
+          CLAMAV_HOST: undefined,
           CORS_ORIGINS: 'http://localhost:5173',
         };
 
+  const storageEncryptionMode = readStorageEncryptionMode(
+    raw.S3_ENCRYPTION_MODE ?? defaults.S3_ENCRYPTION_MODE,
+  );
+  const storageVersioningEnabled = readBoolean(
+    raw.S3_VERSIONING_ENABLED,
+    defaults.S3_VERSIONING_ENABLED ?? false,
+  );
+  const objectLockEnabled = readBoolean(
+    raw.S3_OBJECT_LOCK_ENABLED,
+    defaults.S3_OBJECT_LOCK_ENABLED ?? false,
+  );
+  const malwareScanEnabled = readBoolean(
+    raw.MALWARE_SCAN_ENABLED,
+    defaults.MALWARE_SCAN_ENABLED ?? false,
+  );
+  const clamavHost = readString(raw.CLAMAV_HOST) ?? defaults.CLAMAV_HOST;
+  const clamavPort = readPort(raw.CLAMAV_PORT, 3310);
+  const kmsKeyId = readString(raw.S3_KMS_KEY_ID);
   const otelEndpoint = readString(raw.OTEL_EXPORTER_OTLP_ENDPOINT);
   const metricsEnabled = readBoolean(raw.METRICS_ENABLED, true);
   const otelEnabled = readBoolean(raw.OTEL_ENABLED, Boolean(otelEndpoint));
@@ -91,12 +134,42 @@ export function validateEnvironment(
     readString(raw.OTEL_SERVICE_NAME) ??
     (raw.WORKER_PROCESS === 'true' ? 'mohamy-worker' : 'mohamy-api');
 
+  if (nodeEnv === 'production') {
+    if (!storageVersioningEnabled) {
+      throw new Error('S3_VERSIONING_ENABLED must be true in production');
+    }
+    if (!objectLockEnabled) {
+      throw new Error('S3_OBJECT_LOCK_ENABLED must be true in production');
+    }
+    if (storageEncryptionMode === 'NONE') {
+      throw new Error('S3_ENCRYPTION_MODE must not be NONE in production');
+    }
+    if (!malwareScanEnabled) {
+      throw new Error('MALWARE_SCAN_ENABLED must be true in production');
+    }
+    if (!clamavHost) {
+      throw new Error(
+        'CLAMAV_HOST is required when malware scanning is enabled',
+      );
+    }
+    if (storageEncryptionMode === 'aws:kms' && !kmsKeyId) {
+      throw new Error('S3_KMS_KEY_ID is required for aws:kms encryption');
+    }
+  }
+
   const values = {
     REDIS_URL: readString(raw.REDIS_URL) ?? defaults.REDIS_URL,
     S3_ENDPOINT: readString(raw.S3_ENDPOINT) ?? defaults.S3_ENDPOINT,
     S3_ACCESS_KEY: readString(raw.S3_ACCESS_KEY) ?? defaults.S3_ACCESS_KEY,
     S3_SECRET_KEY: readString(raw.S3_SECRET_KEY) ?? defaults.S3_SECRET_KEY,
     S3_BUCKET: readString(raw.S3_BUCKET) ?? defaults.S3_BUCKET,
+    S3_VERSIONING_ENABLED: storageVersioningEnabled,
+    S3_OBJECT_LOCK_ENABLED: objectLockEnabled,
+    S3_ENCRYPTION_MODE: storageEncryptionMode,
+    S3_KMS_KEY_ID: kmsKeyId,
+    MALWARE_SCAN_ENABLED: malwareScanEnabled,
+    CLAMAV_HOST: clamavHost,
+    CLAMAV_PORT: clamavPort,
     CORS_ORIGINS: readString(raw.CORS_ORIGINS) ?? defaults.CORS_ORIGINS,
     METRICS_ENABLED: metricsEnabled,
     METRICS_AUTH_TOKEN: metricsAuthToken,
@@ -122,6 +195,13 @@ export function validateEnvironment(
     S3_ACCESS_KEY: requiredValue('S3_ACCESS_KEY', values.S3_ACCESS_KEY),
     S3_SECRET_KEY: requiredValue('S3_SECRET_KEY', values.S3_SECRET_KEY),
     S3_BUCKET: requiredValue('S3_BUCKET', values.S3_BUCKET),
+    S3_VERSIONING_ENABLED: values.S3_VERSIONING_ENABLED,
+    S3_OBJECT_LOCK_ENABLED: values.S3_OBJECT_LOCK_ENABLED,
+    S3_ENCRYPTION_MODE: values.S3_ENCRYPTION_MODE,
+    ...(values.S3_KMS_KEY_ID ? { S3_KMS_KEY_ID: values.S3_KMS_KEY_ID } : {}),
+    MALWARE_SCAN_ENABLED: values.MALWARE_SCAN_ENABLED,
+    ...(values.CLAMAV_HOST ? { CLAMAV_HOST: values.CLAMAV_HOST } : {}),
+    CLAMAV_PORT: values.CLAMAV_PORT,
     CORS_ORIGINS: requiredValue('CORS_ORIGINS', values.CORS_ORIGINS),
     METRICS_ENABLED: values.METRICS_ENABLED,
     ...(values.METRICS_AUTH_TOKEN

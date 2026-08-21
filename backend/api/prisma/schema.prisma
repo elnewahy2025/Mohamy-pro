@@ -16,6 +16,28 @@ model Health {
   @@index([createdAt])
 }
 
+// Phase 1: Storage security metadata foundation.
+model StorageObject {
+  id                String    @id @default(uuid())
+  key               String
+  versionId         String?
+  sha256            String    @db.VarChar(64)
+  sizeBytes         BigInt
+  contentType       String
+  encryptionMode    String
+  malwareStatus     String    @default("PENDING_SCAN")
+  malwareScannedAt  DateTime?
+  retentionUntil    DateTime?
+  legalHold         Boolean   @default(false)
+  metadata          Json?
+  createdAt         DateTime  @default(now())
+  deletedAt         DateTime?
+
+  @@unique([key, versionId])
+  @@index([malwareStatus, createdAt])
+  @@index([retentionUntil, legalHold])
+}
+
 // Phase 1: Transactional outbox table skeleton
 model OutboxMessage {
   id            String    @id @default(uuid())

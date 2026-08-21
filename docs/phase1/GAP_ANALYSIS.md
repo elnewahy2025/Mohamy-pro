@@ -28,7 +28,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | Generated API client | `UNVERIFIED` | Shared contracts exist, but generated OpenAPI client artifacts and consumer tests are not evidenced. |
 | HTTP idempotency integration | `PARTIAL` | The persistence registry exists; complete request interception, replay, conflict, expiry, scope, and concurrency behavior are not evidenced. |
 | Basic object storage | `PASS WITH SCOPE LIMIT` | Bucket readiness, basic object operations, signed download URLs, and private access are implemented and readiness-tested. |
-| Storage security controls | `MISSING` | Integrity metadata enforcement, versioning, retention/legal hold, encryption-specific configuration, malware scanning, and download/share audit are not implemented and evidenced. |
+| Storage security controls | `PARTIALLY VERIFIED` | Storage metadata, SHA-256 hashing, configured versioning/encryption, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and covered by repository build/unit tests. The new migration, MinIO versioning behavior, object-lock behavior, and real ClamAV scan remain Windows/deployment evidence gates. |
 | Structured logging and correlation IDs | `PASS` | Production logs, correlation IDs, sensitive-header redaction, and runtime startup are evidenced. |
 | Metrics and tracing | `PARTIALLY VERIFIED` | Prometheus metric families, protected `/api/metrics`, OpenTelemetry API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, explicit outbox spans, and W3C queue propagation are implemented. Build and unit tests pass; Windows runtime scrape and collector-received spans remain unverified. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, OpenTelemetry Collector, and critical Prometheus alert configurations are present. Hosted retention enforcement and alert routing are not runtime-verified; audit/security event persistence remains explicitly owned by later roadmap phases. |
@@ -44,7 +44,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 
 1. Hosted GitHub Actions execution and retained quality/security artifacts are not verified.
 2. Metrics and distributed tracing are implemented at application level, but current Windows scrape/collector evidence and hosted retention/alert-routing evidence remain unverified.
-3. Advanced object-storage security controls are absent.
+3. Storage-security controls are implemented at application level, but the new migration and real S3/MinIO/object-lock/ClamAV runtime evidence remain open.
 4. The outbox success path and advanced recovery paths are not fully demonstrated.
 5. Generated API client artifacts and consumer tests are not evidenced.
 6. Rate limiting and CSRF decisions/tests remain open.
@@ -53,7 +53,7 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 
 ## Phase boundary
 
-Phase 2 remains paused. The current evidence proves a functioning foundation runtime, not a complete legal-operations platform. Phase 1 may close only when every remaining item is implemented and evidenced or has an explicit documented deferral with owner, target phase, rationale, risk, and acceptance impact.
+Phase 2 remains paused. The current evidence proves a functioning foundation runtime and application-level storage-security controls, not a complete legal-operations platform. Phase 1 may close only when every remaining item is implemented and evidenced or has an explicit documented deferral with owner, target phase, rationale, risk, and acceptance impact.
 
 ## Canonical references
 
@@ -68,6 +68,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`Retention policy`](RETENTION_POLICY.md)
 - [`Alerting baseline`](ALERTING_BASELINE.md)
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
+- [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)

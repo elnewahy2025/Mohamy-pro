@@ -34,6 +34,13 @@ Environment values are loaded locally from the API environment configuration and
 | `S3_ACCESS_KEY` | Required in production. | Supplied through local configuration only. |
 | `S3_SECRET_KEY` | Required in production. | Supplied through local configuration only. |
 | `S3_BUCKET` | Required in production. | The local development bucket is created or checked by the storage adapter. |
+| `S3_VERSIONING_ENABLED` | Must be `true` in production; the adapter enables bucket versioning at startup. | `true` locally. |
+| `S3_OBJECT_LOCK_ENABLED` | Must be `true` in production for retention/legal hold; existing buckets are checked and never silently upgraded. | `false` locally because the existing development bucket was not created with object lock. |
+| `S3_ENCRYPTION_MODE` | `AES256` or `aws:kms` is required in production; `NONE` is development-only. | `NONE` locally. |
+| `S3_KMS_KEY_ID` | Required when `S3_ENCRYPTION_MODE=aws:kms`. | Empty locally. |
+| `MALWARE_SCAN_ENABLED` | Must be `true` in production; uploads fail closed when ClamAV is unavailable. | `false` locally until a ClamAV service is configured. |
+| `CLAMAV_HOST` | Required when malware scanning is enabled. | Empty locally. |
+| `CLAMAV_PORT` | ClamAV daemon port. | `3310`. |
 | `CORS_ORIGINS` | Required in production and parsed as a comma-separated list. | The local web origin defaults to `http://localhost:5173`. |
 | `METRICS_ENABLED` | Boolean; `true` exposes the protected metrics contract, `false` returns `404` from `/api/metrics`. | `true` |
 | `METRICS_AUTH_TOKEN` | Required to authorize production Prometheus scrapes; use bearer authentication or `x-metrics-token`. | Empty in local development; loopback-only access is permitted for local verification. |
@@ -55,11 +62,12 @@ pnpm --filter api exec prisma generate
 pnpm --filter api exec prisma migrate deploy
 ```
 
-The repository contains three canonical migrations:
+The repository contains four canonical migrations:
 
 1. `00000000000000_init`
 2. `20260820190000_outbox_delivery_semantics`
 3. `20260821000000_repair_baseline_indexes`
+4. `20260821160000_storage_security_metadata`
 
 `prisma migrate deploy` must report that no pending migrations remain after deployment. `pnpm --filter api run db:check` performs the additional repository-versus-database migration-history check. The clean disposable database validation returned exit code 0. The existing Windows database is an explicitly documented legacy state because it contains an earlier applied machine-local migration that is absent from the repository; do not edit its `_prisma_migrations` table as a shortcut.
 
@@ -118,7 +126,7 @@ pnpm --filter api run test:cov
 pnpm --filter api run test:e2e
 ```
 
-The recorded Windows baseline includes a successful API build and 3 passing unit suites with 9 passing tests before the observability changes. The current repository verification additionally passes the API build and 6 unit suites with 15 tests, including metrics registration, environment validation, and real W3C queue propagation. The e2e suite requires the real PostgreSQL, Redis, and MinIO services and must fail clearly when its infrastructure is unavailable; it must not silently substitute fake services. Current sandbox e2e execution is blocked by missing `DATABASE_URL` and unavailable Docker, so Windows re-execution remains required.
+The recorded Windows baseline includes a successful API build and 3 passing unit suites with 9 passing tests before the observability changes. The current repository verification passes Prisma validation, the API build, ESLint, and 7 unit suites with 19 tests, including metrics registration, environment validation, W3C queue propagation, and storage integrity. The e2e suite requires the real PostgreSQL, Redis, and MinIO services and must fail clearly when its infrastructure is unavailable; it must not silently substitute fake services. Current sandbox e2e execution is blocked by missing `DATABASE_URL` and unavailable Docker, so Windows re-execution remains required.
 
 ## Backup and restore smoke test
 
@@ -142,9 +150,9 @@ The following statements are deliberately limited to the foundation evidence:
 
 - Authentication, memberships, tenant isolation, RBAC/ABAC, and resource authorization are not part of the current API surface.
 - The idempotency registry exists as a persistence component; a complete HTTP idempotency lifecycle is not claimed until its interceptor, scope, replay, conflict, and concurrency behavior are implemented and tested.
-- The object-storage adapter currently proves bucket readiness, basic object operations, signed download URL generation, and private access. SHA-256 integrity enforcement, versioning, retention/legal hold, encryption-specific configuration, and malware scanning remain open controls.
+- The object-storage adapter now computes SHA-256 and byte-count metadata, persists storage metadata, enables configured S3 versioning, applies configured server-side encryption, enforces retention/legal-hold deletion checks, and requires a configured ClamAV scan before permanent storage when malware scanning is enabled. Windows migration/startup verification for the new storage migration and MinIO versioning behavior remains required; local development intentionally leaves object lock, encryption, and malware scanning disabled.
 - The outbox worker and failure/dead-letter path are runtime-verified. The current API has no business write endpoint or registered domain handler for a successful `PROCESSED` event, so a successful business-event workflow is not claimed.
-- Structured logs, correlation IDs, Prometheus application metrics, OpenTelemetry bootstrap/instrumentation, retention configuration, and critical alert rules are implemented. Application build/unit evidence is current, but Windows runtime scrape/collector evidence and hosted retention/alert-routing evidence remain open. Seven-year audit/security event persistence is explicitly owned by later roadmap phases and is not represented as a Phase 1 business-audit implementation.
+- Structured logs, correlation IDs, Prometheus application metrics, OpenTelemetry bootstrap/instrumentation, retention configuration, and critical alert rules are implemented. Windows API metrics/readiness scrape evidence is recorded; collector delivery and hosted retention/alert-routing evidence remain open. Seven-year audit/security event persistence is explicitly owned by later roadmap phases and is not represented as a Phase 1 business-audit implementation.
 - The generated API client decision remains evidence-gated; the current frontend and shared contracts must not be described as a generated OpenAPI client without generated artifacts and consumer tests.
 - GitHub Actions hosted execution and retained security artifacts remain required before production-readiness closure.
 
@@ -160,6 +168,7 @@ The following statements are deliberately limited to the foundation evidence:
 - [`Retention policy`](RETENTION_POLICY.md)
 - [`Alerting baseline`](ALERTING_BASELINE.md)
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
+- [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
 

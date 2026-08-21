@@ -31,7 +31,7 @@ The frontend foundation is under `apps/web` and uses Next.js App Router, React, 
 | pnpm version | `PASS` | Windows output reported `11.22.0`. |
 | Frozen workspace install | `PASS` | All 6 workspace projects were already up to date. |
 | Prisma Client generation | `PASS` | Prisma Client `7.9.1` generated successfully. |
-| Prisma migration deployment | `PASS` | Three migrations found; no pending migrations on the Windows Mohamy database. |
+| Prisma migration deployment | `PASS` | The prior Windows verification found no pending migrations before the storage migration. The newly added storage-security migration still requires Windows deployment evidence. |
 | API build | `PASS` | `nest build` completed without errors after the runtime fixes. |
 | API unit suite | `PASS` | Current repository run: 6 suites and 15 tests passed, including metrics, environment validation, and W3C queue propagation. The earlier Windows baseline was 3 suites and 9 tests before these changes. |
 | Outbox focused suite | `PASS` | Failure logging is asserted while expected test output is suppressed. |
@@ -68,7 +68,7 @@ The migration checker must continue to block that legacy database rather than hi
 | Prometheus metrics | `PARTIALLY VERIFIED` | Application metric families, bounded labels, protected `/api/metrics`, unit tests, and build are present. Re-run current code on Windows with real PostgreSQL/Redis/MinIO and retain scrape output. |
 | OpenTelemetry tracing | `PARTIALLY VERIFIED` | API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, outbox spans, W3C propagation, unit tests, and build are present. A real collector-received API-to-worker trace remains unverified. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, collector, and critical Prometheus alert configurations are committed. Hosted backend retention and alert-routing evidence remain required; audit/security event persistence follows the authoritative later-phase ownership. |
-| Storage integrity/security | `MISSING` | Address integrity metadata, object versioning, retention/legal hold, encryption configuration, malware scanning, and download/share audit requirements, or explicitly defer each control. |
+| Storage integrity/security | `PARTIALLY VERIFIED` | SHA-256 metadata, S3 versioning/encryption configuration, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and repository-tested. Apply the new migration and capture Windows MinIO/versioning/object-lock/ClamAV evidence before closure. |
 | Outbox success path | `UNVERIFIED` | Add a real business-domain handler and supported trigger before claiming `PROCESSED`; do not use a production mock. |
 | Outbox advanced recovery | `PARTIAL` | Execute and retain retry-backoff, lease expiry, duplicate-delivery, and graceful-shutdown evidence. |
 | Idempotency HTTP integration | `PARTIAL` | Prove interceptor/request lifecycle behavior, replay, conflict, expiry, scope, and concurrency semantics. |
@@ -82,7 +82,7 @@ The migration checker must continue to block that legacy database rather than hi
 
 The current foundation does not claim authentication, membership, tenant isolation, RBAC/ABAC, resource authorization, legal-case workflows, document-security pipeline controls, billing, AI, or compliance retention. Those are later-phase responsibilities or explicit open items. The current API has no business write endpoint or registered business handler, so the outbox success path cannot be inferred from the verified failure path.
 
-The current object-storage evidence proves bucket readiness, basic object operations, signed download URL generation, and private access. It does not prove integrity enforcement, versioning, retention/legal hold, encryption-specific configuration, malware scanning, or complete access auditing.
+The current object-storage implementation adds SHA-256 and byte-count metadata, configured S3 versioning and server-side encryption, retention/legal-hold deletion checks, and a ClamAV scan boundary that fails closed when enabled. Repository build/unit verification passed; the new migration, Windows MinIO behavior, object-lock behavior, and real ClamAV scan remain unverified. Complete download/share audit remains outside the current foundation API.
 
 The current observability evidence proves structured production logs, correlation IDs, redaction, health probes, application metric/tracing implementation, bounded W3C job propagation, and repository build/unit execution. It does not yet prove Windows runtime scrape output, collector-received spans, hosted retention enforcement, or alert delivery.
 
@@ -103,6 +103,7 @@ Phase 1 may be declared closed only when every remaining blocker is either imple
 - [`Retention policy`](RETENTION_POLICY.md)
 - [`Alerting baseline`](ALERTING_BASELINE.md)
 - [`Windows observability verification`](OBSERVABILITY_WINDOWS_VERIFICATION.md)
+- [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)

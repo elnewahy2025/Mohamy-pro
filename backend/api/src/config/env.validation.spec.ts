@@ -34,4 +34,46 @@ describe('validateEnvironment telemetry settings', () => {
       validateEnvironment({ ...baseEnvironment, METRICS_ENABLED: 'sometimes' }),
     ).toThrow('Expected a boolean value');
   });
+
+  it('requires storage security controls in production', () => {
+    const environment = validateEnvironment({
+      ...baseEnvironment,
+      NODE_ENV: 'production',
+      REDIS_URL: 'redis://redis.invalid:6379',
+      S3_ENDPOINT: 'https://storage.invalid',
+      S3_ACCESS_KEY: 'access-key-for-test',
+      S3_SECRET_KEY: 'secret-key-for-test',
+      S3_BUCKET: 'mohamy-production',
+      CORS_ORIGINS: 'https://app.invalid',
+      S3_VERSIONING_ENABLED: true,
+      S3_OBJECT_LOCK_ENABLED: true,
+      S3_ENCRYPTION_MODE: 'AES256',
+      MALWARE_SCAN_ENABLED: true,
+      CLAMAV_HOST: 'clamav.invalid',
+    });
+
+    expect(environment.S3_VERSIONING_ENABLED).toBe(true);
+    expect(environment.S3_OBJECT_LOCK_ENABLED).toBe(true);
+    expect(environment.S3_ENCRYPTION_MODE).toBe('AES256');
+    expect(environment.MALWARE_SCAN_ENABLED).toBe(true);
+  });
+
+  it('rejects production storage without malware scanning', () => {
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        NODE_ENV: 'production',
+        REDIS_URL: 'redis://redis.invalid:6379',
+        S3_ENDPOINT: 'https://storage.invalid',
+        S3_ACCESS_KEY: 'access-key-for-test',
+        S3_SECRET_KEY: 'secret-key-for-test',
+        S3_BUCKET: 'mohamy-production',
+        CORS_ORIGINS: 'https://app.invalid',
+        S3_VERSIONING_ENABLED: true,
+        S3_OBJECT_LOCK_ENABLED: true,
+        S3_ENCRYPTION_MODE: 'AES256',
+        MALWARE_SCAN_ENABLED: false,
+      }),
+    ).toThrow('MALWARE_SCAN_ENABLED must be true in production');
+  });
 });
