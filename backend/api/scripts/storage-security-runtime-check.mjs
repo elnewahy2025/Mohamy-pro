@@ -8,7 +8,6 @@ import {
   DeleteObjectCommand,
   HeadObjectCommand,
   PutObjectLegalHoldCommand,
-  PutObjectRetentionCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 
@@ -48,12 +47,13 @@ function createS3Client() {
   });
 }
 
-async function deleteVersion(client, key, versionId) {
+async function deleteVersion(client, key, versionId, bypassGovernanceRetention = false) {
   await client.send(
     new DeleteObjectCommand({
       Bucket: bucket,
       Key: key,
       VersionId: versionId,
+      ...(bypassGovernanceRetention ? { BypassGovernanceRetention: true } : {}),
     }),
   );
 }
@@ -144,16 +144,7 @@ async function runCleanMode(storage, prisma, client) {
           LegalHold: { Status: 'OFF' },
         }),
       );
-      await client.send(
-        new PutObjectRetentionCommand({
-          Bucket: bucket,
-          Key: heldKey,
-          VersionId: heldObject.versionId,
-          Retention: { Mode: 'GOVERNANCE', RetainUntilDate: new Date(0) },
-          BypassGovernanceRetention: true,
-        }),
-      );
-      await deleteVersion(client, heldKey, heldObject.versionId);
+      await deleteVersion(client, heldKey, heldObject.versionId, true);
     }
     for (const object of storedVersions) {
       if (object.versionId) await deleteVersion(client, versionKey, object.versionId);
