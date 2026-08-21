@@ -68,7 +68,12 @@ function Invoke-KmsCli {
     ) + $CommandArguments
     $output = (& docker @arguments 2>&1 | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) {
-        throw "MinIO KMS CLI command failed: minkms $($CommandArguments -join ' ')"
+        $safeOutput = [regex]::Replace(
+            $output,
+            'k1:[A-Za-z0-9+/=_-]+',
+            'k1:[REDACTED]'
+        )
+        throw "MinIO KMS CLI command failed: minkms $($CommandArguments -join ' '); output=$safeOutput"
     }
     return $output
 }
