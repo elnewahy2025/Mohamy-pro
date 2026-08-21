@@ -10,20 +10,15 @@ import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import type { ValidatedEnvironment } from '../config/env.validation';
 import { isMetricsAuthorized } from './metrics-access';
-import { PrismaService } from '../infrastructure/database/prisma.service';
-import {
-  QueueService,
-  APPLICATION_QUEUE_NAME,
-} from '../infrastructure/queue/queue.service';
 import { MetricsService } from './metrics.service';
+import { MetricsSnapshotService } from './metrics-snapshot.service';
 
 @Controller({ path: 'metrics', version: VERSION_NEUTRAL })
 export class MetricsController {
   constructor(
     private readonly config: ConfigService<ValidatedEnvironment, true>,
     private readonly metrics: MetricsService,
-    private readonly prisma: PrismaService,
-    private readonly queue: QueueService,
+    private readonly snapshot: MetricsSnapshotService,
   ) {}
 
   @Get()
@@ -47,19 +42,7 @@ export class MetricsController {
       return;
     }
 
-    const [queueCounts, outboxCounts] = await Promise.all([
-      this.queue.getCounts(),
-      this.prisma.outboxMessage.groupBy({
-        by: ['status'],
-        _count: { _all: true },
-      }),
-    ]);
-    this.metrics.setQueueDepth(APPLICATION_QUEUE_NAME, queueCounts);
-    this.metrics.setOutboxStateCounts(
-      Object.fromEntries(
-        outboxCounts.map((item) => [item.status, item._count._all]),
-      ),
-    );
+    await this.snapshot.refresh();
 
     response.setHeader('Content-Type', this.metrics.registry.contentType);
     response.status(HttpStatus.OK).send(await this.metrics.render());
