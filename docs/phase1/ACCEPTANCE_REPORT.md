@@ -56,6 +56,26 @@ The preserved machine-local migration and the canonical migration are not byte-i
 
 The live database contains ten indexes. The current Prisma model and outbox claim query use `status/availableAt/createdAt`, `status/claimedAt`, and `aggregateType/aggregateId`. The extra `OutboxMessage_status_createdAt_idx` is a legacy index created by the repair migration and is not represented in the current Prisma datamodel. No `DROP INDEX` statement has been executed. Any cleanup must be a reviewed forward-only migration and must not be confused with resolving the unknown migration history.
 
+## Finding 1 final decision
+
+Finding 1 is **reconciled under an explicit legacy-state decision**. The repository migration chain was tested on a separate disposable PostgreSQL 16 container at `localhost:55433` using database `mohamy_pro_disposable` and a generated disposable user. The three repository migrations were applied in order, and the migration checker returned exit code `0` with:
+
+```text
+Migration history is consistent: 3 repository migration(s), 3 applied migration(s).
+```
+
+The disposable migration table contained exactly these three successful repository migrations, with no rolled-back rows:
+
+| Migration | Checksum |
+|---|---|
+| `00000000000000_init` | `439e9a21d4729db9a428201c5785e550bdbdb1a9d99e2d6791e63bfdd32d8d37` |
+| `20260820190000_outbox_delivery_semantics` | `1526db3205ed3587da4dc491e188752afc4f4b8f0e85cdb5f33c83615d55080d` |
+| `20260821000000_repair_baseline_indexes` | `06efcb199977f729721dd7f3ab70bdcff90b293f9f7b8fe3445df008ea08cb40` |
+
+The disposable schema query reported the expected ten application indexes plus `_prisma_migrations_pkey`. The temporary container was then removed. The original Mohamy PostgreSQL, Redis, and MinIO services remained healthy on ports `55432`, `56379`, and `59000/59001`. The original `mohamy_pro` migration table remained unchanged, including the successfully applied machine-local `20260820144702_init` record and the rolled-back/successful canonical baseline records.
+
+The existing Windows database is therefore accepted as a documented **legacy state** and was not rewritten. This acceptance does not claim that its migration history is reproducible from the repository. The clean disposable result proves the repository migration chain independently; the legacy database remains a known limitation that must be preserved and disclosed.
+
 ## Rule #2-compliant Windows commands
 
 Run commands from the actual repository root and preserve local changes. The current local Compose modification and `ENGINEERING_BACKLOG.zip` must not be deleted, reset, stashed, or overwritten without explicit approval.

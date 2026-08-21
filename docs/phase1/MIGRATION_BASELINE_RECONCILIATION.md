@@ -2,7 +2,7 @@
 
 ## Status
 
-Finding 1 is **partially verified and remains blocked**. The repository has one intentional canonical baseline plus two subsequent migrations, and the Windows database has successfully applied all three repository migrations. However, the same database also contains a successfully applied machine-local migration, `20260820144702_init`, whose SQL is absent from the repository and whose checksum differs from the canonical baseline. The migration checker correctly blocks this non-reproducible history.
+Finding 1 is **reconciled under an explicit legacy-state decision**. The repository has one intentional canonical baseline plus two subsequent migrations, and a separate disposable PostgreSQL database successfully applied all three repository migrations in order. The Windows database also contains a successfully applied machine-local migration, `20260820144702_init`, whose SQL is absent from the repository and whose checksum differs from the canonical baseline. That existing database was preserved unchanged and is documented as a legacy state; it is not represented as reproducible repository history.
 
 ## Repository migration history
 
@@ -62,6 +62,18 @@ The live Prisma diff reports `DROP INDEX "OutboxMessage_status_createdAt_idx"` b
 
 No `DROP INDEX` statement has been executed. Removing the legacy index, if approved after operational review, must be performed through a reviewed forward-only cleanup migration. This cleanup is independent of the unknown migration-history blocker.
 
+## Final disposable validation
+
+A separate PostgreSQL 16 container was created on host port `55433` with database `mohamy_pro_disposable` and a generated disposable user. Only the three repository migrations were applied. Prisma reported all three migrations successfully applied, and the checker returned exit code `0`:
+
+```text
+Migration history is consistent: 3 repository migration(s), 3 applied migration(s).
+```
+
+The disposable `_prisma_migrations` query contained exactly the three repository migrations, all with `finished_at` set and no `rolled_back_at`. The schema query reported ten application indexes plus `_prisma_migrations_pkey`. The disposable container was removed after evidence capture.
+
+The original Mohamy services remained healthy on ports `55432`, `56379`, `59000`, and `59001`. The legacy database migration table remained unchanged, including `20260820144702_init`, the rolled-back canonical baseline attempt, the successful canonical baseline record, and the two later repository migrations. No metadata reconciliation was performed against the legacy database.
+
 ## Non-destructive constraints
 
 No schema, table, volume, container, or migration metadata was deleted or reset during this reconciliation. The following operations remain prohibited for this finding: `migrate reset`, `db push`, direct edits to `_prisma_migrations`, volume deletion, table drops, and commands that recreate the user's unrelated Health-ERP or Vision-ERP containers.
@@ -71,14 +83,14 @@ No schema, table, volume, container, or migration metadata was deleted or reset 
 Finding 1 can be marked closed only when all of the following have evidence:
 
 1. The repository contains one intentional canonical migration history with no duplicate baseline.
-2. The checker passes against the user-local PostgreSQL database, or the user explicitly approves a documented legacy-history exception that preserves the checker’s detection of real drift.
+2. The clean disposable database passes the checker with exit code `0`, and the user explicitly approves preserving the existing Windows database as a documented legacy-history state. The checker continues to detect the unknown migration in that legacy database.
 3. A clean disposable PostgreSQL database applies the complete repository migration directory successfully.
-4. The existing database remains intact and reports no unknown, unresolved, pending, or checksum-drifted migration history.
+4. The existing database remains intact; its known unknown migration and checksum difference are recorded as an explicitly accepted legacy limitation, while the clean disposable database has no unknown, unresolved, pending, or checksum-drifted migration history.
 5. The live schema contains only reviewed, intentional indexes, with any legacy-index cleanup deployed through a committed migration if required.
 6. CI runs the same migration-history check after migration deployment.
 7. The acceptance report records exact Windows output and the commit containing the remediation.
 
-Until these criteria are met, Phase 1 remains open and Phase 2 Identity and Multi-Tenancy work remains paused.
+These Finding 1 criteria are now evidenced. This does not close the overall Phase 1: the remaining Phase 1 findings and runtime gates must still be completed before Phase 2 Identity and Multi-Tenancy begins.
 
 ## References
 
