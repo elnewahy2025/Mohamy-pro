@@ -48,19 +48,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
-      minio:
-        image: minio/minio:latest
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        ports:
-          - 9000:9000
-          - 9001:9001
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
 
     steps:
       - name: Checkout
@@ -76,6 +63,23 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
+
+      - name: Start pinned MinIO
+        run: |
+          docker run --detach --name mohamy-ci-minio \
+            --publish 9000:9000 --publish 9001:9001 \
+            --env MINIO_ROOT_USER=minioadmin \
+            --env MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2025-09-07T16-13-09Z \
+            server /data --console-address ":9001"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:9000/minio/health/live > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs mohamy-ci-minio
+          exit 1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -112,6 +116,10 @@ jobs:
 
       - name: Build frontend
         run: pnpm --filter @mohamy/web run build
+
+      - name: Stop pinned MinIO
+        if: always()
+        run: docker rm --force mohamy-ci-minio || true
 
       - name: Upload API coverage
         if: always()
@@ -259,19 +267,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
-      minio:
-        image: minio/minio:latest
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        ports:
-          - 9000:9000
-          - 9001:9001
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -286,6 +281,23 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
+
+      - name: Start pinned MinIO
+        run: |
+          docker run --detach --name mohamy-ci-minio \
+            --publish 9000:9000 --publish 9001:9001 \
+            --env MINIO_ROOT_USER=minioadmin \
+            --env MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2025-09-07T16-13-09Z \
+            server /data --console-address ":9001"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:9000/minio/health/live > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs mohamy-ci-minio
+          exit 1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -314,6 +326,10 @@ jobs:
             -v "$PWD:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py -t http://127.0.0.1:3000/api/docs -r zap-report.html -J zap-report.json -m 2
+
+      - name: Stop pinned MinIO
+        if: always()
+        run: docker rm --force mohamy-ci-minio || true
 
       - name: Upload DAST report
         if: always()
