@@ -8,7 +8,7 @@ Phase 2 remains paused.
 
 ## Current published revisions
 
-The latest published revision is [`8174559f`](https://github.com/elnewahy2025/Mohamy-pro/commit/8174559f), which exposes a protected worker-process metrics endpoint so worker-local Prometheus samples are scrapeable. The preceding [`c5891e09`](https://github.com/elnewahy2025/Mohamy-pro/commit/c5891e09) commit registers the real outbox success handler, and [`23f83f6c`](https://github.com/elnewahy2025/Mohamy-pro/commit/23f83f6c) exposes the API metrics endpoint without versioning. The earlier observability implementation is in [`c0450682`](https://github.com/elnewahy2025/Mohamy-pro/commit/c0450682).
+The latest published revision is [`bfb0dde1`](https://github.com/elnewahy2025/Mohamy-pro/commit/bfb0dde1), which aligns the in-process e2e bootstrap with production and verifies correlation IDs and OpenAPI publication. The preceding [`573e6ede`](https://github.com/elnewahy2025/Mohamy-pro/commit/573e6ede) commit enforces production rate limiting and records the Phase 1 security and architecture decisions. Earlier observability, storage, outbox, and worker revisions remain listed below.
 
 - [`59273a6b`](https://github.com/elnewahy2025/Mohamy-pro/commit/59273a6b): global correlation middleware registration.
 - [`a7e043cb`](https://github.com/elnewahy2025/Mohamy-pro/commit/a7e043cb): visible worker startup logging.
@@ -31,9 +31,9 @@ The frontend foundation is under `apps/web` and uses Next.js App Router, React, 
 | pnpm version | `PASS` | Windows output reported `11.22.0`. |
 | Frozen workspace install | `PASS` | All 6 workspace projects were already up to date. |
 | Prisma Client generation | `PASS` | Prisma Client `7.9.1` generated successfully. |
-| Prisma migration deployment | `PASS` | The prior Windows verification found no pending migrations before the storage migration. The newly added storage-security migration still requires Windows deployment evidence. |
+| Prisma migration deployment | `PASS` | Windows output found 4 migrations and no pending migrations after Prisma Client generation. |
 | API build | `PASS` | `nest build` completed without errors after the runtime fixes. |
-| API unit suite | `PASS` | Current repository run: 9 suites and 23 tests passed, including metrics authorization, storage integrity, environment validation, W3C queue propagation, and the real outbox handler. The earlier Windows baseline was 3 suites and 9 tests before these changes. |
+| API unit suite | `PASS` | Windows output: 10 suites and 28 tests passed, including rate limiting, metrics authorization and bounded labels, storage integrity, environment validation, W3C queue propagation, and the real outbox handler. |
 | Outbox focused suite | `PASS` | Failure logging is asserted while expected test output is suppressed. |
 | Migration classifier suite | `PASS` | Five focused classifier cases passed in repository verification. |
 | API lint | `PASS` | Changed API files passed repository lint verification. |
@@ -53,6 +53,8 @@ The frontend foundation is under `apps/web` and uses Next.js App Router, React, 
 | Legacy database preservation | `PASS` | The primary Windows migration table remained unchanged; no metadata edit, reset, volume deletion, or unrelated-container operation was performed. |
 | Clean migration chain | `PASS` | A disposable database on port `55433` received only the 3 repository migrations; `db:check` returned exit code 0. |
 | Real outbox enqueue/consume | `PASS WITH HARNESS EXIT-CODE DEFECT` | The job was enqueued with the corrected BullMQ-safe ID, consumed by the production worker, and reached `DEAD_LETTER` with the expected unknown-handler error. Cleanup returned `DELETE 1`, and a separate read-only query verified zero matching rows. The wrapper then returned non-zero because it compared the `RETURNING` output to the raw ID while PostgreSQL also emitted the command tag. A clean rerun of the corrected wrapper is still required. |
+| Local API e2e suite | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](./E2E_WINDOWS_VERIFICATION.md) records Windows output: 1 suite and 4 tests passed for liveness, readiness, metrics, and OpenAPI. |
+| Rate-limit enforcement | `PASS` | [`SECURITY_CONTROLS_BASELINE.md`](./SECURITY_CONTROLS_BASELINE.md) records Windows raw-header evidence: 200/200/429 with limit 2, remaining 1/0/0, and `Retry-After: 20`. |
 
 ## Migration reconciliation
 
@@ -72,10 +74,10 @@ The migration checker must continue to block that legacy database rather than hi
 | Outbox success path | `PARTIALLY VERIFIED` | A real `health.status.updated` handler is registered and unit-tested. The current API has no producer endpoint, so execute the dispatcher-to-worker workflow on Windows before claiming `PROCESSED`; see [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md). |
 | Outbox advanced recovery | `PARTIAL` | Execute and retain retry-backoff, lease expiry, duplicate-delivery, and graceful-shutdown evidence. |
 | Idempotency HTTP integration | `PARTIAL` | Prove interceptor/request lifecycle behavior, replay, conflict, expiry, scope, and concurrency semantics. |
-| Generated API client | `UNVERIFIED` | Generate a client from the committed OpenAPI contract and test a real frontend consumer, or document an approved scope decision. |
-| Rate limiting and CSRF | `UNVERIFIED` | Record the Phase 1 decision and execute applicable negative tests. |
-| Local e2e | `UNVERIFIED` | Run the API e2e suite against real Windows PostgreSQL, Redis, and MinIO services and retain output. |
-| Architecture decisions | `PARTIAL` | Record PostgreSQL version, API/worker orchestration, and reserved workspace-scope decisions. |
+| Generated API client | `DOCUMENTED DEFERRAL` | [`GENERATED_CLIENT_DECISION.md`](./GENERATED_CLIENT_DECISION.md) records the approved Phase 1 scope decision and Phase 2 re-entry gate. |
+| Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | [`SECURITY_CONTROLS_BASELINE.md`](./SECURITY_CONTROLS_BASELINE.md) records implementation, unit tests, and Windows 429 evidence. [`CSRF_DECISION.md`](./CSRF_DECISION.md) records why CSRF is not applicable to the current read-only, non-cookie API and defines the future re-entry gate. |
+| Local e2e | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](./E2E_WINDOWS_VERIFICATION.md) records the Windows run against real PostgreSQL, Redis, and MinIO with 1 suite and 4 tests passed. |
+| Architecture decisions | `ACCEPTED` | [`ARCHITECTURE_DECISIONS.md`](./ARCHITECTURE_DECISIONS.md) records PostgreSQL 16, separate API/worker processes, and reserved workspace scopes. |
 | Final documentation | `PARTIAL` | Publish this report, the current gap analysis, the API guide, and the final cross-document link review together. |
 
 ## Evidence boundaries
@@ -107,6 +109,11 @@ Phase 1 may be declared closed only when every remaining blocker is either imple
 - [`Storage security baseline`](STORAGE_SECURITY_BASELINE.md)
 - [`Windows storage verification`](STORAGE_WINDOWS_VERIFICATION.md)
 - [`Outbox success-path baseline`](OUTBOX_SUCCESS_PATH_BASELINE.md)
+- [`Windows e2e verification`](E2E_WINDOWS_VERIFICATION.md)
+- [`Security controls baseline`](SECURITY_CONTROLS_BASELINE.md)
+- [`CSRF applicability decision`](CSRF_DECISION.md)
+- [`Generated API client decision`](GENERATED_CLIENT_DECISION.md)
+- [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
