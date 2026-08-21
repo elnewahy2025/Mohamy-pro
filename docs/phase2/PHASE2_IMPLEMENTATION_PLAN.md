@@ -29,13 +29,32 @@ The implementation must preserve these decisions:
 | Audit | Auth, membership, permission, denial, tenant-switch, and sensitive-access events must be designed as append-only audit events for the Phase 2/3 foundation. |
 | Outbox | Identity and membership events use the existing transactional outbox and dedicated worker; handlers must be idempotent and fail closed. |
 
+## Audit hold — mandatory decisions before coding
+
+The first plan audit identified P1 ambiguities that must be resolved in an accepted architecture decision before Phase 2 application code begins. Option B authorizes Phase 2 entry, but it does not authorize implementation on top of unresolved authentication, tenant-boundary, API-contract, idempotency, RLS, or audit assumptions.
+
+| Decision gate | Required resolution before coding |
+|---|---|
+| OIDC provider and runtime | Select the self-hosted Keycloak topology for Windows-Docker development and verification, or record an explicitly approved alternative. Define issuer, audience, client type, redirect URLs, PKCE/state/nonce, JWKS caching, clock skew, logout/revocation, secret ownership, and a real provider integration test. |
+| Token transport and browser session | Select bearer-only or cookie-backed transport. Do not leave both possible. If cookies are selected, enable credentials only for approved origins and implement CSRF/origin protection for state-changing endpoints; if bearer-only is selected, define refresh-token non-exposure, storage, revocation, and XSS controls. |
+| Account lifecycle ownership | Record whether Keycloak owns credentials, password management, email verification, invitations, recovery, and MFA. Define disabled-user, suspended-membership, zero-membership, and session-revocation behavior. |
+| Tenant switching and bootstrap | Reject client tenant identity as authority. Only a dedicated switch operation may accept a target tenant selector, after active-membership verification; audit the switch. Define first-tenant/first-admin, invitations, membership approval, zero-membership, and multi-membership behavior. |
+| API contract migration | Implement the frozen success/error envelopes before accepting Phase 2 endpoints. Align the exception filter, validation errors, OpenAPI schemas, Phase 1 compatibility decision, and contract tests. |
+| HTTP idempotency | Make idempotency mandatory before the first mutation. Define request fingerprint, method/path/actor/tenant binding, replay and conflict behavior, expiry, concurrent reservation, failure behavior, cleanup, and database constraints. |
+| RLS and compensating controls | Produce a table-by-table RLS decision, transaction-local context mechanism, connection-pool reset rule, privileged-access boundary, and compensating repository/service controls for every table not protected by RLS. |
+| Phase 2 audit store | Implement the minimum append-only audit event persistence for authentication, membership, roles/permissions, denials, tenant switching, and privileged access; define redaction, retention ownership, immutability, indexing, authorization, and outbox linkage. |
+| Abuse and identity-data lifecycle | Freeze IP/identifier throttling, lockout or step-up behavior, enumeration-safe responses, identity retention, residency, minimization, export, deletion/archival, and cascade rules. |
+| Generated client and real integration topology | Make generated API-client generation/consumption and real OIDC integration tests mandatory Phase 2 gates; isolated unit doubles may test pure token logic only and must never be production-wired. |
+
+Until these decisions are recorded and accepted, the status is **PLAN AUDIT HOLD — NO PHASE 2 APPLICATION CODE**.
+
 ## Workstreams and exit gates
 
 ### 1. Identity schema and migration
 
 Design and add the normalized identity schema through an additive Prisma migration. The design must include `User`, `ExternalIdentity` or the approved OIDC subject mapping, `Session` or the approved session reference, and user lifecycle fields. Email uniqueness, normalized identity fields, disabled/deleted states, timestamps, and actor references must be explicit. Secrets such as password hashes or provider credentials must not be stored unless the authentication architecture explicitly requires local credential storage.
 
-The migration must be deployable on the existing Windows PostgreSQL verification database without reset or manual migration-table edits. It must pass fresh-database deployment, migration-checker validation, Prisma generation, schema checks, and rollback/mitigation review. The migration must not modify or reinterpret the accepted legacy migration history.
+The migration must be deployable on the existing Windows PostgreSQL verification database without reset or manual migration-table edits. It must pass fresh-database deployment, migration-checker validation, Prisma generation, schema checks, and rollback/mitigation review. The migration must not modify or reinterpret the accepted legacy migration history. Every identity and tenant table must have an explicit RLS or compensating-control decision before the migration is accepted.
 
 ### 2. Tenant hierarchy and membership
 
@@ -57,13 +76,13 @@ Implement login, logout, session revocation, membership switching, and the authe
 
 ### 5. Tenant context and enforcement
 
-Create a single backend tenant-context mechanism that runs after authentication and before business data access. It must derive the active tenant from a validated membership and an approved session or membership-switch operation. A client-provided `tenantId` may be rejected, ignored, or treated only as a non-authoritative selector; it must never establish trust.
+Create a single backend tenant-context mechanism that runs after authentication and before business data access. Ordinary tenant-scoped endpoints must reject client-supplied tenant identity as an authority. Only the dedicated membership-switch operation may accept a target tenant selector; it must verify active membership server-side, establish the approved active context, and emit an audit event. A client value must never establish trust.
 
 Apply the context consistently to repositories, services, transactions, queues, caches, object-storage metadata, exports, and integrations. Use PostgreSQL RLS where appropriate, with tests proving that application-level mistakes cannot silently create cross-tenant access. Any privileged cross-tenant operation must be a separately named policy, MFA-protected where required, and audited.
 
 ### 6. API and frontend contracts
 
-Define Phase 2 REST endpoints under `/api/v1` for identity, membership, tenant selection, and administration. Every endpoint must have OpenAPI documentation, standard success/error envelopes, correlation IDs, validation schemas, authorization policies, and contract tests. State-changing requests must follow the frozen `Idempotency-Key` contract once the HTTP idempotency interceptor/lifecycle is implemented.
+Define Phase 2 REST endpoints under `/api/v1` for identity, membership, tenant selection, and administration. Every endpoint must have OpenAPI documentation, standard success/error envelopes, correlation IDs, validation schemas, authorization policies, and contract tests. The frozen `Idempotency-Key` contract, including replay/conflict/concurrency behavior, must be implemented before the first state-changing endpoint is accepted.
 
 The frontend must consume the approved API contract through the generated-client re-entry gate when the Phase 2 surface is stable. English and Arabic message catalogs, locale-aware formatting, `dir="ltr"`/`dir="rtl"`, accessible form errors, and keyboard navigation are mandatory. The frontend must not make authorization decisions that are absent from the backend response.
 
@@ -71,7 +90,7 @@ The frontend must consume the approved API contract through the generated-client
 
 Define identity and membership domain events with explicit event types, versioned payloads, aggregate identifiers, tenant context, correlation ID, and traceparent metadata. Persist the event in the existing transactional outbox when the state change and event publication require atomicity. Verify retries, duplicate delivery, dead-letter behavior, and handler idempotency with real PostgreSQL and Redis.
 
-Define append-only audit event contracts for login, logout, session revocation, membership creation/change/removal, role and permission changes, denial decisions, tenant switching, and privileged access. Redact secrets and avoid storing raw tokens or unnecessary personal payloads. Add bounded metrics and traces without exceeding the documented observability boundary. The first Phase 2 mutation endpoint must provide the API-originated API-to-outbox-to-worker trace continuity re-entry evidence.
+Define and persist append-only audit events for login, logout, session revocation, membership creation/change/removal, role and permission changes, denial decisions, tenant switching, and privileged access. Redact secrets and avoid storing raw tokens or unnecessary personal payloads. Define authorization, retention ownership, immutability, indexing, and outbox linkage. Add bounded metrics and traces without exceeding the documented observability boundary. The first Phase 2 mutation endpoint must provide the API-originated API-to-outbox-to-worker trace continuity re-entry evidence.
 
 ### 8. Security and abuse controls
 
@@ -98,7 +117,7 @@ All externally facing identifiers must be non-sequential. All administrative and
 
 ## Phase 2 completion gate
 
-Phase 2 is not complete when the schema exists or when login works in a single happy path. It is complete only when the identity and tenancy dependency chain is implemented, secured, tested, runtime-verified, documented, and reviewed against this plan. The evidence must demonstrate that tenant context is derived from membership and that no tenant escape, privilege escalation, IDOR, denial bypass, or unauthorized membership switch remains in the covered surface.
+Phase 2 cannot begin application implementation until the audit-hold decisions above are recorded and accepted. It is not complete when the schema exists or when login works in a single happy path. It is complete only when the identity and tenancy dependency chain is implemented, secured, tested, runtime-verified, documented, and reviewed against this plan. The evidence must demonstrate that tenant context is derived from membership and that no tenant escape, privilege escalation, IDOR, denial bypass, or unauthorized membership switch remains in the covered surface.
 
 Phase 3 Security Foundation and Audit Foundation cannot begin until this Phase 2 completion gate is approved. The future Linux KMS/object-storage production gate remains separate: Phase 2 implementation may proceed under Option B, but no unqualified production deployment claim is permitted until that gate is implemented and verified.
 

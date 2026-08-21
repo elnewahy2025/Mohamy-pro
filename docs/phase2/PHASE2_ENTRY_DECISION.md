@@ -22,14 +22,20 @@ This is a deliberate policy exception to the previous pause condition. It does *
 | Phase 1 implementation | Closed with evidence |
 | Phase 1 Windows runtime gates | Closed with evidence |
 | Phase 1 deployment production boundary | Open; future Linux KMS/object-storage plane required for unqualified production deployment |
-| Phase 2 Identity and Multi-Tenancy implementation | Authorized to begin under this qualified boundary |
+| Phase 2 Identity and Multi-Tenancy | Authorized for preflight, architecture decisions, and plan correction; application coding is held until the Phase 2 plan-audit exit criteria are accepted |
 | Unqualified production release | Not authorized by this decision |
 
 ## What This Approval Allows
 
-Phase 2 may implement and verify Identity and Multi-Tenancy capabilities against the existing Windows-Docker development and verification environment. The work may include the identity model, memberships, workspace and tenant boundaries, authentication integration, authorization enforcement, tenant-scoped persistence, API contracts, frontend flows, audit/security event foundations assigned to Phase 2, and their tests and runtime evidence, subject to the authoritative Phase 2 plan.
+Phase 2 may perform preflight, architecture decisions, plan correction, and then implement and verify Identity and Multi-Tenancy capabilities against the existing Windows-Docker development and verification environment after the mandatory plan-audit exit criteria are accepted. The work may include the identity model, memberships, workspace and tenant boundaries, authentication integration, authorization enforcement, tenant-scoped persistence, API contracts, frontend flows, audit/security event foundations assigned to Phase 2, and their tests and runtime evidence, subject to the authoritative Phase 2 plan.
 
 Phase 2 work must preserve the Phase 1 controls. It must not disable validation, rate limiting, security headers, correlation, metrics authorization, OpenTelemetry instrumentation, outbox state safety, storage fail-closed behavior, migration checks, or bilingual English/Arabic LTR/RTL behavior to simplify implementation.
+
+## Mandatory plan-audit hold before application coding
+
+A fresh repository audit found P1 planning ambiguities in OIDC/provider configuration, token transport, account lifecycle ownership, tenant switching/bootstrap, API envelopes, HTTP idempotency, RLS decisions, and Phase 2 audit-event persistence. Those decisions are recorded as mandatory gates in [`PHASE2_IMPLEMENTATION_PLAN.md`](PHASE2_IMPLEMENTATION_PLAN.md), and the findings are recorded in [`PHASE2_PLAN_AUDIT.md`](PHASE2_PLAN_AUDIT.md).
+
+Until every P1 decision is explicitly resolved, accepted, and linked to implementation, test, and evidence owners, the project may perform preflight and architecture work but must not begin Phase 2 application code. This is a quality hold within the Option B entry authorization, not a withdrawal of the qualified Phase 2 authorization.
 
 ## What This Approval Does Not Allow
 
@@ -59,12 +65,13 @@ Until that gate is complete, the exact production wording remains:
 The following rules govern Phase 2 and prevent conflict with Phase 0 and Phase 1:
 
 1. The Windows-Docker environment is the current development and verification environment, not an approved unqualified production deployment.
-2. Every Phase 2 requirement must have a traceable design, implementation, integration path, test, runtime evidence, and documented acceptance result.
-3. Identity, membership, tenant, and authorization code must be enforced at the backend and database boundaries; frontend-only checks are insufficient.
-4. Tenant context must not be inferred from a client-controlled field without authenticated membership and authorization verification.
-5. All Phase 1 security, observability, migration, outbox, storage, bilingual, and runtime controls remain mandatory regression gates.
-6. No phase-specific Markdown may be stored outside its canonical `docs/phaseN` directory. This decision is stored under `docs/phase2`.
-7. Phase 3 remains blocked until Phase 2 is fully production-ready under the project’s evidence rules.
+2. Phase 2 application coding begins only after the mandatory plan-audit hold is accepted; preflight and architecture work may proceed before then.
+3. Every Phase 2 requirement must have a traceable design, implementation, integration path, test, runtime evidence, and documented acceptance result.
+4. Identity, membership, tenant, and authorization code must be enforced at the backend and database boundaries; frontend-only checks are insufficient.
+5. Tenant context must not be inferred from a client-controlled field without authenticated membership and authorization verification.
+6. All Phase 1 security, observability, migration, outbox, storage, bilingual, and runtime controls remain mandatory regression gates.
+7. No phase-specific Markdown may be stored outside its canonical `docs/phaseN` directory. This decision is stored under `docs/phase2`.
+8. Phase 3 remains blocked until Phase 2 is fully production-ready under the project’s evidence rules.
 
 ## References
 
