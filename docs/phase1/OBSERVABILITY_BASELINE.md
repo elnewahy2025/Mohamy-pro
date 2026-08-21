@@ -12,7 +12,7 @@ Every request receives an `x-correlation-id` response header. An incoming non-em
 
 ## Metrics and tracing
 
-The protected `/api/metrics` endpoint exposes Prometheus request count and duration, database query duration and errors, queue depth, outbox state count, worker job duration, application errors, and dependency readiness. Labels are bounded to methods, route templates, status codes, fixed operation categories, fixed queue states, fixed outbox states, fixed dependency names, and fixed error categories.
+The protected API `/api/metrics` endpoint exposes request count and duration, database query duration and errors, queue depth, outbox state count, application errors, and dependency readiness. The dedicated worker process exposes its own protected `/metrics` endpoint on `WORKER_METRICS_PORT` because Prometheus registries are process-local; that endpoint exposes worker job duration and worker-process errors. Labels are bounded to methods, route templates, status codes, fixed operation categories, fixed queue states, fixed outbox states, fixed dependency names, fixed job names, and fixed error categories.
 
 The API and worker initialize OpenTelemetry before importing their Nest modules when `OTEL_ENABLED=true` and `OTEL_EXPORTER_OTLP_ENDPOINT` is configured. Automatic instrumentation covers HTTP, PostgreSQL, and ioredis boundaries; explicit spans cover outbox dispatch and worker processing. Active trace and span IDs are included in structured logs without request bodies or secrets.
 

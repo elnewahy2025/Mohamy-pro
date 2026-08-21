@@ -18,8 +18,8 @@ The outbox worker resolves the handler, invokes it while the message is leased i
 
 ## Repository Evidence
 
-The handler unit tests cover valid persistence and malformed-payload rejection. The complete API build, Prisma generation, ESLint, and 8 unit suites with 21 tests passed after registration. A real Windows producer-to-dispatcher-to-worker workflow remains required because the current API surface has no business write endpoint that creates this event.
+The handler unit tests cover valid persistence and malformed-payload rejection. The complete API build, Prisma generation, ESLint, and 9 unit suites with 23 tests passed after registration. Windows runtime evidence now shows a uniquely identified event reaching `PROCESSED` with `attempts=1` and a non-null `processedAt`, while the target Health row changed to `DEGRADED`. The generated test rows still require the documented cleanup verification.
 
 ## Runtime Verification Boundary
 
-The Windows runtime test must use a uniquely identified `Health` row and `OutboxMessage`, allow the existing API dispatcher and dedicated worker to process the event, query both rows, and remove only those uniquely identified test rows. It must not edit `_prisma_migrations`, reset the database, remove volumes, or touch unrelated containers. The expected evidence is `OutboxMessage.status=PROCESSED`, a non-null `processedAt`, and the target `Health.status` equal to the event payload status.
+The Windows runtime test used a uniquely identified `Health` row and `OutboxMessage`, allowed the existing API dispatcher and dedicated worker to process the event, and queried both rows. The expected evidence was obtained: `OutboxMessage.status=PROCESSED`, `attempts=1`, a non-null `processedAt`, and `Health.status=DEGRADED`. Cleanup must remove only those uniquely identified test rows and verify both counts are zero. The test must not edit `_prisma_migrations`, reset the database, remove volumes, or touch unrelated containers.

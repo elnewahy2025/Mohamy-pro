@@ -8,7 +8,7 @@ Phase 2 remains paused.
 
 ## Current published revisions
 
-The latest published revision is [`23f83f6c`](https://github.com/elnewahy2025/Mohamy-pro/commit/23f83f6c), which exposes the Phase 1 metrics endpoint without API versioning so the documented `/api/metrics` contract is reachable. The preceding [`c0450682`](https://github.com/elnewahy2025/Mohamy-pro/commit/c0450682) commit implements the metrics, OpenTelemetry, correlation-propagation, retention-configuration, alert-rule, and verification changes. The earlier runtime remediation chain also includes:
+The latest published revision is [`8174559f`](https://github.com/elnewahy2025/Mohamy-pro/commit/8174559f), which exposes a protected worker-process metrics endpoint so worker-local Prometheus samples are scrapeable. The preceding [`c5891e09`](https://github.com/elnewahy2025/Mohamy-pro/commit/c5891e09) commit registers the real outbox success handler, and [`23f83f6c`](https://github.com/elnewahy2025/Mohamy-pro/commit/23f83f6c) exposes the API metrics endpoint without versioning. The earlier observability implementation is in [`c0450682`](https://github.com/elnewahy2025/Mohamy-pro/commit/c0450682).
 
 - [`59273a6b`](https://github.com/elnewahy2025/Mohamy-pro/commit/59273a6b): global correlation middleware registration.
 - [`a7e043cb`](https://github.com/elnewahy2025/Mohamy-pro/commit/a7e043cb): visible worker startup logging.
@@ -33,7 +33,7 @@ The frontend foundation is under `apps/web` and uses Next.js App Router, React, 
 | Prisma Client generation | `PASS` | Prisma Client `7.9.1` generated successfully. |
 | Prisma migration deployment | `PASS` | The prior Windows verification found no pending migrations before the storage migration. The newly added storage-security migration still requires Windows deployment evidence. |
 | API build | `PASS` | `nest build` completed without errors after the runtime fixes. |
-| API unit suite | `PASS` | Current repository run: 6 suites and 15 tests passed, including metrics, environment validation, and W3C queue propagation. The earlier Windows baseline was 3 suites and 9 tests before these changes. |
+| API unit suite | `PASS` | Current repository run: 9 suites and 23 tests passed, including metrics authorization, storage integrity, environment validation, W3C queue propagation, and the real outbox handler. The earlier Windows baseline was 3 suites and 9 tests before these changes. |
 | Outbox focused suite | `PASS` | Failure logging is asserted while expected test output is suppressed. |
 | Migration classifier suite | `PASS` | Five focused classifier cases passed in repository verification. |
 | API lint | `PASS` | Changed API files passed repository lint verification. |
@@ -65,7 +65,7 @@ The migration checker must continue to block that legacy database rather than hi
 | Blocker | Status | Required closure action |
 |---|---|---|
 | Hosted GitHub Actions run | `UNVERIFIED` | Run the actual workflow and review quality, migration, e2e, security, container, SBOM, DAST, and retained artifacts. |
-| Prometheus metrics | `PARTIALLY VERIFIED` | Application metric families, bounded labels, protected `/api/metrics`, unit tests, and build are present. Re-run current code on Windows with real PostgreSQL/Redis/MinIO and retain scrape output. |
+| Prometheus metrics | `PARTIALLY VERIFIED` | Protected API `/api/metrics` and dedicated worker `/metrics` registries, bounded labels, unit tests, and build are present. The API scrape and outbox success path are Windows-verified; fresh Windows evidence for the worker port `3002` remains required. |
 | OpenTelemetry tracing | `PARTIALLY VERIFIED` | API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, outbox spans, W3C propagation, unit tests, and build are present. A real collector-received API-to-worker trace remains unverified. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, collector, and critical Prometheus alert configurations are committed. Hosted backend retention and alert-routing evidence remain required; audit/security event persistence follows the authoritative later-phase ownership. |
 | Storage integrity/security | `PARTIALLY VERIFIED` | SHA-256 metadata, S3 versioning/encryption configuration, retention/legal-hold checks, and ClamAV fail-closed boundary are implemented and repository-tested. Apply the new migration and capture Windows MinIO/versioning/object-lock/ClamAV evidence before closure. |

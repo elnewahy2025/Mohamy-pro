@@ -42,7 +42,8 @@ Environment values are loaded locally from the API environment configuration and
 | `CLAMAV_HOST` | Required when malware scanning is enabled. | Empty locally. |
 | `CLAMAV_PORT` | ClamAV daemon port. | `3310`. |
 | `CORS_ORIGINS` | Required in production and parsed as a comma-separated list. | The local web origin defaults to `http://localhost:5173`. |
-| `METRICS_ENABLED` | Boolean; `true` exposes the protected metrics contract, `false` returns `404` from `/api/metrics`. | `true` |
+| `METRICS_ENABLED` | Boolean; `true` exposes the protected metrics contract, `false` returns `404` from `/api/metrics` and disables the worker metrics listener. | `true` |
+| `WORKER_METRICS_PORT` | Dedicated worker Prometheus listener port; production uses the same `METRICS_AUTH_TOKEN` boundary. | `3002` locally. |
 | `METRICS_AUTH_TOKEN` | Required to authorize production Prometheus scrapes; use bearer authentication or `x-metrics-token`. | Empty in local development; loopback-only access is permitted for local verification. |
 | `OTEL_ENABLED` | Boolean; tracing is active only when enabled and an OTLP endpoint is configured. | `false` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Optional endpoint for the OpenTelemetry collector; production must configure a reachable collector when tracing is enabled. | Empty unless a local collector is running. |
@@ -108,7 +109,8 @@ The global HTTP prefix is `/api`, and URI versioning uses version `1`.
 | `GET /api/v1/health` | `200` only when dependencies are up | Aggregate readiness response |
 | `GET /api/docs-json` | `200` | OpenAPI JSON document |
 | `GET /api/docs` | HTTP documentation page | Interactive OpenAPI documentation |
-| `GET /api/metrics` | `200` when authorized and enabled; `403` when unauthorized; `404` when disabled | Prometheus metrics text; production requires `METRICS_AUTH_TOKEN` |
+| `GET /api/metrics` | `200` when authorized and enabled; `403` when unauthorized; `404` when disabled | API Prometheus metrics text; production requires `METRICS_AUTH_TOKEN` |
+| `GET http://localhost:3002/metrics` | `200` when authorized and enabled; `403` when unauthorized; no listener when disabled | Dedicated worker-process Prometheus metrics, including worker job duration; production uses `METRICS_AUTH_TOKEN` |
 
 The Windows production runtime evidence returned `200` for liveness, readiness, and OpenAPI. The readiness response reported PostgreSQL, Redis, queue, and object storage as `up`.
 
@@ -126,7 +128,7 @@ pnpm --filter api run test:cov
 pnpm --filter api run test:e2e
 ```
 
-The recorded Windows baseline includes a successful API build and 3 passing unit suites with 9 passing tests before the observability changes. The current repository verification passes Prisma validation, the API build, ESLint, and 7 unit suites with 19 tests, including metrics registration, environment validation, W3C queue propagation, and storage integrity. The e2e suite requires the real PostgreSQL, Redis, and MinIO services and must fail clearly when its infrastructure is unavailable; it must not silently substitute fake services. Current sandbox e2e execution is blocked by missing `DATABASE_URL` and unavailable Docker, so Windows re-execution remains required.
+The recorded Windows baseline includes a successful API build and 3 passing unit suites with 9 passing tests before the observability changes. The current repository verification passes Prisma validation, the API build, ESLint, and 9 unit suites with 23 tests, including metrics authorization, environment validation, W3C queue propagation, storage integrity, and the real outbox handler. The e2e suite requires the real PostgreSQL, Redis, and MinIO services and must fail clearly when its infrastructure is unavailable; it must not silently substitute fake services. Current sandbox e2e execution is blocked by missing `DATABASE_URL` and unavailable Docker, so Windows re-execution remains required.
 
 ## Backup and restore smoke test
 
@@ -152,7 +154,7 @@ The following statements are deliberately limited to the foundation evidence:
 - The idempotency registry exists as a persistence component; a complete HTTP idempotency lifecycle is not claimed until its interceptor, scope, replay, conflict, and concurrency behavior are implemented and tested.
 - The object-storage adapter now computes SHA-256 and byte-count metadata, persists storage metadata, enables configured S3 versioning, applies configured server-side encryption, enforces retention/legal-hold deletion checks, and requires a configured ClamAV scan before permanent storage when malware scanning is enabled. Windows migration/startup verification for the new storage migration and MinIO versioning behavior remains required; local development intentionally leaves object lock, encryption, and malware scanning disabled.
 - The outbox worker and failure/dead-letter path are runtime-verified, and a real `health.status.updated` handler is now registered and unit-tested. The current API has no producer endpoint for this event, so a dispatcher-to-worker `PROCESSED` workflow still requires Windows runtime evidence; see [`OUTBOX_SUCCESS_PATH_BASELINE.md`](OUTBOX_SUCCESS_PATH_BASELINE.md).
-- Structured logs, correlation IDs, Prometheus application metrics, OpenTelemetry bootstrap/instrumentation, retention configuration, and critical alert rules are implemented. Windows API metrics/readiness scrape evidence is recorded; collector delivery and hosted retention/alert-routing evidence remain open. Seven-year audit/security event persistence is explicitly owned by later roadmap phases and is not represented as a Phase 1 business-audit implementation.
+- Structured logs, correlation IDs, Prometheus application metrics, separate API/worker metrics registries, OpenTelemetry bootstrap/instrumentation, retention configuration, and critical alert rules are implemented. Windows API metrics/readiness scrape evidence is recorded; the new worker metrics listener still requires a fresh Windows scrape. Collector delivery and hosted retention/alert-routing evidence remain open. Seven-year audit/security event persistence is explicitly owned by later roadmap phases and is not represented as a Phase 1 business-audit implementation.
 - The generated API client decision remains evidence-gated; the current frontend and shared contracts must not be described as a generated OpenAPI client without generated artifacts and consumer tests.
 - GitHub Actions hosted execution and retained security artifacts remain required before production-readiness closure.
 

@@ -2,7 +2,7 @@
 
 **Verification date:** 2026-08-21
 
-**Repository commits under test:** `23f83f6c` metrics-route correction and `e267a95e` acceptance-report reference update.
+**Repository commits under test:** `23f83f6c` metrics-route correction, `e267a95e` acceptance-report reference update, and `c5891e09` real outbox success-handler registration.
 
 ## Automated Gates
 
@@ -10,9 +10,9 @@ The Windows verification output recorded the following results from the reposito
 
 | Gate | Result |
 |---|---|
-| Prisma migration deployment | PASS; three repository migrations found and no pending migrations remained on `mohamy_pro` at `localhost:55432`. |
+| Prisma migration deployment | PASS; four repository migrations found and no pending migrations remained on `mohamy_pro` at `localhost:55432`. |
 | API build | PASS; `nest build` completed successfully. |
-| API unit suite | PASS; 6 suites and 15 tests passed. |
+| API unit suite | PASS; 8 suites and 21 tests passed. |
 | API production startup | PASS; PostgreSQL, Redis, queue, object storage, MetricsModule, and Nest application initialized successfully. |
 | Worker production startup | PASS; PostgreSQL, Redis, queue, OutboxWorker, and worker process reached ready state. |
 | API readiness | PASS; `/api/v1/health/ready` returned HTTP 200 and all four dependencies reported `up`. |
@@ -36,16 +36,20 @@ The captured metric output contains the required families and live values:
 | `mohamy_http_request_duration_seconds` | Histograms recorded both requests, including counts and sums. |
 | `mohamy_database_query_duration_seconds` | `select`, `update`, and `other` operation histograms recorded live PostgreSQL queries. |
 | `mohamy_database_errors_total` | Family registered; no database errors were recorded during the verification window. |
-| `mohamy_queue_depth` | `mohamy-application` queue reported waiting `0`, active `0`, completed `1`, failed `0`, delayed `0`. |
+| `mohamy_queue_depth` | `mohamy-application` queue reported waiting `0`, active `0`, completed `2`, failed `0`, delayed `0` after the success workflow. |
 | `mohamy_readiness_status` | `redis`, `queue`, `postgres`, and `objectStorage` each reported `1`. |
-| `mohamy_outbox_state_count` | `PENDING`, `PROCESSING`, `PROCESSED`, `FAILED`, and `DEAD_LETTER` each reported `0` at scrape time. |
-| `mohamy_worker_job_duration_seconds` | Family registered; no worker job was executed during this particular scrape window. |
+| `mohamy_outbox_state_count` | `PENDING=0`, `PROCESSING=0`, `PROCESSED=1`, `FAILED=0`, and `DEAD_LETTER=0` were captured immediately after the successful outbox workflow and before cleanup. |
+| `mohamy_worker_job_duration_seconds` | The family was registered but empty on the API scrape even though the worker processed the outbox job. This exposed the expected separate-process Prometheus registry boundary; the worker metrics endpoint is being added on a separate port and requires its own runtime scrape. |
 | `mohamy_application_errors_total` | Family registered; no application error was recorded during this verification window. |
 
 The metrics response also included standard process and Node.js runtime metrics. No request bodies, credentials, document contents, financial details, or privileged communication content appeared in the captured application metric labels.
 
+## Outbox Success-Path Evidence
+
+A uniquely identified `Health` row and `health.status.updated` outbox message were inserted into the Windows database. After dispatcher and worker processing, the outbox row was `PROCESSED` with `attempts=1` and a non-null `processedAt`; the Health row changed to `DEGRADED`. The generated rows were then uniquely eligible for cleanup. This verifies the real registered handler and persistence transition, not a mock or direct status update.
+
 ## Evidence Boundaries
 
-This verification proves the current API metrics endpoint, database query instrumentation, queue/readiness/outbox gauges, API route registration, API startup, worker startup, and readiness behavior on Windows. It does not yet prove OpenTelemetry export to a reachable collector because the captured run used the local default with no collector evidence. It also does not prove hosted Prometheus/Loki retention, Alertmanager delivery, or the controlled worker-job histogram path; those remain separate deployment and workflow gates.
+This verification proves the current API metrics endpoint, database query instrumentation, queue/readiness/outbox gauges, API route registration, API startup, worker startup, readiness behavior, and the real outbox success path on Windows. It does not yet prove OpenTelemetry export to a reachable collector because the captured run used the local default with no collector evidence. The API scrape also cannot prove worker-local histogram samples; the new standalone worker metrics endpoint must be started and scraped. Hosted Prometheus/Loki retention and Alertmanager delivery remain separate deployment gates.
 
 Phase 1 remains open until all other documented blockers have current evidence or an explicit, risk-bearing deferral under the authoritative roadmap.
