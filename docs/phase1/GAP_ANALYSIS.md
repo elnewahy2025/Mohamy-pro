@@ -35,20 +35,19 @@ The local Mohamy services are isolated from Health-ERP and Vision-ERP. Verified 
 | Input validation and security headers | `PASS` | Global validation, whitelist/forbid behavior, Helmet, CORS configuration, and redaction are implemented. |
 | Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | Redis-backed atomic rate limiting is unit-tested and Windows-verified with raw 200/200/429 headers and `Retry-After`. [`CSRF_DECISION.md`](CSRF_DECISION.md) records that the current read-only, non-cookie API has no applicable CSRF surface and defines the future re-entry gate. |
 | Authentication and authorization | `DEFERRED BY ROADMAP` | Identity, membership, tenant isolation, RBAC/ABAC, and resource authorization belong to later phases and are not claimed here. |
-| Hosted CI/security artifacts | `UNVERIFIED` | The workflow definition contains quality, migration, e2e, security, container, SBOM, and DAST jobs, but a successful hosted run and artifact review are still required. |
+| Hosted CI/security artifacts | `PASS` | [`HOSTED_CI_VERIFICATION.md`](HOSTED_CI_VERIFICATION.md) records successful quality, static security, container, and DAST jobs with retained coverage, SBOM, SARIF, and ZAP artifacts. |
 | Local e2e | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](E2E_WINDOWS_VERIFICATION.md) records the Windows run against real PostgreSQL, Redis, and MinIO: 1 suite and 4 tests passed. |
 | Architecture fitness | `ACCEPTED` | [`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md) records PostgreSQL 16, separate API/worker processes, and reserved `integrations/*` and `ai/*` scopes. |
 | Documentation | `PARTIAL` | Phase 1 evidence, security, architecture, acceptance, and migration documents are updated; final cross-document link review and publication remain required. |
 
 ## Remaining blockers for unconditional Phase 1 closure
 
-1. Hosted GitHub Actions execution and retained quality/security artifacts are not verified.
-2. Metrics and distributed tracing are implemented at application level, but collector-received spans and hosted retention/alert-routing evidence remain unverified.
-3. Storage-security controls are implemented at application level, but real S3/MinIO versioning, object-lock, encryption, and ClamAV runtime evidence remain open.
-4. The registered outbox success handler and advanced recovery paths are not fully demonstrated through a real Windows dispatcher-to-worker workflow.
-5. HTTP idempotency interceptor/request lifecycle behavior remains unverified.
-6. The legacy database state is accepted and documented, but the machine-local migration remains non-reproducible and must not be silently rewritten.
-7. Final documentation cross-links and the consolidated Phase 1 closure review remain open.
+1. Metrics and distributed tracing are implemented at application level, but collector-received spans and hosted retention/alert-routing evidence remain unverified.
+2. Storage-security controls are implemented at application level, but real S3/MinIO versioning, object-lock, encryption, and ClamAV runtime evidence remain open.
+3. The registered outbox success handler and advanced recovery paths are not fully demonstrated through a real Windows dispatcher-to-worker workflow.
+4. HTTP idempotency interceptor/request lifecycle behavior remains unverified.
+5. The legacy database state is accepted and documented, but the machine-local migration remains non-reproducible and must not be silently rewritten.
+6. Final documentation cross-links and the consolidated Phase 1 closure review remain open.
 
 ## Phase boundary
 
@@ -76,6 +75,7 @@ Phase 2 remains paused. The current evidence proves a functioning foundation run
 - [`CSRF applicability decision`](CSRF_DECISION.md)
 - [`Generated API client decision`](GENERATED_CLIENT_DECISION.md)
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
+- [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)

@@ -66,7 +66,7 @@ The migration checker must continue to block that legacy database rather than hi
 
 | Blocker | Status | Required closure action |
 |---|---|---|
-| Hosted GitHub Actions run | `UNVERIFIED` | Run the actual workflow and review quality, migration, e2e, security, container, SBOM, DAST, and retained artifacts. |
+| Hosted GitHub Actions run | `PASS` | [`HOSTED_CI_VERIFICATION.md`](./HOSTED_CI_VERIFICATION.md) records successful quality, static security, container, and DAST jobs at commit `85333579`; coverage, SBOM, SARIF, and ZAP artifacts were retained. The pull-request-only dependency-review job was correctly skipped on the push event. |
 | Prometheus metrics | `PASS WITH SCOPE LIMIT` | Protected API `/api/metrics` and dedicated worker `/metrics` registries, bounded labels, unit tests, and build are present. Windows captured the API scrape, outbox success path, worker port `3002`, and a non-empty worker job-duration histogram. Hosted retention and alert-routing evidence remain required. |
 | OpenTelemetry tracing | `PARTIALLY VERIFIED` | API/worker bootstrap, HTTP/PostgreSQL/ioredis auto-instrumentation, outbox spans, W3C propagation, unit tests, and build are present. A real collector-received API-to-worker trace remains unverified. |
 | Retention and alerting | `PARTIALLY VERIFIED` | Loki 30-day, Prometheus 90-day, collector, and critical Prometheus alert configurations are committed. Hosted backend retention and alert-routing evidence remain required; audit/security event persistence follows the authoritative later-phase ownership. |
@@ -78,7 +78,7 @@ The migration checker must continue to block that legacy database rather than hi
 | Rate limiting and CSRF | `RATE LIMIT PASS; CSRF N/A` | [`SECURITY_CONTROLS_BASELINE.md`](./SECURITY_CONTROLS_BASELINE.md) records implementation, unit tests, and Windows 429 evidence. [`CSRF_DECISION.md`](./CSRF_DECISION.md) records why CSRF is not applicable to the current read-only, non-cookie API and defines the future re-entry gate. |
 | Local e2e | `PASS` | [`E2E_WINDOWS_VERIFICATION.md`](./E2E_WINDOWS_VERIFICATION.md) records the Windows run against real PostgreSQL, Redis, and MinIO with 1 suite and 4 tests passed. |
 | Architecture decisions | `ACCEPTED` | [`ARCHITECTURE_DECISIONS.md`](./ARCHITECTURE_DECISIONS.md) records PostgreSQL 16, separate API/worker processes, and reserved workspace scopes. |
-| Final documentation | `PARTIAL` | Publish this report, the current gap analysis, the API guide, and the final cross-document link review together. |
+| Final documentation | `PARTIAL` | Phase 1 evidence and decision documents are published; final cross-document link review and consolidated closure decision remain open. |
 
 ## Evidence boundaries
 
@@ -114,6 +114,7 @@ Phase 1 may be declared closed only when every remaining blocker is either imple
 - [`CSRF applicability decision`](CSRF_DECISION.md)
 - [`Generated API client decision`](GENERATED_CLIENT_DECISION.md)
 - [`Architecture decisions`](ARCHITECTURE_DECISIONS.md)
+- [`Hosted CI verification`](HOSTED_CI_VERIFICATION.md)
 - [`Outbox delivery design`](OUTBOX_DELIVERY_DESIGN.md)
 - [`CI pipeline expansion`](CI_PIPELINE_EXPANSION.md)
 - [`Engineering governance re-verification`](ENGINEERING_GOVERNANCE_REVERIFICATION.md)
