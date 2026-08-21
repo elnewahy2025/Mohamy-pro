@@ -16,6 +16,7 @@ The repository now contains application-level metrics, a protected Prometheus en
 | [`docs/phase1/RETENTION_POLICY.md`](RETENTION_POLICY.md) | Canonical retention matrix and future-phase ownership. | Retention traceability. |
 | [`docs/phase1/ALERTING_BASELINE.md`](ALERTING_BASELINE.md) | Critical alert rules and routing boundary. | Alerting traceability. |
 | [`docs/phase1/OBSERVABILITY_WINDOWS_VERIFICATION.md`](OBSERVABILITY_WINDOWS_VERIFICATION.md) | Captured Windows startup, readiness, and Prometheus scrape evidence. | Runtime evidence. |
+| [`docs/phase1/OTEL_RUNTIME_EVIDENCE_PLAN.md`](OTEL_RUNTIME_EVIDENCE_PLAN.md) | Collector-received API-to-worker trace and backend-delivery evidence boundary. | Open runtime gate. |
 | [`skills/engineering-governance/SKILL.md`](../../skills/engineering-governance/SKILL.md) | No unverified completion claims; every critical requirement needs implementation and execution evidence. | Governs status labels. |
 
 ## Requirement-to-evidence matrix
@@ -45,9 +46,9 @@ The repository now contains application-level metrics, a protected Prometheus en
 | Command | Working directory | Result |
 |---|---|---|
 | `pnpm --filter api run build` | `/home/ubuntu/Mohamy-pro` | PASS; Nest build exit code 0 after current observability changes. |
-| `pnpm --filter api exec jest --runInBand` | `/home/ubuntu/Mohamy-pro` and Windows repository root | PASS; current sandbox run has 9 suites and 23 tests passed, including metrics authorization, storage integrity, environment validation, queue W3C propagation, and the real outbox handler. |
+| `pnpm --filter api exec jest --runInBand` | `/home/ubuntu/Mohamy-pro` and Windows repository root | PASS; current Windows run has 10 suites and 28 tests passed, including rate limiting, metrics authorization, storage integrity, environment validation, queue W3C propagation, and the real outbox handler. |
 | Windows API and worker runtime scrape | Windows repository root | PASS; API and worker started, readiness returned HTTP 200, `/api/metrics` returned HTTP 200, the real outbox success path reached `PROCESSED`, and `http://localhost:3002/metrics` returned HTTP 200 with a worker job histogram sample. |
-| `pnpm --filter api exec jest --config test/jest-e2e.json --runInBand` | `/home/ubuntu/Mohamy-pro` | BLOCKED in sandbox; environment validation correctly rejected missing `DATABASE_URL`; sandbox also has no Docker executable. |
+| `pnpm --filter api exec jest --config test/jest-e2e.json --runInBand` | Windows repository root and hosted runner | PASS; Windows passed 1 suite/4 tests against real PostgreSQL, Redis, and MinIO, and the hosted quality job passed the same contract suite. |
 
 ## Plain-language interpretation
 
@@ -57,4 +58,4 @@ Metrics answer how often and how slowly behavior occurs. Traces answer which API
 
 > **Application observability implementation is partially verified, not fully production-verified.**
 
-The code-level metrics work is now connected, build/lint/unit verified, and runtime-scraped on Windows against real PostgreSQL, Redis, and MinIO services. The project must not claim unconditional Phase 0/Phase 1 production readiness until a real OpenTelemetry collector receives API and worker spans, hosted Prometheus/Loki retention is verified, alert routing is exercised, and the remaining Phase 1 blockers are closed or explicitly documented with owner, target phase, rationale, risk, and acceptance impact. Audit/security retention remains an explicit later-phase requirement under the authoritative plan, not a hidden omission.
+The code-level metrics work is connected, build/lint/unit verified, and runtime-scraped on Windows against real PostgreSQL, Redis, and MinIO services. Hosted CI quality/security/container/DAST jobs also passed with retained artifacts. The project must not claim unconditional Phase 0/Phase 1 production readiness until a real OpenTelemetry collector receives API and worker spans, hosted Prometheus/Loki retention is verified, alert routing is exercised, storage-provider security behavior is evidenced, the remaining outbox recovery gates are closed, and the final acceptance review is complete. Audit/security retention remains an explicit later-phase requirement under the authoritative plan, not a hidden omission.
