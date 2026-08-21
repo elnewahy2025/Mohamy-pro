@@ -1,5 +1,12 @@
 import { timingSafeEqual } from 'node:crypto';
-import { Controller, Get, HttpStatus, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Req,
+  Res,
+  VERSION_NEUTRAL,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import type { ValidatedEnvironment } from '../config/env.validation';
@@ -10,7 +17,7 @@ import {
 } from '../infrastructure/queue/queue.service';
 import { MetricsService } from './metrics.service';
 
-@Controller('metrics')
+@Controller({ path: 'metrics', version: VERSION_NEUTRAL })
 export class MetricsController {
   constructor(
     private readonly config: ConfigService<ValidatedEnvironment, true>,
