@@ -9,7 +9,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'OutboxScope' AND typnamespace = 'public'::regnamespace) THEN
     CREATE TYPE "OutboxScope" AS ENUM ('GLOBAL', 'TENANT');
   ELSIF (
-    SELECT array_agg(enumlabel ORDER BY enumsortorder)
+    SELECT array_agg(enumlabel::text ORDER BY enumsortorder)
     FROM pg_enum
     WHERE enumtypid = 'public."OutboxScope"'::regtype
   ) IS DISTINCT FROM ARRAY['GLOBAL', 'TENANT']::text[] THEN
@@ -22,7 +22,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'IdempotencyState' AND typnamespace = 'public'::regnamespace) THEN
     CREATE TYPE "IdempotencyState" AS ENUM ('RESERVED', 'COMPLETED', 'TERMINAL_FAILURE', 'RETRYABLE');
   ELSIF (
-    SELECT array_agg(enumlabel ORDER BY enumsortorder)
+    SELECT array_agg(enumlabel::text ORDER BY enumsortorder)
     FROM pg_enum
     WHERE enumtypid = 'public."IdempotencyState"'::regtype
   ) IS DISTINCT FROM ARRAY['RESERVED', 'COMPLETED', 'TERMINAL_FAILURE', 'RETRYABLE']::text[] THEN
