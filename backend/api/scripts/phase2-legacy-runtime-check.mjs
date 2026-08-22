@@ -3,10 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import process from 'node:process';
+import { loadApiLocalEnv } from './load-api-local-env.mjs';
 import pg from 'pg';
 
 const { Pool } = pg;
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+loadApiLocalEnv(import.meta.url);
 const repoRoot = path.resolve(scriptDirectory, '../../..');
 const originalDatabaseUrl = process.env.DATABASE_URL;
 const generatedDatabase = `mohamy_phase2_legacy_fresh_${Date.now()}_${randomUUID().slice(0, 8)}`;

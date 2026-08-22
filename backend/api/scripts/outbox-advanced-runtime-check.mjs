@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import IORedis from 'ioredis';
 import { Queue } from 'bullmq';
+import { loadApiLocalEnv } from './load-api-local-env.mjs';
 
+loadApiLocalEnv(import.meta.url);
 const { Client } = pg;
 const queueName = 'mohamy-application';
 const databaseUrl = process.env.DATABASE_URL;

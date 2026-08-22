@@ -3,7 +3,9 @@ import { randomUUID, createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { loadApiLocalEnv } from './load-api-local-env.mjs';
 import {
   DeleteObjectCommand,
   HeadObjectCommand,
@@ -11,6 +13,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 
+loadApiLocalEnv(import.meta.url);
 const require = createRequire(import.meta.url);
 const { NestFactory } = require('@nestjs/core');
 const { AppModule } = require('../dist/src/app.module.js');

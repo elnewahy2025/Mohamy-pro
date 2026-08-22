@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import process from 'node:process';
+import { loadApiLocalEnv } from './load-api-local-env.mjs';
 import pg from 'pg';
 
 const { Pool } = pg;
@@ -16,6 +17,7 @@ const { OutboxService } = require('../dist/src/infrastructure/outbox/outbox.serv
 const { QueueService } = require('../dist/src/infrastructure/queue/queue.service.js');
 const { RedisService } = require('../dist/src/infrastructure/redis/redis.service.js');
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+loadApiLocalEnv(import.meta.url);
 const repoRoot = path.resolve(scriptDirectory, '../../..');
 const originalDatabaseUrl = process.env.DATABASE_URL;
 const originalRedisUrl = process.env.REDIS_URL;
