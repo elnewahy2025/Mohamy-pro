@@ -258,7 +258,23 @@ export class OidcClient implements OidcClientPort {
         signal: controller.signal,
       });
       if (!response.ok) {
-        this.logger.warn(`${operation} rejected with HTTP ${response.status}`);
+        let providerError = 'unknown';
+        try {
+          const payload = (await response.clone().json()) as {
+            error?: unknown;
+          };
+          if (
+            typeof payload.error === 'string' &&
+            /^[A-Za-z0-9_.:-]{1,64}$/.test(payload.error)
+          ) {
+            providerError = payload.error;
+          }
+        } catch {
+          // Keep provider failures non-enumerating when the body is not JSON.
+        }
+        this.logger.warn(
+          `${operation} rejected with HTTP ${response.status}|provider_error=${providerError}`,
+        );
         throw new Error(`${operation} failed with HTTP ${response.status}`);
       }
       if (response.status === 204) return undefined as T;
