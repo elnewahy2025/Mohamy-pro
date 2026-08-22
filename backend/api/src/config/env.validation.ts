@@ -205,7 +205,7 @@ export function validateEnvironment(
           OIDC_AUDIENCE: 'mohamy-api',
           OIDC_REDIRECT_URI: 'http://127.0.0.1:3000/api/v1/auth/callback',
           OIDC_POST_LOGOUT_REDIRECT_URI: 'http://localhost:5173/en',
-          OIDC_SCOPES: 'openid profile email offline_access',
+          OIDC_SCOPES: 'openid profile email',
           OIDC_CLIENT_SECRET: undefined,
           SESSION_COOKIE_NAME: 'mohamy_session',
           SESSION_ENCRYPTION_KEY: undefined,
@@ -252,7 +252,7 @@ export function validateEnvironment(
   const oidcScopes =
     readString(raw.OIDC_SCOPES) ??
     defaults.OIDC_SCOPES ??
-    'openid profile email offline_access';
+    'openid profile email';
   const oidcHttpTimeoutMs = readPositiveInteger(
     raw.OIDC_HTTP_TIMEOUT_MS,
     10_000,

@@ -44,8 +44,7 @@
       "defaultClientScopes": [
         "openid",
         "profile",
-        "email",
-        "offline_access"
+        "email"
       ],
       "protocolMappers": [
         {
