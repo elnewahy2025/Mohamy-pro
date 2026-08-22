@@ -119,10 +119,16 @@ async function main() {
        VALUES ($1, 'Phase1Advanced', $2, $3, $4::jsonb, 'PROCESSING', CURRENT_TIMESTAMP - INTERVAL '2 minutes', 1, CURRENT_TIMESTAMP - INTERVAL '2 minutes', $5)`,
       [leaseId, leaseId, leaseEvent, JSON.stringify({ test: 'lease-expiry' }), expiredToken],
     ));
+    // Reclamation can transition PROCESSING -> FAILED -> PROCESSING -> FAILED
+    // faster than the verifier polling interval. Assert durable evidence: the
+    // row reached a new attempt and no longer carries the injected expired lease.
     const reclaimed = await waitFor(
       'expired lease reclamation',
       () => readOutbox(database, leaseId),
-      (row) => row?.attempts >= 2 && row.status === 'PROCESSING' && row.leaseToken && row.leaseToken !== expiredToken,
+      (row) =>
+        row?.attempts >= 2 &&
+        ['PROCESSING', 'FAILED', 'DEAD_LETTER'].includes(row.status) &&
+        row.leaseToken !== expiredToken,
     );
     const leaseFinal = await waitFor(
       'expired lease retry result',
