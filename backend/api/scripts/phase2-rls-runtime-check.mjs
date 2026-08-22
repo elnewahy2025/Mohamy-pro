@@ -167,8 +167,8 @@ async function seedTenant(
   permissionId,
 ) {
   await client.query(
-    `INSERT INTO "Tenant" ("id", "slug", "name")
-     VALUES ($1, $2, $3)`,
+    `INSERT INTO "Tenant" ("id", "slug", "name", "updatedAt")
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
     [tenant.id, tenant.slug, tenant.name],
   );
   await client.query(
