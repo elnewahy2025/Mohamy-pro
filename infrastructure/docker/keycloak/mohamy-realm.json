@@ -1,0 +1,83 @@
+{
+  "realm": "mohamy",
+  "enabled": true,
+  "displayName": "Mohamy Pro Development",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "rememberMe": false,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "defaultSignatureAlgorithm": "RS256",
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 43200,
+  "offlineSessionIdleTimeout": 2592000,
+  "clients": [
+    {
+      "clientId": "mohamy-api",
+      "name": "Mohamy Pro API Development Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "phase2-development-client-secret",
+      "redirectUris": [
+        "http://localhost:3000/api/v1/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/en"
+      },
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email",
+        "offline_access"
+      ],
+      "protocolMappers": [
+        {
+          "name": "mohamy-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "mohamy-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "phase2-runtime-user",
+      "enabled": true,
+      "email": "phase2-runtime-user@localhost.invalid",
+      "emailVerified": true,
+      "firstName": "Phase 2",
+      "lastName": "Runtime",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "phase2-runtime-password",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

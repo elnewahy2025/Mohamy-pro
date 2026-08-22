@@ -211,6 +211,7 @@ model AppSession {
   userId                         String
   tokenHash                      String        @unique
   csrfTokenHash                  String        @unique
+  csrfTokenCiphertext            String?
   status                         SessionStatus @default(ACTIVE)
   provider                       String
   providerSubject                String

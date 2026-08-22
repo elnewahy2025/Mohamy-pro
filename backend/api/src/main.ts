@@ -28,9 +28,11 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
   app.enableCors({
     origin: config
-      .get<string>('CORS_ORIGINS', 'http://localhost:5173')
-      .split(','),
-    credentials: false,
+      .getOrThrow<string>('CORS_ORIGINS')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    credentials: true,
   });
   app.setGlobalPrefix('api');
   app.enableVersioning({

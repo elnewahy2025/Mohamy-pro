@@ -15,6 +15,7 @@ import { IdempotencyModule } from './infrastructure/idempotency/idempotency.modu
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './observability/metrics.module';
 import { RateLimitMiddleware } from './security/rate-limit.middleware';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RateLimitMiddleware } from './security/rate-limit.middleware';
     IdempotencyModule,
     HealthModule,
     MetricsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

@@ -23,7 +23,8 @@
     "db:check": "node scripts/check-migrations.mjs",
     "db:phase2:rls": "node scripts/phase2-rls-runtime-check.mjs",
     "db:phase2:legacy": "node scripts/phase2-legacy-runtime-check.mjs",
-    "db:phase2:legacy-services": "node scripts/phase2-legacy-service-runtime-check.mjs"
+    "db:phase2:legacy-services": "node scripts/phase2-legacy-service-runtime-check.mjs",
+    "db:phase2:auth": "node scripts/auth-runtime-check.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1113.0",
@@ -49,6 +50,7 @@
     "dotenv": "17.4.2",
     "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
+    "jose": "^6.2.9",
     "nestjs-pino": "^4.6.1",
     "pg": "^8.23.0",
     "pino": "^10.3.1",

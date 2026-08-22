@@ -18,6 +18,22 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   CLAMAV_HOST?: string;
   CLAMAV_PORT: number;
   CORS_ORIGINS: string;
+  OIDC_ISSUER_URL: string;
+  OIDC_CLIENT_ID: string;
+  OIDC_CLIENT_SECRET?: string;
+  OIDC_AUDIENCE: string;
+  OIDC_REDIRECT_URI: string;
+  OIDC_POST_LOGOUT_REDIRECT_URI: string;
+  OIDC_SCOPES: string;
+  OIDC_HTTP_TIMEOUT_MS: number;
+  OIDC_CLOCK_SKEW_SECONDS: number;
+  OIDC_DISCOVERY_CACHE_SECONDS: number;
+  SESSION_COOKIE_NAME: string;
+  SESSION_ENCRYPTION_KEY?: string;
+  SESSION_IDLE_TTL_SECONDS: number;
+  SESSION_ABSOLUTE_TTL_SECONDS: number;
+  SESSION_SECURE_COOKIE: boolean;
+  CSRF_HEADER_NAME: string;
   METRICS_ENABLED: boolean;
   WORKER_METRICS_PORT: number;
   RATE_LIMIT_ENABLED: boolean;
@@ -58,6 +74,52 @@ function readStorageEncryptionMode(value: unknown): StorageEncryptionMode {
     return value;
   }
   throw new Error('S3_ENCRYPTION_MODE must be NONE, AES256, or aws:kms');
+}
+
+function readUrl(value: unknown, name: string): string {
+  const candidate = readString(value);
+  if (!candidate) return '';
+  try {
+    const parsed = new URL(candidate);
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    throw new Error(`${name} must be a valid HTTP(S) URL`);
+  }
+}
+
+function readHeaderName(value: unknown): string {
+  const candidate = readString(value) ?? 'X-CSRF-Token';
+  if (!/^X-[A-Za-z0-9-]{1,63}$/.test(candidate)) {
+    throw new Error('CSRF_HEADER_NAME must be an X- header name');
+  }
+  return candidate;
+}
+
+function readCookieName(value: unknown): string {
+  const candidate = readString(value) ?? 'mohamy_session';
+  if (!/^[A-Za-z0-9_]{1,64}$/.test(candidate)) {
+    throw new Error(
+      'SESSION_COOKIE_NAME must contain only letters, numbers, and underscores',
+    );
+  }
+  return candidate;
+}
+
+function readSessionEncryptionKey(value: unknown): string | undefined {
+  const candidate = readString(value);
+  if (!candidate) return undefined;
+  try {
+    const decoded = Buffer.from(candidate, 'base64url');
+    if (decoded.length !== 32 || decoded.toString('base64url') !== candidate) {
+      throw new Error();
+    }
+  } catch {
+    throw new Error(
+      'SESSION_ENCRYPTION_KEY must be an unpadded base64url-encoded 32-byte key',
+    );
+  }
+  return candidate;
 }
 
 function readPositiveInteger(
@@ -112,6 +174,19 @@ export function validateEnvironment(
           MALWARE_SCAN_ENABLED: undefined,
           CLAMAV_HOST: undefined,
           CORS_ORIGINS: undefined,
+          OIDC_ISSUER_URL: undefined,
+          OIDC_CLIENT_ID: undefined,
+          OIDC_AUDIENCE: undefined,
+          OIDC_REDIRECT_URI: undefined,
+          OIDC_POST_LOGOUT_REDIRECT_URI: undefined,
+          OIDC_SCOPES: undefined,
+          OIDC_CLIENT_SECRET: undefined,
+          SESSION_COOKIE_NAME: undefined,
+          SESSION_ENCRYPTION_KEY: undefined,
+          SESSION_IDLE_TTL_SECONDS: undefined,
+          SESSION_ABSOLUTE_TTL_SECONDS: undefined,
+          SESSION_SECURE_COOKIE: undefined,
+          CSRF_HEADER_NAME: undefined,
         }
       : {
           REDIS_URL: 'redis://localhost:56379',
@@ -125,6 +200,19 @@ export function validateEnvironment(
           MALWARE_SCAN_ENABLED: false,
           CLAMAV_HOST: undefined,
           CORS_ORIGINS: 'http://localhost:5173',
+          OIDC_ISSUER_URL: 'http://localhost:58080/realms/mohamy',
+          OIDC_CLIENT_ID: 'mohamy-api',
+          OIDC_AUDIENCE: 'mohamy-api',
+          OIDC_REDIRECT_URI: 'http://localhost:3000/api/v1/auth/callback',
+          OIDC_POST_LOGOUT_REDIRECT_URI: 'http://localhost:5173/en',
+          OIDC_SCOPES: 'openid profile email offline_access',
+          OIDC_CLIENT_SECRET: undefined,
+          SESSION_COOKIE_NAME: 'mohamy_session',
+          SESSION_ENCRYPTION_KEY: undefined,
+          SESSION_IDLE_TTL_SECONDS: 1_800,
+          SESSION_ABSOLUTE_TTL_SECONDS: 43_200,
+          SESSION_SECURE_COOKIE: false,
+          CSRF_HEADER_NAME: 'X-CSRF-Token',
         };
 
   const storageEncryptionMode = readStorageEncryptionMode(
@@ -145,6 +233,77 @@ export function validateEnvironment(
   const clamavHost = readString(raw.CLAMAV_HOST) ?? defaults.CLAMAV_HOST;
   const clamavPort = readPort(raw.CLAMAV_PORT, 3310);
   const kmsKeyId = readString(raw.S3_KMS_KEY_ID);
+  const oidcIssuerUrl = readUrl(
+    raw.OIDC_ISSUER_URL ?? defaults.OIDC_ISSUER_URL,
+    'OIDC_ISSUER_URL',
+  );
+  const oidcClientId =
+    readString(raw.OIDC_CLIENT_ID) ?? defaults.OIDC_CLIENT_ID;
+  const oidcClientSecret = readString(raw.OIDC_CLIENT_SECRET);
+  const oidcAudience = readString(raw.OIDC_AUDIENCE) ?? defaults.OIDC_AUDIENCE;
+  const oidcRedirectUri = readUrl(
+    raw.OIDC_REDIRECT_URI ?? defaults.OIDC_REDIRECT_URI,
+    'OIDC_REDIRECT_URI',
+  );
+  const oidcPostLogoutRedirectUri = readUrl(
+    raw.OIDC_POST_LOGOUT_REDIRECT_URI ?? defaults.OIDC_POST_LOGOUT_REDIRECT_URI,
+    'OIDC_POST_LOGOUT_REDIRECT_URI',
+  );
+  const oidcScopes =
+    readString(raw.OIDC_SCOPES) ??
+    defaults.OIDC_SCOPES ??
+    'openid profile email offline_access';
+  const oidcHttpTimeoutMs = readPositiveInteger(
+    raw.OIDC_HTTP_TIMEOUT_MS,
+    10_000,
+    'OIDC_HTTP_TIMEOUT_MS',
+    30_000,
+  );
+  const oidcClockSkewSeconds = readPositiveInteger(
+    raw.OIDC_CLOCK_SKEW_SECONDS,
+    30,
+    'OIDC_CLOCK_SKEW_SECONDS',
+    300,
+  );
+  const oidcDiscoveryCacheSeconds = readPositiveInteger(
+    raw.OIDC_DISCOVERY_CACHE_SECONDS,
+    300,
+    'OIDC_DISCOVERY_CACHE_SECONDS',
+    86_400,
+  );
+  const sessionCookieName = readCookieName(
+    raw.SESSION_COOKIE_NAME ?? defaults.SESSION_COOKIE_NAME,
+  );
+  const sessionEncryptionKey = readSessionEncryptionKey(
+    raw.SESSION_ENCRYPTION_KEY,
+  );
+  const sessionIdleTtlSeconds = readPositiveInteger(
+    raw.SESSION_IDLE_TTL_SECONDS,
+    defaults.SESSION_IDLE_TTL_SECONDS ?? 1_800,
+    'SESSION_IDLE_TTL_SECONDS',
+    86_400,
+  );
+  const sessionAbsoluteTtlSeconds = readPositiveInteger(
+    raw.SESSION_ABSOLUTE_TTL_SECONDS,
+    defaults.SESSION_ABSOLUTE_TTL_SECONDS ?? 43_200,
+    'SESSION_ABSOLUTE_TTL_SECONDS',
+    604_800,
+  );
+  const sessionSecureCookie = readBoolean(
+    raw.SESSION_SECURE_COOKIE,
+    defaults.SESSION_SECURE_COOKIE ?? false,
+  );
+  const csrfHeaderName = readHeaderName(
+    raw.CSRF_HEADER_NAME ?? defaults.CSRF_HEADER_NAME,
+  );
+  if (!oidcScopes.split(/\s+/).includes('openid')) {
+    throw new Error('OIDC_SCOPES must include openid');
+  }
+  if (sessionIdleTtlSeconds >= sessionAbsoluteTtlSeconds) {
+    throw new Error(
+      'SESSION_IDLE_TTL_SECONDS must be less than SESSION_ABSOLUTE_TTL_SECONDS',
+    );
+  }
   const otelEndpoint = readString(raw.OTEL_EXPORTER_OTLP_ENDPOINT);
   const metricsEnabled = readBoolean(raw.METRICS_ENABLED, true);
   const workerMetricsPort = readPort(raw.WORKER_METRICS_PORT, 3002);
@@ -191,6 +350,66 @@ export function validateEnvironment(
     if (storageEncryptionMode === 'aws:kms' && !kmsKeyId) {
       throw new Error('S3_KMS_KEY_ID is required for aws:kms encryption');
     }
+    if (!oidcClientId)
+      throw new Error('OIDC_CLIENT_ID is required in production');
+    if (!oidcAudience)
+      throw new Error('OIDC_AUDIENCE is required in production');
+    if (!oidcClientSecret) {
+      throw new Error('OIDC_CLIENT_SECRET is required in production');
+    }
+    if (!sessionEncryptionKey) {
+      throw new Error('SESSION_ENCRYPTION_KEY is required in production');
+    }
+    if (!sessionSecureCookie) {
+      throw new Error('SESSION_SECURE_COOKIE must be true in production');
+    }
+    if (raw.SESSION_IDLE_TTL_SECONDS === undefined) {
+      throw new Error('SESSION_IDLE_TTL_SECONDS is required in production');
+    }
+    if (raw.SESSION_ABSOLUTE_TTL_SECONDS === undefined) {
+      throw new Error('SESSION_ABSOLUTE_TTL_SECONDS is required in production');
+    }
+    if (raw.SESSION_COOKIE_NAME === undefined) {
+      throw new Error('SESSION_COOKIE_NAME is required in production');
+    }
+    for (const [name, value] of [
+      ['OIDC_ISSUER_URL', oidcIssuerUrl],
+      ['OIDC_REDIRECT_URI', oidcRedirectUri],
+      ['OIDC_POST_LOGOUT_REDIRECT_URI', oidcPostLogoutRedirectUri],
+    ] as const) {
+      if (!value.startsWith('https://')) {
+        throw new Error(`${name} must use HTTPS in production`);
+      }
+    }
+    const configuredCorsOrigins =
+      readString(raw.CORS_ORIGINS) ?? defaults.CORS_ORIGINS ?? '';
+    if (configuredCorsOrigins.includes('*')) {
+      throw new Error('CORS_ORIGINS must not contain a wildcard in production');
+    }
+    const productionOrigins = configuredCorsOrigins
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+    if (
+      productionOrigins.length === 0 ||
+      productionOrigins.some((origin) => {
+        try {
+          const parsed = new URL(origin);
+          return (
+            parsed.protocol !== 'https:' ||
+            parsed.pathname !== '/' ||
+            parsed.search.length > 0 ||
+            parsed.hash.length > 0
+          );
+        } catch {
+          return true;
+        }
+      })
+    ) {
+      throw new Error(
+        'CORS_ORIGINS must contain exact HTTPS origins in production',
+      );
+    }
   }
 
   const values = {
@@ -207,6 +426,22 @@ export function validateEnvironment(
     CLAMAV_HOST: clamavHost,
     CLAMAV_PORT: clamavPort,
     CORS_ORIGINS: readString(raw.CORS_ORIGINS) ?? defaults.CORS_ORIGINS,
+    OIDC_ISSUER_URL: oidcIssuerUrl,
+    OIDC_CLIENT_ID: oidcClientId,
+    OIDC_CLIENT_SECRET: oidcClientSecret,
+    OIDC_AUDIENCE: oidcAudience,
+    OIDC_REDIRECT_URI: oidcRedirectUri,
+    OIDC_POST_LOGOUT_REDIRECT_URI: oidcPostLogoutRedirectUri,
+    OIDC_SCOPES: oidcScopes,
+    OIDC_HTTP_TIMEOUT_MS: oidcHttpTimeoutMs,
+    OIDC_CLOCK_SKEW_SECONDS: oidcClockSkewSeconds,
+    OIDC_DISCOVERY_CACHE_SECONDS: oidcDiscoveryCacheSeconds,
+    SESSION_COOKIE_NAME: sessionCookieName,
+    SESSION_ENCRYPTION_KEY: sessionEncryptionKey,
+    SESSION_IDLE_TTL_SECONDS: sessionIdleTtlSeconds,
+    SESSION_ABSOLUTE_TTL_SECONDS: sessionAbsoluteTtlSeconds,
+    SESSION_SECURE_COOKIE: sessionSecureCookie,
+    CSRF_HEADER_NAME: csrfHeaderName,
     METRICS_ENABLED: metricsEnabled,
     METRICS_AUTH_TOKEN: metricsAuthToken,
     OTEL_ENABLED: otelEnabled,
@@ -239,6 +474,35 @@ export function validateEnvironment(
     ...(values.CLAMAV_HOST ? { CLAMAV_HOST: values.CLAMAV_HOST } : {}),
     CLAMAV_PORT: values.CLAMAV_PORT,
     CORS_ORIGINS: requiredValue('CORS_ORIGINS', values.CORS_ORIGINS),
+    OIDC_ISSUER_URL: requiredValue('OIDC_ISSUER_URL', values.OIDC_ISSUER_URL),
+    OIDC_CLIENT_ID: requiredValue('OIDC_CLIENT_ID', values.OIDC_CLIENT_ID),
+    ...(values.OIDC_CLIENT_SECRET
+      ? { OIDC_CLIENT_SECRET: values.OIDC_CLIENT_SECRET }
+      : {}),
+    OIDC_AUDIENCE: requiredValue('OIDC_AUDIENCE', values.OIDC_AUDIENCE),
+    OIDC_REDIRECT_URI: requiredValue(
+      'OIDC_REDIRECT_URI',
+      values.OIDC_REDIRECT_URI,
+    ),
+    OIDC_POST_LOGOUT_REDIRECT_URI: requiredValue(
+      'OIDC_POST_LOGOUT_REDIRECT_URI',
+      values.OIDC_POST_LOGOUT_REDIRECT_URI,
+    ),
+    OIDC_SCOPES: requiredValue('OIDC_SCOPES', values.OIDC_SCOPES),
+    OIDC_HTTP_TIMEOUT_MS: values.OIDC_HTTP_TIMEOUT_MS,
+    OIDC_CLOCK_SKEW_SECONDS: values.OIDC_CLOCK_SKEW_SECONDS,
+    OIDC_DISCOVERY_CACHE_SECONDS: values.OIDC_DISCOVERY_CACHE_SECONDS,
+    SESSION_COOKIE_NAME: requiredValue(
+      'SESSION_COOKIE_NAME',
+      values.SESSION_COOKIE_NAME,
+    ),
+    ...(values.SESSION_ENCRYPTION_KEY
+      ? { SESSION_ENCRYPTION_KEY: values.SESSION_ENCRYPTION_KEY }
+      : {}),
+    SESSION_IDLE_TTL_SECONDS: values.SESSION_IDLE_TTL_SECONDS,
+    SESSION_ABSOLUTE_TTL_SECONDS: values.SESSION_ABSOLUTE_TTL_SECONDS,
+    SESSION_SECURE_COOKIE: values.SESSION_SECURE_COOKIE,
+    CSRF_HEADER_NAME: values.CSRF_HEADER_NAME,
     METRICS_ENABLED: values.METRICS_ENABLED,
     WORKER_METRICS_PORT: workerMetricsPort,
     RATE_LIMIT_ENABLED: rateLimitEnabled,
