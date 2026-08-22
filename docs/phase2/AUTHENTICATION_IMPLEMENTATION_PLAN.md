@@ -20,12 +20,12 @@ The implementation will add a server-side `AuthModule` to the API and keep provi
 
 | Capability | Boundary selected for this slice |
 |---|---|
-| Login start | `GET /api/v1/auth/login` creates a short-lived Redis authorization transaction containing state, nonce, PKCE verifier, redirect URI, and a post-login return target, then redirects to the discovered Keycloak authorization endpoint. |
-| Authorization callback | `GET /api/v1/auth/callback` validates the stored state, exchanges the one-time code, validates ID-token issuer, audience, signature, algorithm, expiry, not-before, nonce, and required subject, then maps the immutable provider subject to `ExternalIdentity`/`User`. |
+| Login start | `GET /api/auth/login` creates a short-lived Redis authorization transaction containing state, nonce, PKCE verifier, redirect URI, and a post-login return target, then redirects to the discovered Keycloak authorization endpoint. |
+| Authorization callback | `GET /api/auth/callback` validates the stored state, exchanges the one-time code, validates ID-token issuer, audience, signature, algorithm, expiry, not-before, nonce, and required subject, then maps the immutable provider subject to `ExternalIdentity`/`User`. |
 | Session creation | The API generates a cryptographically random opaque session identifier and CSRF secret, stores only their SHA-256 hashes, encrypts the provider refresh token with authenticated encryption, records bounded idle/absolute expiry, and returns only an `HttpOnly` session cookie. |
-| Current session | `GET /api/v1/auth/session` validates the cookie hash, session state, user state, expiry, and active membership status, returning a redacted server-derived session view. No raw token or provider payload is returned. |
-| CSRF bootstrap | `GET /api/v1/auth/csrf` requires the authenticated session and returns the CSRF token only to the authenticated browser session. The CSRF token is not the session secret. |
-| Logout | `POST /api/v1/auth/logout` requires the session cookie, approved `Origin`, and matching CSRF token; it revokes the application session, clears the cookie, and attempts provider revocation through the adapter without exposing provider errors. Repeated logout is safe. |
+| Current session | `GET /api/auth/session` validates the cookie hash, session state, user state, expiry, and active membership status, returning a redacted server-derived session view. No raw token or provider payload is returned. |
+| CSRF bootstrap | `GET /api/auth/csrf` requires the authenticated session and returns the CSRF token only to the authenticated browser session. The CSRF token is not the session secret. |
+| Logout | `POST /api/auth/logout` requires the session cookie, approved `Origin`, and matching CSRF token; it revokes the application session, clears the cookie, and attempts provider revocation through the adapter without exposing provider errors. Repeated logout is safe. |
 | Request authentication | An explicit session guard protects the new session and CSRF endpoints and provides a reusable request-context object for subsequent protected endpoints. Existing public health and root endpoints remain public until their endpoint policy is explicitly changed. |
 | State-changing browser requests | A global middleware rejects cookie-authenticated state-changing requests without an exact approved `Origin` and constant-time-matching `X-CSRF-Token` before controller execution. `GET`, `HEAD`, and `OPTIONS` remain exempt. |
 | Provider failure | Discovery, token exchange, JWKS, validation, refresh, and revocation failures fail closed and return controlled non-enumerating authentication errors. No indefinite refresh retry is permitted. |
@@ -85,7 +85,7 @@ The CSRF middleware will compare the request header with the server-side session
 
 ## 8. Runtime topology
 
-Windows verification will use a separate Keycloak development container with a pinned version reference, persistent local data, health checks, an imported application realm, and a test client. Keycloak admin credentials and client secrets will be supplied through local protected environment files only; they will not be committed or printed. Keycloak `start-dev` is acceptable only for the explicitly qualified development/verification plane and is not production evidence.[4]
+Windows verification will use a separate Keycloak development container with a pinned version reference, isolated ephemeral container data, an imported application realm, and a test client. Keycloak admin credentials and client secrets will be supplied through local protected environment files only; they will not be committed or printed. Keycloak `start-dev` is acceptable only for the explicitly qualified development/verification plane and is not production evidence.[4]
 
 The API, worker, Keycloak, PostgreSQL, Redis, and MinIO topology will be tested without resetting the existing `mohamy_pro` database or touching unrelated containers. The real integration gate will verify discovery, login redirect construction, code exchange, claim validation, session cookie behavior, CSRF/origin rejection, logout, revoked/expired session behavior, and provider failure handling. Unit tests may use isolated cryptographic test fixtures, but production code will never use fake authentication results or a development bypass.
 

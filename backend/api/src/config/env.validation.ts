@@ -203,7 +203,7 @@ export function validateEnvironment(
           OIDC_ISSUER_URL: 'http://localhost:58080/realms/mohamy',
           OIDC_CLIENT_ID: 'mohamy-api',
           OIDC_AUDIENCE: 'mohamy-api',
-          OIDC_REDIRECT_URI: 'http://localhost:3000/api/v1/auth/callback',
+          OIDC_REDIRECT_URI: 'http://localhost:3000/api/auth/callback',
           OIDC_POST_LOGOUT_REDIRECT_URI: 'http://localhost:5173/en',
           OIDC_SCOPES: 'openid profile email offline_access',
           OIDC_CLIENT_SECRET: undefined,

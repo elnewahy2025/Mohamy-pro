@@ -4,7 +4,7 @@ function config() {
   return {
     getOrThrow: jest
       .fn()
-      .mockReturnValue('http://localhost:3000/api/v1/auth/callback'),
+      .mockReturnValue('http://localhost:3000/api/auth/callback'),
   } as never;
 }
 
@@ -57,7 +57,7 @@ describe('AuthService', () => {
       state: 'A'.repeat(43),
       nonce: 'B'.repeat(43),
       codeVerifier: 'C'.repeat(64),
-      redirectUri: 'http://localhost:3000/api/v1/auth/callback',
+      redirectUri: 'http://localhost:3000/api/auth/callback',
       returnTo: '/en',
       createdAt: Date.now(),
     };
