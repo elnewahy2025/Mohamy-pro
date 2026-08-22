@@ -65,10 +65,10 @@ let created = false;
 let verifierRoleCreated = false;
 
 function quoteIdentifier(identifier) {
-  if (!/^[a-z0-9_]+$/.test(identifier)) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(identifier)) {
     throw new Error('Refusing to quote an unexpected database identifier.');
   }
-  return `"${identifier}"`;
+  return `"${identifier.replaceAll('"', '""')}"`;
 }
 
 function quoteLiteral(value) {
@@ -607,6 +607,22 @@ async function verifyRollbackAndPoolReuse(tenantA, tenantB, contexts) {
 }
 
 async function main() {
+  requireEqual(
+    quoteIdentifier('Organization'),
+    '"Organization"',
+    'mixed-case table identifier quoting',
+  );
+  requireEqual(
+    quoteIdentifier(generatedDatabase),
+    `"${generatedDatabase}"`,
+    'generated database identifier quoting',
+  );
+  requireEqual(
+    quoteIdentifier(verifierRole),
+    `"${verifierRole}"`,
+    'generated role identifier quoting',
+  );
+
   adminPool = new Pool({ connectionString: adminUrl.toString(), max: 1 });
   await adminPool.query(
     `CREATE DATABASE ${quoteIdentifier(generatedDatabase)}`,
