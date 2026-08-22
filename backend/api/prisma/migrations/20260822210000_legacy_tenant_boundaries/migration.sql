@@ -4,8 +4,31 @@
 -- legacy records with a non-replayable legacy scope. No table or row data is
 -- dropped, truncated, or reset.
 
-CREATE TYPE "OutboxScope" AS ENUM ('GLOBAL', 'TENANT');
-CREATE TYPE "IdempotencyState" AS ENUM ('RESERVED', 'COMPLETED', 'TERMINAL_FAILURE', 'RETRYABLE');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'OutboxScope' AND typnamespace = 'public'::regnamespace) THEN
+    CREATE TYPE "OutboxScope" AS ENUM ('GLOBAL', 'TENANT');
+  ELSIF (
+    SELECT array_agg(enumlabel ORDER BY enumsortorder)
+    FROM pg_enum
+    WHERE enumtypid = 'public."OutboxScope"'::regtype
+  ) IS DISTINCT FROM ARRAY['GLOBAL', 'TENANT']::text[] THEN
+    RAISE EXCEPTION 'Existing public.OutboxScope enum has incompatible labels';
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'IdempotencyState' AND typnamespace = 'public'::regnamespace) THEN
+    CREATE TYPE "IdempotencyState" AS ENUM ('RESERVED', 'COMPLETED', 'TERMINAL_FAILURE', 'RETRYABLE');
+  ELSIF (
+    SELECT array_agg(enumlabel ORDER BY enumsortorder)
+    FROM pg_enum
+    WHERE enumtypid = 'public."IdempotencyState"'::regtype
+  ) IS DISTINCT FROM ARRAY['RESERVED', 'COMPLETED', 'TERMINAL_FAILURE', 'RETRYABLE']::text[] THEN
+    RAISE EXCEPTION 'Existing public.IdempotencyState enum has incompatible labels';
+  END IF;
+END $$;
 
 ALTER TABLE "OutboxMessage"
   ADD COLUMN "scope" "OutboxScope" NOT NULL DEFAULT 'GLOBAL',

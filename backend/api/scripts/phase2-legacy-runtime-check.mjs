@@ -510,9 +510,9 @@ async function main() {
   runMigrations();
   ownerPool = new Pool({ connectionString: freshUrl.toString(), max: 1 });
   await ownerPool.query('SELECT 1');
-  await verifyMetadata();
   const fixtures = await seedFixtures();
   await configureVerifierRole();
+  await verifyMetadata();
   await verifyDefaultDeny(fixtures);
   await verifyTenantIsolation(fixtures);
   await verifyCrossTenantWrites(fixtures);
