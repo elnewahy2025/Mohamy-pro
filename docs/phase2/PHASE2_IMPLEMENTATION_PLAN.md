@@ -80,6 +80,8 @@ Create a single backend tenant-context mechanism that runs after authentication 
 
 Apply the context consistently to repositories, services, transactions, queues, caches, object-storage metadata, exports, and integrations. Use PostgreSQL RLS where appropriate, with tests proving that application-level mistakes cannot silently create cross-tenant access. Any privileged cross-tenant operation must be a separately named policy, MFA-protected where required, and audited.
 
+The first implementation slice is recorded in [`RLS_TENANT_CONTEXT_IMPLEMENTATION.md`](RLS_TENANT_CONTEXT_IMPLEMENTATION.md). It adds the transaction-local Prisma helper, pre-membership scope clearing, and a fail-closed RLS migration for the Phase 2 hierarchy, membership, invitation, tenant-role, role-assignment, and denial tables. The slice has passed static validation and unit tests, but its Windows PostgreSQL runtime gate remains open. `StorageObject`, `OutboxMessage`, and `IdempotencyKey` remain deliberately outside this staged migration until their callers are tenant-aware; no permissive `tenantId IS NULL` policy is allowed.
+
 ### 6. API and frontend contracts
 
 Define Phase 2 REST endpoints under `/api/v1` for identity, membership, tenant selection, and administration. Every endpoint must have OpenAPI documentation, standard success/error envelopes, correlation IDs, validation schemas, authorization policies, and contract tests. The frozen `Idempotency-Key` contract, including replay/conflict/concurrency behavior, must be implemented before the first state-changing endpoint is accepted.

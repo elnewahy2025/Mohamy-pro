@@ -20,7 +20,8 @@
     "test:cov": "jest --coverage --coverageReporters=text-summary --coverageReporters=lcov",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "db:check": "node scripts/check-migrations.mjs"
+    "db:check": "node scripts/check-migrations.mjs",
+    "db:phase2:rls": "node scripts/phase2-rls-runtime-check.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1113.0",

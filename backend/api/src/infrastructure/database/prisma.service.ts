@@ -1,5 +1,5 @@
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client';
 import {
   Injectable,
   Logger,
@@ -9,6 +9,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { ValidatedEnvironment } from '../../config/env.validation';
 import { MetricsService } from '../../observability/metrics.service';
+import {
+  assertMembershipSelectionContext,
+  assertTenantTransactionContext,
+  type MembershipSelectionContext,
+  type TenantTransactionContext,
+} from './tenant-context';
 
 interface PrismaQueryEvent {
   duration: number;
@@ -52,6 +58,28 @@ export class PrismaService
     });
   }
 
+  async withTenantContext<TResult>(
+    context: TenantTransactionContext,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    const validatedContext = assertTenantTransactionContext(context);
+    return this.$transaction(async (transaction) => {
+      await setTransactionContext(transaction, validatedContext);
+      return callback(transaction);
+    });
+  }
+
+  async withMembershipSelectionContext<TResult>(
+    context: MembershipSelectionContext,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    const validatedContext = assertMembershipSelectionContext(context);
+    return this.$transaction(async (transaction) => {
+      await setMembershipSelectionContext(transaction, validatedContext);
+      return callback(transaction);
+    });
+  }
+
   async onModuleInit(): Promise<void> {
     await this.$connect();
     this.logger.log('PostgreSQL connection established');
@@ -60,6 +88,32 @@ export class PrismaService
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
   }
+}
+
+async function setTransactionContext(
+  transaction: Prisma.TransactionClient,
+  context: TenantTransactionContext,
+): Promise<void> {
+  await transaction.$queryRaw`
+    SELECT
+      set_config('app.tenant_id', ${context.tenantId}, true),
+      set_config('app.user_id', ${context.userId}, true),
+      set_config('app.membership_id', ${context.membershipId}, true),
+      set_config('app.operation_id', ${context.operationId}, true)
+  `;
+}
+
+async function setMembershipSelectionContext(
+  transaction: Prisma.TransactionClient,
+  context: MembershipSelectionContext,
+): Promise<void> {
+  await transaction.$queryRaw`
+    SELECT
+      set_config('app.tenant_id', '', true),
+      set_config('app.user_id', ${context.userId}, true),
+      set_config('app.membership_id', '', true),
+      set_config('app.operation_id', ${context.operationId}, true)
+  `;
 }
 
 function databaseOperation(query: string): string {
