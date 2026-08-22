@@ -67,14 +67,14 @@ function quoteIdentifier(identifier) {
 }
 
 function runMigrations() {
-  const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
   execFileSync(
-    pnpm,
+    'pnpm',
     ['--filter', 'api', 'exec', 'prisma', 'migrate', 'deploy'],
     {
       cwd: repoRoot,
       env: { ...process.env, DATABASE_URL: freshUrl.toString() },
       stdio: 'inherit',
+      ...(process.platform === 'win32' ? { shell: true } : {}),
     },
   );
 }
