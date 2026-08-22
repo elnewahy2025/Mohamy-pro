@@ -158,6 +158,23 @@ function requireTrue(value, label) {
   }
 }
 
+async function requireClearedContext(client, label) {
+  const result = await client.query(
+    `SELECT
+       NULLIF(current_setting('app.tenant_id', true), '') AS tenant_id,
+       NULLIF(current_setting('app.user_id', true), '') AS user_id,
+       NULLIF(current_setting('app.membership_id', true), '') AS membership_id,
+       NULLIF(current_setting('app.operation_id', true), '') AS operation_id`,
+  );
+  const contextValues = Object.entries(result.rows[0] ?? {});
+  const leaked = contextValues.find(([, value]) => value !== null);
+  if (leaked) {
+    throw new Error(
+      `${label}: tenant context leaked through ${leaked[0]}=${leaked[1]}`,
+    );
+  }
+}
+
 function requireRlsError(error, label) {
   if (error?.code !== '42501') {
     throw new Error(
@@ -567,28 +584,28 @@ async function verifyRollbackAndPoolReuse(tenantA, tenantB, contexts) {
       [tenantA.id],
     );
     requireEqual(countFrom(afterRollback), 0, 'rollback removed tenant write');
-    const reset = await clientA.query(
-      `SELECT current_setting('app.tenant_id', true) AS tenant_id`,
+    await requireClearedContext(
+      clientA,
+      'tenant context after rollback on the same connection',
     );
-    if (reset.rows[0]?.tenant_id !== null) {
-      throw new Error(
-        'tenant context leaked after rollback on the same connection',
-      );
-    }
+    const noContextAfterRollback = await clientA.query(
+      `SELECT count(*)::int AS count FROM "Organization"`,
+    );
+    requireEqual(
+      countFrom(noContextAfterRollback),
+      0,
+      'no-context visibility after rollback',
+    );
   } finally {
     clientA.release();
   }
 
   const clientB = await rlsPool.connect();
   try {
-    const resetBeforeB = await clientB.query(
-      `SELECT current_setting('app.tenant_id', true) AS tenant_id`,
+    await requireClearedContext(
+      clientB,
+      'tenant context through pool reuse before Tenant B',
     );
-    if (resetBeforeB.rows[0]?.tenant_id !== null) {
-      throw new Error(
-        'tenant context leaked through pool reuse before Tenant B',
-      );
-    }
     const tenantBRead = await inTenantContext(clientB, contexts.b, async () => {
       const own = await clientB.query(
         `SELECT count(*)::int AS count FROM "Organization" WHERE "tenantId" = $1`,
@@ -606,16 +623,16 @@ async function verifyRollbackAndPoolReuse(tenantA, tenantB, contexts) {
       0,
       'Tenant B Tenant A organization visibility',
     );
-    const resetAfterB = await clientB.query(
-      `SELECT current_setting('app.tenant_id', true) AS tenant_id`,
+    await requireClearedContext(
+      clientB,
+      'tenant context after Tenant B commit',
     );
-    if (resetAfterB.rows[0]?.tenant_id !== null) {
-      throw new Error('tenant context leaked after Tenant B commit');
-    }
   } finally {
     clientB.release();
   }
-  console.log('rls_transaction_rollback_status=PASS|rolled_back_team_rows=0');
+  console.log(
+    'rls_transaction_rollback_status=PASS|rolled_back_team_rows=0|post_rollback_no_context_org_rows=0',
+  );
   console.log(
     'rls_pool_reuse_status=PASS|tenant_a_to_b_context_reset=true|tenant_b_sees_a=0',
   );
