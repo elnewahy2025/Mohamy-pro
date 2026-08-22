@@ -41,8 +41,12 @@ if (!originalDatabaseUrl) {
 }
 
 const generatedDatabase = `mohamy_phase2_rls_fresh_${Date.now()}_${randomUUID().slice(0, 8)}`;
+const verifierRole = `mohamy_phase2_rls_verifier_${randomUUID().slice(0, 8)}`;
 if (!/^mohamy_phase2_rls_fresh_[a-z0-9_]+$/.test(generatedDatabase)) {
   throw new Error('Generated database name failed the safety check.');
+}
+if (!/^mohamy_phase2_rls_verifier_[a-z0-9_]+$/.test(verifierRole)) {
+  throw new Error('Generated verifier role name failed the safety check.');
 }
 if (generatedDatabase === 'mohamy_pro') {
   throw new Error('Safety check refused to operate on mohamy_pro.');
@@ -56,14 +60,19 @@ freshUrl.pathname = `/${generatedDatabase}`;
 freshUrl.searchParams.set('schema', 'public');
 
 let adminPool;
-let freshPool;
+let rlsPool;
 let created = false;
+let verifierRoleCreated = false;
 
 function quoteIdentifier(identifier) {
   if (!/^[a-z0-9_]+$/.test(identifier)) {
     throw new Error('Refusing to quote an unexpected database identifier.');
   }
   return `"${identifier}"`;
+}
+
+function quoteLiteral(value) {
+  return `'${value.replaceAll("'", "''")}'`;
 }
 
 function runMigrations() {
@@ -157,6 +166,50 @@ function requireRlsError(error, label) {
   }
 }
 
+async function configureRlsVerifierRole() {
+  const verifierPassword = `${randomUUID().replaceAll('-', '')}${randomUUID().replaceAll('-', '')}`;
+  await adminPool.query(
+    `CREATE ROLE ${quoteIdentifier(verifierRole)} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD ${quoteLiteral(verifierPassword)}`,
+  );
+  verifierRoleCreated = true;
+  await adminPool.query(
+    `GRANT CONNECT ON DATABASE ${quoteIdentifier(generatedDatabase)} TO ${quoteIdentifier(verifierRole)}`,
+  );
+  const tableList = tenantTables.map(quoteIdentifier).join(', ');
+  await rlsPool.query(
+    `GRANT USAGE ON SCHEMA public TO ${quoteIdentifier(verifierRole)}`,
+  );
+  await rlsPool.query(
+    `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE ${tableList} TO ${quoteIdentifier(verifierRole)}`,
+  );
+  await rlsPool.query(
+    `GRANT EXECUTE ON FUNCTION public.app_tenant_context_is_valid(), public.app_membership_selection_context_is_valid() TO ${quoteIdentifier(verifierRole)}`,
+  );
+  await rlsPool.end();
+  const verifierUrl = new URL(freshUrl.toString());
+  verifierUrl.username = verifierRole;
+  verifierUrl.password = verifierPassword;
+  rlsPool = new Pool({ connectionString: verifierUrl.toString(), max: 1 });
+  await rlsPool.query('SELECT 1');
+  const roleState = await rlsPool.query(
+    `SELECT current_user, session_user, rolsuper, rolbypassrls
+     FROM pg_roles
+     WHERE rolname = current_user`,
+  );
+  const role = roleState.rows[0];
+  if (
+    role?.current_user !== verifierRole ||
+    role.session_user !== verifierRole ||
+    role.rolsuper !== false ||
+    role.rolbypassrls !== false
+  ) {
+    throw new Error(
+      'RLS verifier connection did not use a LOGIN NOSUPERUSER NOBYPASSRLS role',
+    );
+  }
+  console.log('rls_runtime_role_status=PASS|superuser=false|bypassrls=false');
+}
+
 async function seedTenant(
   client,
   tenant,
@@ -213,7 +266,7 @@ async function verifyRlsMetadata() {
   const expectedPolicyCounts = Object.fromEntries(
     tenantTables.map((table) => [table, table === 'Membership' ? 2 : 1]),
   );
-  const result = await freshPool.query(
+  const result = await rlsPool.query(
     `SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity, count(p.polname)::int AS policy_count
      FROM pg_class AS c
      LEFT JOIN pg_policy AS p ON p.polrelid = c.oid
@@ -253,16 +306,16 @@ async function verifyDefaultDenyAndIsolation(
   roleB,
 ) {
   for (const table of tenantOnlyTables) {
-    const noContext = await freshPool.query(
+    const noContext = await rlsPool.query(
       `SELECT count(*)::int AS count FROM "${table}"`,
     );
     requireEqual(countFrom(noContext), 0, `no-context ${table} visibility`);
   }
 
-  const tenantRoleNoContext = await freshPool.query(
+  const tenantRoleNoContext = await rlsPool.query(
     `SELECT count(*)::int AS count FROM "Role" WHERE "scope" = 'TENANT'`,
   );
-  const rolePermissionNoContext = await freshPool.query(
+  const rolePermissionNoContext = await rlsPool.query(
     `SELECT count(*)::int AS count FROM "RolePermission"`,
   );
   requireEqual(
@@ -278,7 +331,7 @@ async function verifyDefaultDenyAndIsolation(
 
   const unauthorizedInsertId = randomUUID();
   try {
-    await freshPool.query(
+    await rlsPool.query(
       `INSERT INTO "Organization" ("id", "tenantId", "slug", "name", "updatedAt")
        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
       [unauthorizedInsertId, tenantA.id, 'blocked', 'Blocked'],
@@ -294,7 +347,7 @@ async function verifyDefaultDenyAndIsolation(
     requireRlsError(error, 'no-context tenant insert');
   }
 
-  const tenantAClient = await freshPool.connect();
+  const tenantAClient = await rlsPool.connect();
   try {
     const tenantARead = await inTenantContext(
       tenantAClient,
@@ -353,7 +406,7 @@ async function verifyDefaultDenyAndIsolation(
     tenantAClient.release();
   }
 
-  const selectionClient = await freshPool.connect();
+  const selectionClient = await rlsPool.connect();
   try {
     const selected = await inSettings(
       selectionClient,
@@ -397,7 +450,7 @@ async function verifyDefaultDenyAndIsolation(
 }
 
 async function verifyMalformedContext(tenantA, contexts) {
-  const client = await freshPool.connect();
+  const client = await rlsPool.connect();
   try {
     const malformed = {
       ...contexts.a,
@@ -437,7 +490,7 @@ async function verifyHierarchyForeignKey(
   organizationB,
   contexts,
 ) {
-  const client = await freshPool.connect();
+  const client = await rlsPool.connect();
   try {
     try {
       await inTenantContext(client, contexts.a, async () =>
@@ -474,7 +527,7 @@ async function verifyHierarchyForeignKey(
 }
 
 async function verifyRollbackAndPoolReuse(tenantA, tenantB, contexts) {
-  const clientA = await freshPool.connect();
+  const clientA = await rlsPool.connect();
   try {
     await inTenantContext(clientA, contexts.a, async () => {
       const inserted = await clientA.query(
@@ -511,7 +564,7 @@ async function verifyRollbackAndPoolReuse(tenantA, tenantB, contexts) {
     clientA.release();
   }
 
-  const clientB = await freshPool.connect();
+  const clientB = await rlsPool.connect();
   try {
     const resetBeforeB = await clientB.query(
       `SELECT current_setting('app.tenant_id', true) AS tenant_id`,
@@ -560,13 +613,13 @@ async function main() {
   );
   created = true;
   runMigrations();
-  freshPool = new Pool({ connectionString: freshUrl.toString(), max: 1 });
-  await freshPool.query('SELECT 1');
+  rlsPool = new Pool({ connectionString: freshUrl.toString(), max: 1 });
+  await rlsPool.query('SELECT 1');
 
   await verifyRlsMetadata();
 
   const permissionId = randomUUID();
-  await freshPool.query(
+  await rlsPool.query(
     `INSERT INTO "Permission" ("id", "key", "description")
      VALUES ($1, $2, $3)`,
     [
@@ -625,7 +678,7 @@ async function main() {
     },
   };
 
-  const seedClient = await freshPool.connect();
+  const seedClient = await rlsPool.connect();
   try {
     await seedTenant(
       seedClient,
@@ -649,6 +702,7 @@ async function main() {
     seedClient.release();
   }
 
+  await configureRlsVerifierRole();
   await verifyDefaultDenyAndIsolation(tenantA, tenantB, contexts, roleA, roleB);
   await verifyMalformedContext(tenantA, contexts);
   await verifyHierarchyForeignKey(tenantA, tenantB, organizationB, contexts);
@@ -665,8 +719,8 @@ try {
   );
   process.exitCode = 1;
 } finally {
-  if (freshPool) {
-    await freshPool.end().catch(() => undefined);
+  if (rlsPool) {
+    await rlsPool.end().catch(() => undefined);
   }
   if (adminPool) {
     if (created) {
@@ -675,6 +729,24 @@ try {
         .catch((error) => {
           console.error(
             `rls_cleanup_result=FAIL|error=${error instanceof Error ? error.message : 'unknown error'}`,
+          );
+          process.exitCode = 1;
+        });
+    }
+    if (verifierRoleCreated) {
+      await adminPool
+        .query(`DROP OWNED BY ${quoteIdentifier(verifierRole)}`)
+        .catch((error) => {
+          console.error(
+            `rls_role_cleanup_result=FAIL|error=${error instanceof Error ? error.message : 'unknown error'}`,
+          );
+          process.exitCode = 1;
+        });
+      await adminPool
+        .query(`DROP ROLE ${quoteIdentifier(verifierRole)}`)
+        .catch((error) => {
+          console.error(
+            `rls_role_cleanup_result=FAIL|error=${error instanceof Error ? error.message : 'unknown error'}`,
           );
           process.exitCode = 1;
         });
