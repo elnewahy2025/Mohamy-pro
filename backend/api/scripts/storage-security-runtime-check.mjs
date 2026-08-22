@@ -25,6 +25,8 @@ const { PrismaService } = require('../dist/src/infrastructure/database/prisma.se
 const mode = process.env.STORAGE_SECURITY_MODE ?? 'clean';
 const configuredEncryptionMode = process.env.S3_ENCRYPTION_MODE ?? 'NONE';
 const objectLockEnabled = process.env.S3_OBJECT_LOCK_ENABLED === 'true';
+const malwareScanEnabled = process.env.MALWARE_SCAN_ENABLED === 'true';
+const expectedMalwareStatus = malwareScanEnabled ? 'CLEAN' : 'NOT_SCANNED';
 const bucket = process.env.S3_BUCKET;
 const endpoint = process.env.S3_ENDPOINT;
 const accessKey = process.env.S3_ACCESS_KEY;
@@ -114,8 +116,14 @@ async function runCleanMode(storage, prisma, client, tenantContext) {
     assertCondition(second.sha256 === payloadHash, 'Second SHA-256 metadata mismatch');
     assertCondition(first.sizeBytes === BigInt(payload.length), 'First byte-count metadata mismatch');
     assertCondition(second.sizeBytes === BigInt(payload.length), 'Second byte-count metadata mismatch');
-    assertCondition(first.malwareStatus === 'CLEAN', 'First upload was not marked CLEAN');
-    assertCondition(second.malwareStatus === 'CLEAN', 'Second upload was not marked CLEAN');
+    assertCondition(
+      first.malwareStatus === expectedMalwareStatus,
+      `Unexpected first malware status: ${first.malwareStatus}; scanning=${malwareScanEnabled}`,
+    );
+    assertCondition(
+      second.malwareStatus === expectedMalwareStatus,
+      `Unexpected second malware status: ${second.malwareStatus}; scanning=${malwareScanEnabled}`,
+    );
     assertCondition(
       first.encryptionMode === configuredEncryptionMode,
       `Unexpected first encryption mode: ${first.encryptionMode}; configured=${configuredEncryptionMode}`,
@@ -179,6 +187,7 @@ async function runCleanMode(storage, prisma, client, tenantContext) {
     console.log('clean_upload_status=PASS');
     console.log(`versioning_status=PASS|versions=${first.versionId},${second.versionId}`);
     console.log(`sha256_status=PASS|sha256=${payloadHash}|size=${payload.length}`);
+    console.log(`malware_status=PASS|configured=${malwareScanEnabled ? 'enabled' : 'disabled'}|recorded=${expectedMalwareStatus}`);
     console.log(`encryption_status=PASS|configured=${configuredEncryptionMode}|server_side_encryption=${head.ServerSideEncryption ?? 'none'}`);
     console.log('tenant_download_scope_status=PASS|server_derived_prefix=true');
     console.log(
