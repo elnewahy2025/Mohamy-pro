@@ -51,14 +51,14 @@ The existing Windows `mohamy_pro` data remains protected by additive nullable ch
 | `pnpm --filter api exec jest --runInBand` | PASS — 11 suites, 32 tests |
 | `pnpm --filter api exec eslint 'src/**/*.ts' 'test/**/*.ts'` | PASS |
 | `git diff --check` | PASS |
-| Windows `pnpm --filter api exec prisma migrate deploy` against existing `mohamy_pro` | NOT EXECUTED for this migration revision |
+| Windows `pnpm --filter api exec prisma migrate deploy` against existing `mohamy_pro` | PASS — migration `20260822190000_identity_tenancy_foundation` applied successfully |
 | Disposable PostgreSQL migration deployment | NOT EXECUTED in the sandbox because no reachable PostgreSQL service was configured |
 
-The passing checks above verify schema parsing, client generation, compilation, existing unit coverage, lint, and migration SQL review. They do not prove that the new migration has been accepted by Windows PostgreSQL.
+The passing checks above verify schema parsing, client generation, compilation, existing unit coverage, lint, migration SQL review, and successful application of the new migration to the existing Windows PostgreSQL database. They do not yet prove the new tables, constraints, composite foreign keys, or data-preservation properties through direct post-migration queries, nor do they prove fresh-database reproducibility.
 
 ## Required next verification
 
-**API is stopped. Worker is stopped.** From the Windows repository root, after pulling the published schema migration, run the existing-data migration command:
+**API is stopped. Worker is stopped.** From the Windows repository root, after pulling the published schema migration, the existing-data migration command and direct schema inspection were run and passed as recorded below. The fresh-database rerun remains required:
 
 ```powershell
 Set-Location 'C:\Users\ahmed\Documents\GitHub\Mohamy-pro'
@@ -69,9 +69,43 @@ pnpm --filter api exec prisma generate
 pnpm --filter api exec prisma migrate deploy
 ```
 
-The expected result is one new migration applied and no error. The existing `mohamy_pro` database must not be reset or manually edited. The evidence must record the migration name and final applied state without displaying credentials or data contents.
 
-A separate disposable PostgreSQL database must then apply all migrations from an empty state and run the migration checker. Only after both the existing-data and fresh-database gates pass can this schema slice be marked fully verified.
+Captured Windows migration output:
+
+```text
+5 migrations found in prisma/migrations
+
+Applying migration `20260822190000_identity_tenancy_foundation`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260822190000_identity_tenancy_foundation/
+    └─ migration.sql
+
+All migrations have been successfully applied.
+```
+
+The existing `mohamy_pro` database was not reset or manually edited. The evidence records the migration name and successful result without displaying credentials or data contents.
+
+The direct Windows post-migration inspection was then executed with the API and worker stopped. It returned the applied migration with a finished timestamp and no rollback, all 17 Phase 2 tables, all five manual integrity constraints, the four expected additive columns, and these existing-table row counts: `Health=0`, `IdempotencyKey=0`, `OutboxMessage=0`, and `StorageObject=3`. The existing `StorageObject` rows remained present after migration. No reset, row deletion, migration-history edit, volume deletion, or destructive backfill was used.
+
+A separate disposable PostgreSQL database must still apply all migrations from an empty state and run the migration checker. The first manual attempt exposed a PowerShell interpolation defect that created a temporary database named `=public`; that temporary database was dropped and the existing `mohamy_pro` database was not touched. The corrected first-party runner below prevents that defect and must be used for the accepted rerun. Only after the fresh-database gate passes can this schema slice be marked fully verified.
+
+**API is stopped. Worker is stopped.** From the Windows repository root, run:
+
+```powershell
+Set-Location 'C:\Users\ahmed\Documents\GitHub\Mohamy-pro'
+.\backend\api\scripts\phase2-fresh-database-runtime-check.ps1
+```
+
+Expected result:
+
+```text
+fresh_database_result=PASS
+```
+
+The runner creates only a generated database name with the `mohamy_phase2_fresh_` prefix, applies all repository migrations, runs `db:check`, restores the prior `DATABASE_URL`, and drops only that generated database. It refuses to use or remove the existing `mohamy_pro` database.
 
 ## Remaining implementation boundaries
 
