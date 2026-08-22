@@ -336,25 +336,30 @@ async function verifyDefaultDeny(fixtures) {
   requireEqual(denied.length, 3, 'no-context denied insert count');
   const ordinaryDeleteClient = await verifierPool.connect();
   try {
-    try {
-      await inSettings(
-        ordinaryDeleteClient,
-        fixtures.contexts.a,
-        () =>
-          ordinaryDeleteClient.query(
-            'DELETE FROM "IdempotencyKey" WHERE "tenantId" = $1',
-            [fixtures.tenantA.id],
-          ),
-      );
-      throw new Error('ordinary idempotency delete unexpectedly succeeded');
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('unexpectedly succeeded')) throw error;
-      requireRlsError(error, 'ordinary idempotency delete');
-    }
+    const deleteResult = await inSettings(
+      ordinaryDeleteClient,
+      fixtures.contexts.a,
+      () =>
+        ordinaryDeleteClient.query(
+          'DELETE FROM "IdempotencyKey" WHERE "tenantId" = $1 RETURNING "id"',
+          [fixtures.tenantA.id],
+        ),
+    );
+    requireEqual(deleteResult.rowCount, 0, 'ordinary idempotency delete row count');
+    const preserved = await inSettings(
+      ordinaryDeleteClient,
+      fixtures.contexts.a,
+      () =>
+        ordinaryDeleteClient.query(
+          'SELECT count(*)::int AS count FROM "IdempotencyKey" WHERE "id" = $1',
+          [fixtures.ids.idempotencyA],
+        ),
+    );
+    requireEqual(countFrom(preserved), 1, 'ordinary delete preserves idempotency row');
   } finally {
     ordinaryDeleteClient.release();
   }
-  console.log('legacy_default_deny_status=PASS|storage_read=0|outbox_read=0|idempotency_read=0|insert_denied=true|ordinary_idempotency_delete_denied=true');
+  console.log('legacy_default_deny_status=PASS|storage_read=0|outbox_read=0|idempotency_read=0|insert_denied=true|ordinary_idempotency_delete_denied=true|ordinary_delete_rows=0|record_preserved=true');
 }
 
 async function verifyTenantIsolation(fixtures) {
