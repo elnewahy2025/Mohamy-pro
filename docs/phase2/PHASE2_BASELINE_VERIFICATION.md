@@ -63,6 +63,22 @@ The rate-limit unit test intentionally logged the expected fail-closed message `
 
 ## Baseline decision
 
-The static/package baseline passes. The database/runtime baseline is **OPEN** until the Windows repository checkout runs the published restart sequence, exposes a reachable PostgreSQL URL, runs `pnpm --filter api exec prisma migrate deploy`, and records the result. Phase 2 schema implementation must not be reported as runtime-verified from this sandbox run.
+The static/package baseline passes. At the time of the sandbox run, the database/runtime baseline was **OPEN** because no reachable PostgreSQL URL was configured there. The subsequent Windows migration result below closes that specific baseline condition. Phase 2 schema implementation is still not present or runtime-verified; the Windows result verifies only the current migration state.
 
-The next allowed action is the Windows runtime baseline or a real disposable PostgreSQL baseline. No Phase 2 schema migration is accepted until the migration command passes against real PostgreSQL and the schema/migration evidence is retained.
+## Windows PostgreSQL migration result
+
+The project owner executed the required command from the Windows repository checkout with the API and worker stopped, using the existing Mohamy PostgreSQL container and existing `mohamy_pro` database. The password was retrieved locally and was not included in the evidence.
+
+Captured output:
+
+```text
+4 migrations found in prisma/migrations
+
+No pending migrations to apply.
+```
+
+This confirms that the current Windows database is aligned with all four repository migrations and had no pending migration. The command was `prisma migrate deploy`; it did not reset the database, edit migration history, delete volumes, or remove data. Existing `mohamy_pro` rows remain preserved. This evidence is user-reported from the Windows terminal; no database contents were displayed or modified for this verification.
+
+## Baseline decision
+
+The static/package baseline and the Windows migration baseline are complete. The remaining Windows API/worker startup and runtime evidence is a later Phase 2 verification gate, not a reason to infer that Phase 2 application features already exist. Phase 2 schema implementation may now proceed through an additive migration only. The existing Windows database must receive only reviewed `prisma migrate deploy` changes; disposable databases are used for destructive test setup and cleanup.
