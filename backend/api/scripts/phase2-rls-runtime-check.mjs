@@ -353,6 +353,14 @@ async function verifyDefaultDenyAndIsolation(
       tenantAClient,
       contexts.a,
       async () => {
+        const activeContext = await tenantAClient.query(
+          `SELECT current_setting('app.tenant_id', true) AS tenant_id`,
+        );
+        requireEqual(
+          activeContext.rows[0]?.tenant_id,
+          contexts.a.tenantId,
+          'Tenant A role checks active context',
+        );
         const visible = await tenantAClient.query(
           `SELECT count(*)::int AS count FROM "Organization" WHERE "tenantId" = $1`,
           [tenantA.id],
@@ -361,7 +369,30 @@ async function verifyDefaultDenyAndIsolation(
           `SELECT count(*)::int AS count FROM "Organization" WHERE "tenantId" = $1`,
           [tenantB.id],
         );
-        return { visible: countFrom(visible), hidden: countFrom(hidden) };
+        const ownRole = await tenantAClient.query(
+          `SELECT count(*)::int AS count FROM "Role" WHERE "id" = $1`,
+          [roleA.id],
+        );
+        const otherRole = await tenantAClient.query(
+          `SELECT count(*)::int AS count FROM "Role" WHERE "id" = $1`,
+          [roleB.id],
+        );
+        const ownRolePermission = await tenantAClient.query(
+          `SELECT count(*)::int AS count FROM "RolePermission" WHERE "roleId" = $1`,
+          [roleA.id],
+        );
+        const otherRolePermission = await tenantAClient.query(
+          `SELECT count(*)::int AS count FROM "RolePermission" WHERE "roleId" = $1`,
+          [roleB.id],
+        );
+        return {
+          visible: countFrom(visible),
+          hidden: countFrom(hidden),
+          ownRole: countFrom(ownRole),
+          otherRole: countFrom(otherRole),
+          ownRolePermission: countFrom(ownRolePermission),
+          otherRolePermission: countFrom(otherRolePermission),
+        };
       },
     );
     requireEqual(
@@ -374,31 +405,15 @@ async function verifyDefaultDenyAndIsolation(
       0,
       'Tenant A Tenant B organization visibility',
     );
-    const ownRole = await tenantAClient.query(
-      `SELECT count(*)::int AS count FROM "Role" WHERE "id" = $1`,
-      [roleA.id],
-    );
-    const otherRole = await tenantAClient.query(
-      `SELECT count(*)::int AS count FROM "Role" WHERE "id" = $1`,
-      [roleB.id],
-    );
-    const ownRolePermission = await tenantAClient.query(
-      `SELECT count(*)::int AS count FROM "RolePermission" WHERE "roleId" = $1`,
-      [roleA.id],
-    );
-    const otherRolePermission = await tenantAClient.query(
-      `SELECT count(*)::int AS count FROM "RolePermission" WHERE "roleId" = $1`,
-      [roleB.id],
-    );
-    requireEqual(countFrom(ownRole), 1, 'Tenant A own role visibility');
-    requireEqual(countFrom(otherRole), 0, 'Tenant A Tenant B role visibility');
+    requireEqual(tenantARead.ownRole, 1, 'Tenant A own role visibility');
+    requireEqual(tenantARead.otherRole, 0, 'Tenant A Tenant B role visibility');
     requireEqual(
-      countFrom(ownRolePermission),
+      tenantARead.ownRolePermission,
       1,
       'Tenant A own role-permission visibility',
     );
     requireEqual(
-      countFrom(otherRolePermission),
+      tenantARead.otherRolePermission,
       0,
       'Tenant A Tenant B role-permission visibility',
     );
