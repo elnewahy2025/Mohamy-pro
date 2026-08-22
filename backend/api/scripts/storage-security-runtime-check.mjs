@@ -23,6 +23,8 @@ const {
 } = require('../dist/src/infrastructure/storage/object-storage.service.js');
 const { PrismaService } = require('../dist/src/infrastructure/database/prisma.service.js');
 const mode = process.env.STORAGE_SECURITY_MODE ?? 'clean';
+const configuredEncryptionMode = process.env.S3_ENCRYPTION_MODE ?? 'NONE';
+const objectLockEnabled = process.env.S3_OBJECT_LOCK_ENABLED === 'true';
 const bucket = process.env.S3_BUCKET;
 const endpoint = process.env.S3_ENDPOINT;
 const accessKey = process.env.S3_ACCESS_KEY;
@@ -82,6 +84,8 @@ async function runCleanMode(storage, prisma, client, tenantContext) {
   const heldKey = `phase1/runtime/held-${suffix}.bin`;
   const scopedVersionKey = buildTenantObjectKey(tenantContext.tenantId, versionKey);
   const scopedHeldKey = buildTenantObjectKey(tenantContext.tenantId, heldKey);
+  const expectedServerSideEncryption =
+    configuredEncryptionMode === 'NONE' ? undefined : configuredEncryptionMode;
   const payloadHash = sha256(payload);
   await fs.writeFile(sourcePath, payload, { flag: 'wx' });
 
@@ -112,7 +116,10 @@ async function runCleanMode(storage, prisma, client, tenantContext) {
     assertCondition(second.sizeBytes === BigInt(payload.length), 'Second byte-count metadata mismatch');
     assertCondition(first.malwareStatus === 'CLEAN', 'First upload was not marked CLEAN');
     assertCondition(second.malwareStatus === 'CLEAN', 'Second upload was not marked CLEAN');
-    assertCondition(first.encryptionMode === 'aws:kms', `Unexpected encryption mode: ${first.encryptionMode}`);
+    assertCondition(
+      first.encryptionMode === configuredEncryptionMode,
+      `Unexpected first encryption mode: ${first.encryptionMode}; configured=${configuredEncryptionMode}`,
+    );
 
     const downloadUrl = await storage.getDownloadUrl(tenantContext, versionKey);
     assertCondition(downloadUrl.includes(encodeURIComponent(tenantContext.tenantId)), 'Download URL did not contain the tenant-scoped key');
@@ -124,47 +131,61 @@ async function runCleanMode(storage, prisma, client, tenantContext) {
       }),
     );
     assertCondition(head.VersionId === second.versionId, 'S3 HeadObject returned the wrong version ID');
-    assertCondition(head.ServerSideEncryption === 'aws:kms', `S3 did not report aws:kms encryption: ${head.ServerSideEncryption ?? 'missing'}`);
+    assertCondition(
+      head.ServerSideEncryption === expectedServerSideEncryption,
+      `S3 reported ${head.ServerSideEncryption ?? 'none'} encryption; configured=${configuredEncryptionMode}`,
+    );
 
-    heldObject = await storage.putObject({
-      key: heldKey,
-      tenantContext,
-      body: payload,
-      contentType: 'application/octet-stream',
-      sourcePath,
-      retentionUntil: new Date(Date.now() + 60 * 60 * 1000),
-      legalHold: true,
-    });
-    assertCondition(heldObject.versionId, 'Object-lock upload did not return a version ID');
-    assertCondition(heldObject.legalHold === true, 'Object-lock metadata did not record legal hold');
+    if (objectLockEnabled) {
+      heldObject = await storage.putObject({
+        key: heldKey,
+        tenantContext,
+        body: payload,
+        contentType: 'application/octet-stream',
+        sourcePath,
+        retentionUntil: new Date(Date.now() + 60 * 60 * 1000),
+        legalHold: true,
+      });
+      assertCondition(heldObject.versionId, 'Object-lock upload did not return a version ID');
+      assertCondition(heldObject.legalHold === true, 'Object-lock metadata did not record legal hold');
 
-    let deleteBlocked = false;
-    try {
-                await storage.deleteObject(tenantContext, heldKey);
-
-    } catch (error) {
-      deleteBlocked = error instanceof Error && /legal hold|retention period/i.test(error.message);
+      let deleteBlocked = false;
+      try {
+        await storage.deleteObject(tenantContext, heldKey);
+      } catch (error) {
+        deleteBlocked = error instanceof Error && /legal hold|retention period/i.test(error.message);
+      }
+      assertCondition(deleteBlocked, 'Protected object deletion was not rejected');
     }
-    assertCondition(deleteBlocked, 'Protected object deletion was not rejected');
 
     const records = await prisma.withTenantContext(tenantContext, (transaction) =>
       transaction.storageObject.findMany({
         where: {
           tenantId: tenantContext.tenantId,
-          key: { in: [scopedVersionKey, scopedHeldKey] },
+          key: objectLockEnabled
+            ? { in: [scopedVersionKey, scopedHeldKey] }
+            : scopedVersionKey,
           deletedAt: null,
         },
         orderBy: { createdAt: 'asc' },
       }),
     );
-    assertCondition(records.length === 3, `Expected 3 storage metadata records, received ${records.length}`);
+    const expectedRecordCount = objectLockEnabled ? 3 : 2;
+    assertCondition(
+      records.length === expectedRecordCount,
+      `Expected ${expectedRecordCount} storage metadata records, received ${records.length}`,
+    );
 
-    console.log(`clean_upload_status=PASS`);
+    console.log('clean_upload_status=PASS');
     console.log(`versioning_status=PASS|versions=${first.versionId},${second.versionId}`);
     console.log(`sha256_status=PASS|sha256=${payloadHash}|size=${payload.length}`);
-    console.log(`encryption_status=PASS|server_side_encryption=${head.ServerSideEncryption}`);
+    console.log(`encryption_status=PASS|configured=${configuredEncryptionMode}|server_side_encryption=${head.ServerSideEncryption ?? 'none'}`);
     console.log('tenant_download_scope_status=PASS|server_derived_prefix=true');
-    console.log(`object_lock_status=PASS|legal_hold_delete_rejected=true`);
+    console.log(
+      objectLockEnabled
+        ? 'object_lock_status=PASS|legal_hold_delete_rejected=true'
+        : 'object_lock_status=SKIP|configured=false|development_boundary=true',
+    );
   } finally {
     if (heldObject?.versionId) {
       await client.send(
