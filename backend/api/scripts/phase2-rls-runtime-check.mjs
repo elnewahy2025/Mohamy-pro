@@ -186,8 +186,8 @@ async function seedTenant(
     },
     async () => {
       await client.query(
-        `INSERT INTO "Membership" ("id", "tenantId", "userId", "status", "activeFrom")
-         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP)`,
+        `INSERT INTO "Membership" ("id", "tenantId", "userId", "status", "activeFrom", "updatedAt")
+         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
         [membership.id, tenant.id, user.id],
       );
       await client.query(
