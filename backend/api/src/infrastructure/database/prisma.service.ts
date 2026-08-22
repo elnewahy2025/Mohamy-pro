@@ -12,6 +12,7 @@ import { MetricsService } from '../../observability/metrics.service';
 import {
   assertMembershipSelectionContext,
   assertTenantTransactionContext,
+  assertUuidContextField,
   type MembershipSelectionContext,
   type TenantTransactionContext,
 } from './tenant-context';
@@ -80,6 +81,48 @@ export class PrismaService
     });
   }
 
+  async withGlobalOperationContext<TResult>(
+    operationId: string,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    assertUuidContextField(operationId, 'operationId');
+    return this.$transaction(async (transaction) => {
+      await setControlContext(transaction, {
+        operationId,
+        globalOperation: true,
+      });
+      return callback(transaction);
+    });
+  }
+
+  async withOutboxDispatcherContext<TResult>(
+    operationId: string,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    assertUuidContextField(operationId, 'operationId');
+    return this.$transaction(async (transaction) => {
+      await setControlContext(transaction, {
+        operationId,
+        outboxDispatcher: true,
+      });
+      return callback(transaction);
+    });
+  }
+
+  async withIdempotencyMaintenanceContext<TResult>(
+    operationId: string,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    assertUuidContextField(operationId, 'operationId');
+    return this.$transaction(async (transaction) => {
+      await setControlContext(transaction, {
+        operationId,
+        idempotencyMaintenance: true,
+      });
+      return callback(transaction);
+    });
+  }
+
   async onModuleInit(): Promise<void> {
     await this.$connect();
     this.logger.log('PostgreSQL connection established');
@@ -99,7 +142,10 @@ async function setTransactionContext(
       set_config('app.tenant_id', ${context.tenantId}, true),
       set_config('app.user_id', ${context.userId}, true),
       set_config('app.membership_id', ${context.membershipId}, true),
-      set_config('app.operation_id', ${context.operationId}, true)
+      set_config('app.operation_id', ${context.operationId}, true),
+      set_config('app.global_operation', 'false', true),
+      set_config('app.outbox_dispatcher', 'false', true),
+      set_config('app.idempotency_maintenance', 'false', true)
   `;
 }
 
@@ -112,7 +158,33 @@ async function setMembershipSelectionContext(
       set_config('app.tenant_id', '', true),
       set_config('app.user_id', ${context.userId}, true),
       set_config('app.membership_id', '', true),
-      set_config('app.operation_id', ${context.operationId}, true)
+      set_config('app.operation_id', ${context.operationId}, true),
+      set_config('app.global_operation', 'false', true),
+      set_config('app.outbox_dispatcher', 'false', true),
+      set_config('app.idempotency_maintenance', 'false', true)
+  `;
+}
+
+interface ControlContext {
+  operationId: string;
+  globalOperation?: boolean;
+  outboxDispatcher?: boolean;
+  idempotencyMaintenance?: boolean;
+}
+
+async function setControlContext(
+  transaction: Prisma.TransactionClient,
+  context: ControlContext,
+): Promise<void> {
+  await transaction.$queryRaw`
+    SELECT
+      set_config('app.tenant_id', '', true),
+      set_config('app.user_id', '', true),
+      set_config('app.membership_id', '', true),
+      set_config('app.operation_id', ${context.operationId}, true),
+      set_config('app.global_operation', ${String(context.globalOperation ?? false)}, true),
+      set_config('app.outbox_dispatcher', ${String(context.outboxDispatcher ?? false)}, true),
+      set_config('app.idempotency_maintenance', ${String(context.idempotencyMaintenance ?? false)}, true)
   `;
 }
 

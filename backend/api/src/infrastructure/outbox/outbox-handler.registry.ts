@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import type { OutboxMessage } from '@prisma/client';
+import type { OutboxMessage, Prisma } from '@prisma/client';
 
-export type OutboxHandler = (message: OutboxMessage) => Promise<void>;
+export type OutboxHandler = (
+  message: OutboxMessage,
+  transaction: Prisma.TransactionClient,
+) => Promise<void>;
 
 @Injectable()
 export class OutboxHandlerRegistry {

@@ -26,10 +26,16 @@ import type {
   ValidatedEnvironment,
 } from '../../config/env.validation';
 import { PrismaService } from '../database/prisma.service';
+import {
+  assertTenantTransactionContext,
+  assertUuidContextField,
+  type TenantTransactionContext,
+} from '../database/tenant-context';
 import { ClamAvMalwareScanner } from './clamav-malware-scanner.service';
 
 export interface PutObjectInput {
   key: string;
+  tenantContext: TenantTransactionContext;
   body: Uint8Array | Buffer | Readable;
   contentType: string;
   metadata?: Record<string, string>;
@@ -54,8 +60,15 @@ export interface StoredObjectMetadata {
 
 export interface ObjectStorageService {
   putObject(input: PutObjectInput): Promise<StoredObjectMetadata>;
-  getDownloadUrl(key: string, expiresInSeconds?: number): Promise<string>;
-  deleteObject(key: string): Promise<void>;
+  getDownloadUrl(
+    tenantContext: TenantTransactionContext,
+    key: string,
+    expiresInSeconds?: number,
+  ): Promise<string>;
+  deleteObject(
+    tenantContext: TenantTransactionContext,
+    key: string,
+  ): Promise<void>;
 }
 
 @Injectable()
@@ -138,6 +151,11 @@ export class S3ObjectStorageService
   }
 
   async putObject(input: PutObjectInput): Promise<StoredObjectMetadata> {
+    assertTenantTransactionContext(input.tenantContext);
+    const scopedKey = buildTenantObjectKey(
+      input.tenantContext.tenantId,
+      input.key,
+    );
     if (this.malwareScanner.enabled) {
       if (!input.sourcePath) {
         throw new Error('A sourcePath is required for malware scanning');
@@ -152,7 +170,7 @@ export class S3ObjectStorageService
     const result = await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
-        Key: input.key,
+        Key: scopedKey,
         Body: prepared.body,
         ContentType: input.contentType,
         Metadata: input.metadata,
@@ -170,58 +188,85 @@ export class S3ObjectStorageService
     const digest = prepared.finalize();
     const versionId = result.VersionId ?? input.versionId;
     if (input.retentionUntil && input.retentionUntil <= new Date()) {
-      await this.deleteUploadedObject(input.key, versionId);
+      await this.deleteUploadedObject(scopedKey, versionId);
       throw new Error('Retention must be set to a future time');
     }
     if (input.retentionUntil || input.legalHold) {
       if (!this.objectLockEnabled || !versionId) {
-        await this.deleteUploadedObject(input.key, versionId);
+        await this.deleteUploadedObject(scopedKey, versionId);
         throw new Error(
           'Retention and legal hold require versioned S3 object lock storage',
         );
       }
       try {
         await this.applyObjectLock(
-          input.key,
+          scopedKey,
           versionId,
           input.retentionUntil,
           input.legalHold ?? false,
         );
       } catch (error) {
-        await this.deleteUploadedObject(input.key, versionId);
+        await this.deleteUploadedObject(scopedKey, versionId);
         throw error;
       }
     }
 
     const malwareStatus = this.malwareScanner.enabled ? 'CLEAN' : 'NOT_SCANNED';
     try {
-      const record = await this.prisma.storageObject.create({
-        data: {
-          key: input.key,
-          versionId,
-          sha256: digest.sha256,
-          sizeBytes: digest.sizeBytes,
-          contentType: input.contentType,
-          encryptionMode: this.encryptionMode,
-          malwareStatus,
-          malwareScannedAt: this.malwareScanner.enabled ? new Date() : null,
-          retentionUntil: input.retentionUntil,
-          legalHold: input.legalHold ?? false,
-          metadata: input.metadata,
-        },
-      });
+      const record = await this.prisma.withTenantContext(
+        input.tenantContext,
+        (transaction) =>
+          transaction.storageObject.create({
+            data: {
+              tenantId: input.tenantContext.tenantId,
+              key: scopedKey,
+              versionId,
+              sha256: digest.sha256,
+              sizeBytes: digest.sizeBytes,
+              contentType: input.contentType,
+              encryptionMode: this.encryptionMode,
+              malwareStatus,
+              malwareScannedAt: this.malwareScanner.enabled ? new Date() : null,
+              retentionUntil: input.retentionUntil,
+              legalHold: input.legalHold ?? false,
+              metadata: input.metadata,
+            },
+          }),
+      );
       return toStoredObjectMetadata(record);
     } catch (error) {
-      await this.deleteUploadedObject(input.key, versionId);
+      await this.deleteUploadedObject(scopedKey, versionId);
       throw error;
     }
   }
 
-  async getDownloadUrl(key: string, expiresInSeconds = 300): Promise<string> {
-    const record = await this.prisma.storageObject.findFirst({
-      where: { key, deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-    });
+  async getDownloadUrl(
+    tenantContext: TenantTransactionContext,
+    key: string,
+    expiresInSeconds = 300,
+  ): Promise<string> {
+    if (
+      !Number.isInteger(expiresInSeconds) ||
+      expiresInSeconds < 60 ||
+      expiresInSeconds > 3_600
+    ) {
+      throw new Error(
+        'Download URL expiry must be an integer from 60 to 3600 seconds',
+      );
+    }
+    const scopedKey = buildTenantObjectKey(tenantContext.tenantId, key);
+    const record = await this.prisma.withTenantContext(
+      tenantContext,
+      (transaction) =>
+        transaction.storageObject.findFirst({
+          where: {
+            tenantId: tenantContext.tenantId,
+            key: scopedKey,
+            deletedAt: null,
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+    );
     if (!record) throw new Error('Storage metadata was not found');
     if (record.malwareStatus !== 'CLEAN' && this.malwareScanner.enabled) {
       throw new Error('Object is not approved for download');
@@ -230,18 +275,30 @@ export class S3ObjectStorageService
       this.client,
       new GetObjectCommand({
         Bucket: this.bucket,
-        Key: key,
+        Key: record.key,
         ...(record.versionId ? { VersionId: record.versionId } : {}),
       }),
       { expiresIn: expiresInSeconds },
     );
   }
 
-  async deleteObject(key: string): Promise<void> {
-    const record = await this.prisma.storageObject.findFirst({
-      where: { key, deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-    });
+  async deleteObject(
+    tenantContext: TenantTransactionContext,
+    key: string,
+  ): Promise<void> {
+    const scopedKey = buildTenantObjectKey(tenantContext.tenantId, key);
+    const record = await this.prisma.withTenantContext(
+      tenantContext,
+      (transaction) =>
+        transaction.storageObject.findFirst({
+          where: {
+            tenantId: tenantContext.tenantId,
+            key: scopedKey,
+            deletedAt: null,
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+    );
     if (!record) throw new Error('Storage metadata was not found');
     if (record.legalHold) throw new Error('Object is protected by legal hold');
     if (record.retentionUntil && record.retentionUntil > new Date()) {
@@ -251,14 +308,16 @@ export class S3ObjectStorageService
     await this.client.send(
       new DeleteObjectCommand({
         Bucket: this.bucket,
-        Key: key,
+        Key: record.key,
         ...(record.versionId ? { VersionId: record.versionId } : {}),
       }),
     );
-    await this.prisma.storageObject.update({
-      where: { id: record.id },
-      data: { deletedAt: new Date() },
-    });
+    await this.prisma.withTenantContext(tenantContext, (transaction) =>
+      transaction.storageObject.update({
+        where: { id: record.id },
+        data: { deletedAt: new Date() },
+      }),
+    );
   }
 
   private async applyObjectLock(
@@ -311,6 +370,17 @@ export class S3ObjectStorageService
   onModuleDestroy(): void {
     this.client.destroy();
   }
+}
+
+export function buildTenantObjectKey(
+  tenantId: string,
+  logicalKey: string,
+): string {
+  assertUuidContextField(tenantId, 'tenantId');
+  if (!logicalKey || logicalKey.startsWith('/') || logicalKey.includes('..')) {
+    throw new Error('Storage object key is invalid');
+  }
+  return `tenants/${tenantId}/${logicalKey}`;
 }
 
 export function prepareBodyForIntegrity(body: Uint8Array | Buffer | Readable): {

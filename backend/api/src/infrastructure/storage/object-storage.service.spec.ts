@@ -1,8 +1,31 @@
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
-import { prepareBodyForIntegrity } from './object-storage.service';
+import {
+  buildTenantObjectKey,
+  prepareBodyForIntegrity,
+} from './object-storage.service';
 
-describe('storage object integrity preparation', () => {
+describe('storage object integrity and tenant key boundary', () => {
+  const tenantId = '11111111-1111-4111-8111-111111111111';
+
+  it('builds a server-prefixed tenant object key', () => {
+    expect(buildTenantObjectKey(tenantId, 'documents/contract.pdf')).toBe(
+      `tenants/${tenantId}/documents/contract.pdf`,
+    );
+  });
+
+  it('rejects unsafe or malformed object keys before upload', () => {
+    expect(() => buildTenantObjectKey('not-a-uuid', 'contract.pdf')).toThrow(
+      'tenantId',
+    );
+    expect(() => buildTenantObjectKey(tenantId, '../contract.pdf')).toThrow(
+      'Storage object key is invalid',
+    );
+    expect(() => buildTenantObjectKey(tenantId, '/contract.pdf')).toThrow(
+      'Storage object key is invalid',
+    );
+  });
+
   it('calculates SHA-256 and byte count for a buffer', () => {
     const body = Buffer.from('Mohamy Pro storage integrity', 'utf8');
     const prepared = prepareBodyForIntegrity(body);

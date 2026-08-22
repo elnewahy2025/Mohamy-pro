@@ -14,7 +14,10 @@ import {
 const require = createRequire(import.meta.url);
 const { NestFactory } = require('@nestjs/core');
 const { AppModule } = require('../dist/src/app.module.js');
-const { S3ObjectStorageService } = require('../dist/src/infrastructure/storage/object-storage.service.js');
+const {
+  S3ObjectStorageService,
+  buildTenantObjectKey,
+} = require('../dist/src/infrastructure/storage/object-storage.service.js');
 const { PrismaService } = require('../dist/src/infrastructure/database/prisma.service.js');
 const mode = process.env.STORAGE_SECURITY_MODE ?? 'clean';
 const bucket = process.env.S3_BUCKET;
@@ -58,12 +61,24 @@ async function deleteVersion(client, key, versionId, bypassGovernanceRetention =
   );
 }
 
-async function runCleanMode(storage, prisma, client) {
+function isMissingObjectError(error) {
+  if (typeof error !== 'object' || error === null) return false;
+  const candidate = error;
+  return (
+    candidate.name === 'NotFound' ||
+    candidate.name === 'NoSuchKey' ||
+    candidate.$metadata?.httpStatusCode === 404
+  );
+}
+
+async function runCleanMode(storage, prisma, client, tenantContext) {
   const suffix = randomUUID().replaceAll('-', '');
   const payload = Buffer.from(`Mohamy Phase 1 clean storage evidence ${suffix}`, 'utf8');
   const sourcePath = path.join(os.tmpdir(), `mohamy-storage-clean-${suffix}.bin`);
   const versionKey = `phase1/runtime/versioned-${suffix}.bin`;
   const heldKey = `phase1/runtime/held-${suffix}.bin`;
+  const scopedVersionKey = buildTenantObjectKey(tenantContext.tenantId, versionKey);
+  const scopedHeldKey = buildTenantObjectKey(tenantContext.tenantId, heldKey);
   const payloadHash = sha256(payload);
   await fs.writeFile(sourcePath, payload, { flag: 'wx' });
 
@@ -72,12 +87,14 @@ async function runCleanMode(storage, prisma, client) {
   try {
     const first = await storage.putObject({
       key: versionKey,
+      tenantContext,
       body: payload,
       contentType: 'application/octet-stream',
       sourcePath,
     });
     const second = await storage.putObject({
       key: versionKey,
+      tenantContext,
       body: payload,
       contentType: 'application/octet-stream',
       sourcePath,
@@ -94,10 +111,12 @@ async function runCleanMode(storage, prisma, client) {
     assertCondition(second.malwareStatus === 'CLEAN', 'Second upload was not marked CLEAN');
     assertCondition(first.encryptionMode === 'aws:kms', `Unexpected encryption mode: ${first.encryptionMode}`);
 
+    const downloadUrl = await storage.getDownloadUrl(tenantContext, versionKey);
+    assertCondition(downloadUrl.includes(encodeURIComponent(tenantContext.tenantId)), 'Download URL did not contain the tenant-scoped key');
     const head = await client.send(
       new HeadObjectCommand({
         Bucket: bucket,
-        Key: versionKey,
+        Key: scopedVersionKey,
         VersionId: second.versionId,
       }),
     );
@@ -106,6 +125,7 @@ async function runCleanMode(storage, prisma, client) {
 
     heldObject = await storage.putObject({
       key: heldKey,
+      tenantContext,
       body: payload,
       contentType: 'application/octet-stream',
       sourcePath,
@@ -117,44 +137,59 @@ async function runCleanMode(storage, prisma, client) {
 
     let deleteBlocked = false;
     try {
-      await storage.deleteObject(heldKey);
+                await storage.deleteObject(tenantContext, heldKey);
+
     } catch (error) {
       deleteBlocked = error instanceof Error && /legal hold|retention period/i.test(error.message);
     }
     assertCondition(deleteBlocked, 'Protected object deletion was not rejected');
 
-    const records = await prisma.storageObject.findMany({
-      where: { key: { in: [versionKey, heldKey] }, deletedAt: null },
-      orderBy: { createdAt: 'asc' },
-    });
+    const records = await prisma.withTenantContext(tenantContext, (transaction) =>
+      transaction.storageObject.findMany({
+        where: {
+          tenantId: tenantContext.tenantId,
+          key: { in: [scopedVersionKey, scopedHeldKey] },
+          deletedAt: null,
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+    );
     assertCondition(records.length === 3, `Expected 3 storage metadata records, received ${records.length}`);
 
     console.log(`clean_upload_status=PASS`);
     console.log(`versioning_status=PASS|versions=${first.versionId},${second.versionId}`);
     console.log(`sha256_status=PASS|sha256=${payloadHash}|size=${payload.length}`);
     console.log(`encryption_status=PASS|server_side_encryption=${head.ServerSideEncryption}`);
+    console.log('tenant_download_scope_status=PASS|server_derived_prefix=true');
     console.log(`object_lock_status=PASS|legal_hold_delete_rejected=true`);
   } finally {
     if (heldObject?.versionId) {
       await client.send(
         new PutObjectLegalHoldCommand({
           Bucket: bucket,
-          Key: heldKey,
+          Key: scopedHeldKey,
           VersionId: heldObject.versionId,
           LegalHold: { Status: 'OFF' },
         }),
       );
-      await deleteVersion(client, heldKey, heldObject.versionId, true);
+      await deleteVersion(client, scopedHeldKey, heldObject.versionId, true);
     }
     for (const object of storedVersions) {
-      if (object.versionId) await deleteVersion(client, versionKey, object.versionId);
+      if (object.versionId) await deleteVersion(client, scopedVersionKey, object.versionId);
     }
-    await prisma.storageObject.deleteMany({ where: { key: { in: [versionKey, heldKey] } } });
+    await prisma.withTenantContext(tenantContext, (transaction) =>
+      transaction.storageObject.deleteMany({
+        where: {
+          tenantId: tenantContext.tenantId,
+          key: { in: [scopedVersionKey, scopedHeldKey] },
+        },
+      }),
+    );
     await fs.rm(sourcePath, { force: true });
   }
 }
 
-async function runFailClosedMode(storage, prisma, client) {
+async function runFailClosedMode(storage, prisma, client, tenantContext) {
   const suffix = randomUUID().replaceAll('-', '');
   const payload = Buffer.from(`Mohamy Phase 1 ClamAV fail-closed evidence ${suffix}`, 'utf8');
   const sourcePath = path.join(os.tmpdir(), `mohamy-storage-fail-closed-${suffix}.bin`);
@@ -165,6 +200,7 @@ async function runFailClosedMode(storage, prisma, client) {
     try {
       await storage.putObject({
         key,
+        tenantContext,
         body: payload,
         contentType: 'application/octet-stream',
         sourcePath,
@@ -173,19 +209,75 @@ async function runFailClosedMode(storage, prisma, client) {
       rejected = error instanceof Error;
     }
     assertCondition(rejected, 'Upload was not rejected when ClamAV was unavailable');
-    const records = await prisma.storageObject.count({ where: { key } });
+    const scopedKey = buildTenantObjectKey(tenantContext.tenantId, key);
+    const records = await prisma.withTenantContext(tenantContext, (transaction) =>
+      transaction.storageObject.count({
+        where: { tenantId: tenantContext.tenantId, key: scopedKey },
+      }),
+    );
     assertCondition(records === 0, `Fail-closed path left ${records} metadata records`);
     try {
-      await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+      await client.send(new HeadObjectCommand({ Bucket: bucket, Key: scopedKey }));
       throw new Error('Fail-closed path unexpectedly wrote an S3 object');
     } catch (error) {
       if (error instanceof Error && error.message === 'Fail-closed path unexpectedly wrote an S3 object') throw error;
+      if (!isMissingObjectError(error)) throw error;
     }
     console.log('clamav_fail_closed_status=PASS|metadata_records=0|object_written=false');
   } finally {
-    await prisma.storageObject.deleteMany({ where: { key } });
+    await prisma.withTenantContext(tenantContext, (transaction) =>
+      transaction.storageObject.deleteMany({
+        where: {
+          tenantId: tenantContext.tenantId,
+          key: buildTenantObjectKey(tenantContext.tenantId, key),
+        },
+      }),
+    );
     await fs.rm(sourcePath, { force: true });
   }
+}
+
+async function createRuntimeTenant(prisma) {
+  const tenantContext = {
+    tenantId: randomUUID(),
+    userId: randomUUID(),
+    membershipId: randomUUID(),
+    operationId: randomUUID(),
+  };
+  await prisma.tenant.create({
+    data: {
+      id: tenantContext.tenantId,
+      slug: `storage-runtime-${randomUUID().slice(0, 8)}`,
+      name: 'Disposable Storage Runtime Tenant',
+      status: 'ACTIVE',
+    },
+  });
+  await prisma.user.create({
+    data: {
+      id: tenantContext.userId,
+      status: 'ACTIVE',
+    },
+  });
+  await prisma.withTenantContext(tenantContext, (transaction) =>
+    transaction.membership.create({
+      data: {
+        id: tenantContext.membershipId,
+        tenantId: tenantContext.tenantId,
+        userId: tenantContext.userId,
+        status: 'ACTIVE',
+        activeFrom: new Date(),
+      },
+    }),
+  );
+  return tenantContext;
+}
+
+async function deleteRuntimeTenant(prisma, tenantContext) {
+  await prisma.withTenantContext(tenantContext, (transaction) =>
+    transaction.membership.delete({ where: { id: tenantContext.membershipId } }),
+  );
+  await prisma.user.delete({ where: { id: tenantContext.userId } });
+  await prisma.tenant.delete({ where: { id: tenantContext.tenantId } });
 }
 
 async function main() {
@@ -194,11 +286,17 @@ async function main() {
   const storage = app.get(S3ObjectStorageService);
   const prisma = app.get(PrismaService);
   const client = createS3Client();
+  let tenantContext;
   try {
-    if (mode === 'clean') await runCleanMode(storage, prisma, client);
-    else await runFailClosedMode(storage, prisma, client);
+    tenantContext = await createRuntimeTenant(prisma);
+    if (mode === 'clean') await runCleanMode(storage, prisma, client, tenantContext);
+    else await runFailClosedMode(storage, prisma, client, tenantContext);
     console.log(`storage_security_result=PASS|mode=${mode}`);
   } finally {
+    if (tenantContext) await deleteRuntimeTenant(prisma, tenantContext).catch((cleanupError) => {
+      console.error(`storage_security_cleanup_result=FAIL|error=${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`);
+      process.exitCode = 1;
+    });
     client.destroy();
     await app.close();
   }

@@ -18,22 +18,22 @@ const UUID_PATTERN =
 export function assertTenantTransactionContext(
   context: TenantTransactionContext,
 ): TenantTransactionContext {
-  assertUuid(context.tenantId, 'tenantId');
-  assertUuid(context.userId, 'userId');
-  assertUuid(context.membershipId, 'membershipId');
-  assertUuid(context.operationId, 'operationId');
+  assertUuidContextField(context.tenantId, 'tenantId');
+  assertUuidContextField(context.userId, 'userId');
+  assertUuidContextField(context.membershipId, 'membershipId');
+  assertUuidContextField(context.operationId, 'operationId');
   return context;
 }
 
 export function assertMembershipSelectionContext(
   context: MembershipSelectionContext,
 ): MembershipSelectionContext {
-  assertUuid(context.userId, 'userId');
-  assertUuid(context.operationId, 'operationId');
+  assertUuidContextField(context.userId, 'userId');
+  assertUuidContextField(context.operationId, 'operationId');
   return context;
 }
 
-function assertUuid(value: string, fieldName: string): void {
+export function assertUuidContextField(value: string, fieldName: string): void {
   if (typeof value !== 'string' || !UUID_PATTERN.test(value)) {
     throw new BadRequestException(
       `Invalid database context field: ${fieldName}`,

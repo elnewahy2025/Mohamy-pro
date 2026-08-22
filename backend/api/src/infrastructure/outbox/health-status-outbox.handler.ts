@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { OutboxMessage } from '@prisma/client';
+import type { OutboxMessage, Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 
 export const HEALTH_STATUS_UPDATED_EVENT = 'health.status.updated';
@@ -13,9 +13,13 @@ interface HealthStatusPayload {
 export class HealthStatusOutboxHandler {
   constructor(private readonly prisma: PrismaService) {}
 
-  async handle(message: OutboxMessage): Promise<void> {
+  async handle(
+    message: OutboxMessage,
+    transaction?: Prisma.TransactionClient,
+  ): Promise<void> {
     const payload = parsePayload(message.payload);
-    await this.prisma.health.update({
+    const client = transaction ?? this.prisma;
+    await client.health.update({
       where: { id: payload.healthId },
       data: { status: payload.status },
     });

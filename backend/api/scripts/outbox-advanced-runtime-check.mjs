@@ -39,13 +39,36 @@ function redisConnection(url) {
   };
 }
 
+async function withSettings(client, settings, callback) {
+  await client.query('BEGIN');
+  try {
+    await client.query(
+      `SELECT
+         set_config('app.tenant_id', '', true),
+         set_config('app.user_id', '', true),
+         set_config('app.membership_id', '', true),
+         set_config('app.operation_id', $1, true),
+         set_config('app.global_operation', $2, true),
+         set_config('app.outbox_dispatcher', $3, true),
+         set_config('app.idempotency_maintenance', 'false', true)`,
+      [settings.operationId, String(settings.globalOperation ?? false), String(settings.outboxDispatcher ?? false)],
+    );
+    const result = await callback();
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  }
+}
+
 async function readOutbox(client, id) {
-  const result = await client.query(
+  const result = await withSettings(client, { operationId: randomUUID(), outboxDispatcher: true }, () => client.query(
     `SELECT "status", "attempts", "availableAt", "claimedAt", "leaseToken", "error", "processedAt",
             EXTRACT(EPOCH FROM ("availableAt" - CURRENT_TIMESTAMP)) * 1000 AS "availableDelayMs"
      FROM "OutboxMessage" WHERE "id" = $1`,
     [id],
-  );
+  ));
   return result.rows[0] ?? null;
 }
 
@@ -63,11 +86,11 @@ async function main() {
     const retryId = `phase1-retry-${randomUUID().replaceAll('-', '')}`;
     const retryEvent = `phase1.runtime.retry.${randomUUID().replaceAll('-', '')}`;
     testIds.push(retryId);
-    await database.query(
+    await withSettings(database, { operationId: randomUUID(), globalOperation: true }, () => database.query(
       `INSERT INTO "OutboxMessage" ("id", "aggregateType", "aggregateId", "eventType", "payload", "status", "availableAt", "attempts")
        VALUES ($1, 'Phase1Advanced', $2, $3, $4::jsonb, 'PENDING', CURRENT_TIMESTAMP, 0)`,
       [retryId, retryId, retryEvent, JSON.stringify({ test: 'retry-backoff' })],
-    );
+    ));
     const firstFailure = await waitFor(
       'retry failure',
       () => readOutbox(database, retryId),
@@ -89,11 +112,11 @@ async function main() {
     const expiredToken = `expired-${randomUUID().replaceAll('-', '')}`;
     const leaseEvent = `phase1.runtime.lease.${randomUUID().replaceAll('-', '')}`;
     testIds.push(leaseId);
-    await database.query(
+    await withSettings(database, { operationId: randomUUID(), globalOperation: true }, () => database.query(
       `INSERT INTO "OutboxMessage" ("id", "aggregateType", "aggregateId", "eventType", "payload", "status", "availableAt", "attempts", "claimedAt", "leaseToken")
        VALUES ($1, 'Phase1Advanced', $2, $3, $4::jsonb, 'PROCESSING', CURRENT_TIMESTAMP - INTERVAL '2 minutes', 1, CURRENT_TIMESTAMP - INTERVAL '2 minutes', $5)`,
       [leaseId, leaseId, leaseEvent, JSON.stringify({ test: 'lease-expiry' }), expiredToken],
-    );
+    ));
     const reclaimed = await waitFor(
       'expired lease reclamation',
       () => readOutbox(database, leaseId),
@@ -107,17 +130,17 @@ async function main() {
 
     const duplicateId = `phase1-duplicate-${randomUUID().replaceAll('-', '')}`;
     testIds.push(duplicateId);
-    await database.query(
+    await withSettings(database, { operationId: randomUUID(), globalOperation: true }, () => database.query(
       `INSERT INTO "OutboxMessage" ("id", "aggregateType", "aggregateId", "eventType", "payload", "status", "attempts", "processedAt")
        VALUES ($1, 'Phase1Advanced', $1, $2, $3::jsonb, 'PROCESSED', 1, CURRENT_TIMESTAMP)`,
       [duplicateId, `phase1.runtime.duplicate.${randomUUID().replaceAll('-', '')}`, JSON.stringify({ test: 'duplicate-delivery' })],
-    );
+    ));
     for (const suffix of ['a', 'b']) {
       const jobId = `phase1-duplicate-${duplicateId}-${suffix}`;
       jobIds.push(jobId);
       await queue.add(
         'outbox.dispatch',
-        { outboxMessageId: duplicateId, attempt: 2 },
+        { outboxMessageId: duplicateId, attempt: 2, scope: 'GLOBAL', eventVersion: 1 },
         { jobId },
       );
     }
@@ -147,15 +170,15 @@ async function main() {
       if (job) await job.remove().catch(() => undefined);
     }
     if (testIds.length > 0) {
-      await database.query(
+      await withSettings(database, { operationId: randomUUID(), outboxDispatcher: true }, () => database.query(
         `DELETE FROM "OutboxMessage" WHERE "id" = ANY($1::text[])`,
         [testIds],
-      );
+      ));
     }
-    const remaining = await database.query(
+    const remaining = await withSettings(database, { operationId: randomUUID(), outboxDispatcher: true }, () => database.query(
       `SELECT count(*)::int AS count FROM "OutboxMessage" WHERE "id" = ANY($1::text[])`,
       [testIds],
-    );
+    ));
     console.log(`outbox_cleanup_remaining=${remaining.rows[0]?.count ?? 'unknown'}`);
     await queue.close();
     await redis.quit();

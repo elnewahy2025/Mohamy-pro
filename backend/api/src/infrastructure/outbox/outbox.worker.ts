@@ -21,7 +21,11 @@ import {
   extractQueueTraceContext,
   readQueueTelemetry,
 } from '../queue/queue-telemetry';
-import { OutboxService, type OutboxJobPayload } from './outbox.service';
+import {
+  assertOutboxJobPayload,
+  OutboxService,
+  type OutboxJobPayload,
+} from './outbox.service';
 import { OutboxHandlerRegistry } from './outbox-handler.registry';
 
 const tracer = trace.getTracer('mohamy-outbox-worker');
@@ -121,10 +125,12 @@ export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
     job: Job<OutboxJobPayload>,
     span: ReturnType<typeof tracer.startSpan>,
   ): Promise<void> {
-    const { outboxMessageId } = job.data;
-    const message = await this.outbox.getById(outboxMessageId);
+    const payload = assertOutboxJobPayload(job.data);
+    const message = await this.outbox.getByJob(payload);
     if (!message) {
-      throw new Error(`Outbox message ${outboxMessageId} was not found`);
+      throw new Error(
+        `Outbox message ${payload.outboxMessageId} was not found`,
+      );
     }
 
     if (message.status === 'PROCESSED' || message.status === 'DEAD_LETTER') {
@@ -134,7 +140,7 @@ export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
 
     if (message.status !== 'PROCESSING' || !message.leaseToken) {
       this.logger.warn(
-        `Skipping stale outbox job ${job.id ?? outboxMessageId} for message ${outboxMessageId}`,
+        `Skipping stale outbox job ${job.id ?? payload.outboxMessageId} for message ${payload.outboxMessageId}`,
       );
       span.setStatus({ code: SpanStatusCode.OK });
       return;
@@ -142,7 +148,9 @@ export class OutboxWorker implements OnModuleInit, OnModuleDestroy {
 
     try {
       const handler = this.handlers.resolve(message.eventType);
-      await handler(message);
+      await this.outbox.runInTenantContext(message, (transaction) =>
+        handler(message, transaction),
+      );
       const marked = await this.outbox.markProcessed(
         message.id,
         message.leaseToken,

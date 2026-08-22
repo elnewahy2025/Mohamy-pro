@@ -59,6 +59,18 @@ enum DenialStatus {
   EXPIRED
 }
 
+enum OutboxScope {
+  GLOBAL
+  TENANT
+}
+
+enum IdempotencyState {
+  RESERVED
+  COMPLETED
+  TERMINAL_FAILURE
+  RETRYABLE
+}
+
 // Phase 1: Health check table to prove migrations work
 model Health {
   id        String   @id @default(uuid())
@@ -94,46 +106,65 @@ model StorageObject {
   @@index([tenantId, createdAt])
 }
 
-// Phase 1: Transactional outbox table skeleton
+// Phase 1/2: Transactional outbox delivery state. Tenant events carry a full server-derived worker context.
 model OutboxMessage {
-  id             String    @id @default(uuid())
-  tenantId       String?
-  aggregateType  String
-  aggregateId    String
-  eventType      String
-  payload        Json
-  status         String    @default("PENDING") // PENDING, PROCESSING, PROCESSED, FAILED, DEAD_LETTER
-  error          String?
-  attempts       Int       @default(0)
-  availableAt    DateTime  @default(now())
-  claimedAt      DateTime?
-  leaseToken     String?
-  deadLetteredAt DateTime?
-  createdAt      DateTime  @default(now())
-  processedAt    DateTime?
-  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  id                  String      @id @default(uuid())
+  tenantId            String?
+  scope               OutboxScope @default(GLOBAL)
+  aggregateType       String
+  aggregateId         String
+  eventType           String
+  eventVersion        Int         @default(1)
+  payload             Json
+  correlationId       String?
+  traceparent         String?
+  contextUserId       String?
+  contextMembershipId String?
+  operationId         String?
+  status              String      @default("PENDING") // PENDING, PROCESSING, PROCESSED, FAILED, DEAD_LETTER
+  error               String?
+  attempts            Int         @default(0)
+  availableAt         DateTime    @default(now())
+  claimedAt           DateTime?
+  leaseToken          String?
+  deadLetteredAt      DateTime?
+  createdAt           DateTime    @default(now())
+  processedAt         DateTime?
+  tenant              Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([status, availableAt, createdAt])
   @@index([status, claimedAt])
   @@index([aggregateType, aggregateId])
   @@index([tenantId, status, availableAt])
+  @@index([scope, tenantId, status, availableAt])
 }
 
-// Phase 1: Idempotency registry skeleton
+// Phase 1/2: Scoped idempotency registry. Legacy rows are retained but cannot be replayed without their migrated scope.
 model IdempotencyKey {
-  key            String   @id
-  userId         String?
-  tenantId       String?
-  requestPath    String
-  responseStatus Int
-  responseBody   Json
-  createdAt      DateTime @default(now())
-  expiresAt      DateTime
-  tenant         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  user           User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  id                    String            @id @default(uuid())
+  key                   String            @unique
+  actorScope            String
+  tenantScope           String
+  userId                String?
+  tenantId              String?
+  httpMethod            String
+  requestPath           String
+  requestFingerprint    String            @db.VarChar(64)
+  state                 IdempotencyState  @default(RESERVED)
+  responseStatus        Int?
+  responseBody          Json?
+  responseHeaders       Json?
+  reservationLeaseUntil DateTime?
+  reservationVersion    Int               @default(0)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  expiresAt             DateTime
+  tenant                Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user                  User?             @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([expiresAt])
-  @@index([tenantId, userId])
+  @@index([tenantScope, actorScope, expiresAt])
+  @@index([key, actorScope, tenantScope, httpMethod, requestPath])
 }
 
 // Phase 2: Global application identity. Provider credentials and MFA secrets are not stored here.
