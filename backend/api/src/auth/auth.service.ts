@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ValidatedEnvironment } from '../config/env.validation';
 import { AuthenticationError, ProviderUnavailableError } from './auth.errors';
@@ -13,6 +13,8 @@ import { SessionService } from './session.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject(OIDC_CLIENT) private readonly oidc: OidcClientPort,
     private readonly transactions: OidcTransactionStore,
@@ -56,27 +58,35 @@ export class AuthService {
     const transaction = await this.transactions.consume(input.state);
     if (!transaction) throw new AuthenticationError('AUTHENTICATION_FAILED');
 
+    let phase = 'token_exchange';
     try {
       const tokens = await this.oidc.exchangeCode(
         input.code,
         transaction.codeVerifier,
       );
+      phase = 'id_token_validation';
       const identityClaims = await this.oidc.verifyIdToken(
         tokens.id_token,
         transaction.nonce,
       );
+      phase = 'access_token_validation';
       const accessClaims = await this.oidc.verifyAccessToken(
         tokens.access_token,
       );
+      phase = 'subject_consistency';
       if (identityClaims.sub !== accessClaims.sub) {
         throw new AuthenticationError('AUTHENTICATION_FAILED');
       }
+      phase = 'session_creation';
       const { cookieValue } = await this.sessions.createFromOidc(
         identityClaims,
         tokens,
       );
       return { cookieValue, returnTo: transaction.returnTo };
     } catch (error) {
+      this.logger.warn(
+        `OIDC callback rejected during ${phase}|error=${safeErrorName(error)}`,
+      );
       if (error instanceof AuthenticationError) throw error;
       if (isProviderUnavailable(error)) throw new ProviderUnavailableError();
       throw new AuthenticationError('AUTHENTICATION_FAILED');
@@ -103,6 +113,10 @@ function safeReturnTo(value: string | undefined): string {
 
 function base64UrlSha256(value: string): string {
   return createHash('sha256').update(value, 'ascii').digest('base64url');
+}
+
+function safeErrorName(error: unknown): string {
+  return error instanceof Error && error.name ? error.name : 'UnknownError';
 }
 
 function isProviderUnavailable(error: unknown): boolean {
