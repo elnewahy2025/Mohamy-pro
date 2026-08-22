@@ -141,26 +141,26 @@ model OutboxMessage {
 
 // Phase 1/2: Scoped idempotency registry. Legacy rows are retained but cannot be replayed without their migrated scope.
 model IdempotencyKey {
-  id                    String            @id @default(uuid())
-  key                   String            @unique
+  id                    String           @id @default(uuid())
+  key                   String           @unique
   actorScope            String
   tenantScope           String
   userId                String?
   tenantId              String?
   httpMethod            String
   requestPath           String
-  requestFingerprint    String            @db.VarChar(64)
-  state                 IdempotencyState  @default(RESERVED)
+  requestFingerprint    String           @db.VarChar(64)
+  state                 IdempotencyState @default(RESERVED)
   responseStatus        Int?
   responseBody          Json?
   responseHeaders       Json?
   reservationLeaseUntil DateTime?
-  reservationVersion    Int               @default(0)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  reservationVersion    Int              @default(0)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
   expiresAt             DateTime
-  tenant                Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  user                  User?             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  tenant                Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user                  User?            @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([expiresAt])
   @@index([tenantScope, actorScope, expiresAt])
