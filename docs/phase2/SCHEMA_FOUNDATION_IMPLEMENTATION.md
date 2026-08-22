@@ -1,6 +1,6 @@
 # Phase 2 Identity and Tenancy Schema Foundation
 
-**Status:** Implemented in the repository; Windows database deployment and runtime behavior remain to be verified.
+**Status:** Schema foundation fully verified for migration and database-integrity gates; later Phase 2 runtime workstreams remain unimplemented.
 
 **Date:** 2026-08-22
 
@@ -52,13 +52,14 @@ The existing Windows `mohamy_pro` data remains protected by additive nullable ch
 | `pnpm --filter api exec eslint 'src/**/*.ts' 'test/**/*.ts'` | PASS |
 | `git diff --check` | PASS |
 | Windows `pnpm --filter api exec prisma migrate deploy` against existing `mohamy_pro` | PASS — migration `20260822190000_identity_tenancy_foundation` applied successfully |
-| Disposable PostgreSQL migration deployment | NOT EXECUTED in the sandbox because no reachable PostgreSQL service was configured |
+| Disposable PostgreSQL migration deployment | PASS — corrected Windows runner applied all five migrations and migration checker passed |
+| Disposable database cleanup | PASS — generated `mohamy_phase2_fresh_...` database was dropped |
 
-The passing checks above verify schema parsing, client generation, compilation, existing unit coverage, lint, migration SQL review, and successful application of the new migration to the existing Windows PostgreSQL database. They do not yet prove the new tables, constraints, composite foreign keys, or data-preservation properties through direct post-migration queries, nor do they prove fresh-database reproducibility.
+The passing checks above verify schema parsing, client generation, compilation, existing unit coverage, lint, migration SQL review, successful application of the new migration to the existing Windows PostgreSQL database, direct post-migration schema/constraint inspection, and fresh-database reproducibility. They do not prove the later RLS, authentication, authorization, API, audit, or frontend workstreams.
 
-## Required next verification
+## Verification record
 
-**API is stopped. Worker is stopped.** From the Windows repository root, after pulling the published schema migration, the existing-data migration command and direct schema inspection were run and passed as recorded below. The fresh-database rerun remains required:
+**API is stopped. Worker is stopped.** From the Windows repository root, after pulling the published schema migration, the existing-data migration command, direct schema inspection, and corrected fresh-database runner were executed and passed as recorded below:
 
 ```powershell
 Set-Location 'C:\Users\ahmed\Documents\GitHub\Mohamy-pro'
@@ -90,7 +91,7 @@ The existing `mohamy_pro` database was not reset or manually edited. The evidenc
 
 The direct Windows post-migration inspection was then executed with the API and worker stopped. It returned the applied migration with a finished timestamp and no rollback, all 17 Phase 2 tables, all five manual integrity constraints, the four expected additive columns, and these existing-table row counts: `Health=0`, `IdempotencyKey=0`, `OutboxMessage=0`, and `StorageObject=3`. The existing `StorageObject` rows remained present after migration. No reset, row deletion, migration-history edit, volume deletion, or destructive backfill was used.
 
-A separate disposable PostgreSQL database must still apply all migrations from an empty state and run the migration checker. The first manual attempt exposed a PowerShell interpolation defect that created a temporary database named `=public`; that temporary database was dropped and the existing `mohamy_pro` database was not touched. The corrected first-party runner below prevents that defect and must be used for the accepted rerun. Only after the fresh-database gate passes can this schema slice be marked fully verified.
+The first manual attempt exposed a PowerShell interpolation defect that created a temporary database named `=public`; that temporary database was dropped and the existing `mohamy_pro` database was not touched. The corrected first-party runner prevented that defect and produced the PASS result recorded below. The failed manual attempt is not counted as acceptance evidence.
 
 **API is stopped. Worker is stopped.** From the Windows repository root, run:
 
@@ -105,7 +106,22 @@ Expected result:
 fresh_database_result=PASS
 ```
 
-The runner creates only a generated database name with the `mohamy_phase2_fresh_` prefix, applies all repository migrations, runs `db:check`, restores the prior `DATABASE_URL`, and drops only that generated database. It refuses to use or remove the existing `mohamy_pro` database.
+The runner was executed after the interpolation fix and returned:
+
+```text
+All migrations have been successfully applied.
+$ node scripts/check-migrations.mjs
+Migration history is consistent: 5 repository migration(s), 5 applied migration(s).
+fresh_database=mohamy_phase2_fresh_20260822104250_51461890
+fresh_database_result=PASS
+DROP DATABASE
+```
+
+The runner created only the generated `mohamy_phase2_fresh_...` database, applied all five repository migrations, ran `db:check`, restored the prior `DATABASE_URL`, and dropped only that generated database. It refused to use or remove the existing `mohamy_pro` database. The corrected fresh-database gate is therefore PASS.
+
+## Schema-slice closure
+
+The identity and tenancy schema slice is accepted for Phase 2 continuation. Its migration, existing-data deployment, direct Windows schema/constraint inspection, fresh-database reproducibility, migration checker, build, tests, lint, and destructive-operation review have evidence. This acceptance does not claim that later Phase 2 workstreams are complete.
 
 ## Remaining implementation boundaries
 
