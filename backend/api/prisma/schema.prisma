@@ -6,6 +6,59 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DISABLED
+  DELETED
+}
+
+enum TenantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum HierarchyStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  REMOVED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+  REJECTED
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum RoleScope {
+  GLOBAL
+  TENANT
+}
+
+enum DenialStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
 // Phase 1: Health check table to prove migrations work
 model Health {
   id        String   @id @default(uuid())
@@ -18,33 +71,37 @@ model Health {
 
 // Phase 1: Storage security metadata foundation.
 model StorageObject {
-  id                String    @id @default(uuid())
-  key               String
-  versionId         String?
-  sha256            String    @db.VarChar(64)
-  sizeBytes         BigInt
-  contentType       String
-  encryptionMode    String
-  malwareStatus     String    @default("PENDING_SCAN")
-  malwareScannedAt  DateTime?
-  retentionUntil    DateTime?
-  legalHold         Boolean   @default(false)
-  metadata          Json?
-  createdAt         DateTime  @default(now())
-  deletedAt         DateTime?
+  id               String    @id @default(uuid())
+  tenantId         String?
+  key              String
+  versionId        String?
+  sha256           String    @db.VarChar(64)
+  sizeBytes        BigInt
+  contentType      String
+  encryptionMode   String
+  malwareStatus    String    @default("PENDING_SCAN")
+  malwareScannedAt DateTime?
+  retentionUntil   DateTime?
+  legalHold        Boolean   @default(false)
+  metadata         Json?
+  createdAt        DateTime  @default(now())
+  deletedAt        DateTime?
+  tenant           Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([key, versionId])
   @@index([malwareStatus, createdAt])
   @@index([retentionUntil, legalHold])
+  @@index([tenantId, createdAt])
 }
 
 // Phase 1: Transactional outbox table skeleton
 model OutboxMessage {
-  id            String    @id @default(uuid())
-  aggregateType String
-  aggregateId   String
-  eventType     String
-  payload       Json
+  id             String    @id @default(uuid())
+  tenantId       String?
+  aggregateType  String
+  aggregateId    String
+  eventType      String
+  payload        Json
   status         String    @default("PENDING") // PENDING, PROCESSING, PROCESSED, FAILED, DEAD_LETTER
   error          String?
   attempts       Int       @default(0)
@@ -54,10 +111,12 @@ model OutboxMessage {
   deadLetteredAt DateTime?
   createdAt      DateTime  @default(now())
   processedAt    DateTime?
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([status, availableAt, createdAt])
   @@index([status, claimedAt])
   @@index([aggregateType, aggregateId])
+  @@index([tenantId, status, availableAt])
 }
 
 // Phase 1: Idempotency registry skeleton
@@ -70,7 +129,336 @@ model IdempotencyKey {
   responseBody   Json
   createdAt      DateTime @default(now())
   expiresAt      DateTime
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([expiresAt])
   @@index([tenantId, userId])
+}
+
+// Phase 2: Global application identity. Provider credentials and MFA secrets are not stored here.
+model User {
+  id                    String                 @id @default(uuid())
+  status                UserStatus             @default(PENDING)
+  emailNormalized       String?                @unique
+  displayName           String?
+  givenName             String?
+  familyName            String?
+  locale                String                 @default("en")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  deletedAt             DateTime?
+  externalIdentities    ExternalIdentity[]
+  sessions              AppSession[]
+  memberships           Membership[]
+  globalRoleAssignments GlobalRoleAssignment[]
+  denials               AccessDenial[]         @relation("DenialSubjectUser")
+  idempotencyKeys       IdempotencyKey[]
+
+  @@index([status, createdAt])
+}
+
+// Phase 2: Immutable provider subject mapping. Email matching never links identities implicitly.
+model ExternalIdentity {
+  id                  String    @id @default(uuid())
+  userId              String
+  provider            String
+  subject             String
+  providerSessionId   String?
+  lastAuthenticatedAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, subject])
+  @@index([userId])
+}
+
+// Phase 2: Server-mediated opaque application session. Tokens are stored only as hashes/ciphertext.
+model AppSession {
+  id                             String        @id @default(uuid())
+  userId                         String
+  tokenHash                      String        @unique
+  csrfTokenHash                  String        @unique
+  status                         SessionStatus @default(ACTIVE)
+  provider                       String
+  providerSubject                String
+  providerSessionId              String?
+  activeTenantId                 String?
+  activeMembershipId             String?
+  contextVersion                 Int           @default(0)
+  issuedAt                       DateTime      @default(now())
+  lastUsedAt                     DateTime      @default(now())
+  idleExpiresAt                  DateTime
+  absoluteExpiresAt              DateTime
+  mfaVerifiedAt                  DateTime?
+  mfaAcr                         String?
+  mfaAmr                         Json?
+  providerRefreshTokenCiphertext String?
+  providerRefreshTokenKeyVersion String?
+  userAgentHash                  String?
+  ipHash                         String?
+  revokedAt                      DateTime?
+  revokedReason                  String?
+  user                           User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  activeTenant                   Tenant?       @relation("SessionActiveTenant", fields: [activeTenantId], references: [id], onDelete: SetNull)
+  activeMembership               Membership?   @relation("SessionActiveMembership", fields: [activeMembershipId, activeTenantId], references: [id, tenantId], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([activeTenantId, status])
+  @@index([idleExpiresAt])
+  @@index([absoluteExpiresAt])
+}
+
+// Phase 2: Primary ordinary data-security boundary.
+model Tenant {
+  id                 String           @id @default(uuid())
+  slug               String           @unique
+  name               String
+  externalIdentifier String?          @unique
+  status             TenantStatus     @default(PENDING)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  archivedAt         DateTime?
+  organizations      Organization[]
+  branches           Branch[]
+  departments        Department[]
+  teams              Team[]
+  memberships        Membership[]
+  activeSessions     AppSession[]     @relation("SessionActiveTenant")
+  invitations        Invitation[]
+  roles              Role[]
+  denials            AccessDenial[]
+  teamMembers        TeamMember[]
+  storageObjects     StorageObject[]
+  outboxMessages     OutboxMessage[]
+  idempotencyKeys    IdempotencyKey[]
+
+  @@index([status, createdAt])
+}
+
+model Organization {
+  id        String          @id @default(uuid())
+  tenantId  String
+  slug      String
+  name      String
+  status    HierarchyStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branches  Branch[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+}
+
+model Branch {
+  id             String          @id @default(uuid())
+  tenantId       String
+  organizationId String
+  slug           String
+  name           String
+  status         HierarchyStatus @default(ACTIVE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  organization   Organization    @relation(fields: [organizationId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  departments    Department[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, organizationId, slug])
+  @@index([tenantId, status])
+}
+
+model Department {
+  id        String          @id @default(uuid())
+  tenantId  String
+  branchId  String
+  slug      String
+  name      String
+  status    HierarchyStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch    Branch          @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, branchId, slug])
+  @@index([tenantId, status])
+}
+
+// Team is an assignment construct, not an alternate security boundary.
+model Team {
+  id          String          @id @default(uuid())
+  tenantId    String
+  slug        String
+  name        String
+  description String?
+  status      HierarchyStatus @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  members     TeamMember[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+}
+
+// Membership is the source of ordinary tenant context.
+model Membership {
+  id              String           @id @default(uuid())
+  tenantId        String
+  userId          String
+  status          MembershipStatus @default(INVITED)
+  activeFrom      DateTime?
+  activeUntil     DateTime?
+  invitedAt       DateTime?
+  activatedAt     DateTime?
+  suspendedAt     DateTime?
+  removedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  activeSessions  AppSession[]     @relation("SessionActiveMembership")
+  roles           MembershipRole[]
+  teamMembers     TeamMember[]
+  invitationsSent Invitation[]     @relation("InvitationInviterMembership")
+  denialsCreated  AccessDenial[]   @relation("DenialCreatedByMembership")
+
+  @@unique([userId, tenantId])
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+  @@index([userId, status])
+  @@index([tenantId, activeFrom, activeUntil])
+}
+
+model TeamMember {
+  id           String     @id @default(uuid())
+  tenantId     String
+  teamId       String
+  membershipId String
+  createdAt    DateTime   @default(now())
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  team         Team       @relation(fields: [teamId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  membership   Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([teamId, membershipId])
+  @@index([tenantId, membershipId])
+}
+
+model Invitation {
+  id                      String           @id @default(uuid())
+  tenantId                String
+  inviterMembershipId     String
+  tokenHash               String           @unique
+  intendedEmailNormalized String?
+  intendedProviderSubject String?
+  requestedRoleKeys       Json
+  requestedScope          Json?
+  status                  InvitationStatus @default(PENDING)
+  expiresAt               DateTime
+  acceptedAt              DateTime?
+  revokedAt               DateTime?
+  rejectedAt              DateTime?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  tenant                  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  inviterMembership       Membership       @relation("InvitationInviterMembership", fields: [inviterMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@index([tenantId, status, expiresAt])
+  @@index([intendedEmailNormalized, status])
+  @@index([intendedProviderSubject, status])
+}
+
+// Global immutable permission catalog.
+model Permission {
+  id          String           @id @default(uuid())
+  key         String           @unique
+  description String
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
+}
+
+// Global catalog roles and tenant-defined roles. Tenant roles carry tenantId.
+model Role {
+  id                String                 @id @default(uuid())
+  tenantId          String?
+  scope             RoleScope
+  key               String
+  name              String
+  description       String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  tenant            Tenant?                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  permissions       RolePermission[]
+  membershipRoles   MembershipRole[]
+  globalAssignments GlobalRoleAssignment[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, key])
+  @@index([scope, tenantId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@id([roleId, permissionId])
+}
+
+model MembershipRole {
+  id           String     @id @default(uuid())
+  tenantId     String
+  membershipId String
+  roleId       String
+  assignedAt   DateTime   @default(now())
+  revokedAt    DateTime?
+  membership   Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  role         Role       @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([membershipId, roleId])
+  @@index([tenantId, roleId, revokedAt])
+}
+
+model GlobalRoleAssignment {
+  id         String    @id @default(uuid())
+  userId     String
+  roleId     String
+  assignedAt DateTime  @default(now())
+  revokedAt  DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role       Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, roleId])
+  @@index([userId, revokedAt])
+}
+
+// Tenant-owned explicit denials. The append-only audit record is added in the audit foundation workstream.
+model AccessDenial {
+  id                    String       @id @default(uuid())
+  tenantId              String
+  subjectUserId         String?
+  permissionKey         String
+  resourceType          String?
+  resourceId            String?
+  reason                String
+  status                DenialStatus @default(ACTIVE)
+  startsAt              DateTime     @default(now())
+  endsAt                DateTime?
+  createdByMembershipId String
+  revokedAt             DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  tenant                Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  subjectUser           User?        @relation("DenialSubjectUser", fields: [subjectUserId], references: [id], onDelete: Restrict)
+  createdByMembership   Membership   @relation("DenialCreatedByMembership", fields: [createdByMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@index([tenantId, status, permissionKey])
+  @@index([tenantId, resourceType, resourceId])
+  @@index([subjectUserId, status])
 }

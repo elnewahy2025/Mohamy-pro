@@ -46,7 +46,7 @@ The first plan audit identified P1 ambiguities that must be resolved in an accep
 | Abuse and identity-data lifecycle | Freeze IP/identifier throttling, lockout or step-up behavior, enumeration-safe responses, identity retention, residency, minimization, export, deletion/archival, and cascade rules. |
 | Generated client and real integration topology | Make generated API-client generation/consumption and real OIDC integration tests mandatory Phase 2 gates; isolated unit doubles may test pure token logic only and must never be production-wired. |
 
-Until these decisions are recorded and accepted, the status is **PLAN AUDIT HOLD — NO PHASE 2 APPLICATION CODE**.
+The preflight decisions are recorded and owner-approved, and the corrected plan re-audit is published. The plan is therefore authorized for Phase 2 application implementation under Option B. This authorization does not imply that any implementation, test, or runtime evidence already exists.
 
 ## Workstreams and exit gates
 
@@ -117,7 +117,7 @@ All externally facing identifiers must be non-sequential. All administrative and
 
 ## Phase 2 completion gate
 
-Phase 2 cannot begin application implementation until the audit-hold decisions above are recorded and accepted. It is not complete when the schema exists or when login works in a single happy path. It is complete only when the identity and tenancy dependency chain is implemented, secured, tested, runtime-verified, documented, and reviewed against this plan. The evidence must demonstrate that tenant context is derived from membership and that no tenant escape, privilege escalation, IDOR, denial bypass, or unauthorized membership switch remains in the covered surface.
+The owner-approved preflight decisions and corrected-plan re-audit authorize Phase 2 application implementation under Option B. The phase is not complete when the schema exists or when login works in a single happy path. It is complete only when the identity and tenancy dependency chain is implemented, secured, tested, runtime-verified, documented, and reviewed against this plan. The evidence must demonstrate that tenant context is derived from membership and that no tenant escape, privilege escalation, IDOR, denial bypass, or unauthorized membership switch remains in the covered surface.
 
 Phase 3 Security Foundation and Audit Foundation cannot begin until this Phase 2 completion gate is approved. After the approved preflight decision set and corrected-plan re-audit are complete, Phase 2 implementation may proceed under Option B. The future Linux KMS/object-storage production gate remains separate, and no unqualified production deployment claim is permitted until that gate is implemented and verified.
 
