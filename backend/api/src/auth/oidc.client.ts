@@ -258,6 +258,7 @@ export class OidcClient implements OidcClientPort {
         signal: controller.signal,
       });
       if (!response.ok) {
+        this.logger.warn(`${operation} rejected with HTTP ${response.status}`);
         throw new Error(`${operation} failed with HTTP ${response.status}`);
       }
       if (response.status === 204) return undefined as T;
