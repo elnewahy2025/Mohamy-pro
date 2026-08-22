@@ -6,7 +6,7 @@ function transaction(): OidcAuthorizationTransaction {
     state: 'A'.repeat(43),
     nonce: 'B'.repeat(43),
     codeVerifier: 'C'.repeat(64),
-    redirectUri: 'http://localhost:3000/api/auth/callback',
+    redirectUri: 'http://127.0.0.1:3000/api/v1/auth/callback',
     returnTo: '/ar',
     createdAt: Date.now(),
   };

@@ -94,7 +94,7 @@ describe('validateEnvironment telemetry settings', () => {
       OIDC_CLIENT_ID: 'mohamy-api',
       OIDC_CLIENT_SECRET: 'client-secret-for-test',
       OIDC_AUDIENCE: 'mohamy-api',
-      OIDC_REDIRECT_URI: 'https://api.invalid/api/auth/callback',
+      OIDC_REDIRECT_URI: 'https://api.invalid/api/v1/auth/callback',
       OIDC_POST_LOGOUT_REDIRECT_URI: 'https://app.invalid/en',
       OIDC_SCOPES: 'openid profile email offline_access',
       SESSION_COOKIE_NAME: 'mohamy_session',
@@ -149,7 +149,7 @@ describe('validateEnvironment authentication settings', () => {
     OIDC_CLIENT_ID: 'mohamy-api',
     OIDC_CLIENT_SECRET: 'client-secret-for-test',
     OIDC_AUDIENCE: 'mohamy-api',
-    OIDC_REDIRECT_URI: 'https://api.invalid/api/auth/callback',
+    OIDC_REDIRECT_URI: 'https://api.invalid/api/v1/auth/callback',
     OIDC_POST_LOGOUT_REDIRECT_URI: 'https://app.invalid/en',
     OIDC_SCOPES: 'openid profile email offline_access',
     SESSION_COOKIE_NAME: 'mohamy_session',
@@ -162,7 +162,10 @@ describe('validateEnvironment authentication settings', () => {
   it('provides the approved development authentication defaults', () => {
     const environment = validateEnvironment(baseEnvironment);
     expect(environment.OIDC_ISSUER_URL).toBe(
-      'http://localhost:58080/realms/mohamy',
+      'http://127.0.0.1:58080/realms/mohamy',
+    );
+    expect(environment.OIDC_REDIRECT_URI).toBe(
+      'http://127.0.0.1:3000/api/v1/auth/callback',
     );
     expect(environment.SESSION_COOKIE_NAME).toBe('mohamy_session');
     expect(environment.SESSION_SECURE_COOKIE).toBe(false);

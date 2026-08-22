@@ -24,7 +24,7 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "phase2-development-client-secret",
       "redirectUris": [
-        "http://localhost:3000/api/auth/callback"
+        "http://127.0.0.1:3000/api/v1/auth/callback"
       ],
       "webOrigins": [
         "http://localhost:5173"

@@ -1,6 +1,6 @@
 import './load-api-local-env.mjs';
 
-const apiBaseUrl = process.env.AUTH_RUNTIME_API_BASE_URL ?? 'http://localhost:3000';
+const apiBaseUrl = process.env.AUTH_RUNTIME_API_BASE_URL ?? 'http://127.0.0.1:3000';
 const origin = process.env.AUTH_RUNTIME_ORIGIN ?? 'http://localhost:5173';
 const username = process.env.AUTH_RUNTIME_USERNAME ?? 'phase2-runtime-user';
 const password = process.env.AUTH_RUNTIME_PASSWORD ?? 'phase2-runtime-password';
@@ -94,7 +94,7 @@ function loginForm(html, baseUrl) {
 async function main() {
   const jar = new CookieJar();
   const loginResponse = await request(
-    `${apiBaseUrl}/api/auth/login?returnTo=%2Far`,
+    `${apiBaseUrl}/api/v1/auth/login?returnTo=%2Far`,
     {},
     jar,
   );
@@ -142,7 +142,7 @@ async function main() {
   if (!jar.has(cookieName)) throw new Error('OIDC callback did not set the session cookie');
   console.log('auth_login_status=PASS|callback_validated=true|session_cookie_set=true');
 
-  const sessionResponse = await request(`${apiBaseUrl}/api/auth/session`, {}, jar);
+  const sessionResponse = await request(`${apiBaseUrl}/api/v1/auth/session`, {}, jar);
   requireStatus(sessionResponse, 200, 'authenticated session');
   const session = await sessionResponse.json();
   if (session.authenticated !== true || typeof session.user?.id !== 'string') {
@@ -150,7 +150,7 @@ async function main() {
   }
   console.log('auth_session_status=PASS|authenticated=true|redacted=true');
 
-  const csrfResponse = await request(`${apiBaseUrl}/api/auth/csrf`, {}, jar);
+  const csrfResponse = await request(`${apiBaseUrl}/api/v1/auth/csrf`, {}, jar);
   requireStatus(csrfResponse, 200, 'CSRF token endpoint');
   const csrf = await csrfResponse.json();
   if (!/^[A-Za-z0-9_-]{43}$/.test(csrf.csrfToken ?? '')) {
@@ -159,7 +159,7 @@ async function main() {
   console.log('auth_csrf_status=PASS|token_length=43');
 
   const logoutResponse = await request(
-    `${apiBaseUrl}/api/auth/logout`,
+    `${apiBaseUrl}/api/v1/auth/logout`,
     {
       method: 'POST',
       headers: {
@@ -170,11 +170,11 @@ async function main() {
     jar,
   );
   requireStatus(logoutResponse, 204, 'logout');
-  const postLogoutSession = await request(`${apiBaseUrl}/api/auth/session`, {}, jar);
+  const postLogoutSession = await request(`${apiBaseUrl}/api/v1/auth/session`, {}, jar);
   requireStatus(postLogoutSession, 401, 'post-logout session');
   console.log('auth_logout_status=PASS|revoked=true|post_logout_denied=true');
 
-  const anonymous = await request(`${apiBaseUrl}/api/auth/session`);
+  const anonymous = await request(`${apiBaseUrl}/api/v1/auth/session`);
   requireStatus(anonymous, 401, 'anonymous session');
   console.log('auth_anonymous_status=PASS|session_denied=true');
   console.log('auth_runtime_result=PASS');
