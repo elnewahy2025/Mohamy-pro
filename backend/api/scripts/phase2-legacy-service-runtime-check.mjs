@@ -13,13 +13,19 @@ const { MetricsService } = require('../dist/src/observability/metrics.service.js
 const { PrismaService } = require('../dist/src/infrastructure/database/prisma.service.js');
 const { IdempotencyService } = require('../dist/src/infrastructure/idempotency/idempotency.service.js');
 const { OutboxService } = require('../dist/src/infrastructure/outbox/outbox.service.js');
+const { QueueService } = require('../dist/src/infrastructure/queue/queue.service.js');
+const { RedisService } = require('../dist/src/infrastructure/redis/redis.service.js');
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDirectory, '../../..');
 const originalDatabaseUrl = process.env.DATABASE_URL;
+const originalRedisUrl = process.env.REDIS_URL;
 const generatedDatabase = `mohamy_phase2_services_fresh_${Date.now()}_${randomUUID().slice(0, 8)}`;
 
 if (!originalDatabaseUrl) {
   throw new Error('DATABASE_URL is required; the verifier does not print or create credentials.');
+}
+if (!originalRedisUrl) {
+  throw new Error('REDIS_URL is required; the verifier does not print or create credentials.');
 }
 if (!/^mohamy_phase2_services_fresh_[a-z0-9_]+$/.test(generatedDatabase)) {
   throw new Error('Generated database name failed the safety check.');
@@ -38,6 +44,9 @@ freshUrl.searchParams.set('schema', 'public');
 let adminPool;
 let databaseCreated = false;
 let prisma;
+let redisService;
+let queueService;
+const queuedJobs = [];
 
 function quoteIdentifier(identifier) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(identifier)) {
@@ -72,9 +81,14 @@ async function main() {
   const config = new ConfigService({
     DATABASE_URL: freshUrl.toString(),
     METRICS_ENABLED: false,
+    REDIS_URL: originalRedisUrl,
   });
   const metrics = new MetricsService(config);
   prisma = new PrismaService(config, metrics);
+  redisService = new RedisService(config);
+  await redisService.onModuleInit();
+  queueService = new QueueService(redisService, metrics);
+  await queueService.onModuleInit();
   await prisma.$connect();
 
   const tenantContext = {
@@ -133,11 +147,11 @@ async function main() {
   requireEqual(conflict?.kind, 'CONFLICT', 'changed-body idempotency conflict');
   console.log('legacy_service_idempotency_status=PASS|first=RESERVED|in_progress=IN_PROGRESS|replay=REPLAY|conflict=CONFLICT');
 
-  const queued = [];
   const queue = {
     enqueue: async (name, payload, options) => {
-      queued.push({ name, payload, options });
-      return { id: options?.jobId };
+      const job = await queueService.enqueue(name, payload, options);
+      queuedJobs.push(job);
+      return job;
     },
   };
   const outbox = new OutboxService(prisma, queue, metrics);
@@ -156,9 +170,9 @@ async function main() {
   );
   const dispatched = await outbox.dispatchBatch();
   requireEqual(dispatched, 1, 'tenant outbox dispatch count');
-  requireEqual(queued.length, 1, 'tenant outbox queued count');
-  requireEqual(queued[0].payload.scope, 'TENANT', 'tenant outbox job scope');
-  requireEqual(queued[0].payload.tenantId, tenantContext.tenantId, 'tenant outbox job tenant');
+  requireEqual(queuedJobs.length, 1, 'tenant outbox queued count');
+  requireEqual(queuedJobs[0].data.scope, 'TENANT', 'tenant outbox job scope');
+  requireEqual(queuedJobs[0].data.tenantId, tenantContext.tenantId, 'tenant outbox job tenant');
   const leased = await prisma.withOutboxDispatcherContext(
     randomUUID(),
     (transaction) =>
@@ -171,7 +185,7 @@ async function main() {
     transaction.outboxMessage.findUnique({ where: { id: created.id } }),
   );
   requireEqual(persisted?.status, 'PROCESSED', 'tenant outbox persisted status');
-  console.log(`legacy_service_outbox_status=PASS|created=1|queued=${queued.length}|processed=1|scope=${queued[0].payload.scope}`);
+  console.log(`legacy_service_outbox_status=PASS|created=1|queued=${queuedJobs.length}|processed=1|scope=${queuedJobs[0].data.scope}`);
 
   await prisma.withOutboxDispatcherContext(randomUUID(), (transaction) =>
     transaction.outboxMessage.delete({ where: { id: created.id } }),
@@ -192,6 +206,9 @@ try {
   console.error(`legacy_service_runtime_result=FAIL|error=${error instanceof Error ? error.message : 'unknown error'}`);
   process.exitCode = 1;
 } finally {
+  for (const job of queuedJobs) await job.remove().catch(() => undefined);
+  if (queueService) await queueService.onModuleDestroy().catch(() => undefined);
+  if (redisService) await redisService.onModuleDestroy().catch(() => undefined);
   if (prisma) await prisma.$disconnect().catch(() => undefined);
   if (adminPool) {
     if (databaseCreated) {
@@ -203,4 +220,5 @@ try {
     await adminPool.end().catch(() => undefined);
   }
   if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl;
+  if (originalRedisUrl) process.env.REDIS_URL = originalRedisUrl;
 }
