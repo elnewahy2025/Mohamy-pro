@@ -31,36 +31,45 @@ BEGIN
 END $$;
 
 ALTER TABLE "OutboxMessage"
-  ADD COLUMN "scope" "OutboxScope" NOT NULL DEFAULT 'GLOBAL',
-  ADD COLUMN "eventVersion" INTEGER NOT NULL DEFAULT 1,
-  ADD COLUMN "correlationId" TEXT,
-  ADD COLUMN "traceparent" TEXT,
-  ADD COLUMN "contextUserId" TEXT,
-  ADD COLUMN "contextMembershipId" TEXT,
-  ADD COLUMN "operationId" TEXT;
+  ADD COLUMN IF NOT EXISTS "scope" "OutboxScope" NOT NULL DEFAULT 'GLOBAL',
+  ADD COLUMN IF NOT EXISTS "eventVersion" INTEGER NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS "correlationId" TEXT,
+  ADD COLUMN IF NOT EXISTS "traceparent" TEXT,
+  ADD COLUMN IF NOT EXISTS "contextUserId" TEXT,
+  ADD COLUMN IF NOT EXISTS "contextMembershipId" TEXT,
+  ADD COLUMN IF NOT EXISTS "operationId" TEXT;
 
-ALTER TABLE "OutboxMessage"
-  ADD CONSTRAINT "OutboxMessage_scope_consistency_check"
-  CHECK (
-    ("scope" = 'GLOBAL' AND "tenantId" IS NULL AND "contextUserId" IS NULL AND "contextMembershipId" IS NULL AND "operationId" IS NULL)
-    OR
-    ("scope" = 'TENANT' AND "tenantId" IS NOT NULL AND "contextUserId" IS NOT NULL AND "contextMembershipId" IS NOT NULL AND "operationId" IS NOT NULL)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'OutboxMessage_scope_consistency_check'
+      AND conrelid = 'public."OutboxMessage"'::regclass
+  ) THEN
+    ALTER TABLE "OutboxMessage"
+      ADD CONSTRAINT "OutboxMessage_scope_consistency_check"
+      CHECK (
+        ("scope" = 'GLOBAL' AND "tenantId" IS NULL AND "contextUserId" IS NULL AND "contextMembershipId" IS NULL AND "operationId" IS NULL)
+        OR
+        ("scope" = 'TENANT' AND "tenantId" IS NOT NULL AND "contextUserId" IS NOT NULL AND "contextMembershipId" IS NOT NULL AND "operationId" IS NOT NULL)
+      );
+  END IF;
+END $$;
 
-CREATE INDEX "OutboxMessage_scope_tenantId_status_availableAt_idx"
+CREATE INDEX IF NOT EXISTS "OutboxMessage_scope_tenantId_status_availableAt_idx"
   ON "OutboxMessage"("scope", "tenantId", "status", "availableAt");
 
 ALTER TABLE "IdempotencyKey"
-  ADD COLUMN "id" TEXT,
-  ADD COLUMN "actorScope" TEXT NOT NULL DEFAULT 'LEGACY',
-  ADD COLUMN "tenantScope" TEXT NOT NULL DEFAULT 'GLOBAL',
-  ADD COLUMN "httpMethod" TEXT NOT NULL DEFAULT 'LEGACY',
-  ADD COLUMN "requestFingerprint" VARCHAR(64),
-  ADD COLUMN "state" "IdempotencyState" NOT NULL DEFAULT 'COMPLETED',
-  ADD COLUMN "responseHeaders" JSONB,
-  ADD COLUMN "reservationLeaseUntil" TIMESTAMP(3),
-  ADD COLUMN "reservationVersion" INTEGER NOT NULL DEFAULT 0,
-  ADD COLUMN "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+  ADD COLUMN IF NOT EXISTS "id" TEXT,
+  ADD COLUMN IF NOT EXISTS "actorScope" TEXT NOT NULL DEFAULT 'LEGACY',
+  ADD COLUMN IF NOT EXISTS "tenantScope" TEXT NOT NULL DEFAULT 'GLOBAL',
+  ADD COLUMN IF NOT EXISTS "httpMethod" TEXT NOT NULL DEFAULT 'LEGACY',
+  ADD COLUMN IF NOT EXISTS "requestFingerprint" VARCHAR(64),
+  ADD COLUMN IF NOT EXISTS "state" "IdempotencyState" NOT NULL DEFAULT 'COMPLETED',
+  ADD COLUMN IF NOT EXISTS "responseHeaders" JSONB,
+  ADD COLUMN IF NOT EXISTS "reservationLeaseUntil" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "reservationVersion" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 UPDATE "IdempotencyKey"
 SET
@@ -78,27 +87,58 @@ ALTER TABLE "IdempotencyKey"
   ALTER COLUMN "responseStatus" DROP NOT NULL,
   ALTER COLUMN "responseBody" DROP NOT NULL;
 
-ALTER TABLE "IdempotencyKey"
-  DROP CONSTRAINT "IdempotencyKey_pkey",
-  ADD CONSTRAINT "IdempotencyKey_pkey" PRIMARY KEY ("id");
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'IdempotencyKey_pkey'
+      AND conrelid = 'public."IdempotencyKey"'::regclass
+      AND pg_get_constraintdef(oid) <> 'PRIMARY KEY (id)'
+  ) THEN
+    ALTER TABLE "IdempotencyKey" DROP CONSTRAINT "IdempotencyKey_pkey";
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'IdempotencyKey_pkey'
+      AND conrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    ALTER TABLE "IdempotencyKey" ADD CONSTRAINT "IdempotencyKey_pkey" PRIMARY KEY ("id");
+  END IF;
+END $$;
 
-ALTER TABLE "IdempotencyKey"
-  ADD CONSTRAINT "IdempotencyKey_scope_consistency_check"
-  CHECK (
-    ("tenantScope" = 'GLOBAL' AND "tenantId" IS NULL)
-    OR
-    ("tenantScope" <> 'GLOBAL' AND "tenantId" IS NOT NULL AND "tenantScope" = "tenantId")
-  ),
-  ADD CONSTRAINT "IdempotencyKey_completion_consistency_check"
-  CHECK (
-    "state" NOT IN ('COMPLETED', 'TERMINAL_FAILURE')
-    OR ("responseStatus" IS NOT NULL AND "responseBody" IS NOT NULL)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'IdempotencyKey_scope_consistency_check'
+      AND conrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    ALTER TABLE "IdempotencyKey"
+      ADD CONSTRAINT "IdempotencyKey_scope_consistency_check"
+      CHECK (
+        ("tenantScope" = 'GLOBAL' AND "tenantId" IS NULL)
+        OR ("tenantScope" <> 'GLOBAL' AND "tenantId" IS NOT NULL AND "tenantScope" = "tenantId")
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'IdempotencyKey_completion_consistency_check'
+      AND conrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    ALTER TABLE "IdempotencyKey"
+      ADD CONSTRAINT "IdempotencyKey_completion_consistency_check"
+      CHECK (
+        "state" NOT IN ('COMPLETED', 'TERMINAL_FAILURE')
+        OR ("responseStatus" IS NOT NULL AND "responseBody" IS NOT NULL)
+      );
+  END IF;
+END $$;
 
-CREATE UNIQUE INDEX "IdempotencyKey_key_key" ON "IdempotencyKey"("key");
-CREATE INDEX "IdempotencyKey_scope_key"
+
+CREATE UNIQUE INDEX IF NOT EXISTS "IdempotencyKey_key_key" ON "IdempotencyKey"("key");
+CREATE INDEX IF NOT EXISTS "IdempotencyKey_scope_key"
   ON "IdempotencyKey"("key", "actorScope", "tenantScope", "httpMethod", "requestPath");
-CREATE INDEX "IdempotencyKey_tenantScope_actorScope_expiresAt_idx"
+CREATE INDEX IF NOT EXISTS "IdempotencyKey_tenantScope_actorScope_expiresAt_idx"
   ON "IdempotencyKey"("tenantScope", "actorScope", "expiresAt");
 
 -- Shared worker/maintenance predicates are explicit and fail closed. The
@@ -142,139 +182,220 @@ $$;
 -- Storage metadata becomes visible only through a valid tenant context.
 ALTER TABLE "StorageObject" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "StorageObject" FORCE ROW LEVEL SECURITY;
-CREATE POLICY "StorageObject_tenant_isolation"
-  ON "StorageObject"
-  USING (
-    public.app_tenant_context_is_valid()
-    AND "tenantId" = current_setting('app.tenant_id', true)
-  )
-  WITH CHECK (
-    public.app_tenant_context_is_valid()
-    AND "tenantId" = current_setting('app.tenant_id', true)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'StorageObject_tenant_isolation'
+      AND polrelid = 'public."StorageObject"'::regclass
+  ) THEN
+    CREATE POLICY "StorageObject_tenant_isolation"
+      ON "StorageObject"
+      USING (
+        public.app_tenant_context_is_valid()
+        AND "tenantId" = current_setting('app.tenant_id', true)
+      )
+      WITH CHECK (
+        public.app_tenant_context_is_valid()
+        AND "tenantId" = current_setting('app.tenant_id', true)
+      );
+  END IF;
+END $$;
 
 -- Outbox rows can be written in the same tenant/global transaction as the
 -- mutation, claimed by the named dispatcher path, and delivered in the
 -- validated tenant/global context. Dispatcher access is read/update only.
 ALTER TABLE "OutboxMessage" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "OutboxMessage" FORCE ROW LEVEL SECURITY;
-CREATE POLICY "OutboxMessage_context_insert"
-  ON "OutboxMessage"
-  FOR INSERT
-  WITH CHECK (
-    ("scope" = 'TENANT'
-      AND public.app_tenant_context_is_valid()
-      AND "tenantId" = current_setting('app.tenant_id', true)
-      AND "contextUserId" = current_setting('app.user_id', true)
-      AND "contextMembershipId" = current_setting('app.membership_id', true)
-      AND "operationId" = current_setting('app.operation_id', true))
-    OR
-    ("scope" = 'GLOBAL' AND public.app_global_operation_context_is_valid())
-  );
-CREATE POLICY "OutboxMessage_context_read"
-  ON "OutboxMessage"
-  FOR SELECT
-  USING (
-    public.app_outbox_dispatch_context_is_valid()
-    OR
-    ("scope" = 'TENANT'
-      AND public.app_tenant_context_is_valid()
-      AND "tenantId" = current_setting('app.tenant_id', true))
-    OR
-    ("scope" = 'GLOBAL' AND public.app_global_operation_context_is_valid())
-  );
-CREATE POLICY "OutboxMessage_context_update"
-  ON "OutboxMessage"
-  FOR UPDATE
-  USING (
-    public.app_outbox_dispatch_context_is_valid()
-    OR
-    ("scope" = 'TENANT'
-      AND public.app_tenant_context_is_valid()
-      AND "tenantId" = current_setting('app.tenant_id', true))
-    OR
-    ("scope" = 'GLOBAL' AND public.app_global_operation_context_is_valid())
-  )
-  WITH CHECK (
-    public.app_outbox_dispatch_context_is_valid()
-    OR
-    ("scope" = 'TENANT'
-      AND public.app_tenant_context_is_valid()
-      AND "tenantId" = current_setting('app.tenant_id', true))
-    OR
-    ("scope" = 'GLOBAL' AND public.app_global_operation_context_is_valid())
-  );
-CREATE POLICY "OutboxMessage_context_delete"
-  ON "OutboxMessage"
-  FOR DELETE
-  USING (public.app_outbox_dispatch_context_is_valid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'OutboxMessage_context_insert'
+      AND polrelid = 'public."OutboxMessage"'::regclass
+  ) THEN
+    CREATE POLICY "OutboxMessage_context_insert"
+      ON "OutboxMessage"
+      FOR INSERT
+      WITH CHECK (
+        ("scope" = 'TENANT'
+          AND public.app_tenant_context_is_valid()
+          AND "tenantId" = current_setting('app.tenant_id', true)
+          AND "contextUserId" = current_setting('app.user_id', true)
+          AND "contextMembershipId" = current_setting('app.membership_id', true)
+          AND "operationId" = current_setting('app.operation_id', true))
+        OR
+        ("scope" = 'GLOBAL' AND public.app_global_operation_context_is_valid())
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'OutboxMessage_context_read'
+      AND polrelid = 'public."OutboxMessage"'::regclass
+  ) THEN
+    CREATE POLICY "OutboxMessage_context_read"
+      ON "OutboxMessage"
+      FOR SELECT
+      USING (
+        public.app_outbox_dispatch_context_is_valid()
+        OR
+        ("scope" = 'TENANT'
+          AND public.app_tenant_context_is_valid()
+          AND "tenantId" = current_setting('app.tenant_id', true))
+        OR
+        ("scope" = 'GLOBAL' AND public.app_global_operation_context_is_valid())
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'OutboxMessage_context_update'
+      AND polrelid = 'public."OutboxMessage"'::regclass
+  ) THEN
+    CREATE POLICY "OutboxMessage_context_update"
+      ON "OutboxMessage"
+      FOR UPDATE
+      USING (
+        public.app_outbox_dispatch_context_is_valid()
+        OR
+        ("scope" = 'TENANT'
+          AND public.app_tenant_context_is_valid()
+          AND "tenantId" = current_setting('app.tenant_id', true))
+        OR
+        ("scope" = 'GLOBAL' AND public.app_global_operation_context_is_valid())
+      )
+      WITH CHECK (
+        public.app_outbox_dispatch_context_is_valid()
+        OR
+        ("scope" = 'TENANT'
+          AND public.app_tenant_context_is_valid()
+          AND "tenantId" = current_setting('app.tenant_id', true))
+        OR
+        ("scope" = 'GLOBAL' AND public.app_global_operation_context_is_valid())
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'OutboxMessage_context_delete'
+      AND polrelid = 'public."OutboxMessage"'::regclass
+  ) THEN
+    CREATE POLICY "OutboxMessage_context_delete"
+      ON "OutboxMessage"
+      FOR DELETE
+      USING (public.app_outbox_dispatch_context_is_valid());
+  END IF;
+END $$;
 
 -- Idempotency rows are actor and tenant scoped. Maintenance deletion is a
 -- separate named path; ordinary application transactions cannot purge rows.
 ALTER TABLE "IdempotencyKey" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "IdempotencyKey" FORCE ROW LEVEL SECURITY;
-CREATE POLICY "IdempotencyKey_tenant_actor_select"
-  ON "IdempotencyKey"
-  FOR SELECT
-  USING (
-    public.app_tenant_context_is_valid()
-    AND "tenantScope" = current_setting('app.tenant_id', true)
-    AND "tenantId" = current_setting('app.tenant_id', true)
-    AND "actorScope" = current_setting('app.user_id', true)
-  );
-CREATE POLICY "IdempotencyKey_tenant_actor_insert"
-  ON "IdempotencyKey"
-  FOR INSERT
-  WITH CHECK (
-    public.app_tenant_context_is_valid()
-    AND "tenantScope" = current_setting('app.tenant_id', true)
-    AND "tenantId" = current_setting('app.tenant_id', true)
-    AND "actorScope" = current_setting('app.user_id', true)
-  );
-CREATE POLICY "IdempotencyKey_tenant_actor_update"
-  ON "IdempotencyKey"
-  FOR UPDATE
-  USING (
-    public.app_tenant_context_is_valid()
-    AND "tenantScope" = current_setting('app.tenant_id', true)
-    AND "tenantId" = current_setting('app.tenant_id', true)
-    AND "actorScope" = current_setting('app.user_id', true)
-  )
-  WITH CHECK (
-    public.app_tenant_context_is_valid()
-    AND "tenantScope" = current_setting('app.tenant_id', true)
-    AND "tenantId" = current_setting('app.tenant_id', true)
-    AND "actorScope" = current_setting('app.user_id', true)
-  );
-CREATE POLICY "IdempotencyKey_global_operation_select"
-  ON "IdempotencyKey"
-  FOR SELECT
-  USING (
-    public.app_global_operation_context_is_valid()
-    AND "tenantScope" = 'GLOBAL'
-  );
-CREATE POLICY "IdempotencyKey_global_operation_insert"
-  ON "IdempotencyKey"
-  FOR INSERT
-  WITH CHECK (
-    public.app_global_operation_context_is_valid()
-    AND "tenantScope" = 'GLOBAL'
-  );
-CREATE POLICY "IdempotencyKey_global_operation_update"
-  ON "IdempotencyKey"
-  FOR UPDATE
-  USING (
-    public.app_global_operation_context_is_valid()
-    AND "tenantScope" = 'GLOBAL'
-  )
-  WITH CHECK (
-    public.app_global_operation_context_is_valid()
-    AND "tenantScope" = 'GLOBAL'
-  );
-CREATE POLICY "IdempotencyKey_maintenance_delete"
-  ON "IdempotencyKey"
-  FOR DELETE
-  USING (public.app_idempotency_maintenance_context_is_valid());
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'IdempotencyKey_tenant_actor_select'
+      AND polrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    CREATE POLICY "IdempotencyKey_tenant_actor_select"
+      ON "IdempotencyKey"
+      FOR SELECT
+      USING (
+        public.app_tenant_context_is_valid()
+        AND "tenantScope" = current_setting('app.tenant_id', true)
+        AND "tenantId" = current_setting('app.tenant_id', true)
+        AND "actorScope" = current_setting('app.user_id', true)
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'IdempotencyKey_tenant_actor_insert'
+      AND polrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    CREATE POLICY "IdempotencyKey_tenant_actor_insert"
+      ON "IdempotencyKey"
+      FOR INSERT
+      WITH CHECK (
+        public.app_tenant_context_is_valid()
+        AND "tenantScope" = current_setting('app.tenant_id', true)
+        AND "tenantId" = current_setting('app.tenant_id', true)
+        AND "actorScope" = current_setting('app.user_id', true)
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'IdempotencyKey_tenant_actor_update'
+      AND polrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    CREATE POLICY "IdempotencyKey_tenant_actor_update"
+      ON "IdempotencyKey"
+      FOR UPDATE
+      USING (
+        public.app_tenant_context_is_valid()
+        AND "tenantScope" = current_setting('app.tenant_id', true)
+        AND "tenantId" = current_setting('app.tenant_id', true)
+        AND "actorScope" = current_setting('app.user_id', true)
+      )
+      WITH CHECK (
+        public.app_tenant_context_is_valid()
+        AND "tenantScope" = current_setting('app.tenant_id', true)
+        AND "tenantId" = current_setting('app.tenant_id', true)
+        AND "actorScope" = current_setting('app.user_id', true)
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'IdempotencyKey_global_operation_select'
+      AND polrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    CREATE POLICY "IdempotencyKey_global_operation_select"
+      ON "IdempotencyKey"
+      FOR SELECT
+      USING (
+        public.app_global_operation_context_is_valid()
+        AND "tenantScope" = 'GLOBAL'
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'IdempotencyKey_global_operation_insert'
+      AND polrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    CREATE POLICY "IdempotencyKey_global_operation_insert"
+      ON "IdempotencyKey"
+      FOR INSERT
+      WITH CHECK (
+        public.app_global_operation_context_is_valid()
+        AND "tenantScope" = 'GLOBAL'
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'IdempotencyKey_global_operation_update'
+      AND polrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    CREATE POLICY "IdempotencyKey_global_operation_update"
+      ON "IdempotencyKey"
+      FOR UPDATE
+      USING (
+        public.app_global_operation_context_is_valid()
+        AND "tenantScope" = 'GLOBAL'
+      )
+      WITH CHECK (
+        public.app_global_operation_context_is_valid()
+        AND "tenantScope" = 'GLOBAL'
+      );
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polname = 'IdempotencyKey_maintenance_delete'
+      AND polrelid = 'public."IdempotencyKey"'::regclass
+  ) THEN
+    CREATE POLICY "IdempotencyKey_maintenance_delete"
+      ON "IdempotencyKey"
+      FOR DELETE
+      USING (public.app_idempotency_maintenance_context_is_valid());
+  END IF;
+END $$;
 
 -- No permissive tenantId IS NULL policy is present. Existing legacy rows are
 -- preserved but are inaccessible to ordinary tenant-scoped operations until
