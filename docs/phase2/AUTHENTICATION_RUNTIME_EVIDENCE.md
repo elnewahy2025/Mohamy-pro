@@ -44,8 +44,23 @@ auth_negative_session_preserved_status=PASS|authenticated=true
 auth_negative_logout_status=PASS|http=204|post_logout_denied=true
 auth_negative_anonymous_status=PASS|http=401
 auth_lifecycle_refresh_status=PASS|http=204|session_preserved=true
+auth_lifecycle_refresh_repeat_status=PASS|http=204|session_preserved=true
 auth_negative_runtime_result=PASS
 ```
+
+The controlled provider-availability failure verifier produced the following safe markers after Keycloak was stopped only for the refresh request and then restored:
+
+```text
+auth_provider_failure_pkce_status=PASS|method=S256|state_nonce_present=true
+auth_provider_failure_login_status=PASS|callback_validated=true|session_cookie_set=true
+auth_provider_failure_session_status=PASS|authenticated=true|redacted=true
+auth_provider_refresh_failure_setup_status=READY|manual_keycloak_stop_required=true
+auth_provider_refresh_failure_status=PASS|http=401|cookie_cleared=true|session_revoked=true
+auth_provider_failure_runtime_result=PASS
+KEYCLOAK_RESTORE_STATUS=STARTED
+```
+
+This is qualified evidence for fail-closed behavior when the provider is unavailable during refresh. It is not evidence for a provider `invalid_grant` response.
 
 The runtime results demonstrate that the following sequence succeeded in the qualified Windows environment:
 
@@ -62,6 +77,8 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 | Missing and mismatched CSRF rejection | `http=403` for both paths | PASS |
 | Session preservation after rejected mutations | `authenticated=true` | PASS |
 | Successful server-side session refresh | `http=204` and `session_preserved=true` | PASS |
+| Repeated server-side refresh | `http=204` and `session_preserved=true` on the second refresh | PASS for exercised behavior |
+| Provider unavailable during refresh | `http=401`, cookie cleared, and application session revoked | PASS for exercised behavior |
 
 ## 3. Requirements traceability
 
@@ -75,21 +92,22 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 | Logout revocation and anonymous denial | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/auth.controller.ts`, `backend/api/src/auth/session.service.ts`, OIDC adapter | Session/AuthService suites | Logout, post-logout denial, and anonymous denial all passed | PASS for exercised behavior |
 | Frontend-origin callback redirect | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `FRONTEND_ORIGIN` validation and `AuthController.callback()` | `backend/api/src/auth/auth.controller.spec.ts`, environment-validation suite | `auth_login_status=PASS` after the redirect-contract correction | PASS for this runtime slice |
 
-## 4. Static verification associated with the correction
+## 4. Static verification associated with the authentication/session runtime changes
 
-The following commands were executed in the sandbox checkout `/home/ubuntu/Mohamy-pro-git` after the redirect correction:
+The latest sandbox verification covered the refresh hardening, repeated-refresh verifier, and provider-outage verifier:
 
 | Command | Result |
 |---|---|
-| `pnpm --filter api exec jest --runInBand` | PASS — 19 suites, 79 tests |
+| `pnpm --filter api exec jest --runInBand` | PASS — 20 suites, 85 tests |
 | `pnpm --filter api exec eslint src` | PASS |
 | `pnpm --filter api run build` | PASS |
-| `python3 -m json.tool infrastructure/docker/keycloak/mohamy-realm.json` | PASS |
-| `git diff --check` | PASS |
+| `node --check backend/api/scripts/auth-runtime-check.mjs` | PASS |
 | `node --check backend/api/scripts/auth-negative-runtime-check.mjs` | PASS |
-| `python3 -m json.tool backend/api/package.json` | PASS |
+| `node --check backend/api/scripts/auth-provider-failure-runtime-check.mjs` | PASS |
+| JSON validation for `backend/api/package.json` and `infrastructure/docker/keycloak/mohamy-realm.json` | PASS |
+| `git diff --check` | PASS |
 
-The redirect correction was published only to `origin/phase2/legacy-tenant-boundaries` as commit `8ca694d2`; the negative-path verifier was published as commit `c943b2b2`. `origin/main` was not modified.
+The refresh hardening and repeated-refresh verifier were published as commit `5573ea8f`. The controlled provider-outage verifier and Keycloak research note were published as commit `36de2090`. `origin/main` was not modified.
 
 ## 5. Remaining Phase 2 work
 
@@ -104,7 +122,9 @@ The following authentication-related evidence remains unverified or partial:
 | OIDC state replay and state mismatch | PASS in the negative-path Windows verifier |
 | Callback nonce mismatch and expired transaction runtime cases | Unit-tested or design-covered; real Windows runtime evidence not recorded here |
 | Successful provider refresh | PASS in the lifecycle verifier; session cookie preserved |
-| Refresh-token rotation with a newly returned refresh token and provider refresh failure revocation | UNVERIFIED in this runtime run |
+| Refresh-token rotation persistence | Repeated refresh passed; encrypted-token replacement is covered by deterministic SessionService tests, but the live provider response was not inspected | PARTIAL |
+| Provider unavailable during refresh | HTTP 401, cookie cleared, and application session revoked | PASS for exercised behavior |
+| Provider `invalid_grant` refresh failure revocation | UNVERIFIED in this runtime run |
 | Session idle and absolute expiry runtime behavior | UNVERIFIED in this runtime run |
 | Suspended/disabled/deleted user and membership gates | UNVERIFIED in this runtime run |
 | Database-level persisted identity/session inspection | UNVERIFIED in this runtime run |
@@ -135,4 +155,4 @@ The subject-claim diagnosis was cross-checked against the OpenID Connect and Key
 
 ## 9. Current qualified status
 
-The happy-path, negative-path, and successful server-side refresh authentication/session verifiers are PASS in the qualified Windows development environment. Refresh-token rotation/failure, idle and absolute expiry, user and membership state transitions, provider logout events, MFA assurance, database persistence inspection, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
+The happy-path, negative-path, successful server-side refresh, repeated-refresh, and provider-unavailability fail-closed authentication/session verifiers are PASS in the qualified Windows development environment. Provider `invalid_grant` refresh failure, idle and absolute expiry, user and membership state transitions, provider logout events, MFA assurance, database persistence inspection, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
