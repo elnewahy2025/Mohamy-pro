@@ -31,6 +31,7 @@ function createSession(overrides: Record<string, unknown> = {}) {
     id: 'session-id',
     status: 'ACTIVE',
     tokenHash: TOKEN_HASH,
+    userId: 'user-id',
     providerRefreshTokenCiphertext: 'encrypted:refresh-token-1',
     csrfTokenCiphertext: 'encrypted:csrf-token',
     idleExpiresAt: new Date(Date.now() + 3_600_000),
@@ -40,11 +41,18 @@ function createSession(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function createPrisma(updateMany: jest.Mock, session = createSession()) {
+function createPrisma(
+  updateMany: jest.Mock,
+  session = createSession(),
+  userUpdate: jest.Mock = jest.fn().mockResolvedValue({ status: 'ACTIVE' }),
+) {
   const transaction = {
     appSession: {
       findUnique: jest.fn().mockResolvedValue(session),
       updateMany,
+    },
+    user: {
+      update: userUpdate,
     },
   };
   return {
@@ -54,6 +62,115 @@ function createPrisma(updateMany: jest.Mock, session = createSession()) {
     ),
   } as never;
 }
+
+describe('SessionService user-state lifecycle', () => {
+  it('does not revoke sessions when transitioning to an allowed state', async () => {
+    const updateMany = jest.fn();
+    const userUpdate = jest.fn().mockResolvedValue({ status: 'PENDING' });
+    const service = new SessionService(
+      createPrisma(updateMany, createSession(), userUpdate),
+      createCrypto(),
+      {} as never,
+      createConfig(),
+    );
+
+    await expect(
+      service.transitionUserStatus('user-id', 'PENDING'),
+    ).resolves.toEqual({ status: 'PENDING', revokedSessionCount: 0 });
+
+    expect(userUpdate).toHaveBeenCalledWith({
+      where: { id: 'user-id' },
+      data: { status: 'PENDING' },
+    });
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['SUSPENDED', 'DISABLED', 'DELETED'] as const)(
+    'atomically revokes every active session when transitioning to %s',
+    async (status) => {
+      const updateMany = jest.fn().mockResolvedValue({ count: 3 });
+      const userUpdate = jest.fn().mockResolvedValue({ status });
+      const service = new SessionService(
+        createPrisma(updateMany, createSession(), userUpdate),
+        createCrypto(),
+        {} as never,
+        createConfig(),
+      );
+
+      await expect(
+        service.transitionUserStatus('user-id', status),
+      ).resolves.toEqual({ status, revokedSessionCount: 3 });
+
+      expect(updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-id', status: 'ACTIVE' },
+        data: {
+          status: 'REVOKED',
+          revokedAt: anyDateMatcher,
+          revokedReason: 'account_status',
+          providerRefreshTokenCiphertext: null,
+          csrfTokenCiphertext: null,
+        },
+      });
+    },
+  );
+
+  it.each(['SUSPENDED', 'DISABLED', 'DELETED'] as const)(
+    'revokes all remaining active sessions when a %s user presents an existing cookie',
+    async (status) => {
+      const updateMany = jest.fn().mockResolvedValue({ count: 2 });
+      const service = new SessionService(
+        createPrisma(
+          updateMany,
+          createSession({ user: { status }, userId: 'user-id' }),
+        ),
+        createCrypto(),
+        {} as never,
+        createConfig(),
+      );
+
+      await expect(service.findByCookie(COOKIE)).resolves.toBeNull();
+
+      expect(updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-id', status: 'ACTIVE' },
+        data: {
+          status: 'REVOKED',
+          revokedAt: anyDateMatcher,
+          revokedReason: 'account_status',
+          providerRefreshTokenCiphertext: null,
+          csrfTokenCiphertext: null,
+        },
+      });
+    },
+  );
+
+  it('revokes all remaining active sessions before refusing refresh for a blocked user', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 2 });
+    const oidc = { refreshToken: jest.fn() };
+    const service = new SessionService(
+      createPrisma(
+        updateMany,
+        createSession({ user: { status: 'SUSPENDED' }, userId: 'user-id' }),
+      ),
+      createCrypto(),
+      oidc as never,
+      createConfig(),
+    );
+
+    await expect(service.refreshByCookie(COOKIE)).resolves.toBe(false);
+
+    expect(oidc.refreshToken).not.toHaveBeenCalled();
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { userId: 'user-id', status: 'ACTIVE' },
+      data: {
+        status: 'REVOKED',
+        revokedAt: anyDateMatcher,
+        revokedReason: 'account_status',
+        providerRefreshTokenCiphertext: null,
+        csrfTokenCiphertext: null,
+      },
+    });
+  });
+});
 
 describe('SessionService refresh lifecycle', () => {
   it('atomically replaces the encrypted refresh token when the provider rotates it', async () => {

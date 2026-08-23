@@ -120,16 +120,12 @@ export class SessionService {
         });
         if (!session || session.status !== 'ACTIVE') return null;
         if (!isLoginAllowed(session.user.status)) {
-          await transaction.appSession.update({
-            where: { id: session.id },
-            data: {
-              status: 'REVOKED',
-              revokedAt: now,
-              revokedReason: 'account_status',
-              providerRefreshTokenCiphertext: null,
-              csrfTokenCiphertext: null,
-            },
-          });
+          await revokeActiveSessionsInTransaction(
+            transaction,
+            session.userId,
+            'account_status',
+            now,
+          );
           return null;
         }
         if (session.idleExpiresAt <= now || session.absoluteExpiresAt <= now) {
@@ -218,6 +214,31 @@ export class SessionService {
     }
   }
 
+  async transitionUserStatus(
+    userId: string,
+    status: UserStatus,
+  ): Promise<{ status: UserStatus; revokedSessionCount: number }> {
+    const now = new Date();
+    return this.prisma.withGlobalOperationContext(
+      randomUUID(),
+      async (transaction) => {
+        const user = await transaction.user.update({
+          where: { id: userId },
+          data: { status },
+        });
+        const revokedSessionCount = isLoginAllowed(status)
+          ? 0
+          : await revokeActiveSessionsInTransaction(
+              transaction,
+              userId,
+              'account_status',
+              now,
+            );
+        return { status: user.status, revokedSessionCount };
+      },
+    );
+  }
+
   async revokeByCookie(cookieValue: string, reason: string): Promise<boolean> {
     if (!/^[A-Za-z0-9_-]{43}$/.test(cookieValue)) return false;
     const tokenHash = this.crypto.hash(cookieValue);
@@ -264,12 +285,23 @@ export class SessionService {
           include: { user: true },
         }),
     );
-    if (
-      !session ||
-      session.status !== 'ACTIVE' ||
-      !isLoginAllowed(session.user.status) ||
-      !session.providerRefreshTokenCiphertext
-    ) {
+    if (!session || session.status !== 'ACTIVE') {
+      return false;
+    }
+    if (!isLoginAllowed(session.user.status)) {
+      await this.prisma.withGlobalOperationContext(
+        randomUUID(),
+        (transaction) =>
+          revokeActiveSessionsInTransaction(
+            transaction,
+            session.userId,
+            'account_status',
+            new Date(),
+          ),
+      );
+      return false;
+    }
+    if (!session.providerRefreshTokenCiphertext) {
       return false;
     }
     const now = new Date();
@@ -392,6 +424,25 @@ function normalizeEmail(
 
 function isLoginAllowed(status: UserStatus): boolean {
   return status === UserStatus.PENDING || status === UserStatus.ACTIVE;
+}
+
+async function revokeActiveSessionsInTransaction(
+  transaction: Prisma.TransactionClient,
+  userId: string,
+  reason: string,
+  revokedAt: Date,
+): Promise<number> {
+  const result = await transaction.appSession.updateMany({
+    where: { userId, status: 'ACTIVE' },
+    data: {
+      status: 'REVOKED',
+      revokedAt,
+      revokedReason: reason.slice(0, 128),
+      providerRefreshTokenCiphertext: null,
+      csrfTokenCiphertext: null,
+    },
+  });
+  return result.count;
 }
 
 async function countActiveMemberships(
