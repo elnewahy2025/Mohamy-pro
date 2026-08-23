@@ -88,6 +88,22 @@ auth_persistence_runtime_result=PASS
 
 This is qualified aggregate and structural evidence only. It proves that the verifier could read the persisted identity/session records and that the observed hashes, ciphertext format, lifecycle counts, and expiry ordering met its assertions. It does not prove identifier-level correctness for every record, complete user or membership lifecycle behavior, audit persistence, or the full Phase 2 database acceptance matrix. The verifier was read-only and did not print identifiers, provider subjects, hashes, ciphertexts, cookies, tokens, or database connection values.
 
+The user-state runtime verifier then produced the following bounded markers on Windows. It used the existing development identity, began in `PENDING` with zero active memberships, created two application sessions, exercised the approved transitions, and restored the original `PENDING` state:
+
+```text
+auth_user_state_precheck=PASS|sessions=2|original_status=PENDING|active_memberships=0
+auth_user_state_pending_status=PASS|session_access=true|tenant_context=false
+auth_user_state_active_status=PASS|session_access=true|tenant_context=false
+auth_user_state_suspended_status=PASS|sessions_revoked=true|session_denied=true|persistence=true
+auth_user_state_disabled_status=PASS|sessions_revoked=true|session_denied=true|persistence=true
+auth_user_state_deleted_status=PASS|sessions_revoked=true|session_denied=true|persistence=true
+auth_user_state_restore_status=PASS|restored=true|status=PENDING
+auth_membership_context_status=PASS|active_memberships=0|tenant_context=false
+auth_user_state_runtime_result=PASS
+```
+
+This is qualified evidence for the exercised user-state and no-membership boundary only. It proves that `PENDING` and `ACTIVE` sessions remained usable without tenant context for the zero-membership test user, and that `SUSPENDED`, `DISABLED`, and `DELETED` transitions revoked both active sessions, persisted the blocked state, denied both cookies, and restored the original state. It does not prove membership `INVITED`, `ACTIVE`, `SUSPENDED`, `EXPIRED`, or `REMOVED` transitions, tenant switching, onboarding/invitation behavior, audit persistence, MFA assurance, or the full Phase 2 acceptance matrix.
+
 The runtime results demonstrate that the following sequence succeeded in the qualified Windows environment:
 
 | Boundary | Evidence | Status |
@@ -108,6 +124,8 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 | Idle session expiry | Short-TTL session denied after inactivity and refresh denied | PASS for exercised behavior |
 | Absolute session expiry | Short-TTL session denied after absolute deadline and refresh denied | PASS for exercised behavior |
 | Persisted identity/session shape | Read-only aggregate counts and ciphertext/hash structure satisfied the verifier assertions | PASS for aggregate/structural evidence only |
+| User lifecycle session boundary | PENDING and ACTIVE session preservation; SUSPENDED, DISABLED, and DELETED all-session revocation and denial | PASS for exercised behavior |
+| Zero-membership tenant-context boundary | Session remained available for controlled no-membership behavior while `tenantContext` remained null | PASS for exercised behavior; membership lifecycle states remain open |
 
 ## 3. Requirements traceability
 
@@ -120,25 +138,28 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 | CSRF token boundary | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/session.service.ts`, CSRF/origin middleware, controller | CSRF/origin and session suites | Valid token bootstrap passed; missing and mismatched CSRF mutations returned HTTP 403 | PASS for exercised behavior; additional mutation cases remain |
 | Logout revocation and anonymous denial | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/auth.controller.ts`, `backend/api/src/auth/session.service.ts`, OIDC adapter | Session/AuthService suites | Logout, post-logout denial, and anonymous denial all passed | PASS for exercised behavior |
 | Frontend-origin callback redirect | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `FRONTEND_ORIGIN` validation and `AuthController.callback()` | `backend/api/src/auth/auth.controller.spec.ts`, environment-validation suite | `auth_login_status=PASS` after the redirect-contract correction | PASS for this runtime slice |
+| User lifecycle states and all-session revocation | [`ACCOUNT_LIFECYCLE_DECISION.md`](ACCOUNT_LIFECYCLE_DECISION.md) | `SessionService.transitionUserStatus()`, blocked-user lookup and refresh branches | `backend/api/src/auth/session.service.spec.ts` | `auth_user_state_*` markers; persisted state and two-session denial passed on Windows | PASS for exercised behavior; public administrative transition API and audit event remain open |
+| Zero-membership and tenant-context gate | [`ACCOUNT_LIFECYCLE_DECISION.md`](ACCOUNT_LIFECYCLE_DECISION.md) and [`TENANT_MEMBERSHIP_SWITCHING_DECISION.md`](TENANT_MEMBERSHIP_SWITCHING_DECISION.md) | `SessionService` active-membership count and current session view | Session-service and real runtime verifier | `auth_membership_context_status=PASS|active_memberships=0|tenant_context=false` | PASS for the exercised zero-membership slice; membership lifecycle and switching remain open |
 
 ## 4. Static verification associated with the authentication/session runtime changes
 
-The latest sandbox verification covered the refresh hardening, repeated-refresh verifier, provider-outage verifier, and short-TTL expiry verifier:
+The latest sandbox verification covered the refresh hardening, repeated-refresh verifier, provider-outage verifier, short-TTL expiry verifier, and user-state lifecycle implementation and verifier:
 
 | Command | Result |
 |---|---|
-| `pnpm --filter api exec jest --runInBand` | PASS — 20 suites, 87 tests |
+| `pnpm --filter api exec jest --runInBand` | PASS — 20 suites, 95 tests |
 | `pnpm --filter api exec eslint src` | PASS |
 | `pnpm --filter api run build` | PASS |
 | `node --check backend/api/scripts/auth-runtime-check.mjs` | PASS |
 | `node --check backend/api/scripts/auth-negative-runtime-check.mjs` | PASS |
 | `node --check backend/api/scripts/auth-provider-failure-runtime-check.mjs` | PASS |
 | `node --check backend/api/scripts/auth-expiry-runtime-check.mjs` | PASS |
+| `node --check backend/api/scripts/auth-user-state-runtime-check.mjs` | PASS |
 | JSON validation for `backend/api/package.json` and `infrastructure/docker/keycloak/mohamy-realm.json` | PASS |
 | `git diff --check` | PASS |
 | `pnpm --filter api run db:phase2:auth-persistence` | PASS on Windows — read-only aggregate/structural persistence verifier; exact five safe markers recorded in Section 2 |
 
-The refresh hardening and repeated-refresh verifier were published as commit `5573ea8f`. The controlled provider-outage verifier and Keycloak research note were published as commit `36de2090`. The explicit refresh-expiry guard was published as commit `330f5dca`, and the short-TTL expiry verifier was published as commit `58d55440`. `origin/main` was not modified.
+The refresh hardening and repeated-refresh verifier were published as commit `5573ea8f`. The controlled provider-outage verifier and Keycloak research note were published as commit `36de2090`. The explicit refresh-expiry guard was published as commit `330f5dca`, and the short-TTL expiry verifier was published as commit `58d55440`. Persisted evidence documentation was published as `395dfbaa`; the atomic blocked-user transition implementation and verifier were published as `00341038`, with the per-state active-session verifier correction published as `05c5a3bf`. `origin/main` was not modified.
 
 ## 5. Remaining Phase 2 work
 
@@ -157,7 +178,8 @@ The following authentication-related evidence remains unverified or partial:
 | Provider unavailable during refresh | HTTP 401, cookie cleared, and application session revoked | PASS for exercised behavior |
 | Provider `invalid_grant` refresh failure revocation | UNVERIFIED in this runtime run |
 | Session idle and absolute expiry runtime behavior | PASS in the short-TTL Windows verifier; normal production-duration timing remains represented by configuration and unit behavior |
-| Suspended/disabled/deleted user and membership gates | UNVERIFIED in this runtime run |
+| User lifecycle state gates | PASS for the exercised PENDING/ACTIVE preservation and SUSPENDED/DISABLED/DELETED all-session revocation/denial runtime slice |
+| Membership lifecycle gates | UNVERIFIED for INVITED, ACTIVE, SUSPENDED, EXPIRED, and REMOVED transitions; zero-membership/no-tenant-context behavior is evidenced separately |
 | Database-level persisted identity/session inspection | PASS for the read-only aggregate/structural verifier; identifier-level correctness and full lifecycle persistence remain unverified |
 | Production Keycloak deployment, TLS, KMS-backed encryption, production object storage, and operational evidence | BLOCKED by the qualified development-only environment |
 
@@ -186,4 +208,4 @@ The subject-claim diagnosis was cross-checked against the OpenID Connect and Key
 
 ## 9. Current qualified status
 
-The happy-path, negative-path, successful server-side refresh, repeated-refresh, provider-unavailability fail-closed, short-TTL idle/absolute-expiry, and read-only aggregate/structural persistence verifiers are PASS in the qualified Windows development environment. Provider `invalid_grant` refresh failure, user and membership state transitions, provider logout events, MFA assurance, identifier-level and full-lifecycle database persistence, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
+The happy-path, negative-path, successful server-side refresh, repeated-refresh, provider-unavailability fail-closed, short-TTL idle/absolute-expiry, read-only aggregate/structural persistence, and exercised user-state verifiers are PASS in the qualified Windows development environment. Provider `invalid_grant` refresh failure, membership lifecycle and tenant switching, provider logout events, MFA assurance, identifier-level and full-lifecycle database persistence, administrative lifecycle API and audit events, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
