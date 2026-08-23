@@ -259,9 +259,11 @@ export class OidcClient implements OidcClientPort {
       });
       if (!response.ok) {
         let providerError = 'unknown';
+        let providerReason = 'unknown';
         try {
           const payload = (await response.clone().json()) as {
             error?: unknown;
+            error_description?: unknown;
           };
           if (
             typeof payload.error === 'string' &&
@@ -269,11 +271,12 @@ export class OidcClient implements OidcClientPort {
           ) {
             providerError = payload.error;
           }
+          providerReason = classifyProviderReason(payload.error_description);
         } catch {
           // Keep provider failures non-enumerating when the body is not JSON.
         }
         this.logger.warn(
-          `${operation} rejected with HTTP ${response.status}|provider_error=${providerError}`,
+          `${operation} rejected with HTTP ${response.status}|provider_error=${providerError}|provider_reason=${providerReason}`,
         );
         throw new Error(`${operation} failed with HTTP ${response.status}`);
       }
@@ -343,6 +346,30 @@ function isHttpUrl(value: unknown): value is string {
   } catch {
     return false;
   }
+}
+
+function classifyProviderReason(description: unknown): string {
+  if (typeof description !== 'string') return 'unknown';
+  const normalized = description.toLowerCase();
+  if (normalized.includes('offline') && normalized.includes('not allowed')) {
+    return 'offline_token_not_allowed';
+  }
+  if (normalized.includes('consent') && normalized.includes('not')) {
+    return 'consent_not_granted';
+  }
+  if (normalized.includes('pkce') || normalized.includes('code verifier')) {
+    return 'pkce_verifier_rejected';
+  }
+  if (normalized.includes('redirect_uri')) {
+    return 'redirect_uri_rejected';
+  }
+  if (normalized.includes('code') && normalized.includes('valid')) {
+    return 'authorization_code_rejected';
+  }
+  if (normalized.includes('client') && normalized.includes('not')) {
+    return 'client_rejected';
+  }
+  return 'description_present';
 }
 
 function safeErrorName(error: unknown): string {
