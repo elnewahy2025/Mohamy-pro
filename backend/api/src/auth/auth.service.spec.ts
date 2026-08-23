@@ -161,6 +161,31 @@ describe('AuthService', () => {
       },
       { code: 'ERR_JWKS_TIMEOUT', reason: 'signature_or_key_rejected' },
       {
+        code: 'ERR_OIDC_REQUIRED_CLAIM',
+        claim: 'iss',
+        reason: 'required_issuer_claim_rejected',
+      },
+      {
+        code: 'ERR_OIDC_REQUIRED_CLAIM',
+        claim: 'sub',
+        reason: 'required_subject_claim_rejected',
+      },
+      {
+        code: 'ERR_OIDC_REQUIRED_CLAIM',
+        claim: 'exp',
+        reason: 'required_expiration_claim_rejected',
+      },
+      {
+        code: 'ERR_OIDC_REQUIRED_CLAIM',
+        claim: 'iat',
+        reason: 'required_issued_at_claim_rejected',
+      },
+      {
+        code: 'ERR_OIDC_REQUIRED_CLAIM',
+        claim: 'nonce',
+        reason: 'required_nonce_claim_rejected',
+      },
+      {
         message: 'OIDC token claims are incomplete',
         reason: 'jwt_claim_rejected',
       },
@@ -185,8 +210,9 @@ describe('AuthService', () => {
         verifyAccessToken: jest.fn(() => {
           const error = new Error(
             failure.message ?? 'native jose detail must not be logged',
-          ) as Error & { code?: string };
+          ) as Error & { code?: string; claim?: string };
           if (failure.code) error.code = failure.code;
+          if ('claim' in failure) error.claim = failure.claim;
           throw error;
         }),
       } as never;

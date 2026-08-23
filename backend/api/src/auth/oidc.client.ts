@@ -157,15 +157,20 @@ export class OidcClient implements OidcClientPort {
       clockTolerance: this.config.getOrThrow<number>('OIDC_CLOCK_SKEW_SECONDS'),
       ...(nonce ? { nonce } : {}),
     });
-    if (
-      typeof payload.iss !== 'string' ||
-      typeof payload.sub !== 'string' ||
-      payload.sub.trim().length === 0 ||
-      typeof payload.exp !== 'number' ||
-      typeof payload.iat !== 'number' ||
-      (nonce !== undefined && typeof payload.nonce !== 'string')
-    ) {
-      throw new Error('OIDC token claims are incomplete');
+    if (typeof payload.iss !== 'string') {
+      throw requiredClaimError('iss');
+    }
+    if (typeof payload.sub !== 'string' || payload.sub.trim().length === 0) {
+      throw requiredClaimError('sub');
+    }
+    if (typeof payload.exp !== 'number') {
+      throw requiredClaimError('exp');
+    }
+    if (typeof payload.iat !== 'number') {
+      throw requiredClaimError('iat');
+    }
+    if (nonce !== undefined && typeof payload.nonce !== 'string') {
+      throw requiredClaimError('nonce');
     }
     return payload as unknown as OidcIdentityClaims;
   }
@@ -370,6 +375,18 @@ function classifyProviderReason(description: unknown): string {
     return 'client_rejected';
   }
   return 'description_present';
+}
+
+function requiredClaimError(
+  claim: 'iss' | 'sub' | 'exp' | 'iat' | 'nonce',
+): Error {
+  const error = new Error('OIDC required claim rejected') as Error & {
+    code: string;
+    claim: string;
+  };
+  error.code = 'ERR_OIDC_REQUIRED_CLAIM';
+  error.claim = claim;
+  return error;
 }
 
 function safeErrorName(error: unknown): string {

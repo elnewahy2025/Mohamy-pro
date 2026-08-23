@@ -146,6 +146,16 @@ function safeValidationReason(error: unknown): string {
   ) {
     return 'jwt_token_invalid';
   }
+  if (joseError.code === 'ERR_OIDC_REQUIRED_CLAIM') {
+    if (joseError.claim === 'iss') return 'required_issuer_claim_rejected';
+    if (joseError.claim === 'sub') return 'required_subject_claim_rejected';
+    if (joseError.claim === 'exp') {
+      return 'required_expiration_claim_rejected';
+    }
+    if (joseError.claim === 'iat') return 'required_issued_at_claim_rejected';
+    if (joseError.claim === 'nonce') return 'required_nonce_claim_rejected';
+    return 'jwt_claim_rejected';
+  }
   if (
     joseError.code === 'ERR_JWT_CLAIM_VALIDATION_FAILED' ||
     joseError.name === 'JWTClaimValidationFailed'
