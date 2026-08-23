@@ -27,7 +27,8 @@
     "db:phase2:auth": "node scripts/auth-runtime-check.mjs",
     "db:phase2:auth-negative": "node scripts/auth-negative-runtime-check.mjs",
     "db:phase2:auth-provider-failure": "node scripts/auth-provider-failure-runtime-check.mjs",
-    "db:phase2:auth-expiry": "node scripts/auth-expiry-runtime-check.mjs"
+    "db:phase2:auth-expiry": "node scripts/auth-expiry-runtime-check.mjs",
+    "db:phase2:auth-persistence": "node scripts/auth-persistence-runtime-check.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1113.0",
