@@ -8,9 +8,14 @@ import { OidcTransactionStore } from './oidc-transaction.store';
 import { SessionCryptoService } from './session-crypto.service';
 import { SessionGuard } from './session.guard';
 import { SessionService } from './session.service';
+import { IdempotencyModule } from '../infrastructure/idempotency/idempotency.module';
+import { Phase2BusinessInterceptor } from '../common/http/phase2-business.interceptor';
+import { MembershipService } from './membership.service';
+import { TenantSessionController } from './tenant-session.controller';
 
 @Module({
-  controllers: [AuthController],
+  imports: [IdempotencyModule],
+  controllers: [AuthController, TenantSessionController],
   providers: [
     AuthService,
     CsrfOriginMiddleware,
@@ -20,8 +25,15 @@ import { SessionService } from './session.service';
     SessionCryptoService,
     SessionGuard,
     SessionService,
+    Phase2BusinessInterceptor,
+    MembershipService,
   ],
-  exports: [AuthService, SessionGuard, SessionService],
+  exports: [
+    AuthService,
+    SessionGuard,
+    SessionService,
+    Phase2BusinessInterceptor,
+  ],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

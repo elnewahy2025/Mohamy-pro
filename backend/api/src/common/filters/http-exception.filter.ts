@@ -9,8 +9,15 @@ import {
 import type { Request, Response } from 'express';
 import { getCorrelationId } from '../middleware/correlation-id.middleware';
 import { MetricsService } from '../../observability/metrics.service';
+import {
+  createErrorEnvelope,
+  type ApiErrorEnvelope,
+  isOidcRedirectRequest,
+  isOperationalRequest,
+  statusForException,
+} from '../http/api-envelope';
 
-interface ErrorResponseBody {
+interface LegacyErrorResponseBody {
   statusCode: number;
   error: string;
   message: string | string[];
@@ -32,32 +39,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = http.getResponse<Response>();
     const correlationId = getCorrelationId(request);
     const timestamp = new Date().toISOString();
-
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
-    const rawResponse =
-      exception instanceof HttpException ? exception.getResponse() : undefined;
-    const rawMessage =
-      typeof rawResponse === 'object' &&
-      rawResponse !== null &&
-      'message' in rawResponse
-        ? rawResponse.message
-        : typeof rawResponse === 'string'
-          ? rawResponse
-          : undefined;
-    const message: string | string[] =
-      status >= 500
-        ? 'Internal server error'
-        : typeof rawMessage === 'string'
-          ? rawMessage
-          : Array.isArray(rawMessage) &&
-              rawMessage.every(
-                (item): item is string => typeof item === 'string',
-              )
-            ? rawMessage
-            : 'Request failed';
+    const status = statusForException(exception);
 
     if (status >= 400) {
       this.metrics?.recordApplicationError(
@@ -77,16 +59,62 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
-    const body: ErrorResponseBody = {
-      statusCode: status,
-      error: HttpStatus[status] ?? 'HTTP_ERROR',
-      message,
-      path: request.originalUrl,
-      method: request.method,
-      timestamp,
-      correlationId,
-    };
+    if (
+      isOperationalRequest(request) ||
+      isOidcRedirectRequest(request) ||
+      isServiceInfoRequest(request)
+    ) {
+      response
+        .status(status)
+        .json(legacyErrorBody(exception, request, timestamp));
+      return;
+    }
 
-    response.status(status).json(body);
+    const errorEnvelope =
+      (request as Request & { phase2ErrorEnvelope?: ApiErrorEnvelope })
+        .phase2ErrorEnvelope ??
+      createErrorEnvelope(exception, request, timestamp);
+    response.status(status).json(errorEnvelope);
   }
+}
+
+function legacyErrorBody(
+  exception: unknown,
+  request: Request,
+  timestamp: string,
+): LegacyErrorResponseBody {
+  const status = statusForException(exception);
+  const rawResponse =
+    exception instanceof HttpException ? exception.getResponse() : undefined;
+  const rawMessage =
+    typeof rawResponse === 'object' &&
+    rawResponse !== null &&
+    'message' in rawResponse
+      ? rawResponse.message
+      : typeof rawResponse === 'string'
+        ? rawResponse
+        : undefined;
+  const message: string | string[] =
+    status >= 500
+      ? 'Internal server error'
+      : typeof rawMessage === 'string'
+        ? rawMessage
+        : Array.isArray(rawMessage) &&
+            rawMessage.every((item): item is string => typeof item === 'string')
+          ? rawMessage
+          : 'Request failed';
+  return {
+    statusCode: status,
+    error: HttpStatus[status] ?? 'HTTP_ERROR',
+    message,
+    path: request.originalUrl,
+    method: request.method,
+    timestamp,
+    correlationId: getCorrelationId(request),
+  };
+}
+
+function isServiceInfoRequest(request: Request): boolean {
+  const path = request.originalUrl.split('?', 1)[0];
+  return path === '/api/v1' || path === '/api/v1/';
 }

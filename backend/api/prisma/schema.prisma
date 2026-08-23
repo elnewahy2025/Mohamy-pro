@@ -64,6 +64,18 @@ enum OutboxScope {
   TENANT
 }
 
+enum AuditCategory {
+  AUDIT
+  SECURITY
+}
+
+enum AuditOutcome {
+  SUCCEEDED
+  DENIED
+  FAILED
+  REVOKED
+}
+
 enum IdempotencyState {
   RESERVED
   COMPLETED
@@ -185,6 +197,7 @@ model User {
   globalRoleAssignments GlobalRoleAssignment[]
   denials               AccessDenial[]         @relation("DenialSubjectUser")
   idempotencyKeys       IdempotencyKey[]
+  auditEvents           AuditEvent[]       @relation("AuditActorUser")
 
   @@index([status, createdAt])
 }
@@ -242,6 +255,39 @@ model AppSession {
   @@index([absoluteExpiresAt])
 }
 
+model AuditEvent {
+  id                String        @id @default(uuid())
+  eventType         String        @db.VarChar(128)
+  eventVersion      Int           @default(1)
+  category          AuditCategory
+  outcome           AuditOutcome
+  actorUserId       String?
+  actorMembershipId String?
+  tenantId          String?
+  targetType        String?       @db.VarChar(128)
+  targetId          String?       @db.VarChar(128)
+  policy            String?       @db.VarChar(128)
+  reasonCode        String?       @db.VarChar(128)
+  correlationId     String        @db.VarChar(36)
+  traceId           String?       @db.VarChar(128)
+  ipHash            String?       @db.VarChar(128)
+  userAgentHash     String?       @db.VarChar(128)
+  metadata          Json
+  payloadHash       String        @db.VarChar(64)
+  occurredAt        DateTime      @default(now())
+  createdAt         DateTime      @default(now())
+  retentionUntil    DateTime
+  legalHold         Boolean       @default(false)
+  actorUser         User?         @relation("AuditActorUser", fields: [actorUserId], references: [id], onDelete: Restrict)
+  actorMembership   Membership?   @relation("AuditActorMembership", fields: [actorMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  tenant            Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([eventType, occurredAt])
+  @@index([retentionUntil, legalHold])
+}
+
 // Phase 2: Primary ordinary data-security boundary.
 model Tenant {
   id                 String           @id @default(uuid())
@@ -265,6 +311,7 @@ model Tenant {
   storageObjects     StorageObject[]
   outboxMessages     OutboxMessage[]
   idempotencyKeys    IdempotencyKey[]
+  auditEvents        AuditEvent[]
 
   @@index([status, createdAt])
 }
@@ -359,6 +406,7 @@ model Membership {
   teamMembers     TeamMember[]
   invitationsSent Invitation[]     @relation("InvitationInviterMembership")
   denialsCreated  AccessDenial[]   @relation("DenialCreatedByMembership")
+  auditEvents     AuditEvent[]     @relation("AuditActorMembership")
 
   @@unique([userId, tenantId])
   @@unique([id, tenantId])

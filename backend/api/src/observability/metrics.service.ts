@@ -58,6 +58,12 @@ export class MetricsService {
   private readonly readinessStatus: Gauge<'dependency'>;
   private readonly workerJobDurationSeconds: Histogram<'job_name'>;
   private readonly applicationErrorsTotal: Counter<'error_type'>;
+  private readonly auditEventsTotal: Counter<
+    'event_type' | 'category' | 'outcome'
+  >;
+  private readonly auditWriteFailuresTotal: Counter<'category'>;
+  private readonly auditQueryDenialsTotal: Counter<'reason'>;
+  private readonly auditRetentionPurgeTotal: Counter<'result'>;
 
   constructor(config: ConfigService<ValidatedEnvironment, true>) {
     this.enabled = config.get<boolean>('METRICS_ENABLED', true);
@@ -117,6 +123,30 @@ export class MetricsService {
       name: 'mohamy_application_errors_total',
       help: 'Application errors by bounded category.',
       labelNames: ['error_type'],
+      registers: [this.registry],
+    });
+    this.auditEventsTotal = new Counter({
+      name: 'mohamy_audit_events_total',
+      help: 'Audit events by bounded event type, category, and outcome.',
+      labelNames: ['event_type', 'category', 'outcome'],
+      registers: [this.registry],
+    });
+    this.auditWriteFailuresTotal = new Counter({
+      name: 'mohamy_audit_write_failures_total',
+      help: 'Audit write failures by bounded category.',
+      labelNames: ['category'],
+      registers: [this.registry],
+    });
+    this.auditQueryDenialsTotal = new Counter({
+      name: 'mohamy_audit_query_denials_total',
+      help: 'Audit query denials by bounded reason.',
+      labelNames: ['reason'],
+      registers: [this.registry],
+    });
+    this.auditRetentionPurgeTotal = new Counter({
+      name: 'mohamy_audit_retention_purge_total',
+      help: 'Audit retention purge results by bounded outcome.',
+      labelNames: ['result'],
       registers: [this.registry],
     });
 
@@ -214,6 +244,32 @@ export class MetricsService {
     this.applicationErrorsTotal.labels(normalizeErrorType(errorType)).inc();
   }
 
+  recordAuditEvent(eventType: string, category: string, outcome: string): void {
+    if (!this.enabled) return;
+    this.auditEventsTotal
+      .labels(
+        normalizeAuditEventType(eventType),
+        normalizeAuditCategory(category),
+        normalizeAuditOutcome(outcome),
+      )
+      .inc();
+  }
+
+  recordAuditWriteFailure(category: string): void {
+    if (!this.enabled) return;
+    this.auditWriteFailuresTotal.labels(normalizeAuditCategory(category)).inc();
+  }
+
+  recordAuditQueryDenial(reason: string): void {
+    if (!this.enabled) return;
+    this.auditQueryDenialsTotal.labels(normalizeAuditReason(reason)).inc();
+  }
+
+  recordAuditRetentionPurge(result: 'success' | 'failure'): void {
+    if (!this.enabled) return;
+    this.auditRetentionPurgeTotal.labels(result).inc();
+  }
+
   async render(): Promise<string> {
     return this.enabled ? this.registry.metrics() : '';
   }
@@ -254,6 +310,45 @@ function normalizeDependency(dependency: string): string {
 
 function normalizeQueueName(queueName: string): string {
   return queueName === 'mohamy-application' ? queueName : 'other';
+}
+
+function normalizeAuditEventType(eventType: string): string {
+  return [
+    'auth.login.succeeded',
+    'auth.logout',
+    'auth.session.revoked',
+    'auth.session.refresh_failed',
+    'identity.suspended',
+    'identity.disabled',
+    'identity.deleted',
+    'privileged.operation.succeeded',
+    'tenant.switch.succeeded',
+    'tenant.switch.denied',
+  ].includes(eventType)
+    ? eventType
+    : 'other';
+}
+
+function normalizeAuditCategory(category: string): string {
+  return ['AUDIT', 'SECURITY'].includes(category) ? category : 'other';
+}
+
+function normalizeAuditOutcome(outcome: string): string {
+  return ['SUCCEEDED', 'DENIED', 'FAILED', 'REVOKED'].includes(outcome)
+    ? outcome
+    : 'other';
+}
+
+function normalizeAuditReason(reason: string): string {
+  return [
+    'unauthorized',
+    'forbidden',
+    'membership_not_eligible',
+    'stale_session_context',
+    'retention_policy',
+  ].includes(reason)
+    ? reason
+    : 'other';
 }
 
 function normalizeWorkerJobName(jobName: string): string {

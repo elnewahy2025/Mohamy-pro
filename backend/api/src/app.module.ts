@@ -16,6 +16,7 @@ import { HealthModule } from './health/health.module';
 import { MetricsModule } from './observability/metrics.module';
 import { RateLimitMiddleware } from './security/rate-limit.middleware';
 import { AuthModule } from './auth/auth.module';
+import { AuditModule } from './infrastructure/audit/audit.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AuthModule } from './auth/auth.module';
     HealthModule,
     MetricsModule,
     AuthModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [

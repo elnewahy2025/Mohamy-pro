@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { ApiErrorEnvelope } from '../common/http/api-envelope';
 
 export interface OidcDiscoveryDocument {
   issuer: string;
@@ -63,10 +64,14 @@ export interface AuthenticatedSession {
   idleExpiresAt: Date;
   absoluteExpiresAt: Date;
   activeMembershipCount: number;
+  activeTenantId: string | null;
+  activeMembershipId: string | null;
+  contextVersion: number;
 }
 
 export interface AuthenticatedRequest extends Request {
   authSession?: AuthenticatedSession;
+  phase2ErrorEnvelope?: ApiErrorEnvelope;
 }
 
 export interface AuthSessionView {
@@ -83,5 +88,9 @@ export interface AuthSessionView {
     absoluteExpiresAt: string;
   };
   activeMembershipCount: number;
-  tenantContext: null;
+  tenantContext: {
+    tenantId: string;
+    membershipId: string;
+    contextVersion: number;
+  } | null;
 }

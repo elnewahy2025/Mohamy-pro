@@ -81,6 +81,48 @@ export class PrismaService
     });
   }
 
+  async bindTenantContext(
+    transaction: Prisma.TransactionClient,
+    context: TenantTransactionContext,
+  ): Promise<void> {
+    const validatedContext = assertTenantTransactionContext(context);
+    await setTransactionContext(transaction, validatedContext);
+  }
+
+  async bindMembershipSelectionContext(
+    transaction: Prisma.TransactionClient,
+    context: MembershipSelectionContext,
+  ): Promise<void> {
+    const validatedContext = assertMembershipSelectionContext(context);
+    await setMembershipSelectionContext(transaction, validatedContext);
+  }
+
+  async bindGlobalOperationContext(
+    transaction: Prisma.TransactionClient,
+    operationId: string,
+  ): Promise<void> {
+    assertUuidContextField(operationId, 'operationId');
+    await setControlContext(transaction, {
+      operationId,
+      globalOperation: true,
+    });
+  }
+
+  async withAuditRetentionContext<TResult>(
+    operationId: string,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    assertUuidContextField(operationId, 'operationId');
+    return this.$transaction(async (transaction) => {
+      await setControlContext(transaction, {
+        operationId,
+        globalOperation: true,
+        auditRetentionPurge: true,
+      });
+      return callback(transaction);
+    });
+  }
+
   async withGlobalOperationContext<TResult>(
     operationId: string,
     callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
@@ -145,7 +187,8 @@ async function setTransactionContext(
       set_config('app.operation_id', ${context.operationId}, true),
       set_config('app.global_operation', 'false', true),
       set_config('app.outbox_dispatcher', 'false', true),
-      set_config('app.idempotency_maintenance', 'false', true)
+      set_config('app.idempotency_maintenance', 'false', true),
+      set_config('app.audit_retention_purge', 'false', true)
   `;
 }
 
@@ -161,7 +204,8 @@ async function setMembershipSelectionContext(
       set_config('app.operation_id', ${context.operationId}, true),
       set_config('app.global_operation', 'false', true),
       set_config('app.outbox_dispatcher', 'false', true),
-      set_config('app.idempotency_maintenance', 'false', true)
+      set_config('app.idempotency_maintenance', 'false', true),
+      set_config('app.audit_retention_purge', 'false', true)
   `;
 }
 
@@ -170,6 +214,7 @@ interface ControlContext {
   globalOperation?: boolean;
   outboxDispatcher?: boolean;
   idempotencyMaintenance?: boolean;
+  auditRetentionPurge?: boolean;
 }
 
 async function setControlContext(
@@ -184,7 +229,8 @@ async function setControlContext(
       set_config('app.operation_id', ${context.operationId}, true),
       set_config('app.global_operation', ${String(context.globalOperation ?? false)}, true),
       set_config('app.outbox_dispatcher', ${String(context.outboxDispatcher ?? false)}, true),
-      set_config('app.idempotency_maintenance', ${String(context.idempotencyMaintenance ?? false)}, true)
+      set_config('app.idempotency_maintenance', ${String(context.idempotencyMaintenance ?? false)}, true),
+      set_config('app.audit_retention_purge', ${String(context.auditRetentionPurge ?? false)}, true)
   `;
 }
 

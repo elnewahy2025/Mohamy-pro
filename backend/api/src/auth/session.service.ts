@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma, UserStatus } from '@prisma/client';
 import type { ValidatedEnvironment } from '../config/env.validation';
 import { PrismaService } from '../infrastructure/database/prisma.service';
+import { AuditService } from '../infrastructure/audit/audit.service';
 import { AuthenticationError } from './auth.errors';
 import type {
   AuthSessionView,
@@ -25,6 +26,7 @@ export class SessionService {
     private readonly crypto: SessionCryptoService,
     @Inject(OIDC_CLIENT) private readonly oidc: OidcClientPort,
     private readonly config: ConfigService<ValidatedEnvironment, true>,
+    private readonly audit: AuditService,
   ) {}
 
   async createFromOidc(
@@ -48,8 +50,9 @@ export class SessionService {
     );
     const provider = this.config.getOrThrow<string>('OIDC_ISSUER_URL');
     const email = normalizeEmail(claims.email, claims.email_verified);
+    const operationId = randomUUID();
     const user = await this.prisma.withGlobalOperationContext(
-      randomUUID(),
+      operationId,
       async (transaction) => {
         const userId = await this.resolveOrCreateUserIdInTransaction(
           transaction,
@@ -63,11 +66,16 @@ export class SessionService {
         if (!current || !isLoginAllowed(current.status)) {
           throw new AuthenticationError();
         }
+        await this.prisma.bindMembershipSelectionContext(transaction, {
+          userId,
+          operationId: randomUUID(),
+        });
         const activeMembershipCount = await countActiveMemberships(
           transaction,
           userId,
           now,
         );
+        await this.prisma.bindGlobalOperationContext(transaction, operationId);
         const created = await transaction.appSession.create({
           data: {
             userId,
@@ -88,6 +96,21 @@ export class SessionService {
             providerRefreshTokenCiphertext: this.crypto.encrypt(refreshToken),
           },
         });
+        await this.audit.recordInTransaction(
+          {
+            eventType: 'auth.login.succeeded',
+            category: 'AUDIT',
+            outcome: 'SUCCEEDED',
+            actorUserId: current.id,
+            targetType: 'AppSession',
+            targetId: created.id,
+            policy: 'Authentication',
+            reasonCode: 'oidc_authorization_code',
+            correlationId: randomUUID(),
+            metadata: { activeMembershipCount },
+          },
+          transaction,
+        );
         return {
           sessionId: created.id,
           userId: current.id,
@@ -99,6 +122,9 @@ export class SessionService {
           idleExpiresAt: created.idleExpiresAt,
           absoluteExpiresAt: created.absoluteExpiresAt,
           activeMembershipCount,
+          activeTenantId: created.activeTenantId,
+          activeMembershipId: created.activeMembershipId,
+          contextVersion: created.contextVersion,
         };
       },
     );
@@ -139,13 +165,98 @@ export class SessionService {
               csrfTokenCiphertext: null,
             },
           });
+          await this.audit.recordInTransaction(
+            {
+              eventType: 'auth.session.revoked',
+              category: 'SECURITY',
+              outcome: 'REVOKED',
+              actorUserId: session.userId,
+              targetType: 'AppSession',
+              targetId: session.id,
+              policy: 'SessionLifecycle',
+              reasonCode: 'expired',
+              correlationId: randomUUID(),
+              metadata: {},
+            },
+            transaction,
+          );
           return null;
+        }
+        let activeTenantId = session.activeTenantId;
+        let activeMembershipId = session.activeMembershipId;
+        let contextVersion = session.contextVersion;
+        await this.prisma.bindMembershipSelectionContext(transaction, {
+          userId: session.userId,
+          operationId: randomUUID(),
+        });
+        if (activeTenantId && activeMembershipId) {
+          const selectedMembership = await transaction.membership.findUnique({
+            where: {
+              id_tenantId: {
+                id: activeMembershipId,
+                tenantId: activeTenantId,
+              },
+            },
+            select: {
+              userId: true,
+              status: true,
+              activeFrom: true,
+              activeUntil: true,
+              tenant: { select: { status: true } },
+            },
+          });
+          if (
+            !isMembershipCurrentlyEligible(
+              selectedMembership,
+              now,
+              session.user.status,
+            )
+          ) {
+            activeTenantId = null;
+            activeMembershipId = null;
+            contextVersion += 1;
+            await this.prisma.bindGlobalOperationContext(
+              transaction,
+              randomUUID(),
+            );
+            await transaction.appSession.update({
+              where: { id: session.id },
+              data: {
+                activeTenantId: null,
+                activeMembershipId: null,
+                contextVersion,
+              },
+            });
+            await this.audit.recordInTransaction(
+              {
+                eventType: 'tenant.switch.denied',
+                category: 'SECURITY',
+                outcome: 'DENIED',
+                actorUserId: session.userId,
+                targetType: 'Tenant',
+                targetId: session.activeTenantId ?? undefined,
+                policy: 'SessionTenantContext',
+                reasonCode: 'membership_not_eligible',
+                correlationId: randomUUID(),
+                metadata: {
+                  sourceTenantId: session.activeTenantId,
+                  targetTenantId: session.activeTenantId,
+                },
+              },
+              transaction,
+            );
+            await this.prisma.bindMembershipSelectionContext(transaction, {
+              userId: session.userId,
+              operationId: randomUUID(),
+            });
+          }
         }
         const activeMembershipCount = await countActiveMemberships(
           transaction,
           session.userId,
           now,
         );
+        await this.prisma.bindGlobalOperationContext(transaction, randomUUID());
         if (
           now.getTime() - session.lastUsedAt.getTime() >=
           LAST_USED_WRITE_INTERVAL_MS
@@ -170,6 +281,9 @@ export class SessionService {
           idleExpiresAt: session.idleExpiresAt,
           absoluteExpiresAt: session.absoluteExpiresAt,
           activeMembershipCount,
+          activeTenantId,
+          activeMembershipId,
+          contextVersion,
         };
       },
     );
@@ -190,7 +304,14 @@ export class SessionService {
         absoluteExpiresAt: session.absoluteExpiresAt.toISOString(),
       },
       activeMembershipCount: session.activeMembershipCount,
-      tenantContext: null,
+      tenantContext:
+        session.activeTenantId && session.activeMembershipId
+          ? {
+              tenantId: session.activeTenantId,
+              membershipId: session.activeMembershipId,
+              contextVersion: session.contextVersion,
+            }
+          : null,
     };
   }
 
@@ -222,6 +343,9 @@ export class SessionService {
     return this.prisma.withGlobalOperationContext(
       randomUUID(),
       async (transaction) => {
+        const previous = await transaction.user.findUnique({
+          where: { id: userId },
+        });
         const user = await transaction.user.update({
           where: { id: userId },
           data: { status },
@@ -234,6 +358,26 @@ export class SessionService {
               'account_status',
               now,
             );
+        if (!isLoginAllowed(status)) {
+          await this.audit.recordInTransaction(
+            {
+              eventType: identityEventType(status),
+              category: 'SECURITY',
+              outcome: 'REVOKED',
+              targetType: 'User',
+              targetId: userId,
+              policy: 'AccountLifecycle',
+              reasonCode: 'account_status',
+              correlationId: randomUUID(),
+              metadata: {
+                fromStatus: previous?.status ?? null,
+                toStatus: status,
+                revokedSessionCount,
+              },
+            },
+            transaction,
+          );
+        }
         return { status: user.status, revokedSessionCount };
       },
     );
@@ -259,17 +403,37 @@ export class SessionService {
         // token material is unavailable or fails authenticated decryption.
       }
     }
-    await this.prisma.withGlobalOperationContext(randomUUID(), (transaction) =>
-      transaction.appSession.updateMany({
-        where: { id: session.id, status: 'ACTIVE' },
-        data: {
-          status: 'REVOKED',
-          revokedAt: new Date(),
-          revokedReason: reason.slice(0, 128),
-          providerRefreshTokenCiphertext: null,
-          csrfTokenCiphertext: null,
-        },
-      }),
+    await this.prisma.withGlobalOperationContext(
+      randomUUID(),
+      async (transaction) => {
+        const revokedAt = new Date();
+        const updated = await transaction.appSession.updateMany({
+          where: { id: session.id, status: 'ACTIVE' },
+          data: {
+            status: 'REVOKED',
+            revokedAt,
+            revokedReason: reason.slice(0, 128),
+            providerRefreshTokenCiphertext: null,
+            csrfTokenCiphertext: null,
+          },
+        });
+        if (updated.count !== 1) return;
+        await this.audit.recordInTransaction(
+          {
+            eventType: 'auth.logout',
+            category: 'AUDIT',
+            outcome: 'REVOKED',
+            actorUserId: session.userId,
+            targetType: 'AppSession',
+            targetId: session.id,
+            policy: 'SessionLifecycle',
+            reasonCode: reason.slice(0, 128),
+            correlationId: randomUUID(),
+            metadata: {},
+          },
+          transaction,
+        );
+      },
     );
     return true;
   }
@@ -308,8 +472,8 @@ export class SessionService {
     if (session.idleExpiresAt <= now || session.absoluteExpiresAt <= now) {
       await this.prisma.withGlobalOperationContext(
         randomUUID(),
-        (transaction) =>
-          transaction.appSession.updateMany({
+        async (transaction) => {
+          const updated = await transaction.appSession.updateMany({
             where: { id: session.id, status: 'ACTIVE', tokenHash },
             data: {
               status: 'EXPIRED',
@@ -318,7 +482,24 @@ export class SessionService {
               providerRefreshTokenCiphertext: null,
               csrfTokenCiphertext: null,
             },
-          }),
+          });
+          if (updated.count !== 1) return;
+          await this.audit.recordInTransaction(
+            {
+              eventType: 'auth.session.revoked',
+              category: 'SECURITY',
+              outcome: 'REVOKED',
+              actorUserId: session.userId,
+              targetType: 'AppSession',
+              targetId: session.id,
+              policy: 'SessionLifecycle',
+              reasonCode: 'expired',
+              correlationId: randomUUID(),
+              metadata: {},
+            },
+            transaction,
+          );
+        },
       );
       return false;
     }
@@ -347,17 +528,35 @@ export class SessionService {
     } catch {
       await this.prisma.withGlobalOperationContext(
         randomUUID(),
-        (transaction) =>
-          transaction.appSession.updateMany({
+        async (transaction) => {
+          const revokedAt = new Date();
+          const updated = await transaction.appSession.updateMany({
             where: { id: session.id, status: 'ACTIVE', tokenHash },
             data: {
               status: 'REVOKED',
-              revokedAt: new Date(),
+              revokedAt,
               revokedReason: 'provider_refresh_failed',
               providerRefreshTokenCiphertext: null,
               csrfTokenCiphertext: null,
             },
-          }),
+          });
+          if (updated.count !== 1) return;
+          await this.audit.recordInTransaction(
+            {
+              eventType: 'auth.session.refresh_failed',
+              category: 'SECURITY',
+              outcome: 'REVOKED',
+              actorUserId: session.userId,
+              targetType: 'AppSession',
+              targetId: session.id,
+              policy: 'SessionLifecycle',
+              reasonCode: 'provider_refresh_failed',
+              correlationId: randomUUID(),
+              metadata: {},
+            },
+            transaction,
+          );
+        },
       );
       return false;
     }
@@ -422,6 +621,15 @@ function normalizeEmail(
     : undefined;
 }
 
+function identityEventType(
+  status: UserStatus,
+): 'identity.suspended' | 'identity.disabled' | 'identity.deleted' {
+  if (status === UserStatus.SUSPENDED) return 'identity.suspended';
+  if (status === UserStatus.DISABLED) return 'identity.disabled';
+  if (status === UserStatus.DELETED) return 'identity.deleted';
+  throw new Error('Account lifecycle audit event requires a blocked status');
+}
+
 function isLoginAllowed(status: UserStatus): boolean {
   return status === UserStatus.PENDING || status === UserStatus.ACTIVE;
 }
@@ -443,6 +651,27 @@ async function revokeActiveSessionsInTransaction(
     },
   });
   return result.count;
+}
+
+function isMembershipCurrentlyEligible(
+  membership: {
+    userId: string;
+    status: string;
+    activeFrom: Date | null;
+    activeUntil: Date | null;
+    tenant: { status: string };
+  } | null,
+  now: Date,
+  userStatus: UserStatus,
+): boolean {
+  return (
+    userStatus === UserStatus.ACTIVE &&
+    membership !== null &&
+    membership.status === 'ACTIVE' &&
+    (membership.activeFrom === null || membership.activeFrom <= now) &&
+    (membership.activeUntil === null || membership.activeUntil >= now) &&
+    membership.tenant.status === 'ACTIVE'
+  );
 }
 
 async function countActiveMemberships(

@@ -26,6 +26,13 @@ function createCrypto() {
   } as never;
 }
 
+function createAudit() {
+  return {
+    recordInTransaction: jest.fn().mockResolvedValue({}),
+    recordGlobal: jest.fn().mockResolvedValue({}),
+  } as never;
+}
+
 function createSession(overrides: Record<string, unknown> = {}) {
   return {
     id: 'session-id',
@@ -52,6 +59,7 @@ function createPrisma(
       updateMany,
     },
     user: {
+      findUnique: jest.fn().mockResolvedValue(session.user),
       update: userUpdate,
     },
   };
@@ -60,6 +68,8 @@ function createPrisma(
       (_operationId: string, callback: (value: never) => unknown) =>
         callback(transaction as never),
     ),
+    bindMembershipSelectionContext: jest.fn().mockResolvedValue(undefined),
+    bindGlobalOperationContext: jest.fn().mockResolvedValue(undefined),
   } as never;
 }
 
@@ -72,6 +82,7 @@ describe('SessionService user-state lifecycle', () => {
       createCrypto(),
       {} as never,
       createConfig(),
+      createAudit(),
     );
 
     await expect(
@@ -95,6 +106,7 @@ describe('SessionService user-state lifecycle', () => {
         createCrypto(),
         {} as never,
         createConfig(),
+        createAudit(),
       );
 
       await expect(
@@ -126,6 +138,7 @@ describe('SessionService user-state lifecycle', () => {
         createCrypto(),
         {} as never,
         createConfig(),
+        createAudit(),
       );
 
       await expect(service.findByCookie(COOKIE)).resolves.toBeNull();
@@ -154,6 +167,7 @@ describe('SessionService user-state lifecycle', () => {
       createCrypto(),
       oidc as never,
       createConfig(),
+      createAudit(),
     );
 
     await expect(service.refreshByCookie(COOKIE)).resolves.toBe(false);
@@ -188,6 +202,7 @@ describe('SessionService refresh lifecycle', () => {
       crypto,
       oidc,
       createConfig(),
+      createAudit(),
     );
 
     await expect(service.refreshByCookie(COOKIE)).resolves.toBe(true);
@@ -217,6 +232,7 @@ describe('SessionService refresh lifecycle', () => {
       crypto,
       oidc,
       createConfig(),
+      createAudit(),
     );
 
     await expect(service.refreshByCookie(COOKIE)).resolves.toBe(true);
@@ -241,6 +257,7 @@ describe('SessionService refresh lifecycle', () => {
       createCrypto(),
       oidc,
       createConfig(),
+      createAudit(),
     );
 
     await expect(service.refreshByCookie(COOKIE)).resolves.toBe(false);
@@ -272,6 +289,7 @@ describe('SessionService refresh lifecycle', () => {
         createCrypto(),
         oidc,
         createConfig(),
+        createAudit(),
       );
 
       await expect(service.refreshByCookie(COOKIE)).resolves.toBe(false);
@@ -307,6 +325,7 @@ describe('SessionService refresh lifecycle', () => {
       createCrypto(),
       oidc,
       createConfig(),
+      createAudit(),
     );
 
     await expect(service.refreshByCookie(COOKIE)).resolves.toBe(false);
