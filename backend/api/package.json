@@ -24,7 +24,8 @@
     "db:phase2:rls": "node scripts/phase2-rls-runtime-check.mjs",
     "db:phase2:legacy": "node scripts/phase2-legacy-runtime-check.mjs",
     "db:phase2:legacy-services": "node scripts/phase2-legacy-service-runtime-check.mjs",
-    "db:phase2:auth": "node scripts/auth-runtime-check.mjs"
+    "db:phase2:auth": "node scripts/auth-runtime-check.mjs",
+    "db:phase2:auth-negative": "node scripts/auth-negative-runtime-check.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1113.0",
