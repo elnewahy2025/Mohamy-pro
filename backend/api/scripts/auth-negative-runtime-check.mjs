@@ -252,6 +252,25 @@ async function main() {
   requireExpectedStatus(refreshedSession, 200, 'session after refresh');
   console.log('auth_lifecycle_refresh_status=PASS|http=204|session_preserved=true');
 
+  const repeatedRefresh = await request(
+    `${apiBaseUrl}/api/v1/auth/refresh`,
+    {
+      method: 'POST',
+      headers: {
+        origin,
+        'x-csrf-token': csrf.csrfToken,
+      },
+    },
+    jar,
+  );
+  requireExpectedStatus(repeatedRefresh, 204, 'repeated session refresh');
+  if (!jar.has(cookieName)) {
+    throw new Error('Session cookie was lost during repeated refresh');
+  }
+  console.log(
+    'auth_lifecycle_refresh_repeat_status=PASS|http=204|session_preserved=true',
+  );
+
   const logout = await request(
     `${apiBaseUrl}/api/v1/auth/logout`,
     {

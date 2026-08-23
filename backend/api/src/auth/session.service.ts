@@ -277,7 +277,7 @@ export class SessionService {
         session.providerRefreshTokenCiphertext,
       );
       const tokens = await this.oidc.refreshToken(refreshToken);
-      await this.prisma.withGlobalOperationContext(
+      const updated = await this.prisma.withGlobalOperationContext(
         randomUUID(),
         (transaction) =>
           transaction.appSession.updateMany({
@@ -290,6 +290,9 @@ export class SessionService {
             },
           }),
       );
+      if (updated.count !== 1) {
+        throw new Error('Session refresh update was not applied');
+      }
       return true;
     } catch {
       await this.prisma.withGlobalOperationContext(
