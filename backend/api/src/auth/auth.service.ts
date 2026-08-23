@@ -132,10 +132,19 @@ function safeValidationReason(error: unknown): string {
   }
   if (
     joseError.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED' ||
+    joseError.code === 'ERR_JWK_INVALID' ||
+    joseError.code === 'ERR_JWKS_INVALID' ||
+    joseError.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS' ||
     joseError.code === 'ERR_JWKS_NO_MATCHING_KEY' ||
-    joseError.code === 'ERR_JWKS_INVALID'
+    joseError.code === 'ERR_JWKS_TIMEOUT'
   ) {
     return 'signature_or_key_rejected';
+  }
+  if (
+    joseError.code === 'ERR_JWS_INVALID' ||
+    joseError.code === 'ERR_JWT_INVALID'
+  ) {
+    return 'jwt_token_invalid';
   }
   if (
     joseError.code === 'ERR_JWT_CLAIM_VALIDATION_FAILED' ||
@@ -150,6 +159,9 @@ function safeValidationReason(error: unknown): string {
     return 'jwt_claim_rejected';
   }
   const message = error instanceof Error ? error.message.toLowerCase() : '';
+  if (message === 'oidc token claims are incomplete') {
+    return 'jwt_claim_rejected';
+  }
   if (/\baud\b|audience/.test(message)) return 'audience_mismatch';
   if (/\biss\b|issuer/.test(message)) return 'issuer_mismatch';
   if (/\bnonce\b/.test(message)) return 'nonce_mismatch';

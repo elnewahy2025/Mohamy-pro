@@ -142,6 +142,73 @@ describe('AuthService', () => {
     );
   });
 
+  it('classifies remaining jose token failures without exposing native details', async () => {
+    const transaction = {
+      state: 'A'.repeat(43),
+      nonce: 'B'.repeat(43),
+      codeVerifier: 'C'.repeat(64),
+      redirectUri: 'http://127.0.0.1:3000/api/v1/auth/callback',
+      returnTo: '/en',
+      createdAt: Date.now(),
+    };
+    const failures = [
+      { code: 'ERR_JWS_INVALID', reason: 'jwt_token_invalid' },
+      { code: 'ERR_JWT_INVALID', reason: 'jwt_token_invalid' },
+      { code: 'ERR_JWK_INVALID', reason: 'signature_or_key_rejected' },
+      {
+        code: 'ERR_JWKS_MULTIPLE_MATCHING_KEYS',
+        reason: 'signature_or_key_rejected',
+      },
+      { code: 'ERR_JWKS_TIMEOUT', reason: 'signature_or_key_rejected' },
+      {
+        message: 'OIDC token claims are incomplete',
+        reason: 'jwt_claim_rejected',
+      },
+    ];
+
+    for (const failure of failures) {
+      const oidc = {
+        exchangeCode: jest.fn(() => ({
+          access_token: 'access',
+          token_type: 'Bearer',
+          id_token: 'id',
+          refresh_token: 'refresh',
+        })),
+        verifyIdToken: jest.fn(() => ({
+          iss: 'issuer',
+          sub: 'subject',
+          aud: 'audience',
+          exp: 1,
+          iat: 1,
+          nonce: transaction.nonce,
+        })),
+        verifyAccessToken: jest.fn(() => {
+          const error = new Error(
+            failure.message ?? 'native jose detail must not be logged',
+          ) as Error & { code?: string };
+          if (failure.code) error.code = failure.code;
+          throw error;
+        }),
+      } as never;
+      const transactions = { consume: jest.fn(() => transaction) } as never;
+      const service = new AuthService(
+        oidc,
+        transactions,
+        {} as never,
+        config(),
+      );
+      const warn = jest.fn();
+      (service as unknown as { logger: { warn: jest.Mock } }).logger = { warn };
+
+      await expect(
+        service.completeLogin({ code: 'code', state: transaction.state }),
+      ).rejects.toThrow('AUTHENTICATION_FAILED');
+      expect(warn).toHaveBeenCalledWith(
+        `OIDC callback rejected during access_token_validation|reason=${failure.reason}|error=Error`,
+      );
+    }
+  });
+
   it('requires ID and access tokens to identify the same subject', async () => {
     const transaction = {
       state: 'A'.repeat(43),
