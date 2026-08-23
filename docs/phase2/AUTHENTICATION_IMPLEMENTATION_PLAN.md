@@ -20,8 +20,8 @@ The implementation will add a server-side `AuthModule` to the API and keep provi
 
 | Capability | Boundary selected for this slice |
 |---|---|
-| Login start | `GET /api/v1/auth/login` creates a short-lived Redis authorization transaction containing state, nonce, PKCE verifier, redirect URI, and a post-login return target, then redirects to the discovered Keycloak authorization endpoint. |
-| Authorization callback | `GET /api/v1/auth/callback` validates the stored state, exchanges the one-time code, validates ID-token issuer, audience, signature, algorithm, expiry, not-before, nonce, and required subject, then maps the immutable provider subject to `ExternalIdentity`/`User`. |
+| Login start | `GET /api/v1/auth/login` creates a short-lived Redis authorization transaction containing state, nonce, PKCE verifier, redirect URI, and a validated relative post-login return path, then redirects to the discovered Keycloak authorization endpoint. |
+| Authorization callback | `GET /api/v1/auth/callback` validates the stored state, exchanges the one-time code, validates ID-token issuer, audience, signature, algorithm, expiry, not-before, nonce, and required subject, maps the immutable provider subject to `ExternalIdentity`/`User`, and redirects the validated relative path against the explicit frontend origin. |
 | Session creation | The API generates a cryptographically random opaque session identifier and CSRF secret, stores only their SHA-256 hashes, encrypts the provider refresh token with authenticated encryption, records bounded idle/absolute expiry, and returns only an `HttpOnly` session cookie. |
 | Current session | `GET /api/v1/auth/session` validates the cookie hash, session state, user state, expiry, and active membership status, returning a redacted server-derived session view. No raw token or provider payload is returned. |
 | CSRF bootstrap | `GET /api/v1/auth/csrf` requires the authenticated session and returns the CSRF token only to the authenticated browser session. The CSRF token is not the session secret. |

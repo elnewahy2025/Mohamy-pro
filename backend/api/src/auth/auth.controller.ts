@@ -53,7 +53,11 @@ export class AuthController {
   ): Promise<void> {
     const result = await this.auth.completeLogin({ code, state, error });
     setSessionCookie(response, result.cookieValue, this.config);
-    response.redirect(302, result.returnTo);
+    const frontendLocation = new URL(
+      result.returnTo,
+      `${this.config.getOrThrow('FRONTEND_ORIGIN')}/`,
+    ).toString();
+    response.redirect(302, frontendLocation);
   }
 
   @Get('session')

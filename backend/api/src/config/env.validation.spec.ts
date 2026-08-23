@@ -66,6 +66,7 @@ describe('validateEnvironment telemetry settings', () => {
         S3_SECRET_KEY: 'secret-key-for-test',
         S3_BUCKET: 'mohamy-production',
         CORS_ORIGINS: 'https://app.invalid',
+        FRONTEND_ORIGIN: 'https://app.invalid',
         S3_VERSIONING_ENABLED: true,
         S3_OBJECT_LOCK_ENABLED: true,
         S3_ENCRYPTION_MODE: 'AES256',
@@ -85,6 +86,7 @@ describe('validateEnvironment telemetry settings', () => {
       S3_SECRET_KEY: 'secret-key-for-test',
       S3_BUCKET: 'mohamy-production',
       CORS_ORIGINS: 'https://app.invalid',
+      FRONTEND_ORIGIN: 'https://app.invalid',
       S3_VERSIONING_ENABLED: true,
       S3_OBJECT_LOCK_ENABLED: true,
       S3_ENCRYPTION_MODE: 'AES256',
@@ -121,6 +123,7 @@ describe('validateEnvironment telemetry settings', () => {
         S3_SECRET_KEY: 'secret-key-for-test',
         S3_BUCKET: 'mohamy-production',
         CORS_ORIGINS: 'https://app.invalid',
+        FRONTEND_ORIGIN: 'https://app.invalid',
         S3_VERSIONING_ENABLED: true,
         S3_OBJECT_LOCK_ENABLED: true,
         S3_ENCRYPTION_MODE: 'AES256',
@@ -140,6 +143,7 @@ describe('validateEnvironment authentication settings', () => {
     S3_SECRET_KEY: 'secret-key-for-test',
     S3_BUCKET: 'mohamy-production',
     CORS_ORIGINS: 'https://app.invalid',
+    FRONTEND_ORIGIN: 'https://app.invalid',
     S3_VERSIONING_ENABLED: true,
     S3_OBJECT_LOCK_ENABLED: true,
     S3_ENCRYPTION_MODE: 'AES256',
@@ -167,6 +171,7 @@ describe('validateEnvironment authentication settings', () => {
     expect(environment.OIDC_REDIRECT_URI).toBe(
       'http://127.0.0.1:3000/api/v1/auth/callback',
     );
+    expect(environment.FRONTEND_ORIGIN).toBe('http://localhost:5173');
     expect(environment.SESSION_COOKIE_NAME).toBe('mohamy_session');
     expect(environment.SESSION_SECURE_COOKIE).toBe(false);
     expect(environment.CSRF_HEADER_NAME).toBe('X-CSRF-Token');
@@ -223,11 +228,21 @@ describe('validateEnvironment authentication settings', () => {
     );
   });
 
+  it('rejects a production frontend origin that is not an exact HTTPS origin', () => {
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        FRONTEND_ORIGIN: 'https://app.invalid/login',
+      }),
+    ).toThrow('FRONTEND_ORIGIN must be an exact HTTP(S) origin');
+  });
+
   it('rejects a production CORS origin that is not an exact HTTPS origin', () => {
     expect(() =>
       validateEnvironment({
         ...productionEnvironment,
-        CORS_ORIGINS: 'http://app.invalid',
+        CORS_ORIGINS: 'https://app.invalid,http://other.invalid',
+        FRONTEND_ORIGIN: 'https://app.invalid',
       }),
     ).toThrow('CORS_ORIGINS must contain exact HTTPS origins in production');
   });

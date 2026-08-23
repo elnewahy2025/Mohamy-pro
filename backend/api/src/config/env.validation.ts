@@ -18,6 +18,7 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   CLAMAV_HOST?: string;
   CLAMAV_PORT: number;
   CORS_ORIGINS: string;
+  FRONTEND_ORIGIN: string;
   OIDC_ISSUER_URL: string;
   OIDC_CLIENT_ID: string;
   OIDC_CLIENT_SECRET?: string;
@@ -86,6 +87,22 @@ function readUrl(value: unknown, name: string): string {
   } catch {
     throw new Error(`${name} must be a valid HTTP(S) URL`);
   }
+}
+
+function readOrigin(value: unknown, name: string): string {
+  const candidate = readUrl(value, name);
+  if (!candidate) return '';
+  const parsed = new URL(candidate);
+  if (
+    parsed.pathname !== '/' ||
+    parsed.search.length > 0 ||
+    parsed.hash.length > 0 ||
+    parsed.username.length > 0 ||
+    parsed.password.length > 0
+  ) {
+    throw new Error(`${name} must be an exact HTTP(S) origin`);
+  }
+  return parsed.origin;
 }
 
 function readHeaderName(value: unknown): string {
@@ -174,6 +191,7 @@ export function validateEnvironment(
           MALWARE_SCAN_ENABLED: undefined,
           CLAMAV_HOST: undefined,
           CORS_ORIGINS: undefined,
+          FRONTEND_ORIGIN: undefined,
           OIDC_ISSUER_URL: undefined,
           OIDC_CLIENT_ID: undefined,
           OIDC_AUDIENCE: undefined,
@@ -200,6 +218,7 @@ export function validateEnvironment(
           MALWARE_SCAN_ENABLED: false,
           CLAMAV_HOST: undefined,
           CORS_ORIGINS: 'http://localhost:5173',
+          FRONTEND_ORIGIN: 'http://localhost:5173',
           OIDC_ISSUER_URL: 'http://127.0.0.1:58080/realms/mohamy',
           OIDC_CLIENT_ID: 'mohamy-api',
           OIDC_AUDIENCE: 'mohamy-api',
@@ -233,6 +252,10 @@ export function validateEnvironment(
   const clamavHost = readString(raw.CLAMAV_HOST) ?? defaults.CLAMAV_HOST;
   const clamavPort = readPort(raw.CLAMAV_PORT, 3310);
   const kmsKeyId = readString(raw.S3_KMS_KEY_ID);
+  const frontendOrigin = readOrigin(
+    raw.FRONTEND_ORIGIN ?? defaults.FRONTEND_ORIGIN,
+    'FRONTEND_ORIGIN',
+  );
   const oidcIssuerUrl = readUrl(
     raw.OIDC_ISSUER_URL ?? defaults.OIDC_ISSUER_URL,
     'OIDC_ISSUER_URL',
@@ -253,6 +276,17 @@ export function validateEnvironment(
     readString(raw.OIDC_SCOPES) ??
     defaults.OIDC_SCOPES ??
     'openid profile email';
+  const corsOriginsForFrontendCheck = (
+    readString(raw.CORS_ORIGINS) ??
+    defaults.CORS_ORIGINS ??
+    ''
+  )
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (!corsOriginsForFrontendCheck.includes(frontendOrigin)) {
+    throw new Error('FRONTEND_ORIGIN must be included in CORS_ORIGINS');
+  }
   const oidcHttpTimeoutMs = readPositiveInteger(
     raw.OIDC_HTTP_TIMEOUT_MS,
     10_000,
@@ -376,6 +410,7 @@ export function validateEnvironment(
       ['OIDC_ISSUER_URL', oidcIssuerUrl],
       ['OIDC_REDIRECT_URI', oidcRedirectUri],
       ['OIDC_POST_LOGOUT_REDIRECT_URI', oidcPostLogoutRedirectUri],
+      ['FRONTEND_ORIGIN', frontendOrigin],
     ] as const) {
       if (!value.startsWith('https://')) {
         throw new Error(`${name} must use HTTPS in production`);
@@ -426,6 +461,7 @@ export function validateEnvironment(
     CLAMAV_HOST: clamavHost,
     CLAMAV_PORT: clamavPort,
     CORS_ORIGINS: readString(raw.CORS_ORIGINS) ?? defaults.CORS_ORIGINS,
+    FRONTEND_ORIGIN: frontendOrigin,
     OIDC_ISSUER_URL: oidcIssuerUrl,
     OIDC_CLIENT_ID: oidcClientId,
     OIDC_CLIENT_SECRET: oidcClientSecret,
@@ -474,6 +510,7 @@ export function validateEnvironment(
     ...(values.CLAMAV_HOST ? { CLAMAV_HOST: values.CLAMAV_HOST } : {}),
     CLAMAV_PORT: values.CLAMAV_PORT,
     CORS_ORIGINS: requiredValue('CORS_ORIGINS', values.CORS_ORIGINS),
+    FRONTEND_ORIGIN: requiredValue('FRONTEND_ORIGIN', values.FRONTEND_ORIGIN),
     OIDC_ISSUER_URL: requiredValue('OIDC_ISSUER_URL', values.OIDC_ISSUER_URL),
     OIDC_CLIENT_ID: requiredValue('OIDC_CLIENT_ID', values.OIDC_CLIENT_ID),
     ...(values.OIDC_CLIENT_SECRET
