@@ -123,6 +123,32 @@ function safeErrorName(error: unknown): string {
 }
 
 function safeValidationReason(error: unknown): string {
+  const joseError = asJoseError(error);
+  if (joseError.code === 'ERR_JWT_EXPIRED') {
+    return 'temporal_claim_rejected';
+  }
+  if (joseError.code === 'ERR_JOSE_ALG_NOT_ALLOWED') {
+    return 'algorithm_mismatch';
+  }
+  if (
+    joseError.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED' ||
+    joseError.code === 'ERR_JWKS_NO_MATCHING_KEY' ||
+    joseError.code === 'ERR_JWKS_INVALID'
+  ) {
+    return 'signature_or_key_rejected';
+  }
+  if (
+    joseError.code === 'ERR_JWT_CLAIM_VALIDATION_FAILED' ||
+    joseError.name === 'JWTClaimValidationFailed'
+  ) {
+    if (joseError.claim === 'aud') return 'audience_mismatch';
+    if (joseError.claim === 'iss') return 'issuer_mismatch';
+    if (joseError.claim === 'nonce') return 'nonce_mismatch';
+    if (['exp', 'iat', 'nbf'].includes(joseError.claim ?? '')) {
+      return 'temporal_claim_rejected';
+    }
+    return 'jwt_claim_rejected';
+  }
   const message = error instanceof Error ? error.message.toLowerCase() : '';
   if (/\baud\b|audience/.test(message)) return 'audience_mismatch';
   if (/\biss\b|issuer/.test(message)) return 'issuer_mismatch';
@@ -132,6 +158,20 @@ function safeValidationReason(error: unknown): string {
     return 'temporal_claim_rejected';
   }
   return 'jwt_validation_rejected';
+}
+
+function asJoseError(error: unknown): {
+  code?: string;
+  name?: string;
+  claim?: string;
+} {
+  if (typeof error !== 'object' || error === null) return {};
+  const candidate = error as Record<string, unknown>;
+  return {
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
+    name: typeof candidate.name === 'string' ? candidate.name : undefined,
+    claim: typeof candidate.claim === 'string' ? candidate.claim : undefined,
+  };
 }
 
 function isProviderUnavailable(error: unknown): boolean {
