@@ -43,6 +43,7 @@
       },
       "defaultClientScopes": [
         "openid",
+        "basic",
         "profile",
         "email"
       ],
