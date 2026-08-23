@@ -8,7 +8,7 @@
 
 ## 1. Scope and evidence boundary
 
-This record documents the successful end-to-end authentication/session verifier run after the live Keycloak client `mohamy-api` was assigned the `basic` client scope as a Default scope. The `basic` scope’s Subject (`sub`) mapper was inspected and reported with **Add to access token = On**. The repository fixture was aligned in commit `41a454af`, and the callback redirect contract was corrected and published in commit `8ca694d2`.
+This record documents the successful end-to-end authentication/session verifier runs after the live Keycloak client `mohamy-api` was assigned the `basic` client scope as a Default scope. The `basic` scope’s Subject (`sub`) mapper was inspected and reported with **Add to access token = On**. The repository fixture was aligned in commit `41a454af`, the callback redirect contract was corrected and published in commit `8ca694d2`, and the separate negative-path verifier was published in commit `c943b2b2`.
 
 The correction in `8ca694d2` adds an explicit validated `FRONTEND_ORIGIN` configuration value and resolves the already-allowlisted relative return path against that origin. It does not weaken JWT validation, add an alternate identity claim, bypass CSRF/origin checks, or change tenant security behavior.
 
@@ -28,7 +28,25 @@ auth_anonymous_status=PASS|session_denied=true
 auth_runtime_result=PASS
 ```
 
-The runtime result demonstrates that the following sequence succeeded in the qualified Windows environment:
+The separate negative-path verifier subsequently produced the following safe markers:
+
+```text
+auth_negative_pkce_status=PASS|method=S256|state_nonce_present=true
+auth_negative_state_mismatch_status=PASS|http=401
+auth_negative_login_status=PASS|callback_validated=true|session_cookie_set=true
+auth_negative_state_replay_status=PASS|http=401
+auth_negative_session_status=PASS|authenticated=true|redacted=true
+auth_negative_origin_missing_status=PASS|http=403
+auth_negative_origin_disallowed_status=PASS|http=403
+auth_negative_csrf_missing_status=PASS|http=403
+auth_negative_csrf_mismatch_status=PASS|http=403
+auth_negative_session_preserved_status=PASS|authenticated=true
+auth_negative_logout_status=PASS|http=204|post_logout_denied=true
+auth_negative_anonymous_status=PASS|http=401
+auth_negative_runtime_result=PASS
+```
+
+The runtime results demonstrate that the following sequence succeeded in the qualified Windows environment:
 
 | Boundary | Evidence | Status |
 |---|---|---|
@@ -38,6 +56,10 @@ The runtime result demonstrates that the following sequence succeeded in the qua
 | CSRF bootstrap | `token_length=43` | PASS |
 | Logout and application-session revocation | `revoked=true` and `post_logout_denied=true` | PASS |
 | Anonymous session denial | `session_denied=true` | PASS |
+| State mismatch and replay rejection | `http=401` for both paths | PASS |
+| Missing and disallowed origin rejection | `http=403` for both paths | PASS |
+| Missing and mismatched CSRF rejection | `http=403` for both paths | PASS |
+| Session preservation after rejected mutations | `authenticated=true` | PASS |
 
 ## 3. Requirements traceability
 
@@ -47,7 +69,7 @@ The runtime result demonstrates that the following sequence succeeded in the qua
 | Strict provider-token validation, including required subject | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/oidc.client.ts` and fixed diagnostic classification in `backend/api/src/auth/auth.service.ts` | OIDC/AuthService regression coverage | Successful callback after live `basic` Subject mapper assignment; no subject-rejection warning in the supplied successful run | PASS for this runtime slice |
 | Immutable provider-subject mapping | [`ACCOUNT_LIFECYCLE_DECISION.md`](ACCOUNT_LIFECYCLE_DECISION.md) | `backend/api/src/auth/session.service.ts`, `ExternalIdentity` schema model | Session-service and AuthService coverage | Session creation completed; raw identity payload was not returned | PARTIAL; database identity persistence was not independently captured in this run |
 | Opaque application session | [`AUTHENTICATION_ARCHITECTURE_DECISION.md`](AUTHENTICATION_ARCHITECTURE_DECISION.md) | `backend/api/src/auth/session.service.ts`, `backend/api/src/auth/session-cookie.ts` | Session and cookie suites | Session cookie set; authenticated session returned redacted view | PASS for exercised behavior |
-| CSRF token boundary | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/session.service.ts`, CSRF/origin middleware, controller | CSRF/origin and session suites | CSRF endpoint returned a 43-character token | PARTIAL; negative mutation cases were not part of this verifier run |
+| CSRF token boundary | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/session.service.ts`, CSRF/origin middleware, controller | CSRF/origin and session suites | Valid token bootstrap passed; missing and mismatched CSRF mutations returned HTTP 403 | PASS for exercised behavior; additional mutation cases remain |
 | Logout revocation and anonymous denial | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/auth.controller.ts`, `backend/api/src/auth/session.service.ts`, OIDC adapter | Session/AuthService suites | Logout, post-logout denial, and anonymous denial all passed | PASS for exercised behavior |
 | Frontend-origin callback redirect | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `FRONTEND_ORIGIN` validation and `AuthController.callback()` | `backend/api/src/auth/auth.controller.spec.ts`, environment-validation suite | `auth_login_status=PASS` after the redirect-contract correction | PASS for this runtime slice |
 
@@ -62,8 +84,10 @@ The following commands were executed in the sandbox checkout `/home/ubuntu/Moham
 | `pnpm --filter api run build` | PASS |
 | `python3 -m json.tool infrastructure/docker/keycloak/mohamy-realm.json` | PASS |
 | `git diff --check` | PASS |
+| `node --check backend/api/scripts/auth-negative-runtime-check.mjs` | PASS |
+| `python3 -m json.tool backend/api/package.json` | PASS |
 
-The correction was published only to `origin/phase2/legacy-tenant-boundaries` as commit `8ca694d2`. `origin/main` was not modified.
+The redirect correction was published only to `origin/phase2/legacy-tenant-boundaries` as commit `8ca694d2`; the negative-path verifier was published as commit `c943b2b2`. `origin/main` was not modified.
 
 ## 5. Remaining Phase 2 work
 
@@ -73,9 +97,10 @@ The following authentication-related evidence remains unverified or partial:
 
 | Item | Status |
 |---|---|
-| CSRF rejection for missing and mismatched tokens | UNVERIFIED by this happy-path verifier |
-| Exact-origin rejection for disallowed or missing browser origins on state-changing requests | UNVERIFIED by this happy-path verifier |
-| OIDC state replay, state mismatch, callback nonce mismatch, and expired transaction runtime cases | Unit-tested or design-covered; real Windows runtime evidence not recorded here |
+| CSRF rejection for missing and mismatched tokens | PASS in the negative-path Windows verifier; additional mutation cases remain |
+| Exact-origin rejection for disallowed or missing browser origins on state-changing requests | PASS in the negative-path Windows verifier |
+| OIDC state replay and state mismatch | PASS in the negative-path Windows verifier |
+| Callback nonce mismatch and expired transaction runtime cases | Unit-tested or design-covered; real Windows runtime evidence not recorded here |
 | Refresh-token rotation and provider refresh failure handling | UNVERIFIED in this runtime run |
 | Session idle and absolute expiry runtime behavior | UNVERIFIED in this runtime run |
 | Suspended/disabled/deleted user and membership gates | UNVERIFIED in this runtime run |
