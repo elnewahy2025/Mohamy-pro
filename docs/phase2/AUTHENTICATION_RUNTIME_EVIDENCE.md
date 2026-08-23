@@ -76,6 +76,18 @@ EXPIRY_API_ENV_RESTORE=PASS|temporary_ttl_overrides_cleared=true
 
 This is qualified evidence that idle and absolute application-session expiry deny both normal session access and refresh. The normal runtime environment was restored after the attempt.
 
+The read-only persistence verifier produced the following bounded, secret-safe aggregate markers on the existing Windows PostgreSQL database:
+
+```text
+auth_persistence_database_status=PASS|read_only=true
+auth_persistence_identity_status=PASS|identity_rows=1|mapped_users=1|provider_values_present=true|subjects_present=true
+auth_persistence_session_status=PASS|sessions=10|active=2|revoked=6|expired=2|opaque_hashes=true|expiry_order=true
+auth_persistence_ciphertext_status=PASS|active_refresh_encrypted=true|active_csrf_encrypted=true|inactive_ciphertext_cleared=true
+auth_persistence_runtime_result=PASS
+```
+
+This is qualified aggregate and structural evidence only. It proves that the verifier could read the persisted identity/session records and that the observed hashes, ciphertext format, lifecycle counts, and expiry ordering met its assertions. It does not prove identifier-level correctness for every record, complete user or membership lifecycle behavior, audit persistence, or the full Phase 2 database acceptance matrix. The verifier was read-only and did not print identifiers, provider subjects, hashes, ciphertexts, cookies, tokens, or database connection values.
+
 The runtime results demonstrate that the following sequence succeeded in the qualified Windows environment:
 
 | Boundary | Evidence | Status |
@@ -95,6 +107,7 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 | Provider unavailable during refresh | `http=401`, cookie cleared, and application session revoked | PASS for exercised behavior |
 | Idle session expiry | Short-TTL session denied after inactivity and refresh denied | PASS for exercised behavior |
 | Absolute session expiry | Short-TTL session denied after absolute deadline and refresh denied | PASS for exercised behavior |
+| Persisted identity/session shape | Read-only aggregate counts and ciphertext/hash structure satisfied the verifier assertions | PASS for aggregate/structural evidence only |
 
 ## 3. Requirements traceability
 
@@ -102,7 +115,7 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 |---|---|---|---|---|---|
 | Authorization Code + PKCE with state, nonce, and S256 | [`AUTHENTICATION_ARCHITECTURE_DECISION.md`](AUTHENTICATION_ARCHITECTURE_DECISION.md) and [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/auth.service.ts`, `backend/api/src/auth/oidc-transaction.store.ts`, `backend/api/src/auth/oidc.client.ts` | AuthService and transaction-store suites | `auth_pkce_status=PASS` | PASS for this runtime slice |
 | Strict provider-token validation, including required subject | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/oidc.client.ts` and fixed diagnostic classification in `backend/api/src/auth/auth.service.ts` | OIDC/AuthService regression coverage | Successful callback after live `basic` Subject mapper assignment; no subject-rejection warning in the supplied successful run | PASS for this runtime slice |
-| Immutable provider-subject mapping | [`ACCOUNT_LIFECYCLE_DECISION.md`](ACCOUNT_LIFECYCLE_DECISION.md) | `backend/api/src/auth/session.service.ts`, `ExternalIdentity` schema model | Session-service and AuthService coverage | Session creation completed; raw identity payload was not returned | PARTIAL; database identity persistence was not independently captured in this run |
+| Immutable provider-subject mapping | [`ACCOUNT_LIFECYCLE_DECISION.md`](ACCOUNT_LIFECYCLE_DECISION.md) | `backend/api/src/auth/session.service.ts`, `ExternalIdentity` schema model | Session-service and AuthService coverage | Read-only persistence verifier observed one identity row mapped to one user with provider and subject values present, without emitting either value | PARTIAL; aggregate persistence shape is evidenced, but identifier-level mapping and complete identity lifecycle remain open |
 | Opaque application session | [`AUTHENTICATION_ARCHITECTURE_DECISION.md`](AUTHENTICATION_ARCHITECTURE_DECISION.md) | `backend/api/src/auth/session.service.ts`, `backend/api/src/auth/session-cookie.ts` | Session and cookie suites | Session cookie set; authenticated session returned redacted view | PASS for exercised behavior |
 | CSRF token boundary | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/session.service.ts`, CSRF/origin middleware, controller | CSRF/origin and session suites | Valid token bootstrap passed; missing and mismatched CSRF mutations returned HTTP 403 | PASS for exercised behavior; additional mutation cases remain |
 | Logout revocation and anonymous denial | [`AUTHENTICATION_IMPLEMENTATION_PLAN.md`](AUTHENTICATION_IMPLEMENTATION_PLAN.md) | `backend/api/src/auth/auth.controller.ts`, `backend/api/src/auth/session.service.ts`, OIDC adapter | Session/AuthService suites | Logout, post-logout denial, and anonymous denial all passed | PASS for exercised behavior |
@@ -123,6 +136,7 @@ The latest sandbox verification covered the refresh hardening, repeated-refresh 
 | `node --check backend/api/scripts/auth-expiry-runtime-check.mjs` | PASS |
 | JSON validation for `backend/api/package.json` and `infrastructure/docker/keycloak/mohamy-realm.json` | PASS |
 | `git diff --check` | PASS |
+| `pnpm --filter api run db:phase2:auth-persistence` | PASS on Windows — read-only aggregate/structural persistence verifier; exact five safe markers recorded in Section 2 |
 
 The refresh hardening and repeated-refresh verifier were published as commit `5573ea8f`. The controlled provider-outage verifier and Keycloak research note were published as commit `36de2090`. The explicit refresh-expiry guard was published as commit `330f5dca`, and the short-TTL expiry verifier was published as commit `58d55440`. `origin/main` was not modified.
 
@@ -144,7 +158,7 @@ The following authentication-related evidence remains unverified or partial:
 | Provider `invalid_grant` refresh failure revocation | UNVERIFIED in this runtime run |
 | Session idle and absolute expiry runtime behavior | PASS in the short-TTL Windows verifier; normal production-duration timing remains represented by configuration and unit behavior |
 | Suspended/disabled/deleted user and membership gates | UNVERIFIED in this runtime run |
-| Database-level persisted identity/session inspection | UNVERIFIED in this runtime run |
+| Database-level persisted identity/session inspection | PASS for the read-only aggregate/structural verifier; identifier-level correctness and full lifecycle persistence remain unverified |
 | Production Keycloak deployment, TLS, KMS-backed encryption, production object storage, and operational evidence | BLOCKED by the qualified development-only environment |
 
 ## 6. Security and production qualification
@@ -172,4 +186,4 @@ The subject-claim diagnosis was cross-checked against the OpenID Connect and Key
 
 ## 9. Current qualified status
 
-The happy-path, negative-path, successful server-side refresh, repeated-refresh, provider-unavailability fail-closed, and short-TTL idle/absolute-expiry authentication/session verifiers are PASS in the qualified Windows development environment. Provider `invalid_grant` refresh failure, user and membership state transitions, provider logout events, MFA assurance, database persistence inspection, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
+The happy-path, negative-path, successful server-side refresh, repeated-refresh, provider-unavailability fail-closed, short-TTL idle/absolute-expiry, and read-only aggregate/structural persistence verifiers are PASS in the qualified Windows development environment. Provider `invalid_grant` refresh failure, user and membership state transitions, provider logout events, MFA assurance, identifier-level and full-lifecycle database persistence, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
