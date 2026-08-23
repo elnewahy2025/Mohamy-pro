@@ -266,6 +266,7 @@ async function main() {
       'auth_user_state_active_status=PASS|session_access=true|tenant_context=false',
     );
 
+    let currentJars = [firstJar, secondJar];
     for (const status of ['SUSPENDED', 'DISABLED', 'DELETED']) {
       const transition = await sessionService.transitionUserStatus(
         userId,
@@ -296,8 +297,8 @@ async function main() {
           `${status} transition did not persist closed session state`,
         );
       }
-      const deniedFirst = await sessionRequest(firstJar);
-      const deniedSecond = await sessionRequest(secondJar);
+      const deniedFirst = await sessionRequest(currentJars[0]);
+      const deniedSecond = await sessionRequest(currentJars[1]);
       if (
         deniedFirst.response.status !== 401 ||
         deniedSecond.response.status !== 401
@@ -327,9 +328,10 @@ async function main() {
       );
       requireAuthenticated(
         replacementSecond.body,
-        `${status === 'DELETED' ? 'ACTIVE' : 'ACTIVE'}`,
+        'ACTIVE',
         `${status} second replacement session`,
       );
+      currentJars = [replacementFirstJar, replacementSecondJar];
     }
 
     await sessionService.transitionUserStatus(userId, originalStatus);
