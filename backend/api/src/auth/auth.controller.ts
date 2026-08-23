@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Post,
   Query,
   Req,
@@ -82,6 +84,26 @@ export class AuthController {
     );
     if (!csrfToken) throw new AuthenticationError();
     return { csrfToken };
+  }
+
+  @Post('refresh')
+  @UseGuards(SessionGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Refresh the server-side provider session' })
+  async refresh(
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ): Promise<void> {
+    if (!request.authSession) throw new AuthenticationError();
+    const cookie = readSessionCookie(
+      request.headers.cookie,
+      this.config.getOrThrow('SESSION_COOKIE_NAME'),
+    );
+    if (!cookie || !(await this.sessions.refreshByCookie(cookie))) {
+      clearSessionCookie(response, this.config);
+      throw new AuthenticationError();
+    }
+    response.status(HttpStatus.NO_CONTENT).send();
   }
 
   @Post('logout')

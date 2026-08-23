@@ -231,6 +231,27 @@ async function main() {
   requireExpectedStatus(preservedSession, 200, 'session after rejected mutations');
   console.log('auth_negative_session_preserved_status=PASS|authenticated=true');
 
+  const refresh = await request(
+    `${apiBaseUrl}/api/v1/auth/refresh`,
+    {
+      method: 'POST',
+      headers: {
+        origin,
+        'x-csrf-token': csrf.csrfToken,
+      },
+    },
+    jar,
+  );
+  requireExpectedStatus(refresh, 204, 'valid session refresh');
+  if (!jar.has(cookieName)) throw new Error('Session cookie was lost during refresh');
+  const refreshedSession = await request(
+    `${apiBaseUrl}/api/v1/auth/session`,
+    {},
+    jar,
+  );
+  requireExpectedStatus(refreshedSession, 200, 'session after refresh');
+  console.log('auth_lifecycle_refresh_status=PASS|http=204|session_preserved=true');
+
   const logout = await request(
     `${apiBaseUrl}/api/v1/auth/logout`,
     {

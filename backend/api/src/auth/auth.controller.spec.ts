@@ -37,4 +37,55 @@ describe('AuthController', () => {
       'http://localhost:5173/ar',
     );
   });
+
+  it('returns no content after a successful server-side refresh', async () => {
+    const auth = {} as never;
+    const sessions = {
+      refreshByCookie: jest.fn().mockResolvedValue(true),
+    } as never;
+    const response = {
+      append: jest.fn(),
+      status: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    } as never;
+    const request = {
+      authSession: { sessionId: 'session-id' },
+      headers: { cookie: `mohamy_session=${'A'.repeat(43)}` },
+    } as never;
+    const controller = new AuthController(auth, sessions, config());
+
+    await controller.refresh(request, response);
+
+    expect(sessions.refreshByCookie).toHaveBeenCalledWith('A'.repeat(43));
+    expect(response.status).toHaveBeenCalledWith(204);
+    expect(response.send).toHaveBeenCalledWith();
+    expect(response.append).not.toHaveBeenCalled();
+  });
+
+  it('clears the cookie and fails closed when provider refresh fails', async () => {
+    const auth = {} as never;
+    const sessions = {
+      refreshByCookie: jest.fn().mockResolvedValue(false),
+    } as never;
+    const response = {
+      append: jest.fn(),
+      status: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    } as never;
+    const request = {
+      authSession: { sessionId: 'session-id' },
+      headers: { cookie: `mohamy_session=${'A'.repeat(43)}` },
+    } as never;
+    const controller = new AuthController(auth, sessions, config());
+
+    await expect(controller.refresh(request, response)).rejects.toThrow(
+      'AUTHENTICATION_REQUIRED',
+    );
+
+    expect(sessions.refreshByCookie).toHaveBeenCalledWith('A'.repeat(43));
+    expect(response.append).toHaveBeenCalledWith(
+      'Set-Cookie',
+      expect.stringContaining('Max-Age=0'),
+    );
+  });
 });

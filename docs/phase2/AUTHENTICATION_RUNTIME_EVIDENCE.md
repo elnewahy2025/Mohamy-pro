@@ -122,3 +122,14 @@ No alternate claim was accepted for the provider subject. The API continues to r
 **Production readiness:** NOT ESTABLISHED.
 
 **Phase 3:** Not started.
+
+## 8. External protocol evidence
+
+The subject-claim diagnosis was cross-checked against the OpenID Connect and Keycloak documentation. OpenID Connect Core defines `sub` as a required ID Token claim and describes it as a locally unique, never-reassigned subject identifier intended for the client [1]. Keycloak’s release notes explain that, in the lightweight-access-token changes, `sub` is supplied by protocol mappers and remains present in regular access tokens but may be absent from lightweight access tokens unless configured for that token profile [2]. This supports the project decision to retain a mandatory standard `sub` claim and to correct client-scope/token-profile configuration rather than substitute another claim.
+
+[1]: https://openid.net/specs/openid-connect-core-1_0.html "OpenID Connect Core 1.0 incorporating errata set 2"
+[2]: https://www.keycloak.org/2024/06/keycloak-2500-released "Keycloak 25.0.0 release notes"
+
+## 9. Current qualified status
+
+The happy-path and negative-path authentication/session verifiers are PASS in the qualified Windows development environment. Refresh-token rotation/failure, idle and absolute expiry, user and membership state transitions, provider logout events, MFA assurance, database persistence inspection, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
