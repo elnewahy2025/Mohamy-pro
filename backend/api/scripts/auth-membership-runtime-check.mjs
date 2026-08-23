@@ -188,6 +188,7 @@ async function main() {
   let prisma;
   let userId;
   let originalUserStatus;
+  let runtimeUserActivated = false;
   const createdTenantIds = [];
   try {
     const { NestFactory } = await import('@nestjs/core');
@@ -224,6 +225,16 @@ async function main() {
     console.log(
       `auth_membership_precheck=PASS|sessions=2|original_status=${originalUserStatus}|tenant_context=false`,
     );
+
+    if (originalUserStatus !== 'ACTIVE') {
+      await prisma.withGlobalOperationContext(randomUUID(), (transaction) =>
+        transaction.user.update({
+          where: { id: userId },
+          data: { status: 'ACTIVE' },
+        }),
+      );
+      runtimeUserActivated = true;
+    }
 
     const tenant = await prisma.withGlobalOperationContext(
       randomUUID(),
@@ -447,6 +458,15 @@ async function main() {
         targetTenantId: fixture.tenantId,
       },
     });
+    if (runtimeUserActivated) {
+      await prisma.withGlobalOperationContext(randomUUID(), (transaction) =>
+        transaction.user.update({
+          where: { id: userId },
+          data: { status: originalUserStatus },
+        }),
+      );
+      runtimeUserActivated = false;
+    }
     console.log('auth_membership_restore_status=PASS|tenant_archived=true|context_cleared=true');
     console.log('auth_membership_runtime_result=PASS');
   } catch (error) {
@@ -454,6 +474,14 @@ async function main() {
     console.error(`auth_membership_runtime_result=FAIL|error=${message.slice(0, 160)}`);
     process.exitCode = 1;
   } finally {
+    if (runtimeUserActivated && prisma && userId && originalUserStatus) {
+      await prisma.withGlobalOperationContext(randomUUID(), (transaction) =>
+        transaction.user.update({
+          where: { id: userId },
+          data: { status: originalUserStatus },
+        }),
+      );
+    }
     if (app) await app.close();
   }
 }
