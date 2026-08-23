@@ -43,6 +43,7 @@ auth_negative_csrf_mismatch_status=PASS|http=403
 auth_negative_session_preserved_status=PASS|authenticated=true
 auth_negative_logout_status=PASS|http=204|post_logout_denied=true
 auth_negative_anonymous_status=PASS|http=401
+auth_lifecycle_refresh_status=PASS|http=204|session_preserved=true
 auth_negative_runtime_result=PASS
 ```
 
@@ -60,6 +61,7 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 | Missing and disallowed origin rejection | `http=403` for both paths | PASS |
 | Missing and mismatched CSRF rejection | `http=403` for both paths | PASS |
 | Session preservation after rejected mutations | `authenticated=true` | PASS |
+| Successful server-side session refresh | `http=204` and `session_preserved=true` | PASS |
 
 ## 3. Requirements traceability
 
@@ -101,7 +103,8 @@ The following authentication-related evidence remains unverified or partial:
 | Exact-origin rejection for disallowed or missing browser origins on state-changing requests | PASS in the negative-path Windows verifier |
 | OIDC state replay and state mismatch | PASS in the negative-path Windows verifier |
 | Callback nonce mismatch and expired transaction runtime cases | Unit-tested or design-covered; real Windows runtime evidence not recorded here |
-| Refresh-token rotation and provider refresh failure handling | UNVERIFIED in this runtime run |
+| Successful provider refresh | PASS in the lifecycle verifier; session cookie preserved |
+| Refresh-token rotation with a newly returned refresh token and provider refresh failure revocation | UNVERIFIED in this runtime run |
 | Session idle and absolute expiry runtime behavior | UNVERIFIED in this runtime run |
 | Suspended/disabled/deleted user and membership gates | UNVERIFIED in this runtime run |
 | Database-level persisted identity/session inspection | UNVERIFIED in this runtime run |
@@ -132,4 +135,4 @@ The subject-claim diagnosis was cross-checked against the OpenID Connect and Key
 
 ## 9. Current qualified status
 
-The happy-path and negative-path authentication/session verifiers are PASS in the qualified Windows development environment. Refresh-token rotation/failure, idle and absolute expiry, user and membership state transitions, provider logout events, MFA assurance, database persistence inspection, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
+The happy-path, negative-path, and successful server-side refresh authentication/session verifiers are PASS in the qualified Windows development environment. Refresh-token rotation/failure, idle and absolute expiry, user and membership state transitions, provider logout events, MFA assurance, database persistence inspection, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
