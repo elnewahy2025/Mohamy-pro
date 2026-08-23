@@ -84,8 +84,11 @@ export class AuthService {
       );
       return { cookieValue, returnTo: transaction.returnTo };
     } catch (error) {
+      const reason = phase.endsWith('_validation')
+        ? `|reason=${safeValidationReason(error)}`
+        : '';
       this.logger.warn(
-        `OIDC callback rejected during ${phase}|error=${safeErrorName(error)}`,
+        `OIDC callback rejected during ${phase}${reason}|error=${safeErrorName(error)}`,
       );
       if (error instanceof AuthenticationError) throw error;
       if (isProviderUnavailable(error)) throw new ProviderUnavailableError();
@@ -117,6 +120,18 @@ function base64UrlSha256(value: string): string {
 
 function safeErrorName(error: unknown): string {
   return error instanceof Error && error.name ? error.name : 'UnknownError';
+}
+
+function safeValidationReason(error: unknown): string {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  if (/\baud\b|audience/.test(message)) return 'audience_mismatch';
+  if (/\biss\b|issuer/.test(message)) return 'issuer_mismatch';
+  if (/\bnonce\b/.test(message)) return 'nonce_mismatch';
+  if (/signature|jwks|key/.test(message)) return 'signature_or_key_rejected';
+  if (/exp|nbf|iat|clock|timestamp|expired/.test(message)) {
+    return 'temporal_claim_rejected';
+  }
+  return 'jwt_validation_rejected';
 }
 
 function isProviderUnavailable(error: unknown): boolean {
