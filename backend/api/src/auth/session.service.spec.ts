@@ -26,21 +26,24 @@ function createCrypto() {
   } as never;
 }
 
-function createSession() {
+function createSession(overrides: Record<string, unknown> = {}) {
   return {
     id: 'session-id',
     status: 'ACTIVE',
     tokenHash: TOKEN_HASH,
     providerRefreshTokenCiphertext: 'encrypted:refresh-token-1',
     csrfTokenCiphertext: 'encrypted:csrf-token',
+    idleExpiresAt: new Date(Date.now() + 3_600_000),
+    absoluteExpiresAt: new Date(Date.now() + 7_200_000),
     user: { status: 'ACTIVE' },
+    ...overrides,
   };
 }
 
-function createPrisma(updateMany: jest.Mock) {
+function createPrisma(updateMany: jest.Mock, session = createSession()) {
   const transaction = {
     appSession: {
-      findUnique: jest.fn().mockResolvedValue(createSession()),
+      findUnique: jest.fn().mockResolvedValue(session),
       updateMany,
     },
   };
@@ -136,6 +139,39 @@ describe('SessionService refresh lifecycle', () => {
       },
     });
   });
+
+  it.each([
+    ['idle', { idleExpiresAt: new Date(0) }],
+    ['absolute', { absoluteExpiresAt: new Date(0) }],
+  ])(
+    'rejects an expired %s session before provider refresh',
+    async (_kind, expiry) => {
+      const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+      const oidc = {
+        refreshToken: jest.fn(),
+      } as never;
+      const service = new SessionService(
+        createPrisma(updateMany, createSession(expiry)),
+        createCrypto(),
+        oidc,
+        createConfig(),
+      );
+
+      await expect(service.refreshByCookie(COOKIE)).resolves.toBe(false);
+
+      expect(oidc.refreshToken).not.toHaveBeenCalled();
+      expect(updateMany).toHaveBeenCalledWith({
+        where: { id: 'session-id', status: 'ACTIVE', tokenHash: TOKEN_HASH },
+        data: {
+          status: 'EXPIRED',
+          revokedAt: anyDateMatcher,
+          revokedReason: 'expired',
+          providerRefreshTokenCiphertext: null,
+          csrfTokenCiphertext: null,
+        },
+      });
+    },
+  );
 
   it('fails closed when the atomic refresh update no longer matches the active session', async () => {
     const updateMany = jest

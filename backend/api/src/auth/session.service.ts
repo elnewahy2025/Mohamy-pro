@@ -272,6 +272,24 @@ export class SessionService {
     ) {
       return false;
     }
+    const now = new Date();
+    if (session.idleExpiresAt <= now || session.absoluteExpiresAt <= now) {
+      await this.prisma.withGlobalOperationContext(
+        randomUUID(),
+        (transaction) =>
+          transaction.appSession.updateMany({
+            where: { id: session.id, status: 'ACTIVE', tokenHash },
+            data: {
+              status: 'EXPIRED',
+              revokedAt: now,
+              revokedReason: 'expired',
+              providerRefreshTokenCiphertext: null,
+              csrfTokenCiphertext: null,
+            },
+          }),
+      );
+      return false;
+    }
     try {
       const refreshToken = this.crypto.decrypt(
         session.providerRefreshTokenCiphertext,
