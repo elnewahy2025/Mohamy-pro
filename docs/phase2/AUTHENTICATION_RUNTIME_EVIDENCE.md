@@ -62,6 +62,20 @@ KEYCLOAK_RESTORE_STATUS=STARTED
 
 This is qualified evidence for fail-closed behavior when the provider is unavailable during refresh. It is not evidence for a provider `invalid_grant` response.
 
+The short-TTL expiry verifier produced the following safe markers using process-local TTL overrides (`SESSION_IDLE_TTL_SECONDS=2` and `SESSION_ABSOLUTE_TTL_SECONDS=5`), without changing the protected `.env` file:
+
+```text
+auth_expiry_config_status=READY|idle_wait_ms=3000|absolute_wait_ms=6000
+auth_expiry_idle_setup_status=PASS|session_created=true
+auth_expiry_idle_status=PASS|session_denied=true|refresh_denied=true
+auth_expiry_absolute_setup_status=PASS|session_created=true
+auth_expiry_absolute_status=PASS|session_denied=true|refresh_denied=true
+auth_expiry_runtime_result=PASS
+EXPIRY_API_ENV_RESTORE=PASS|temporary_ttl_overrides_cleared=true
+```
+
+This is qualified evidence that idle and absolute application-session expiry deny both normal session access and refresh. The normal runtime environment was restored after the attempt.
+
 The runtime results demonstrate that the following sequence succeeded in the qualified Windows environment:
 
 | Boundary | Evidence | Status |
@@ -79,6 +93,8 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 | Successful server-side session refresh | `http=204` and `session_preserved=true` | PASS |
 | Repeated server-side refresh | `http=204` and `session_preserved=true` on the second refresh | PASS for exercised behavior |
 | Provider unavailable during refresh | `http=401`, cookie cleared, and application session revoked | PASS for exercised behavior |
+| Idle session expiry | Short-TTL session denied after inactivity and refresh denied | PASS for exercised behavior |
+| Absolute session expiry | Short-TTL session denied after absolute deadline and refresh denied | PASS for exercised behavior |
 
 ## 3. Requirements traceability
 
@@ -94,20 +110,21 @@ The runtime results demonstrate that the following sequence succeeded in the qua
 
 ## 4. Static verification associated with the authentication/session runtime changes
 
-The latest sandbox verification covered the refresh hardening, repeated-refresh verifier, and provider-outage verifier:
+The latest sandbox verification covered the refresh hardening, repeated-refresh verifier, provider-outage verifier, and short-TTL expiry verifier:
 
 | Command | Result |
 |---|---|
-| `pnpm --filter api exec jest --runInBand` | PASS — 20 suites, 85 tests |
+| `pnpm --filter api exec jest --runInBand` | PASS — 20 suites, 87 tests |
 | `pnpm --filter api exec eslint src` | PASS |
 | `pnpm --filter api run build` | PASS |
 | `node --check backend/api/scripts/auth-runtime-check.mjs` | PASS |
 | `node --check backend/api/scripts/auth-negative-runtime-check.mjs` | PASS |
 | `node --check backend/api/scripts/auth-provider-failure-runtime-check.mjs` | PASS |
+| `node --check backend/api/scripts/auth-expiry-runtime-check.mjs` | PASS |
 | JSON validation for `backend/api/package.json` and `infrastructure/docker/keycloak/mohamy-realm.json` | PASS |
 | `git diff --check` | PASS |
 
-The refresh hardening and repeated-refresh verifier were published as commit `5573ea8f`. The controlled provider-outage verifier and Keycloak research note were published as commit `36de2090`. `origin/main` was not modified.
+The refresh hardening and repeated-refresh verifier were published as commit `5573ea8f`. The controlled provider-outage verifier and Keycloak research note were published as commit `36de2090`. The explicit refresh-expiry guard was published as commit `330f5dca`, and the short-TTL expiry verifier was published as commit `58d55440`. `origin/main` was not modified.
 
 ## 5. Remaining Phase 2 work
 
@@ -125,7 +142,7 @@ The following authentication-related evidence remains unverified or partial:
 | Refresh-token rotation persistence | Repeated refresh passed; encrypted-token replacement is covered by deterministic SessionService tests, but the live provider response was not inspected | PARTIAL |
 | Provider unavailable during refresh | HTTP 401, cookie cleared, and application session revoked | PASS for exercised behavior |
 | Provider `invalid_grant` refresh failure revocation | UNVERIFIED in this runtime run |
-| Session idle and absolute expiry runtime behavior | UNVERIFIED in this runtime run |
+| Session idle and absolute expiry runtime behavior | PASS in the short-TTL Windows verifier; normal production-duration timing remains represented by configuration and unit behavior |
 | Suspended/disabled/deleted user and membership gates | UNVERIFIED in this runtime run |
 | Database-level persisted identity/session inspection | UNVERIFIED in this runtime run |
 | Production Keycloak deployment, TLS, KMS-backed encryption, production object storage, and operational evidence | BLOCKED by the qualified development-only environment |
@@ -155,4 +172,4 @@ The subject-claim diagnosis was cross-checked against the OpenID Connect and Key
 
 ## 9. Current qualified status
 
-The happy-path, negative-path, successful server-side refresh, repeated-refresh, and provider-unavailability fail-closed authentication/session verifiers are PASS in the qualified Windows development environment. Provider `invalid_grant` refresh failure, idle and absolute expiry, user and membership state transitions, provider logout events, MFA assurance, database persistence inspection, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
+The happy-path, negative-path, successful server-side refresh, repeated-refresh, provider-unavailability fail-closed, and short-TTL idle/absolute-expiry authentication/session verifiers are PASS in the qualified Windows development environment. Provider `invalid_grant` refresh failure, user and membership state transitions, provider logout events, MFA assurance, database persistence inspection, and broader Phase 2 workstreams remain unverified or open. Phase 3 has not started, and production readiness is not established.
