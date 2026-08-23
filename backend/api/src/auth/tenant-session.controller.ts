@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  HttpCode,
+  HttpStatus,
   Post,
   Req,
   UseGuards,
@@ -30,6 +32,7 @@ export class TenantSessionController {
   constructor(private readonly memberships: MembershipService) {}
 
   @Post('tenant-switch')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Switch the authenticated session tenant context' })
   @ApiHeader({
     name: 'Idempotency-Key',
