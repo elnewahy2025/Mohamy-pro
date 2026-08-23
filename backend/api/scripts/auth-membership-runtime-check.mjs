@@ -261,11 +261,12 @@ async function main() {
     );
     createdTenantIds.push(fixture.tenantId);
 
+    const initialKey = randomUUID();
     const initialSwitch = await switchRequest(
       firstJar,
       fixture.tenantId,
       0,
-      randomUUID(),
+      initialKey,
     );
     if (
       initialSwitch.response.status !== 200 ||
@@ -290,13 +291,28 @@ async function main() {
     const replay = await switchRequest(
       firstJar,
       fixture.tenantId,
-      1,
-      initialSwitch.correlationId,
+      0,
+      initialKey,
     );
-    if (replay.response.status !== 400 || replay.body?.success !== false) {
+    if (
+      replay.response.status !== 200 ||
+      replay.body?.success !== true ||
+      replay.body.data?.contextVersion !== 1
+    ) {
+      throw new Error('same idempotency key and body did not replay exactly');
+    }
+    console.log('auth_membership_idempotency_replay_status=PASS|http=200|version=1');
+
+    const conflict = await switchRequest(
+      firstJar,
+      fixture.tenantId,
+      1,
+      initialKey,
+    );
+    if (conflict.response.status !== 409 || conflict.body?.success !== false) {
       throw new Error('same idempotency key with changed request was not rejected');
     }
-    console.log('auth_membership_idempotency_conflict_status=PASS|http=400');
+    console.log('auth_membership_idempotency_conflict_status=PASS|http=409');
 
     for (const state of ['INVITED', 'SUSPENDED', 'EXPIRED', 'REMOVED']) {
       await prisma.withTenantContext(
