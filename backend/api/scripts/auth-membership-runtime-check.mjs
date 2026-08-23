@@ -183,6 +183,22 @@ async function readJson(response) {
   }
 }
 
+function safeSuccessState(body) {
+  if (!body || typeof body !== 'object') return 'absent';
+  if (!('success' in body)) return 'absent';
+  return body.success === true ? 'true' : body.success === false ? 'false' : 'invalid';
+}
+
+function safeErrorCode(body) {
+  if (!body || typeof body !== 'object') return 'none';
+  const error = body.error;
+  if (!error || typeof error !== 'object' || !('code' in error)) return 'none';
+  const code = error.code;
+  return typeof code === 'string' && /^[A-Z][A-Z0-9_]+$/.test(code)
+    ? code
+    : 'invalid';
+}
+
 async function main() {
   let app;
   let prisma;
@@ -278,6 +294,9 @@ async function main() {
       fixture.tenantId,
       0,
       initialKey,
+    );
+    console.log(
+      `auth_membership_initial_switch_diagnostic=status=${initialSwitch.response.status}|success=${safeSuccessState(initialSwitch.body)}|error_code=${safeErrorCode(initialSwitch.body)}`,
     );
     if (
       initialSwitch.response.status !== 200 ||
