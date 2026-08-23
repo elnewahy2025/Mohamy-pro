@@ -89,12 +89,12 @@ function loginForm(html, baseUrl) {
   return { action: new URL(action, baseUrl).toString(), fields };
 }
 
-async function waitForManualProviderInvalidation() {
+async function waitForProviderOutage() {
   console.log(
-    'auth_provider_refresh_failure_setup_status=READY|manual_keycloak_invalidation_required=true',
+    'auth_provider_refresh_failure_setup_status=READY|manual_keycloak_stop_required=true',
   );
   console.log(
-    'In Keycloak Admin Console, sign out all sessions for phase2-runtime-user, then press Enter here.',
+    'Stop only docker-keycloak-1 in another terminal, then press Enter here.',
   );
   await new Promise((resolve) => {
     process.stdin.resume();
@@ -158,7 +158,7 @@ async function main() {
     throw new Error('CSRF token response was invalid');
   }
 
-  await waitForManualProviderInvalidation();
+  await waitForProviderOutage();
 
   const refresh = await request(
     `${apiBaseUrl}/api/v1/auth/refresh`,
