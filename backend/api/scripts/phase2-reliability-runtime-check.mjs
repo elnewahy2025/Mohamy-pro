@@ -325,6 +325,25 @@ async function readOutboxByAggregate(client, aggregateId) {
   );
 }
 
+async function readRlsRuntimeState(client) {
+  const result = await client.query(
+    `SELECT
+       EXISTS (
+         SELECT 1 FROM pg_roles
+         WHERE rolname = current_user AND rolsuper = true
+       ) AS is_superuser,
+       EXISTS (
+         SELECT 1 FROM pg_roles
+         WHERE rolname = current_user AND rolbypassrls = true
+       ) AS bypasses_rls,
+       c.relrowsecurity AS row_security_enabled,
+       c.relforcerowsecurity AS row_security_forced
+     FROM pg_class AS c
+     WHERE c.oid = 'public."AuditEvent"'::regclass`,
+  );
+  return result.rows[0] ?? null;
+}
+
 async function readOutboxById(client, id) {
   return withSettings(
     client,
@@ -472,6 +491,16 @@ async function main() {
     await database.connect();
     await redis.ping();
     appReady = true;
+
+    stage = 'rls_runtime_role_probe';
+    const rlsRuntimeState = await readRlsRuntimeState(database);
+    assert(
+      rlsRuntimeState !== null,
+      'AuditEvent RLS runtime state was unavailable',
+    );
+    console.log(
+      `audit_rls_role_diagnostic=superuser=${rlsRuntimeState.is_superuser}|bypassrls=${rlsRuntimeState.bypasses_rls}|enabled=${rlsRuntimeState.row_security_enabled}|forced=${rlsRuntimeState.row_security_forced}`,
+    );
 
     stage = 'authenticated_fixture';
     const firstJar = await login();
