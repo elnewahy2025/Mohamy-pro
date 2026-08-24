@@ -501,18 +501,21 @@ async function main() {
     createdTenantIds.push(tenantOneId, tenantTwoId);
     createdMembershipIds.push(membershipOneId, membershipTwoId);
 
-    stage = 'create_tenant_fixtures';
+    stage = 'create_tenant_one';
     await createTenant(
       database,
       tenantOneId,
       `phase2-reliability-a-${randomUUID().replaceAll('-', '')}`,
     );
+    stage = 'create_tenant_two';
     await createTenant(
       database,
       tenantTwoId,
       `phase2-reliability-b-${randomUUID().replaceAll('-', '')}`,
     );
+    stage = 'create_membership_one';
     await createMembership(database, tenantOneId, membershipOneId, userId);
+    stage = 'create_membership_two';
     await createMembership(database, tenantTwoId, membershipTwoId, userId);
 
     stage = 'real_api_audit_mutation';
@@ -1007,30 +1010,27 @@ async function main() {
             database,
             { operationId: randomUUID(), globalOperation: true },
             async () => {
-              const [audit, outbox, tenants, memberships, sessions] =
-                await Promise.all([
-                  database.query(
-                    `SELECT count(*)::int AS count FROM "AuditEvent" WHERE "id" = ANY($1::text[])`,
-                    [cleanupAuditIds],
-                  ),
-                  database.query(
-                    `SELECT count(*)::int AS count FROM "OutboxMessage" WHERE "id" = ANY($1::text[])`,
-                    [createdOutboxIds],
-                  ),
-                  database.query(
-                    `SELECT count(*)::int AS count FROM "Tenant" WHERE "id" = ANY($1::text[]) AND "status" <> 'ARCHIVED'`,
-                    [createdTenantIds],
-                  ),
-                  database.query(
-                    `SELECT count(*)::int AS count FROM "Membership" WHERE "id" = ANY($1::text[]) AND "status" <> 'REMOVED'`,
-                    [createdMembershipIds],
-                  ),
-                  database.query(
-                    `SELECT count(*)::int AS count FROM "AppSession"
-                   WHERE "userId" = $1 AND "activeTenantId" = ANY($2::text[])`,
-                    [userId, createdTenantIds],
-                  ),
-                ]);
+              const audit = await database.query(
+                `SELECT count(*)::int AS count FROM "AuditEvent" WHERE "id" = ANY($1::text[])`,
+                [cleanupAuditIds],
+              );
+              const outbox = await database.query(
+                `SELECT count(*)::int AS count FROM "OutboxMessage" WHERE "id" = ANY($1::text[])`,
+                [createdOutboxIds],
+              );
+              const tenants = await database.query(
+                `SELECT count(*)::int AS count FROM "Tenant" WHERE "id" = ANY($1::text[]) AND "status" <> 'ARCHIVED'`,
+                [createdTenantIds],
+              );
+              const memberships = await database.query(
+                `SELECT count(*)::int AS count FROM "Membership" WHERE "id" = ANY($1::text[]) AND "status" <> 'REMOVED'`,
+                [createdMembershipIds],
+              );
+              const sessions = await database.query(
+                `SELECT count(*)::int AS count FROM "AppSession"
+                 WHERE "userId" = $1 AND "activeTenantId" = ANY($2::text[])`,
+                [userId, createdTenantIds],
+              );
               return {
                 audit: audit.rows[0]?.count ?? -1,
                 outbox: outbox.rows[0]?.count ?? -1,
