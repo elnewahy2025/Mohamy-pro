@@ -89,7 +89,7 @@ export class AuthService {
         : '';
       const databaseDiagnostic =
         phase === 'session_creation'
-          ? `|db_code=${safeDatabaseCode(error)}|db_model=${safeDatabaseModel(error)}`
+          ? `|db_code=${safeDatabaseCode(error)}|db_model=${safeDatabaseModel(error)}|driver_code=${safeDatabaseDriverCode(error)}|driver_kind=${safeDatabaseDriverKind(error)}|driver_category=${safeDatabaseDriverCategory(error)}`
           : '';
       this.logger.warn(
         `OIDC callback rejected during ${phase}${reason}|error=${safeErrorName(error)}${databaseDiagnostic}`,
@@ -144,6 +144,47 @@ function safeDatabaseModel(error: unknown): string {
   return typeof model === 'string' && /^[A-Za-z][A-Za-z0-9_]*$/.test(model)
     ? model
     : 'none';
+}
+
+function safeDatabaseDriverCode(error: unknown): string {
+  const cause = databaseDriverCause(error);
+  return typeof cause?.originalCode === 'string' &&
+    /^[0-9A-Z]{5}$/.test(cause.originalCode)
+    ? cause.originalCode
+    : 'none';
+}
+
+function safeDatabaseDriverKind(error: unknown): string {
+  const cause = databaseDriverCause(error);
+  return typeof cause?.kind === 'string' &&
+    /^[A-Za-z][A-Za-z0-9_]*$/.test(cause.kind)
+    ? cause.kind
+    : 'none';
+}
+
+function safeDatabaseDriverCategory(error: unknown): string {
+  const code = safeDatabaseDriverCode(error);
+  if (code === '42501') return 'insufficient_privilege';
+  if (code === '23505') return 'unique_violation';
+  if (code === '23503') return 'foreign_key_violation';
+  if (code === '23502') return 'not_null_violation';
+  if (code === '22P02') return 'invalid_text_representation';
+  if (code === '42P01') return 'undefined_table';
+  if (code === '42703') return 'undefined_column';
+  if (code === '40001') return 'serialization_failure';
+  if (code === '40P01') return 'deadlock_detected';
+  if (code === 'P0001') return 'database_raise_exception';
+  return 'unknown';
+}
+
+function databaseDriverCause(error: unknown): Record<string, unknown> | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const driver = (error as Record<string, unknown>).driverAdapterError;
+  if (typeof driver !== 'object' || driver === null) return null;
+  const cause = (driver as Record<string, unknown>).cause;
+  return typeof cause === 'object' && cause !== null
+    ? (cause as Record<string, unknown>)
+    : null;
 }
 
 function safeValidationReason(error: unknown): string {
