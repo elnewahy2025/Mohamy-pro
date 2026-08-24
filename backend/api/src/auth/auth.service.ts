@@ -87,8 +87,12 @@ export class AuthService {
       const reason = phase.endsWith('_validation')
         ? `|reason=${safeValidationReason(error)}`
         : '';
+      const databaseDiagnostic =
+        phase === 'session_creation'
+          ? `|db_code=${safeDatabaseCode(error)}|db_model=${safeDatabaseModel(error)}`
+          : '';
       this.logger.warn(
-        `OIDC callback rejected during ${phase}${reason}|error=${safeErrorName(error)}`,
+        `OIDC callback rejected during ${phase}${reason}|error=${safeErrorName(error)}${databaseDiagnostic}`,
       );
       if (error instanceof AuthenticationError) throw error;
       if (isProviderUnavailable(error)) throw new ProviderUnavailableError();
@@ -120,6 +124,26 @@ function base64UrlSha256(value: string): string {
 
 function safeErrorName(error: unknown): string {
   return error instanceof Error && error.name ? error.name : 'UnknownError';
+}
+
+function safeDatabaseCode(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return 'none';
+  const candidate = error as Record<string, unknown>;
+  return typeof candidate.code === 'string' &&
+    /^P[0-9]{4}$/.test(candidate.code)
+    ? candidate.code
+    : 'none';
+}
+
+function safeDatabaseModel(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return 'none';
+  const candidate = error as Record<string, unknown>;
+  const meta = candidate.meta;
+  if (typeof meta !== 'object' || meta === null) return 'none';
+  const model = (meta as Record<string, unknown>).modelName;
+  return typeof model === 'string' && /^[A-Za-z][A-Za-z0-9_]*$/.test(model)
+    ? model
+    : 'none';
 }
 
 function safeValidationReason(error: unknown): string {
