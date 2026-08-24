@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import {
@@ -17,10 +18,12 @@ export class MetricsSnapshotService {
   async refresh(): Promise<void> {
     const [queueCounts, outboxCounts] = await Promise.all([
       this.queue.getCounts(),
-      this.prisma.outboxMessage.groupBy({
-        by: ['status'],
-        _count: { _all: true },
-      }),
+      this.prisma.withOutboxDispatcherContext(randomUUID(), (transaction) =>
+        transaction.outboxMessage.groupBy({
+          by: ['status'],
+          _count: { _all: true },
+        }),
+      ),
     ]);
     this.metrics.setQueueDepth(APPLICATION_QUEUE_NAME, queueCounts);
     this.metrics.setOutboxStateCounts(

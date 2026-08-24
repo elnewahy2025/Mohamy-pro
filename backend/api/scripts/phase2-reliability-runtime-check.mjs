@@ -325,6 +325,21 @@ async function readOutboxByAggregate(client, aggregateId) {
   );
 }
 
+function assertRestrictedRuntimeRole(state) {
+  assert(
+    state.row_security_enabled === true,
+    'AuditEvent row-level security is not enabled',
+  );
+  assert(
+    state.row_security_forced === true,
+    'AuditEvent row-level security is not forced',
+  );
+  assert(
+    state.is_superuser === false && state.bypasses_rls === false,
+    'runtime database role bypasses row-level security',
+  );
+}
+
 async function readRlsRuntimeState(client) {
   const result = await client.query(
     `SELECT
@@ -501,6 +516,7 @@ async function main() {
     console.log(
       `audit_rls_role_diagnostic=superuser=${rlsRuntimeState.is_superuser}|bypassrls=${rlsRuntimeState.bypasses_rls}|enabled=${rlsRuntimeState.row_security_enabled}|forced=${rlsRuntimeState.row_security_forced}`,
     );
+    assertRestrictedRuntimeRole(rlsRuntimeState);
 
     stage = 'authenticated_fixture';
     const firstJar = await login();

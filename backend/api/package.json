@@ -31,7 +31,8 @@
     "db:phase2:auth-persistence": "node scripts/auth-persistence-runtime-check.mjs",
     "db:phase2:auth-user-state": "node scripts/auth-user-state-runtime-check.mjs",
     "db:phase2:auth-membership": "node scripts/auth-membership-runtime-check.mjs",
-    "db:phase2:reliability": "node scripts/phase2-reliability-runtime-check.mjs"
+    "db:phase2:reliability": "node scripts/phase2-reliability-runtime-check.mjs",
+    "db:phase2:admin-inventory": "node scripts/phase2-admin-inventory.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1113.0",
