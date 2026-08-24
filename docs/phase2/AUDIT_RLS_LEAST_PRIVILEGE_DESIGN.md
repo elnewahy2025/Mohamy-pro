@@ -169,3 +169,17 @@ The unexecuted `backend/api/scripts/phase2-provision-mohamy-app.sql` template is
 The repository changes must first be reviewed, statically verified, committed, and published on `phase2/legacy-tenant-boundaries`. The user must then run the read-only inventory on Windows with the API and worker stopped and the required Docker PostgreSQL service running. Only after interpreting that bounded inventory may the user separately approve and perform role provisioning, interactive password setting, protected `DATABASE_URL` cutover, and optional protected `MIGRATION_DATABASE_URL` configuration. The reliability verifier may be rerun only after its role marker shows `superuser=false|bypassrls=false|enabled=true|forced=true`.
 
 Until those gates and the complete restricted-role runtime campaign pass, the audit/reliability workstream remains partial. Phase 2 remains open; Phase 3 has not started; and production readiness is not established.
+
+
+## Bounded Windows administrative inventory evidence
+
+After commit `9996db29` was synchronized with fast-forward-only pull, the user ran the new inventory command with the API and worker stopped and PostgreSQL reachable. The command selected the runtime fallback because no protected `MIGRATION_DATABASE_URL` was configured; it used the existing local connection only for read-only inventory. The bounded output was:
+
+```text
+admin_inventory_source=runtime_fallback
+admin_inventory_current=superuser=true|bypassrls=true|createdb=true|createrole=true|canlogin=true|owned_relations=114|owned_functions=6|owns_public_schema=false
+admin_inventory_target=exists=false|canlogin=false|superuser=false|bypassrls=false|createdb=false|createrole=false|schema_usage=false|schema_create=false|memberships=0|owned_relations=0|owned_functions=0
+admin_inventory_audit_rls=enabled=true|forced=true
+```
+
+This inventory confirms that the current connection is an administrative superuser with `BYPASSRLS` and substantial ownership, and therefore must not be reused as valid restricted-role RLS evidence. It also confirms that the target runtime role does not yet exist and that `AuditEvent` RLS is enabled and forced. No role, password, grant, ownership, protected environment value, or existing row was changed by this inventory. The next operation is a separate user-run administrative provisioning decision; the agent must not execute it.
