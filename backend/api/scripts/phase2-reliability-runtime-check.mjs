@@ -519,14 +519,24 @@ async function main() {
     assertRestrictedRuntimeRole(rlsRuntimeState);
 
     stage = 'authenticated_fixture';
-    const firstJar = await login();
-    const firstSession = await sessionRequest(firstJar);
-    assert(
-      firstSession.response.status === 200,
-      'authenticated session unavailable',
-    );
-    userId = firstSession.body?.user?.id;
-    originalUserStatus = firstSession.body?.user?.status;
+    let authenticatedFixtureSubstage = 'login';
+    let firstJar;
+    try {
+      firstJar = await login();
+      authenticatedFixtureSubstage = 'session_request';
+      const firstSession = await sessionRequest(firstJar);
+      assert(
+        firstSession.response.status === 200,
+        'authenticated session unavailable',
+      );
+      userId = firstSession.body?.user?.id;
+      originalUserStatus = firstSession.body?.user?.status;
+    } catch (error) {
+      console.log(
+        `audit_authenticated_fixture_diagnostic=substage=${authenticatedFixtureSubstage}|error_class=${safeErrorClass(error)}`,
+      );
+      throw error;
+    }
     assert(typeof userId === 'string', 'authenticated user was not resolved');
     assert(
       originalUserStatus === 'PENDING' || originalUserStatus === 'ACTIVE',
