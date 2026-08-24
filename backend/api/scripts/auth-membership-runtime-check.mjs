@@ -344,6 +344,7 @@ async function main() {
     }
     console.log('auth_membership_idempotency_conflict_status=PASS|http=409');
 
+    let currentContextVersion = 1;
     for (const state of ['INVITED', 'SUSPENDED', 'EXPIRED', 'REMOVED']) {
       await prisma.withTenantContext(
         {
@@ -381,16 +382,15 @@ async function main() {
       ) {
         throw new Error(`${state} membership was not denied with the controlled envelope`);
       }
-      const unchanged = await sessionRequest(firstJar);
+      const cleared = await sessionRequest(firstJar);
       if (
-        unchanged.body?.tenantContext?.tenantId !== fixture.tenantId ||
-        unchanged.body?.tenantContext?.contextVersion !== 1
+        cleared.response.status !== 200 ||
+        cleared.body?.tenantContext !== null ||
+        cleared.body?.activeMembershipCount !== 0
       ) {
-        throw new Error(`${state} denial changed the existing tenant context`);
+        throw new Error(`${state} denial did not clear the invalid tenant context`);
       }
-      console.log(
-        `auth_membership_${state.toLowerCase()}_status=PASS|http=403|context_preserved=true`,
-      );
+      const clearedContextVersion = currentContextVersion + 1;
       await prisma.withTenantContext(
         {
           tenantId: fixture.tenantId,
@@ -406,6 +406,23 @@ async function main() {
               activeUntil: new Date(Date.now() + 60 * 60_000),
             },
           }),
+      );
+      const restored = await switchRequest(
+        firstJar,
+        fixture.tenantId,
+        clearedContextVersion,
+        randomUUID(),
+      );
+      if (
+        restored.response.status !== 200 ||
+        restored.body?.success !== true ||
+        restored.body.data?.contextVersion !== clearedContextVersion + 1
+      ) {
+        throw new Error(`${state} context could not be re-established after denial`);
+      }
+      currentContextVersion = clearedContextVersion + 1;
+      console.log(
+        `auth_membership_${state.toLowerCase()}_status=PASS|http=403|context_cleared=true`,
       );
     }
 
