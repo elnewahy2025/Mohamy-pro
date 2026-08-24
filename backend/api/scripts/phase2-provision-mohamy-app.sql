@@ -1,5 +1,3 @@
-\set ON_ERROR_STOP on
-
 -- User-run only. Execute this file as the existing administrative migration role.
 -- This file contains no password and must never be executed by an application role.
 -- It does not change ownership, drop data, alter RLS policies, or grant blanket
