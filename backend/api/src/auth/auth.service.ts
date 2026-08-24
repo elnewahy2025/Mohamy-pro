@@ -148,10 +148,15 @@ function safeDatabaseModel(error: unknown): string {
 
 function safeDatabaseDriverCode(error: unknown): string {
   const cause = databaseDriverCause(error);
-  return typeof cause?.originalCode === 'string' &&
+  if (
+    typeof cause?.originalCode === 'string' &&
     /^[0-9A-Z]{5}$/.test(cause.originalCode)
-    ? cause.originalCode
-    : 'none';
+  ) {
+    return cause.originalCode;
+  }
+  const message = error instanceof Error ? error.message : '';
+  const match = message.match(/Database error\. Code:\s*`?([0-9A-Z]{5})`?/i);
+  return match?.[1]?.toUpperCase() ?? 'none';
 }
 
 function safeDatabaseDriverKind(error: unknown): string {
