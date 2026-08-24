@@ -667,6 +667,9 @@ async function main() {
       membershipId: membershipTwoId,
       operationId: randomUUID(),
     });
+    console.log(
+      `audit_rls_diagnostic=same_tenant_${tenantVisible?.id === auditEvent.id ? 'visible' : 'hidden'}|cross_tenant_${crossTenantHidden === null ? 'hidden' : 'visible'}`,
+    );
     assert(
       tenantVisible?.id === auditEvent.id,
       'tenant audit row was not visible in its tenant context',
@@ -706,6 +709,9 @@ async function main() {
             ],
           ),
       ),
+    );
+    console.log(
+      `audit_rls_write_diagnostic=cross_tenant_write_${crossTenantWriteBlocked ? 'blocked' : 'allowed'}`,
     );
     assert(
       crossTenantWriteBlocked,
