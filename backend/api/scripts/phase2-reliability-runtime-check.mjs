@@ -347,8 +347,8 @@ async function createTenant(client, tenantId, slug) {
     { operationId: randomUUID(), globalOperation: true },
     () =>
       client.query(
-        `INSERT INTO "Tenant" ("id", "slug", "name", "status")
-         VALUES ($1, $2, $3, 'ACTIVE')`,
+        `INSERT INTO "Tenant" ("id", "slug", "name", "status", "updatedAt")
+         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP)`,
         [tenantId, slug, 'Phase 2 reliability verification tenant'],
       ),
   );
@@ -366,9 +366,9 @@ async function createMembership(client, tenantId, membershipId, userId) {
     () =>
       client.query(
         `INSERT INTO "Membership"
-           ("id", "tenantId", "userId", "status", "activeFrom", "activeUntil")
+           ("id", "tenantId", "userId", "status", "activeFrom", "activeUntil", "updatedAt")
          VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '1 minute',
-                 CURRENT_TIMESTAMP + INTERVAL '1 hour')`,
+                 CURRENT_TIMESTAMP + INTERVAL '1 hour', CURRENT_TIMESTAMP)`,
         [membershipId, tenantId, userId],
       ),
   );
