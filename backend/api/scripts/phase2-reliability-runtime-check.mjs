@@ -133,54 +133,69 @@ function loginForm(html, baseUrl) {
 
 async function login() {
   const jar = new CookieJar();
-  const loginResponse = await request(
-    `${apiBaseUrl}/api/v1/auth/login?returnTo=%2Far`,
-    {},
-    jar,
-  );
-  if (loginResponse.status !== 302) {
-    throw new Error(`login start returned HTTP ${loginResponse.status}`);
-  }
-  const authorizationUrl = absoluteLocation(
-    apiBaseUrl,
-    loginResponse,
-    'login start',
-  );
-  const authorization = new URL(authorizationUrl);
-  if (authorization.searchParams.get('code_challenge_method') !== 'S256') {
-    throw new Error('OIDC PKCE method is not S256');
-  }
-  const keycloakLogin = await request(authorizationUrl, {}, jar);
-  if (keycloakLogin.status !== 200) {
-    throw new Error(
-      `Keycloak login page returned HTTP ${keycloakLogin.status}`,
+  let loginStage = 'login_start';
+  try {
+    const loginResponse = await request(
+      `${apiBaseUrl}/api/v1/auth/login?returnTo=%2Far`,
+      {},
+      jar,
     );
-  }
-  const form = loginForm(await keycloakLogin.text(), authorizationUrl);
-  const credentialResponse = await request(
-    form.action,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: form.fields,
-    },
-    jar,
-  );
-  if (credentialResponse.status !== 302) {
-    throw new Error(
-      `Keycloak credential submission returned HTTP ${credentialResponse.status}`,
+    if (loginResponse.status !== 302) {
+      throw new Error(`login start returned HTTP ${loginResponse.status}`);
+    }
+    const authorizationUrl = absoluteLocation(
+      apiBaseUrl,
+      loginResponse,
+      'login start',
     );
+    const authorization = new URL(authorizationUrl);
+    if (authorization.searchParams.get('code_challenge_method') !== 'S256') {
+      throw new Error('OIDC PKCE method is not S256');
+    }
+
+    loginStage = 'authorization_page';
+    const keycloakLogin = await request(authorizationUrl, {}, jar);
+    if (keycloakLogin.status !== 200) {
+      throw new Error(
+        `Keycloak login page returned HTTP ${keycloakLogin.status}`,
+      );
+    }
+    const form = loginForm(await keycloakLogin.text(), authorizationUrl);
+
+    loginStage = 'credential_submission';
+    const credentialResponse = await request(
+      form.action,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: form.fields,
+      },
+      jar,
+    );
+    if (credentialResponse.status !== 302) {
+      throw new Error(
+        `Keycloak credential submission returned HTTP ${credentialResponse.status}`,
+      );
+    }
+    const callbackUrl = absoluteLocation(
+      authorizationUrl,
+      credentialResponse,
+      'Keycloak credential submission',
+    );
+
+    loginStage = 'callback_request';
+    const callback = await request(callbackUrl, { headers: { origin } }, jar);
+    if (callback.status !== 302 || !jar.header().includes(`${cookieName}=`)) {
+      throw new Error('OIDC login did not establish an application session');
+    }
+    return jar;
+  } catch (error) {
+    const wrapped = new Error('OIDC login stage failed');
+    wrapped.name = 'OidcLoginStageError';
+    wrapped.loginStage = loginStage;
+    wrapped.causeClass = safeErrorClass(error);
+    throw wrapped;
   }
-  const callbackUrl = absoluteLocation(
-    authorizationUrl,
-    credentialResponse,
-    'Keycloak credential submission',
-  );
-  const callback = await request(callbackUrl, { headers: { origin } }, jar);
-  if (callback.status !== 302 || !jar.header().includes(`${cookieName}=`)) {
-    throw new Error('OIDC login did not establish an application session');
-  }
-  return jar;
 }
 
 async function readJson(response) {
@@ -532,8 +547,20 @@ async function main() {
       userId = firstSession.body?.user?.id;
       originalUserStatus = firstSession.body?.user?.status;
     } catch (error) {
+      const loginStage =
+        error instanceof Error &&
+        typeof error.loginStage === 'string' &&
+        /^[a-z_]+$/.test(error.loginStage)
+          ? error.loginStage
+          : 'unknown';
+      const causeClass =
+        error instanceof Error &&
+        typeof error.causeClass === 'string' &&
+        /^[A-Za-z][A-Za-z0-9_]*$/.test(error.causeClass)
+          ? error.causeClass
+          : 'UnknownError';
       console.log(
-        `audit_authenticated_fixture_diagnostic=substage=${authenticatedFixtureSubstage}|error_class=${safeErrorClass(error)}`,
+        `audit_authenticated_fixture_diagnostic=substage=${authenticatedFixtureSubstage}|login_stage=${loginStage}|error_class=${safeErrorClass(error)}|cause_class=${causeClass}`,
       );
       throw error;
     }
