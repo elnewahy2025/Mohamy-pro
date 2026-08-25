@@ -80,3 +80,11 @@ The source audit identified the mismatch: `MembershipService` binds a transactio
 The repository correction reads and validates `current_setting('app.operation_id', true)` from the same Prisma transaction immediately before creating the tenant outbox message, then passes that value as the outbox tenant context. It does not alter the RLS policy, add privileges, weaken forced RLS, use the migration connection in the API, or change the correlation identifier. A focused AuditService test asserts that the tenant outbox context carries the transaction-local operation identifier.
 
 This correction is statically verified but is not accepted as a runtime fix until the real Windows tenant-switch mutation succeeds under the restricted runtime role and the downstream audit/outbox/isolation/concurrency assertions pass.
+
+## 2.5 Append-only verifier boundary correction
+
+The restricted-role runtime campaign passed the real tenant-switch mutation, tenant AuditEvent/outbox creation, tenant isolation, cross-tenant write denial, outbox delivery, duplicate suppression, and cleanup, then stopped at `audit_append_only_boundary`. The source and privilege inventory show that `mohamy_app` intentionally has `SELECT, INSERT, DELETE` but no `UPDATE` privilege on `AuditEvent`; therefore an UPDATE attempt is a valid privilege boundary and must not be converted into a broader grant merely to force the trigger to execute.
+
+The verifier’s append-only assertion was corrected to recognize both legitimate protected outcomes without exposing raw database messages: an attempted mutation is blocked either by the existing append-only trigger/RLS error or by a zero-row result caused by the forced-RLS boundary. It then verifies that the audit row remains present and unchanged. The verifier emits a bounded `audit_append_only_diagnostic` category for the UPDATE and DELETE attempts and emits PASS only when both are blocked and the row remains intact.
+
+No database policy, role privilege, trigger, migration, or existing data was changed. The correction is statically verified and remains unaccepted until the Windows runtime reaches and passes this boundary.

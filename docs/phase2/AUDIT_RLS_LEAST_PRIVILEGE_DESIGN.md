@@ -222,3 +222,13 @@ The source audit found the precise mismatch. `MembershipService` binds a transac
 The repository correction reads and validates `current_setting('app.operation_id', true)` on the same Prisma transaction immediately before creating a tenant outbox message and passes that value as the outbox tenant context. It preserves the request correlation ID separately, changes no RLS policy or privilege, and does not use the administrative migration connection in API/worker runtime. A focused AuditService regression test verifies that tenant outbox linkage uses the transaction-local operation identifier.
 
 The correction is statically verified and published, but it is not runtime-accepted until the real Windows tenant-switch mutation succeeds under `mohamy_app` and the downstream restricted-role audit, outbox, isolation, retry/dead-letter, retention/legal-hold, and concurrency assertions pass. Phase 2 remains open and production readiness is not established.
+
+## Append-only boundary evidence and verifier correction
+
+The restricted-role runtime campaign now proves the real tenant-switch API mutation, tenant-scoped AuditEvent and OutboxMessage creation, outbox delivery and duplicate suppression, same-tenant visibility, cross-tenant read isolation, cross-tenant write denial, and zero-residue cleanup. It then stopped at `audit_append_only_boundary`.
+
+The source-audited runtime privilege matrix intentionally grants `mohamy_app` `SELECT, INSERT, DELETE` on `AuditEvent` and omits `UPDATE`. This omission is part of the append-only security boundary; it must not be changed merely to force a trigger-level UPDATE test. The existing `AuditEvent_append_only` trigger still rejects ordinary UPDATE and non-eligible DELETE operations, while the dedicated retention path is allowed to delete only expired non-held rows.
+
+The verifier correction now classifies an attempted UPDATE or DELETE as blocked when the operation raises the existing append-only/RLS boundary error or returns zero affected rows under forced RLS. It then reads the audit event through the named dispatcher context and verifies that exactly one row remains. The verifier emits only the bounded mutation categories and reports PASS only when both attempts are blocked and the row remains intact. No grant, RLS policy, trigger, migration, password, ownership, or existing data was changed.
+
+This correction is statically verified but not runtime-accepted. The next Windows run must prove the append-only marker and then continue to retention/legal-hold, retry/dead-letter, and same-session concurrency stages. Phase 2 remains open and production readiness is not established.

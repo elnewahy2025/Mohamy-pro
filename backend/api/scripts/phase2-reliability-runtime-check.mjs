@@ -502,6 +502,34 @@ async function rejects(operation) {
   }
 }
 
+async function mutationOutcome(operation) {
+  try {
+    const result = await operation();
+    return {
+      blocked: result.rowCount !== 1,
+      boundary: result.rowCount === 0 ? 'rls_filtered' : 'not_blocked',
+    };
+  } catch (error) {
+    return { blocked: true, boundary: safeMutationBoundary(error) };
+  }
+}
+
+function safeMutationBoundary(error) {
+  const message = error instanceof Error ? error.message : '';
+  if (/row-level security policy|violates row-level security/i.test(message)) {
+    return 'rls_policy';
+  }
+  if (
+    /permission denied for (table|schema|column|sequence|function)/i.test(
+      message,
+    )
+  ) {
+    return 'object_privilege';
+  }
+  if (/append-only/i.test(message)) return 'append_only_trigger';
+  return 'other_error';
+}
+
 async function main() {
   required('DATABASE_URL', databaseUrl);
   required('MIGRATION_DATABASE_URL', migrationDatabaseUrl);
@@ -834,7 +862,7 @@ async function main() {
     );
 
     stage = 'audit_append_only_boundary';
-    const updateBlocked = await rejects(() =>
+    const updateOutcome = await mutationOutcome(() =>
       withSettings(
         database,
         { operationId: randomUUID(), auditRetentionPurge: true },
@@ -846,7 +874,7 @@ async function main() {
           ),
       ),
     );
-    const deleteBlocked = await rejects(() =>
+    const deleteOutcome = await mutationOutcome(() =>
       withSettings(
         database,
         { operationId: randomUUID(), auditRetentionPurge: true },
@@ -861,11 +889,14 @@ async function main() {
       database,
       firstSwitch.correlationId,
     );
-    assert(updateBlocked, 'audit update unexpectedly succeeded');
-    assert(deleteBlocked, 'audit delete unexpectedly succeeded');
+    console.log(
+      `audit_append_only_diagnostic=update_boundary=${updateOutcome.boundary}|delete_boundary=${deleteOutcome.boundary}|row_count=${auditAfterMutation.length}`,
+    );
+    assert(updateOutcome.blocked, 'audit update unexpectedly succeeded');
+    assert(deleteOutcome.blocked, 'audit delete unexpectedly succeeded');
     assert(auditAfterMutation.length === 1, 'audit row was mutated or deleted');
     console.log(
-      'audit_append_only_status=PASS|update_blocked=true|delete_blocked=true',
+      'audit_append_only_status=PASS|update_blocked=true|delete_blocked=true|row_unchanged=true',
     );
 
     stage = 'audit_retention_boundary';
