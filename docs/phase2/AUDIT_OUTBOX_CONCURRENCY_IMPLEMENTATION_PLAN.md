@@ -32,16 +32,16 @@ The existing `outbox-advanced-runtime-check.mjs` and the canonical legacy-bounda
 
 ## 3. Required runtime assertions
 
-| Boundary | Real assertion | Safe cleanup requirement |
-|---|---|---|
-| Append-only audit row | Updating or deleting a normal audit row is rejected by the trigger/RLS boundary | Test row remains retained as audit evidence or is removed only through the approved retention path |
-| Audit tenant isolation | A tenant-scoped read/write is visible only inside the matching tenant context; global control is required for global audit access | Restore the test tenant to an archived state without deleting audit evidence |
-| Retention | An expired, non-held row is purgeable only through the retention context and its purge event is written | Verify no expired test row remains after the approved purge |
-| Legal hold | An expired row with legal hold remains present and is not purged | Retain or explicitly release only the generated fixture under the approved path |
-| Audit outbox success | A real audit event creates one linked outbox row and reaches `PROCESSED` through API dispatch and the worker | Verify linked row and audit row counts; no duplicate audit event is created |
-| Duplicate delivery | Two jobs for a processed audit outbox row complete without changing processed attempts or creating an audit duplicate | Remove only generated queue jobs if still present |
-| Retry and dead letter | A registered failure path produces retry state, then `DEAD_LETTER` at the configured attempt boundary | Verify final state and remove only generated outbox fixtures through the dispatcher context |
-| Tenant-switch concurrency | Two valid requests use the same session and expected version; exactly one wins and the loser receives the controlled conflict | Archive generated tenants and clear active session context; retain audit evidence intentionally |
+| Boundary                  | Real assertion                                                                                                                    | Safe cleanup requirement                                                                           |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Append-only audit row     | Updating or deleting a normal audit row is rejected by the trigger/RLS boundary                                                   | Test row remains retained as audit evidence or is removed only through the approved retention path |
+| Audit tenant isolation    | A tenant-scoped read/write is visible only inside the matching tenant context; global control is required for global audit access | Restore the test tenant to an archived state without deleting audit evidence                       |
+| Retention                 | An expired, non-held row is purgeable only through the retention context and its purge event is written                           | Verify no expired test row remains after the approved purge                                        |
+| Legal hold                | An expired row with legal hold remains present and is not purged                                                                  | Retain or explicitly release only the generated fixture under the approved path                    |
+| Audit outbox success      | A real audit event creates one linked outbox row and reaches `PROCESSED` through API dispatch and the worker                      | Verify linked row and audit row counts; no duplicate audit event is created                        |
+| Duplicate delivery        | Two jobs for a processed audit outbox row complete without changing processed attempts or creating an audit duplicate             | Remove only generated queue jobs if still present                                                  |
+| Retry and dead letter     | A registered failure path produces retry state, then `DEAD_LETTER` at the configured attempt boundary                             | Verify final state and remove only generated outbox fixtures through the dispatcher context        |
+| Tenant-switch concurrency | Two valid requests use the same session and expected version; exactly one wins and the loser receives the controlled conflict     | Archive generated tenants and clear active session context; retain audit evidence intentionally    |
 
 ## 4. Implementation contract
 
@@ -49,13 +49,15 @@ The next implementation will add one real runtime verifier at `backend/api/scrip
 
 The verifier will keep runtime output bounded. It will emit only the following marker families after each assertion has passed: `audit_append_only_status`, `audit_rls_status`, `audit_retention_status`, `audit_legal_hold_status`, `audit_outbox_delivery_status`, `audit_outbox_duplicate_status`, `audit_outbox_retry_status`, `audit_outbox_dead_letter_status`, `tenant_switch_concurrency_status`, and the final `phase2_reliability_runtime_result`. Failure output will include only a bounded allowlisted stage and error class; it will not print identifiers, tokens, cookies, request bodies, database URLs, credentials, or raw audit payloads.
 
+The verifier uses a deliberate dual-connection topology. `MIGRATION_DATABASE_URL` is required for administrative fixture creation, fixture-state restoration, and bounded cleanup; `DATABASE_URL` is used for the role probe and all runtime RLS assertions. This prevents the restricted application role from requiring administrative fixture privileges such as tenant creation while ensuring that every security assertion still executes under the non-owner `NOBYPASSRLS` runtime role. The verifier emits `phase2_reliability_fixture_connection=admin_migration_url|runtime_assertions=database_url` and fails closed if the protected migration connection is absent.
+
 The concurrency test will use two valid active tenants and memberships for one real authenticated user. It will issue two independent HTTP requests against the same session and expected context version, then assert one HTTP 200 success and one HTTP 409 `TENANT_SWITCH_CONFLICT`, followed by a session read that proves the winning server-derived context is the only active context. This proves the compare-and-set boundary rather than merely testing the service method in isolation.
 
 ## 5. Static and runtime sequence
 
 The implementation must first pass verifier syntax, API Jest, API build, lint, and `git diff --check`. The exact diff must contain only the new verifier, package command, tests required by the implementation, and canonical Phase 2 documentation. After publication, Windows synchronization must begin with `git status --short` from the actual repository root and use only `git pull --ff-only origin phase2/legacy-tenant-boundaries`. The required frozen install, Prisma generation, migration deploy, build, and syntax gates must complete successfully before application startup.
 
-The Windows runtime sequence is API and worker startup, one verifier execution, bounded marker capture, and safe cleanup confirmation. If a stage fails, the failure remains a failure; no later marker is inferred. A successful runtime result will be documented with the exact markers, environment and topology qualification, cleanup outcome, and remaining Phase 2 gaps.
+The Windows runtime sequence is API and worker startup, one verifier execution, bounded marker capture, and safe cleanup confirmation. Before the verifier starts, the protected administrative migration URL must be configured separately from the restricted runtime URL. If a stage fails, the failure remains a failure; no later marker is inferred. A successful runtime result will be documented with the exact markers, environment and topology qualification, cleanup outcome, and remaining Phase 2 gaps.
 
 ## 6. Remaining boundaries after this workstream
 

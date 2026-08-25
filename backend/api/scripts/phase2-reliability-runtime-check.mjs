@@ -15,6 +15,7 @@ const username = process.env.AUTH_RUNTIME_USERNAME ?? 'phase2-runtime-user';
 const password = process.env.AUTH_RUNTIME_PASSWORD ?? 'phase2-runtime-password';
 const cookieName = process.env.SESSION_COOKIE_NAME ?? 'mohamy_session';
 const databaseUrl = process.env.DATABASE_URL;
+const migrationDatabaseUrl = process.env.MIGRATION_DATABASE_URL;
 const redisUrl = process.env.REDIS_URL;
 const timeoutMs = 60_000;
 const oneDayMs = 24 * 60 * 60 * 1_000;
@@ -497,9 +498,13 @@ async function rejects(operation) {
 
 async function main() {
   required('DATABASE_URL', databaseUrl);
+  required('MIGRATION_DATABASE_URL', migrationDatabaseUrl);
   required('REDIS_URL', redisUrl);
 
   const database = new Client({ connectionString: databaseUrl });
+  const fixtureDatabase = new Client({
+    connectionString: migrationDatabaseUrl,
+  });
   const redis = new IORedis(redisConnection(redisUrl));
   const queue = new Queue(queueName, { connection: redisConnection(redisUrl) });
   const createdTenantIds = [];
@@ -508,6 +513,7 @@ async function main() {
   const createdJobIds = [];
   const cleanupAuditIds = [];
   let appReady = false;
+  let fixtureReady = false;
   let userId;
   let originalUserStatus;
   let userWasActivated = false;
@@ -519,6 +525,8 @@ async function main() {
   try {
     stage = 'database_connectivity';
     await database.connect();
+    await fixtureDatabase.connect();
+    fixtureReady = true;
     await redis.ping();
     appReady = true;
 
@@ -532,6 +540,9 @@ async function main() {
       `audit_rls_role_diagnostic=superuser=${rlsRuntimeState.is_superuser}|bypassrls=${rlsRuntimeState.bypasses_rls}|enabled=${rlsRuntimeState.row_security_enabled}|forced=${rlsRuntimeState.row_security_forced}`,
     );
     assertRestrictedRuntimeRole(rlsRuntimeState);
+    console.log(
+      'phase2_reliability_fixture_connection=admin_migration_url|runtime_assertions=database_url',
+    );
 
     stage = 'authenticated_fixture';
     let authenticatedFixtureSubstage = 'login';
@@ -572,7 +583,7 @@ async function main() {
 
     if (originalUserStatus !== 'ACTIVE') {
       stage = 'activate_fixture_user';
-      await setUserStatus(database, userId, 'ACTIVE');
+      await setUserStatus(fixtureDatabase, userId, 'ACTIVE');
       userWasActivated = true;
     }
 
@@ -585,20 +596,30 @@ async function main() {
 
     stage = 'create_tenant_one';
     await createTenant(
-      database,
+      fixtureDatabase,
       tenantOneId,
       `phase2-reliability-a-${randomUUID().replaceAll('-', '')}`,
     );
     stage = 'create_tenant_two';
     await createTenant(
-      database,
+      fixtureDatabase,
       tenantTwoId,
       `phase2-reliability-b-${randomUUID().replaceAll('-', '')}`,
     );
     stage = 'create_membership_one';
-    await createMembership(database, tenantOneId, membershipOneId, userId);
+    await createMembership(
+      fixtureDatabase,
+      tenantOneId,
+      membershipOneId,
+      userId,
+    );
     stage = 'create_membership_two';
-    await createMembership(database, tenantTwoId, membershipTwoId, userId);
+    await createMembership(
+      fixtureDatabase,
+      tenantTwoId,
+      membershipTwoId,
+      userId,
+    );
 
     stage = 'real_api_audit_mutation';
     const firstSwitch = await switchRequest(
@@ -855,8 +876,8 @@ async function main() {
       retentionUntil: new Date(Date.now() - oneDayMs),
       legalHold: true,
     };
-    await insertAuditFixture(database, expiredFixture);
-    await insertAuditFixture(database, heldFixture);
+    await insertAuditFixture(fixtureDatabase, expiredFixture);
+    await insertAuditFixture(fixtureDatabase, heldFixture);
     const purgeResult = await withSettings(
       database,
       { operationId: randomUUID(), auditRetentionPurge: true },
@@ -1035,23 +1056,23 @@ async function main() {
         }
       }
     }
-    if (appReady) {
+    if (fixtureReady) {
       await withSettings(
-        database,
+        fixtureDatabase,
         {
           operationId: randomUUID(),
           outboxDispatcher: true,
           auditRetentionPurge: true,
         },
         async () => {
-          await database.query(
+          await fixtureDatabase.query(
             `DELETE FROM "AuditEvent"
              WHERE "id" = ANY($1::text[])
                AND "retentionUntil" <= CURRENT_TIMESTAMP
                AND "legalHold" = false`,
             [cleanupAuditIds],
           );
-          await database.query(
+          await fixtureDatabase.query(
             `DELETE FROM "OutboxMessage" WHERE "id" = ANY($1::text[])`,
             [createdOutboxIds],
           );
@@ -1061,10 +1082,10 @@ async function main() {
       });
       if (userId && createdTenantIds.length > 0) {
         await withSettings(
-          database,
+          fixtureDatabase,
           { operationId: randomUUID(), globalOperation: true },
           async () => {
-            await database.query(
+            await fixtureDatabase.query(
               `UPDATE "AppSession"
                SET "activeTenantId" = NULL, "activeMembershipId" = NULL,
                    "contextVersion" = "contextVersion" + 1
@@ -1072,19 +1093,19 @@ async function main() {
                  AND "activeTenantId" = ANY($2::text[])`,
               [userId, createdTenantIds],
             );
-            await database.query(
+            await fixtureDatabase.query(
               `UPDATE "Membership"
                SET "status" = 'REMOVED', "removedAt" = CURRENT_TIMESTAMP
                WHERE "id" = ANY($1::text[]) AND "tenantId" = ANY($2::text[])`,
               [createdMembershipIds, createdTenantIds],
             );
-            await database.query(
+            await fixtureDatabase.query(
               `UPDATE "Tenant" SET "status" = 'ARCHIVED', "archivedAt" = CURRENT_TIMESTAMP
                WHERE "id" = ANY($1::text[])`,
               [createdTenantIds],
             );
             if (userWasActivated && originalUserStatus) {
-              await database.query(
+              await fixtureDatabase.query(
                 `UPDATE "User" SET "status" = $2 WHERE "id" = $1`,
                 [userId, originalUserStatus],
               );
@@ -1095,26 +1116,26 @@ async function main() {
         });
         if (!cleanupFailed) {
           const cleanupState = await withSettings(
-            database,
+            fixtureDatabase,
             { operationId: randomUUID(), globalOperation: true },
             async () => {
-              const audit = await database.query(
+              const audit = await fixtureDatabase.query(
                 `SELECT count(*)::int AS count FROM "AuditEvent" WHERE "id" = ANY($1::text[])`,
                 [cleanupAuditIds],
               );
-              const outbox = await database.query(
+              const outbox = await fixtureDatabase.query(
                 `SELECT count(*)::int AS count FROM "OutboxMessage" WHERE "id" = ANY($1::text[])`,
                 [createdOutboxIds],
               );
-              const tenants = await database.query(
+              const tenants = await fixtureDatabase.query(
                 `SELECT count(*)::int AS count FROM "Tenant" WHERE "id" = ANY($1::text[]) AND "status" <> 'ARCHIVED'`,
                 [createdTenantIds],
               );
-              const memberships = await database.query(
+              const memberships = await fixtureDatabase.query(
                 `SELECT count(*)::int AS count FROM "Membership" WHERE "id" = ANY($1::text[]) AND "status" <> 'REMOVED'`,
                 [createdMembershipIds],
               );
-              const sessions = await database.query(
+              const sessions = await fixtureDatabase.query(
                 `SELECT count(*)::int AS count FROM "AppSession"
                  WHERE "userId" = $1 AND "activeTenantId" = ANY($2::text[])`,
                 [userId, createdTenantIds],
@@ -1152,6 +1173,9 @@ async function main() {
       cleanupFailed = true;
     });
     await database.end().catch(() => {
+      cleanupFailed = true;
+    });
+    await fixtureDatabase.end().catch(() => {
       cleanupFailed = true;
     });
   }
