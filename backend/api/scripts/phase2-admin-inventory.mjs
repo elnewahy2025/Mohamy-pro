@@ -114,6 +114,9 @@ async function readInventory(client) {
           has_table_privilege($1, 'public."User"', 'SELECT') AS user_select_granted,
           has_table_privilege($1, 'public."Tenant"', 'SELECT') AS tenant_select_granted,
           has_table_privilege($1, 'public."Membership"', 'SELECT') AS membership_select_granted,
+          has_table_privilege($1, 'public."User"', 'REFERENCES') AS user_references_granted,
+          has_table_privilege($1, 'public."Tenant"', 'REFERENCES') AS tenant_references_granted,
+          has_table_privilege($1, 'public."Membership"', 'REFERENCES') AS membership_references_granted,
           (
             SELECT count(*)
             FROM pg_policy AS p
@@ -204,6 +207,9 @@ async function readInventory(client) {
       userSelectGranted: bool(boundary.user_select_granted),
       tenantSelectGranted: bool(boundary.tenant_select_granted),
       membershipSelectGranted: bool(boundary.membership_select_granted),
+      userReferencesGranted: bool(boundary.user_references_granted),
+      tenantReferencesGranted: bool(boundary.tenant_references_granted),
+      membershipReferencesGranted: bool(boundary.membership_references_granted),
       auditInsertPolicyCount: count(boundary.audit_insert_policy_count),
       auditInsertPermissivePolicyCount: count(
         boundary.audit_insert_permissive_policy_count,
@@ -246,7 +252,7 @@ async function run() {
       `admin_inventory_audit_rls=enabled=${marker(inventory.auditRlsEnabled)}|forced=${marker(inventory.auditRlsForced)}`,
     );
     console.log(
-      `admin_inventory_audit_boundary=insert_granted=${marker(inventory.auditInsertGranted)}|select_granted=${marker(inventory.auditSelectGranted)}|delete_granted=${marker(inventory.auditDeleteGranted)}|user_select_granted=${marker(inventory.userSelectGranted)}|tenant_select_granted=${marker(inventory.tenantSelectGranted)}|membership_select_granted=${marker(inventory.membershipSelectGranted)}|insert_policies=${inventory.auditInsertPolicyCount}|permissive_insert_policies=${inventory.auditInsertPermissivePolicyCount}|global_insert_policy=${marker(inventory.globalInsertPolicyPresent)}|tenant_insert_policy=${marker(inventory.tenantInsertPolicyPresent)}|append_only_trigger=${marker(inventory.appendOnlyTriggerPresent)}|foreign_keys=${inventory.auditForeignKeyCount}|trigger_execute=${marker(inventory.triggerFunctionExecuteGranted)}`,
+      `admin_inventory_audit_boundary=insert_granted=${marker(inventory.auditInsertGranted)}|select_granted=${marker(inventory.auditSelectGranted)}|delete_granted=${marker(inventory.auditDeleteGranted)}|user_select_granted=${marker(inventory.userSelectGranted)}|tenant_select_granted=${marker(inventory.tenantSelectGranted)}|membership_select_granted=${marker(inventory.membershipSelectGranted)}|user_references_granted=${marker(inventory.userReferencesGranted)}|tenant_references_granted=${marker(inventory.tenantReferencesGranted)}|membership_references_granted=${marker(inventory.membershipReferencesGranted)}|insert_policies=${inventory.auditInsertPolicyCount}|permissive_insert_policies=${inventory.auditInsertPermissivePolicyCount}|global_insert_policy=${marker(inventory.globalInsertPolicyPresent)}|tenant_insert_policy=${marker(inventory.tenantInsertPolicyPresent)}|append_only_trigger=${marker(inventory.appendOnlyTriggerPresent)}|foreign_keys=${inventory.auditForeignKeyCount}|trigger_execute=${marker(inventory.triggerFunctionExecuteGranted)}`,
     );
   } catch (error) {
     console.error(
