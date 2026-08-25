@@ -483,6 +483,24 @@ function safeErrorClass(error) {
   return /^[A-Za-z][A-Za-z0-9_]*$/.test(name) ? name : 'UnknownError';
 }
 
+function safeOutboxStatus(status) {
+  return new Set([
+    'PENDING',
+    'PROCESSING',
+    'FAILED',
+    'DEAD_LETTER',
+    'PROCESSED',
+  ]).has(status)
+    ? status
+    : 'unknown';
+}
+
+function safeAttemptCount(attempts) {
+  return Number.isInteger(attempts) && attempts >= 0 && attempts <= 999
+    ? String(attempts)
+    : 'unknown';
+}
+
 function safeErrorCode(value) {
   return typeof value === 'string' && /^[A-Z][A-Z0-9_]{2,64}$/.test(value)
     ? value
@@ -972,15 +990,28 @@ async function main() {
           ],
         ),
     );
-    const retryState = await waitFor(
-      'outbox retry scheduling',
-      () => readOutboxById(database, retryId),
-      (row) => row?.status === 'FAILED' && row.attempts === 1,
+    let retryState;
+    try {
+      retryState = await waitFor(
+        'outbox retry scheduling',
+        () => readOutboxById(database, retryId),
+        (row) => row?.status === 'FAILED' && row.attempts === 1,
+      );
+    } catch (error) {
+      const observedRetryState = await readOutboxById(database, retryId).catch(
+        () => null,
+      );
+      console.log(
+        `audit_outbox_retry_diagnostic=wait=timeout|status=${safeOutboxStatus(observedRetryState?.status)}|attempts=${safeAttemptCount(observedRetryState?.attempts)}|available_at_present=${String(observedRetryState?.availableAt instanceof Date || typeof observedRetryState?.availableAt === 'string').toLowerCase()}|error_class=${safeErrorClass(error)}`,
+      );
+      throw error;
+    }
+    const futureBackoff =
+      new Date(retryState.availableAt).getTime() > Date.now();
+    console.log(
+      `audit_outbox_retry_diagnostic=wait=observed|status=${safeOutboxStatus(retryState.status)}|attempts=${safeAttemptCount(retryState.attempts)}|future_backoff=${String(futureBackoff).toLowerCase()}`,
     );
-    assert(
-      new Date(retryState.availableAt).getTime() > Date.now(),
-      'retry was not scheduled in the future',
-    );
+    assert(futureBackoff, 'retry was not scheduled in the future');
     console.log(
       'audit_outbox_retry_status=PASS|first_attempt_failed=true|future_backoff=true',
     );
