@@ -89,7 +89,7 @@ export class AuthService {
         : '';
       const databaseDiagnostic =
         phase === 'session_creation'
-          ? `|db_code=${safeDatabaseCode(error)}|db_model=${safeDatabaseModel(error)}|driver_code=${safeDatabaseDriverCode(error)}|driver_kind=${safeDatabaseDriverKind(error)}|driver_category=${safeDatabaseDriverCategory(error)}`
+          ? `|db_code=${safeDatabaseCode(error)}|db_model=${safeDatabaseModel(error)}|driver_code=${safeDatabaseDriverCode(error)}|driver_kind=${safeDatabaseDriverKind(error)}|driver_category=${safeDatabaseDriverCategory(error)}|driver_boundary=${safeDatabaseDriverBoundary(error)}`
           : '';
       this.logger.warn(
         `OIDC callback rejected during ${phase}${reason}|error=${safeErrorName(error)}${databaseDiagnostic}`,
@@ -179,6 +179,26 @@ function safeDatabaseDriverCategory(error: unknown): string {
   if (code === '40001') return 'serialization_failure';
   if (code === '40P01') return 'deadlock_detected';
   if (code === 'P0001') return 'database_raise_exception';
+  return 'unknown';
+}
+
+function safeDatabaseDriverBoundary(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  if (/row-level security policy|violates row-level security/i.test(message)) {
+    return 'rls_policy';
+  }
+  if (
+    /permission denied for (table|schema|column|sequence|function)/i.test(
+      message,
+    )
+  ) {
+    return 'object_privilege';
+  }
+  if (/permission denied/i.test(message)) return 'permission_other';
+  if (/foreign key constraint/i.test(message)) return 'foreign_key';
+  if (/violates (a )?check constraint|check constraint/i.test(message)) {
+    return 'check_constraint';
+  }
   return 'unknown';
 }
 
