@@ -70,3 +70,13 @@ Even a complete pass of this workstream will not close Phase 2. Explicit remaini
 3. [`LEGACY_TENANT_BOUNDARY_IMPLEMENTATION.md`](LEGACY_TENANT_BOUNDARY_IMPLEMENTATION.md)
 4. [`PHASE2_IMPLEMENTATION_PLAN.md`](PHASE2_IMPLEMENTATION_PLAN.md)
 5. [`../../skills/engineering-governance/SKILL.md`](../../skills/engineering-governance/SKILL.md)
+
+## 2.4 Source-confirmed tenant OutboxMessage context correction
+
+The first valid restricted-role tenant-switch run reached the real API mutation and failed with PostgreSQL `42501` because the new tenant-scoped `OutboxMessage` violated `OutboxMessage_context_insert`. The transaction probe and administrative inventory had already established that the runtime role, table privileges, and tenant context were valid.
+
+The source audit identified the mismatch: `MembershipService` binds a transaction-local UUIDv4 `app.operation_id`, while `AuditService` previously populated the tenant outbox row’s `operationId` from the request `correlationId`. The applied policy requires the persisted tenant outbox `operationId` to equal the transaction-local `app.operation_id`. These are distinct concepts and must not be conflated.
+
+The repository correction reads and validates `current_setting('app.operation_id', true)` from the same Prisma transaction immediately before creating the tenant outbox message, then passes that value as the outbox tenant context. It does not alter the RLS policy, add privileges, weaken forced RLS, use the migration connection in the API, or change the correlation identifier. A focused AuditService test asserts that the tenant outbox context carries the transaction-local operation identifier.
+
+This correction is statically verified but is not accepted as a runtime fix until the real Windows tenant-switch mutation succeeds under the restricted runtime role and the downstream audit/outbox/isolation/concurrency assertions pass.

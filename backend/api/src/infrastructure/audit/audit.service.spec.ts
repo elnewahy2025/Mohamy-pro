@@ -15,6 +15,7 @@ function createMetrics() {
 
 function createTransaction() {
   return {
+    $queryRaw: jest.fn().mockResolvedValue([{ operationId: CORRELATION_ID }]),
     auditEvent: {
       create: jest.fn().mockResolvedValue({
         id: '55555555-5555-4555-8555-555555555555',
@@ -79,6 +80,9 @@ describe('AuditService', () => {
         aggregateType: 'AuditEvent',
         eventType: 'tenant.switch.succeeded',
         correlationId: CORRELATION_ID,
+        tenantContext: expect.objectContaining({
+          operationId: CORRELATION_ID,
+        }),
       }),
       transaction,
     );

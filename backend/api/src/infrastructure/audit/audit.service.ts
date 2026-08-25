@@ -192,19 +192,18 @@ export class AuditService {
           legalHold: normalized.legalHold ?? false,
         },
       });
+      const tenantContext = normalized.tenantId
+        ? {
+            tenantId: normalized.tenantId,
+            userId: normalized.actorUserId as string,
+            membershipId: normalized.actorMembershipId as string,
+            operationId: await readTransactionOperationId(transaction),
+          }
+        : undefined;
       await this.outbox.create(
         {
           scope: normalized.tenantId ? 'TENANT' : 'GLOBAL',
-          ...(normalized.tenantId
-            ? {
-                tenantContext: {
-                  tenantId: normalized.tenantId,
-                  userId: normalized.actorUserId as string,
-                  membershipId: normalized.actorMembershipId as string,
-                  operationId: normalized.correlationId,
-                },
-              }
-            : {}),
+          ...(tenantContext ? { tenantContext } : {}),
           aggregateType: 'AuditEvent',
           aggregateId: event.id,
           eventType: normalized.eventType,
@@ -270,6 +269,19 @@ export class AuditService {
       );
     }
   }
+}
+
+async function readTransactionOperationId(
+  transaction: Prisma.TransactionClient,
+): Promise<string> {
+  const [context] = await transaction.$queryRaw<
+    Array<{ operationId: string | null }>
+  >`SELECT current_setting('app.operation_id', true) AS "operationId"`;
+  const operationId = context?.operationId;
+  if (!operationId || !UUID_V4_PATTERN.test(operationId)) {
+    throw new Error('Tenant outbox operation context is unavailable');
+  }
+  return operationId;
 }
 
 function normalizeInput(
