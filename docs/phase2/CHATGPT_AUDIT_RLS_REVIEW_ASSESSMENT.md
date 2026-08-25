@@ -87,3 +87,13 @@ Do not grant `REFERENCES`, `ALL`, or broad future-object privileges. Do not make
 ## Qualified status
 
 **Phase 2: OPEN.** The original global AuditEvent RETURNING/RLS failure is corrected and the restricted-role verifier topology has now executed through fixture setup to the real API mutation. The real tenant-switch mutation and the subsequent restricted-role audit, outbox, tenant-isolation, retention, retry/dead-letter, and concurrency evidence remain incomplete. **Production readiness is not established.**
+
+## Subsequent runtime diagnosis: tenant OutboxMessage context mismatch
+
+The next restricted-role Windows run supplied the decisive API diagnostic. The real tenant-switch request returned HTTP 500 because Prisma P2039/PostgreSQL SQLSTATE 42501 rejected a new `OutboxMessage` row under its tenant INSERT policy. The policy requires the persisted tenant row’s `operationId` to equal the transaction-local `app.operation_id`; the API had valid tenant context and table privileges.
+
+Source inspection showed that `MembershipService` generated and bound a transaction-local operation UUID, while `AuditService` populated the tenant outbox context from the request `correlationId`. Those values are intentionally distinct. This was a genuine application/RLS context mismatch, not a missing grant, missing `REFERENCES`, missing trigger privilege, or a reason to weaken RLS.
+
+The published correction reads and validates `current_setting('app.operation_id', true)` on the same Prisma transaction immediately before creating a tenant outbox message and passes that value to `OutboxService.create`. The request correlation ID remains stored separately for event correlation. A focused AuditService regression test verifies the tenant outbox context operation identifier. This correction is statically verified and published at commit `38d16ead`; it remains runtime-unaccepted until the next Windows reliability run succeeds.
+
+This new evidence supersedes the earlier generic `real_api_audit_mutation` diagnostic state. The correct next procedure is to synchronize `38d16ead`, rebuild, restart the host API/worker, and run one bounded reliability campaign. No database grant or policy change is justified.
