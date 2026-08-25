@@ -105,10 +105,69 @@ async function readInventory(client) {
       WHERE c.oid = 'public."AuditEvent"'::regclass
     `);
 
+    const auditBoundary = await client.query(
+      `
+        SELECT
+          has_table_privilege($1, 'public."AuditEvent"', 'INSERT') AS audit_insert_granted,
+          has_table_privilege($1, 'public."AuditEvent"', 'SELECT') AS audit_select_granted,
+          has_table_privilege($1, 'public."AuditEvent"', 'DELETE') AS audit_delete_granted,
+          has_table_privilege($1, 'public."User"', 'SELECT') AS user_select_granted,
+          has_table_privilege($1, 'public."Tenant"', 'SELECT') AS tenant_select_granted,
+          has_table_privilege($1, 'public."Membership"', 'SELECT') AS membership_select_granted,
+          (
+            SELECT count(*)
+            FROM pg_policy AS p
+            WHERE p.polrelid = 'public."AuditEvent"'::regclass
+              AND p.polcmd = 'a'
+          )::int AS audit_insert_policy_count,
+          (
+            SELECT count(*)
+            FROM pg_policy AS p
+            WHERE p.polrelid = 'public."AuditEvent"'::regclass
+              AND p.polcmd = 'a'
+              AND p.polpermissive
+          )::int AS audit_insert_permissive_policy_count,
+          EXISTS (
+            SELECT 1
+            FROM pg_policy AS p
+            WHERE p.polrelid = 'public."AuditEvent"'::regclass
+              AND p.polname = 'AuditEvent_global_control_insert'
+              AND p.polcmd = 'a'
+          ) AS global_insert_policy_present,
+          EXISTS (
+            SELECT 1
+            FROM pg_policy AS p
+            WHERE p.polrelid = 'public."AuditEvent"'::regclass
+              AND p.polname = 'AuditEvent_tenant_insert'
+              AND p.polcmd = 'a'
+          ) AS tenant_insert_policy_present,
+          EXISTS (
+            SELECT 1
+            FROM pg_trigger AS t
+            WHERE t.tgrelid = 'public."AuditEvent"'::regclass
+              AND t.tgname = 'AuditEvent_append_only'
+              AND NOT t.tgisinternal
+          ) AS append_only_trigger_present,
+          (
+            SELECT count(*)
+            FROM pg_constraint AS c
+            WHERE c.conrelid = 'public."AuditEvent"'::regclass
+              AND c.contype = 'f'
+          )::int AS audit_foreign_key_count,
+          has_function_privilege(
+            $1,
+            'public.prevent_audit_event_mutation()',
+            'EXECUTE'
+          ) AS trigger_function_execute_granted
+      `,
+      [targetRoleName],
+    );
+
     const current = currentRole.rows[0];
     const target = targetRole.rows[0] ?? null;
     const rls = rlsState.rows[0];
-    if (!current || !rls)
+    const boundary = auditBoundary.rows[0];
+    if (!current || !rls || !boundary)
       throw new Error('required inventory state was unavailable');
 
     const result = {
@@ -139,6 +198,23 @@ async function readInventory(client) {
       targetOwnedFunctions: target ? count(target.owned_function_count) : 0,
       auditRlsEnabled: bool(rls.row_security_enabled),
       auditRlsForced: bool(rls.row_security_forced),
+      auditInsertGranted: bool(boundary.audit_insert_granted),
+      auditSelectGranted: bool(boundary.audit_select_granted),
+      auditDeleteGranted: bool(boundary.audit_delete_granted),
+      userSelectGranted: bool(boundary.user_select_granted),
+      tenantSelectGranted: bool(boundary.tenant_select_granted),
+      membershipSelectGranted: bool(boundary.membership_select_granted),
+      auditInsertPolicyCount: count(boundary.audit_insert_policy_count),
+      auditInsertPermissivePolicyCount: count(
+        boundary.audit_insert_permissive_policy_count,
+      ),
+      globalInsertPolicyPresent: bool(boundary.global_insert_policy_present),
+      tenantInsertPolicyPresent: bool(boundary.tenant_insert_policy_present),
+      appendOnlyTriggerPresent: bool(boundary.append_only_trigger_present),
+      auditForeignKeyCount: count(boundary.audit_foreign_key_count),
+      triggerFunctionExecuteGranted: bool(
+        boundary.trigger_function_execute_granted,
+      ),
     };
 
     await client.query('COMMIT');
@@ -168,6 +244,9 @@ async function run() {
     );
     console.log(
       `admin_inventory_audit_rls=enabled=${marker(inventory.auditRlsEnabled)}|forced=${marker(inventory.auditRlsForced)}`,
+    );
+    console.log(
+      `admin_inventory_audit_boundary=insert_granted=${marker(inventory.auditInsertGranted)}|select_granted=${marker(inventory.auditSelectGranted)}|delete_granted=${marker(inventory.auditDeleteGranted)}|user_select_granted=${marker(inventory.userSelectGranted)}|tenant_select_granted=${marker(inventory.tenantSelectGranted)}|membership_select_granted=${marker(inventory.membershipSelectGranted)}|insert_policies=${inventory.auditInsertPolicyCount}|permissive_insert_policies=${inventory.auditInsertPermissivePolicyCount}|global_insert_policy=${marker(inventory.globalInsertPolicyPresent)}|tenant_insert_policy=${marker(inventory.tenantInsertPolicyPresent)}|append_only_trigger=${marker(inventory.appendOnlyTriggerPresent)}|foreign_keys=${inventory.auditForeignKeyCount}|trigger_execute=${marker(inventory.triggerFunctionExecuteGranted)}`,
     );
   } catch (error) {
     console.error(

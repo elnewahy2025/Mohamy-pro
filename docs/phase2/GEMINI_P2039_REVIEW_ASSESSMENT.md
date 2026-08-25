@@ -55,3 +55,14 @@ These findings narrow the likely boundary: a missing `REFERENCES` grant is not a
 [5]: https://www.postgresql.org/docs/current/ddl-rowsecurity.html "PostgreSQL Documentation: Row Security Policies"
 [6]: https://www.postgresql.org/docs/current/ddl-priv.html "PostgreSQL Documentation: Privileges"
 [7]: https://www.postgresql.org/docs/current/sql-createtrigger.html "PostgreSQL Documentation: CREATE TRIGGER"
+
+
+## Decisive runtime probe result
+
+The real OIDC session-creation transaction emitted the bounded probe:
+
+```text
+audit_event_preinsert_probe|status=observed|global_operation=true|operation_id_present=true|tenant_id_present=false|audit_insert_granted=true
+```
+
+This is valid evidence that, immediately before the real global login `AuditEvent` insert, the transaction-local global context was active, an operation context was present, no tenant context was present as expected for a global event, and the restricted runtime role had effective table `INSERT` privilege. The session-creation failure therefore cannot be attributed to the previously suspected missing global context or missing `AuditEvent` table `INSERT` grant. The next required evidence is a bounded administrative catalog inventory of the applied policies, ACLs, foreign keys, triggers, and referenced-object privileges; no blind grant or RLS change is justified. The inventory script now emits one bounded `admin_inventory_audit_boundary=...` marker containing only booleans and counts for effective `AuditEvent`/referenced-table privileges, insert-policy presence and permissiveness, append-only trigger presence, foreign-key count, and trigger-function `EXECUTE`; it does not emit policy text, role names, function definitions, rows, or secrets.
