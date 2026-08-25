@@ -84,6 +84,45 @@ describe('AuditService', () => {
     );
   });
 
+  it('probes the global AuditEvent boundary before a global login audit insert', async () => {
+    const transaction = {
+      ...createTransaction(),
+      $queryRaw: jest.fn().mockResolvedValue([
+        {
+          globalOperation: true,
+          operationIdPresent: true,
+          tenantIdPresent: false,
+          auditInsertGranted: true,
+        },
+      ]),
+    };
+    const outbox = { create: jest.fn().mockResolvedValue({}) };
+    const service = new AuditService(
+      outbox as never,
+      {} as never,
+      createMetrics() as never,
+    );
+
+    await service.recordInTransaction(
+      {
+        eventType: 'auth.login.succeeded',
+        category: 'AUDIT',
+        outcome: 'SUCCEEDED',
+        actorUserId: USER_ID,
+        targetType: 'AppSession',
+        targetId: USER_ID,
+        policy: 'Authentication',
+        reasonCode: 'oidc_authorization_code',
+        correlationId: CORRELATION_ID,
+        metadata: { activeMembershipCount: 0 },
+      },
+      transaction as never,
+    );
+
+    expect(transaction.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(transaction.auditEvent.create).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects unallowlisted metadata before persistence', async () => {
     const transaction = createTransaction();
     const outbox = { create: jest.fn() };

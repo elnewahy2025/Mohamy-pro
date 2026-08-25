@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   Prisma,
   type AuditEvent,
@@ -53,6 +53,8 @@ export interface AuditRecordInput {
 
 @Injectable()
 export class AuditService {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(
     private readonly outbox: OutboxService,
     private readonly prisma: PrismaService,
@@ -159,6 +161,12 @@ export class AuditService {
       )
       .digest('hex');
     try {
+      if (
+        !normalized.tenantId &&
+        normalized.eventType === 'auth.login.succeeded'
+      ) {
+        await this.probeGlobalAuditInsertBoundary(transaction);
+      }
       const event = await transaction.auditEvent.create({
         data: {
           id: randomUUID(),
@@ -222,6 +230,44 @@ export class AuditService {
     } catch (error) {
       this.metrics.recordAuditWriteFailure(normalized.category);
       throw error;
+    }
+  }
+
+  private async probeGlobalAuditInsertBoundary(
+    transaction: Prisma.TransactionClient,
+  ): Promise<void> {
+    try {
+      const [probe] = await transaction.$queryRaw<
+        Array<{
+          globalOperation: boolean;
+          operationIdPresent: boolean;
+          tenantIdPresent: boolean;
+          auditInsertGranted: boolean;
+        }>
+      >`
+        SELECT
+          current_setting('app.global_operation', true) = 'true' AS "globalOperation",
+          coalesce(current_setting('app.operation_id', true), '') <> '' AS "operationIdPresent",
+          coalesce(current_setting('app.tenant_id', true), '') <> '' AS "tenantIdPresent",
+          has_table_privilege(
+            current_user,
+            'public."AuditEvent"',
+            'INSERT'
+          ) AS "auditInsertGranted"
+      `;
+      if (!probe) {
+        this.logger.warn(
+          'audit_event_preinsert_probe|status=unavailable|reason=empty_result',
+        );
+        return;
+      }
+      this.logger.warn(
+        `audit_event_preinsert_probe|status=observed|global_operation=${String(probe.globalOperation).toLowerCase()}|operation_id_present=${String(probe.operationIdPresent).toLowerCase()}|tenant_id_present=${String(probe.tenantIdPresent).toLowerCase()}|audit_insert_granted=${String(probe.auditInsertGranted).toLowerCase()}`,
+      );
+    } catch {
+      this.logger.warn(
+        'audit_event_preinsert_probe|status=unavailable|reason=query_failed',
+      );
     }
   }
 }
