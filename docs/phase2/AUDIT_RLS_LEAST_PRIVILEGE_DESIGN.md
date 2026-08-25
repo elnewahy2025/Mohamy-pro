@@ -1,6 +1,6 @@
 # Phase 2 Audit RLS Least-Privilege Design
 
-**Status:** Non-secret repository implementation approved and in progress; database provisioning and protected runtime cutover have not been approved or performed.
+**Status:** Non-secret repository implementation, user-run restricted-role provisioning, and protected runtime cutover are complete. The source-confirmed additive AuditEvent RLS correction is published but has not yet been applied to the Windows database or runtime-verified. Phase 2 remains open.
 
 **Scope:** Resolve the real PostgreSQL AuditEvent RLS runtime boundary failure without weakening RLS, changing protected Windows environment files, exposing credentials, or modifying existing database data. This document is Phase 2 only.
 
@@ -10,7 +10,7 @@ The live runtime evidence establishes that the current application database conn
 
 The permanent direction is a **dual-role runtime model**. The existing administrative connection remains responsible for controlled DDL and Prisma migrations. A separate non-owner application/worker LOGIN role must have `NOSUPERUSER`, `NOBYPASSRLS`, `NOCREATEDB`, and `NOCREATEROLE`. The application and worker must connect with that restricted role so the existing tenant and dispatcher policies are actually evaluated. The existing RLS policies, append-only trigger, retention controls, and fail-closed context predicates must not be relaxed.
 
-No role, password, protected environment value, database URL, migration history, or Docker configuration has been changed. The approved repository work is limited to non-secret configuration selection, bounded diagnostics, fail-closed verification, documentation, and an unexecuted user-run provisioning template.
+The agent has not read, printed, or changed any password, protected environment value, database URL, migration history, or Docker configuration. The user separately executed the approved out-of-band role provisioning, set the runtime-role password locally, and configured the protected runtime and migration connection values. Repository work remains limited to non-secret configuration selection, bounded diagnostics, fail-closed verification, documentation, explicit provisioning guidance, and the additive RLS correction migration described below.
 
 ## Bounded runtime evidence
 
@@ -32,17 +32,17 @@ The evidence proves that audit source creation, outbox delivery, duplicate suppr
 
 The following requirements remain mandatory for implementation, provisioning, and runtime acceptance:
 
-| Requirement | Decision |
-| --- | --- |
-| Existing database and volumes | Preserve; no reset, truncate, recreation, or destructive cleanup |
-| RLS policies and `FORCE ROW LEVEL SECURITY` | Preserve; no weakening, removal, or bypass path |
-| Administrative/migration access | Keep separate from API/worker runtime access |
-| Runtime role | Non-owner LOGIN with `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE` |
-| Credentials | Provision interactively or through the user’s secret-management process; never in migrations, source, logs, or committed files |
-| Protected Windows configuration | Do not edit automatically; updating the runtime connection string requires explicit user approval and user-managed secret entry |
-| Migration history | Additive only if a schema change is proven necessary; role/password provisioning does not belong in a Prisma migration |
-| Evidence | Runtime verifier must fail closed when the connection role has `superuser` or `BYPASSRLS` |
-| Phase scope | Phase 2 only; no Phase 3 or production-readiness claim |
+| Requirement                                 | Decision                                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Existing database and volumes               | Preserve; no reset, truncate, recreation, or destructive cleanup                                                                |
+| RLS policies and `FORCE ROW LEVEL SECURITY` | Preserve; no weakening, removal, or bypass path                                                                                 |
+| Administrative/migration access             | Keep separate from API/worker runtime access                                                                                    |
+| Runtime role                                | Non-owner LOGIN with `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`                                                          |
+| Credentials                                 | Provision interactively or through the user’s secret-management process; never in migrations, source, logs, or committed files  |
+| Protected Windows configuration             | Do not edit automatically; updating the runtime connection string requires explicit user approval and user-managed secret entry |
+| Migration history                           | Additive only if a schema change is proven necessary; role/password provisioning does not belong in a Prisma migration          |
+| Evidence                                    | Runtime verifier must fail closed when the connection role has `superuser` or `BYPASSRLS`                                       |
+| Phase scope                                 | Phase 2 only; no Phase 3 or production-readiness claim                                                                          |
 
 ## Proposed role separation
 
@@ -94,24 +94,25 @@ The following actions are not approved:
 
 The next attempt may be called a valid RLS runtime verification only if all of the following are true:
 
-| Criterion | Required evidence |
-| --- | --- |
-| Role enforcement | Runtime marker shows `superuser=false` and `bypassrls=false` |
-| Policy state | `enabled=true` and `forced=true` for `AuditEvent` |
-| Same-tenant read | Audit row visible under its server-bound tenant context |
-| Cross-tenant read | Same row hidden under another tenant context |
-| Cross-tenant write | Insert rejected by RLS or controlled privilege failure |
-| Audit immutability | Unauthorized update/delete rejected; legal-hold row protected from purge |
-| Retention | Eligible expired row purged only through named retention context |
-| Outbox | Delivery, duplicate suppression, retry/lease/dead-letter evidence present |
-| Concurrency | One CAS winner and one controlled conflict with no context leak |
-| Cleanup | Zero active fixture tenants, memberships, contexts, audit residue, and outbox residue |
+| Criterion          | Required evidence                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| Role enforcement   | Runtime marker shows `superuser=false` and `bypassrls=false`                          |
+| Policy state       | `enabled=true` and `forced=true` for `AuditEvent`                                     |
+| Same-tenant read   | Audit row visible under its server-bound tenant context                               |
+| Cross-tenant read  | Same row hidden under another tenant context                                          |
+| Cross-tenant write | Insert rejected by RLS or controlled privilege failure                                |
+| Audit immutability | Unauthorized update/delete rejected; legal-hold row protected from purge              |
+| Retention          | Eligible expired row purged only through named retention context                      |
+| Outbox             | Delivery, duplicate suppression, retry/lease/dead-letter evidence present             |
+| Concurrency        | One CAS winner and one controlled conflict with no context leak                       |
+| Cleanup            | Zero active fixture tenants, memberships, contexts, audit residue, and outbox residue |
 
 ## Current status
 
 ```text
-AUDIT_RLS_ROOT_CAUSE=CONFIRMED_RUNTIME_ROLE_BYPASSES_RLS
-AUDIT_RLS_PERMANENT_FIX=DESIGN_ONLY_NOT_EXECUTED
+AUDIT_RLS_ROOT_CAUSE=SOURCE_CONFIRMED_GLOBAL_INSERT_RETURNING_LACKED_SELECT_POLICY
+AUDIT_RLS_PERMANENT_FIX=PUBLISHED_NOT_APPLIED_TO_WINDOWS_DATABASE
+AUDIT_RLS_ROLE_BOUNDARY=VERIFIED_SUPERUSER_FALSE_BYPASSRLS_FALSE
 AUDIT_OUTBOX_SOURCE_DELIVERY_DUPLICATE_CLEANUP=PARTIAL_RUNTIME_PASS
 AUDIT_RLS_ISOLATION=NOT_VERIFIED_UNDER_RESTRICTED_ROLE
 TENANT_SWITCH_CONCURRENCY=NOT_EXECUTED
@@ -136,8 +137,7 @@ The current development compose baseline declares the database service with a de
 
 ### Approval gate
 
-The user has approved the non-secret repository contract: the runtime design name is `mohamy_app`; the existing administrative role remains responsible for migrations and ownership; Prisma CLI may use optional `MIGRATION_DATABASE_URL` with a safe fallback to `DATABASE_URL`; the API/worker continue to consume `DATABASE_URL`; the verifier must fail closed for a superuser or `BYPASSRLS` runtime; and the current-object grant matrix is explicit. Password setting, protected Windows configuration, database role provisioning, and runtime cutover remain separate user-run approval gates. The agent must never receive or print the password, full connection string, or environment-file contents. The database and volumes must remain intact.
-
+The user approved the non-secret repository contract and then completed the separate user-run provisioning gate: the runtime role `mohamy_app` was created with the approved restricted attributes, explicit grants were applied, its password was set interactively, and protected `DATABASE_URL`/`MIGRATION_DATABASE_URL` values were configured locally. The agent never received or printed the password, full connection strings, or environment-file contents. The database and volumes remain intact. The remaining gates are application of the new additive RLS migration through the protected migration connection and complete restricted-role runtime verification.
 
 ## Repository implementation and source-audited privilege matrix
 
@@ -145,33 +145,48 @@ The approved repository implementation is intentionally limited to non-secret co
 
 The source audit covers `SessionService`, `MembershipService`, `AuditService`, `OutboxService`, `OutboxWorker`, `IdempotencyService`, `HealthService`, `S3ObjectStorageService`, and `MetricsSnapshotService`. The latter now executes its outbox aggregation through the existing dispatcher context, so restricted-role RLS applies consistently to both worker and observability paths. The current API/worker path requires the following explicit existing-object privileges:
 
-| Object or object class | Runtime privilege | Source-derived reason | RLS/context boundary |
-| --- | --- | --- | --- |
-| `public."User"` | `SELECT, INSERT, UPDATE` | Identity lookup/creation and lifecycle state transitions | Tenant or global operation context as used by the service |
-| `public."ExternalIdentity"` | `SELECT, INSERT, UPDATE` | OIDC identity lookup and provider-subject mapping | Global operation context |
-| `public."AppSession"` | `SELECT, INSERT, UPDATE` | Session creation, refresh, revocation, expiry, and tenant-context CAS | Global operation context and server-bound session checks |
-| `public."Membership"` | `SELECT` | Membership state and tenant-switch validation | Tenant/membership selection predicates |
-| `public."Tenant"` | `SELECT` | Tenant active/archive and membership resolution | Tenant-context predicate |
-| `public."AuditEvent"` | `SELECT, INSERT, DELETE` | Audit write/read and retention purge; no update grant | Forced RLS, append-only trigger, named retention context |
-| `public."OutboxMessage"` | `SELECT, INSERT, UPDATE` | Outbox creation, claim/lease, delivery, retry, dead-letter, and metrics | Tenant/global context and `app.outbox_dispatcher` |
-| `public."IdempotencyKey"` | `SELECT, INSERT, UPDATE, DELETE` | Reservation, replay, completion, retry release, and expiry purge | Tenant/global context and named maintenance context |
-| `public."StorageObject"` | `SELECT, INSERT, UPDATE` | Tenant-aware object metadata write, signed-download lookup, and soft-delete update | Forced RLS and tenant context |
-| Other current tables | No grant | No source-audited API/worker operation requires them in this slice | Future work requires explicit review |
-| Current UUID-backed sequences | No grant required | The current Prisma models use UUID identifiers and the source audit found no sequence-backed runtime field | Reassess for any future schema change |
-| Current policy helper functions | `EXECUTE` only on the five named helpers | PostgreSQL evaluates the existing context predicates during runtime DML | Functions remain owned/admin-controlled; no blanket function grant |
+| Object or object class          | Runtime privilege                        | Source-derived reason                                                                                      | RLS/context boundary                                               |
+| ------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `public."User"`                 | `SELECT, INSERT, UPDATE`                 | Identity lookup/creation and lifecycle state transitions                                                   | Tenant or global operation context as used by the service          |
+| `public."ExternalIdentity"`     | `SELECT, INSERT, UPDATE`                 | OIDC identity lookup and provider-subject mapping                                                          | Global operation context                                           |
+| `public."AppSession"`           | `SELECT, INSERT, UPDATE`                 | Session creation, refresh, revocation, expiry, and tenant-context CAS                                      | Global operation context and server-bound session checks           |
+| `public."Membership"`           | `SELECT`                                 | Membership state and tenant-switch validation                                                              | Tenant/membership selection predicates                             |
+| `public."Tenant"`               | `SELECT`                                 | Tenant active/archive and membership resolution                                                            | Tenant-context predicate                                           |
+| `public."AuditEvent"`           | `SELECT, INSERT, DELETE`                 | Audit write/read and retention purge; no update grant                                                      | Forced RLS, append-only trigger, named retention context           |
+| `public."OutboxMessage"`        | `SELECT, INSERT, UPDATE`                 | Outbox creation, claim/lease, delivery, retry, dead-letter, and metrics                                    | Tenant/global context and `app.outbox_dispatcher`                  |
+| `public."IdempotencyKey"`       | `SELECT, INSERT, UPDATE, DELETE`         | Reservation, replay, completion, retry release, and expiry purge                                           | Tenant/global context and named maintenance context                |
+| `public."StorageObject"`        | `SELECT, INSERT, UPDATE`                 | Tenant-aware object metadata write, signed-download lookup, and soft-delete update                         | Forced RLS and tenant context                                      |
+| Other current tables            | No grant                                 | No source-audited API/worker operation requires them in this slice                                         | Future work requires explicit review                               |
+| Current UUID-backed sequences   | No grant required                        | The current Prisma models use UUID identifiers and the source audit found no sequence-backed runtime field | Reassess for any future schema change                              |
+| Current policy helper functions | `EXECUTE` only on the five named helpers | PostgreSQL evaluates the existing context predicates during runtime DML                                    | Functions remain owned/admin-controlled; no blanket function grant |
 
 The five explicitly named helper functions are `app_tenant_context_is_valid()`, `app_membership_selection_context_is_valid()`, `app_outbox_dispatch_context_is_valid()`, `app_global_operation_context_is_valid()`, and `app_idempotency_maintenance_context_is_valid()`. The append-only audit trigger is executed by PostgreSQL as part of the table operation and is not exposed as a runtime callable API. No grant includes `WITH GRANT OPTION`, ownership, role membership, replication, database creation, or role creation.
 
 The unexecuted `backend/api/scripts/phase2-provision-mohamy-app.sql` template is an administrative-session artifact, not a migration. It creates or verifies the non-owner role with the approved restricted attributes, fails rather than silently taking ownership or accepting memberships, revokes pre-existing privileges from that target role, grants only the matrix above, and leaves password entry to an interactive protected administrative session. It does not alter the existing administrative role, RLS policies, data, volumes, migration history, or protected environment files. Future migrations must add separately reviewed explicit grants; this repository does not claim automatic future-object coverage.
 
+## Source-confirmed AuditEvent RETURNING diagnosis and correction
+
+The restricted-role runtime probe immediately before the real global login audit insert reported `global_operation=true`, `operation_id_present=true`, `tenant_id_present=false`, and `audit_insert_granted=true`. The administrative inventory reported two applicable permissive INSERT policies, zero restrictive INSERT policies, the expected global and tenant policy definitions, the append-only trigger, three foreign keys, and the required referenced-table SELECT privileges. The live API classified the failed operation as an RLS policy rejection with PostgreSQL SQLSTATE `42501` wrapped by Prisma P2039.
+
+The remaining discrepancy is explained by the actual Prisma write semantics and PostgreSQL row-security planning. `transaction.auditEvent.create(...)` returns the inserted row, so the generated statement requires SELECT visibility for its `RETURNING` result. PostgreSQL’s row-security source adds SELECT policy checks to an INSERT when SELECT permission is required by the query; the existing global AuditEvent SELECT policy allowed only retention and outbox-dispatch contexts. The global authentication transaction therefore passed the INSERT `WITH CHECK` policy but failed the SELECT visibility check for the returned global row. This is a policy interaction defect, not a missing table grant, missing REFERENCES grant, missing trigger grant, or missing global context.
+
+The minimal complete repository correction is published as:
+
+```text
+backend/api/prisma/migrations/20260825180000_audit_global_returning_rls_fix/migration.sql
+```
+
+That additive migration recreates only `AuditEvent_global_control_select` and adds the narrowly scoped condition `app.global_operation = 'true' AND tenantId IS NULL`, alongside the existing retention and outbox conditions. It preserves forced RLS, tenant isolation, append-only behavior, and the separation between administrative migrations and restricted runtime access. It does not grant privileges, change passwords, alter ownership, reset data, or add a bypass path. The migration has passed repository static validation but has not yet been applied to the Windows database.
+
 ## Remaining approval gates
 
-The repository changes must first be reviewed, statically verified, committed, and published on `phase2/legacy-tenant-boundaries`. The user must then run the read-only inventory on Windows with the API and worker stopped and the required Docker PostgreSQL service running. Only after interpreting that bounded inventory may the user separately approve and perform role provisioning, interactive password setting, protected `DATABASE_URL` cutover, and optional protected `MIGRATION_DATABASE_URL` configuration. The reliability verifier may be rerun only after its role marker shows `superuser=false|bypassrls=false|enabled=true|forced=true`.
+The user-run role provisioning, interactive password setting, protected runtime cutover, and bounded administrative inventory are complete. The repository must now publish the additive AuditEvent RETURNING policy migration, the user must apply it through the protected administrative migration connection with the API and worker stopped, and then the API/worker must be restarted from fresh terminals. The reliability verifier may be rerun only after its role marker remains `superuser=false|bypassrls=false|enabled=true|forced=true` and the migration reports successful application.
 
-Until those gates and the complete restricted-role runtime campaign pass, the audit/reliability workstream remains partial. Phase 2 remains open; Phase 3 has not started; and production readiness is not established.
-
+Until the migration is applied and the complete restricted-role runtime campaign passes, the audit/reliability workstream remains partial. Phase 2 remains open; Phase 3 has not started; and production readiness is not established.
 
 ## Bounded Windows administrative inventory evidence
+
+### Initial pre-provisioning inventory
 
 After commit `9996db29` was synchronized with fast-forward-only pull, the user ran the new inventory command with the API and worker stopped and PostgreSQL reachable. The command selected the runtime fallback because no protected `MIGRATION_DATABASE_URL` was configured; it used the existing local connection only for read-only inventory. The bounded output was:
 
@@ -182,4 +197,18 @@ admin_inventory_target=exists=false|canlogin=false|superuser=false|bypassrls=fal
 admin_inventory_audit_rls=enabled=true|forced=true
 ```
 
-This inventory confirms that the current connection is an administrative superuser with `BYPASSRLS` and substantial ownership, and therefore must not be reused as valid restricted-role RLS evidence. It also confirms that the target runtime role does not yet exist and that `AuditEvent` RLS is enabled and forced. No role, password, grant, ownership, protected environment value, or existing row was changed by this inventory. The next operation is a separate user-run administrative provisioning decision; the agent must not execute it.
+This initial inventory confirmed that the current connection was an administrative superuser with `BYPASSRLS` and substantial ownership, and therefore could not be reused as valid restricted-role RLS evidence. It also confirmed that the target runtime role did not yet exist and that `AuditEvent` RLS was enabled and forced. No role, password, grant, ownership, protected environment value, or existing row was changed by this inventory.
+
+### Post-provisioning inventory
+
+After the user-run provisioning and protected runtime cutover, the read-only inventory selected `MIGRATION_DATABASE_URL` and reported the following bounded state:
+
+```text
+admin_inventory_source=migration_url
+admin_inventory_current=superuser=true|bypassrls=true|createdb=true|createrole=true|canlogin=true|owned_relations=114|owned_functions=6|owns_public_schema=false
+admin_inventory_target=exists=true|canlogin=true|superuser=false|bypassrls=false|createdb=false|createrole=false|schema_usage=true|schema_create=false|memberships=0|owned_relations=0|owned_functions=0
+admin_inventory_audit_rls=enabled=true|forced=true
+admin_inventory_audit_boundary=insert_granted=true|select_granted=true|delete_granted=true|user_select_granted=true|tenant_select_granted=true|membership_select_granted=true|user_references_granted=false|tenant_references_granted=false|membership_references_granted=false|insert_policies=2|permissive_insert_policies=2|restrictive_insert_policies=0|global_insert_policy=true|tenant_insert_policy=true|append_only_trigger=true|foreign_keys=3|trigger_execute=true
+```
+
+This post-provisioning inventory confirms that the target runtime role exists with no memberships or object ownership, while the administrative migration connection remains separate. It also confirms the explicit AuditEvent privilege, policy, trigger, and referenced-table SELECT boundary used in the source-level diagnosis. No database data was reset or recreated by the inventory. The remaining database action is applying the published additive RLS migration, followed by the restricted-role runtime campaign.

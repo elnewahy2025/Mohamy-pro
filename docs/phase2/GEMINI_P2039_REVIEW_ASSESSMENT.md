@@ -34,7 +34,6 @@ The least-privilege role boundary is verified. Audit source creation and outbox 
 
 [1]: https://www.prisma.io/changelog/2026-04-27 "Prisma ORM changelog: Catch more database driver errors"
 
-
 ## External verification
 
 Prisma’s official ORM error reference documents `PrismaClientKnownRequestError` as carrying a Prisma-specific `code` and `meta`, while the official Prisma changelog explains that P2039 wraps an otherwise unmapped database-driver error and preserves the driver error under `driverAdapterError` [1] [2]. The PostgreSQL privilege documentation confirms that `INSERT` is a table privilege, schema `USAGE` permits object lookup, and function `EXECUTE` is a separate privilege; it also states that table privileges are not granted to `PUBLIC` by default, while function `EXECUTE` is granted to `PUBLIC` by default and may be revoked [3]. PostgreSQL’s `CREATE TRIGGER` documentation states that `EXECUTE` on a trigger function is required when creating the trigger, not that application DML requires a runtime trigger-function grant [4].
@@ -44,7 +43,6 @@ These sources support retaining explicit table and helper-function grants, but t
 [2]: https://www.prisma.io/changelog/2026-04-27 "Prisma ORM changelog: Catch more database driver errors"
 [3]: https://www.postgresql.org/docs/current/ddl-priv.html "PostgreSQL Documentation: Privileges"
 [4]: https://www.postgresql.org/docs/current/sql-createtrigger.html "PostgreSQL Documentation: CREATE TRIGGER"
-
 
 ## PostgreSQL privilege findings relevant to SQLSTATE 42501
 
@@ -56,7 +54,6 @@ These findings narrow the likely boundary: a missing `REFERENCES` grant is not a
 [6]: https://www.postgresql.org/docs/current/ddl-priv.html "PostgreSQL Documentation: Privileges"
 [7]: https://www.postgresql.org/docs/current/sql-createtrigger.html "PostgreSQL Documentation: CREATE TRIGGER"
 
-
 ## Decisive runtime probe result
 
 The real OIDC session-creation transaction emitted the bounded probe:
@@ -66,7 +63,6 @@ audit_event_preinsert_probe|status=observed|global_operation=true|operation_id_p
 ```
 
 This is valid evidence that, immediately before the real global login `AuditEvent` insert, the transaction-local global context was active, an operation context was present, no tenant context was present as expected for a global event, and the restricted runtime role had effective table `INSERT` privilege. The session-creation failure therefore cannot be attributed to the previously suspected missing global context or missing `AuditEvent` table `INSERT` grant. The next required evidence is a bounded administrative catalog inventory of the applied policies, ACLs, foreign keys, triggers, and referenced-object privileges; no blind grant or RLS change is justified. The inventory script now emits one bounded `admin_inventory_audit_boundary=...` marker containing only booleans and counts for effective `AuditEvent`/referenced-table privileges, insert-policy presence and permissiveness, append-only trigger presence, foreign-key count, and trigger-function `EXECUTE`; it does not emit policy text, role names, function definitions, rows, or secrets.
-
 
 ## REFERENCES privilege investigation
 
