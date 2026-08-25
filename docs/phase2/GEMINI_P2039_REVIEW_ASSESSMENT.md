@@ -66,3 +66,13 @@ audit_event_preinsert_probe|status=observed|global_operation=true|operation_id_p
 ```
 
 This is valid evidence that, immediately before the real global login `AuditEvent` insert, the transaction-local global context was active, an operation context was present, no tenant context was present as expected for a global event, and the restricted runtime role had effective table `INSERT` privilege. The session-creation failure therefore cannot be attributed to the previously suspected missing global context or missing `AuditEvent` table `INSERT` grant. The next required evidence is a bounded administrative catalog inventory of the applied policies, ACLs, foreign keys, triggers, and referenced-object privileges; no blind grant or RLS change is justified. The inventory script now emits one bounded `admin_inventory_audit_boundary=...` marker containing only booleans and counts for effective `AuditEvent`/referenced-table privileges, insert-policy presence and permissiveness, append-only trigger presence, foreign-key count, and trigger-function `EXECUTE`; it does not emit policy text, role names, function definitions, rows, or secrets.
+
+
+## REFERENCES privilege investigation
+
+The authoritative PostgreSQL constraints documentation explains that a foreign key enforces matching referenced rows and that a non-NULL referencing value must match a referenced row [8]. The PostgreSQL `GRANT` documentation lists `REFERENCES` as a table privilege and describes it as a privilege that permits creation of a foreign-key constraint; it does not state that an inserting role must hold `REFERENCES` on the referenced table for ordinary enforcement of an already-created constraint [9]. The row-security documentation states that referential-integrity checks bypass row security [5].
+
+The live administrative inventory reports `user_references_granted=false`, `tenant_references_granted=false`, and `membership_references_granted=false`, but this is only a candidate fact. It is not sufficient evidence to grant those privileges. A controlled, read-only source/database test or authoritative PostgreSQL behavior confirmation is required before any user-run grant change.
+
+[8]: https://www.postgresql.org/docs/current/ddl-constraints.html "PostgreSQL Documentation: Constraints"
+[9]: https://www.postgresql.org/docs/current/sql-grant.html "PostgreSQL Documentation: GRANT"

@@ -121,28 +121,41 @@ async function readInventory(client) {
             SELECT count(*)
             FROM pg_policy AS p
             WHERE p.polrelid = 'public."AuditEvent"'::regclass
-              AND p.polcmd = 'a'
+              AND p.polcmd IN ('a', '*')
           )::int AS audit_insert_policy_count,
           (
             SELECT count(*)
             FROM pg_policy AS p
             WHERE p.polrelid = 'public."AuditEvent"'::regclass
-              AND p.polcmd = 'a'
+              AND p.polcmd IN ('a', '*')
               AND p.polpermissive
           )::int AS audit_insert_permissive_policy_count,
+          (
+            SELECT count(*)
+            FROM pg_policy AS p
+            WHERE p.polrelid = 'public."AuditEvent"'::regclass
+              AND p.polcmd IN ('a', '*')
+              AND NOT p.polpermissive
+          )::int AS audit_insert_restrictive_policy_count,
           EXISTS (
             SELECT 1
             FROM pg_policy AS p
+            JOIN pg_roles AS r ON r.rolname = $1
             WHERE p.polrelid = 'public."AuditEvent"'::regclass
               AND p.polname = 'AuditEvent_global_control_insert'
-              AND p.polcmd = 'a'
+              AND p.polcmd IN ('a', '*')
+              AND (0 = ANY(p.polroles) OR r.oid = ANY(p.polroles))
+              AND pg_get_expr(p.polwithcheck, p.polrelid) LIKE '%app.global_operation%'
           ) AS global_insert_policy_present,
           EXISTS (
             SELECT 1
             FROM pg_policy AS p
+            JOIN pg_roles AS r ON r.rolname = $1
             WHERE p.polrelid = 'public."AuditEvent"'::regclass
               AND p.polname = 'AuditEvent_tenant_insert'
-              AND p.polcmd = 'a'
+              AND p.polcmd IN ('a', '*')
+              AND (0 = ANY(p.polroles) OR r.oid = ANY(p.polroles))
+              AND pg_get_expr(p.polwithcheck, p.polrelid) LIKE '%app.tenant_id%'
           ) AS tenant_insert_policy_present,
           EXISTS (
             SELECT 1
@@ -214,6 +227,9 @@ async function readInventory(client) {
       auditInsertPermissivePolicyCount: count(
         boundary.audit_insert_permissive_policy_count,
       ),
+      auditInsertRestrictivePolicyCount: count(
+        boundary.audit_insert_restrictive_policy_count,
+      ),
       globalInsertPolicyPresent: bool(boundary.global_insert_policy_present),
       tenantInsertPolicyPresent: bool(boundary.tenant_insert_policy_present),
       appendOnlyTriggerPresent: bool(boundary.append_only_trigger_present),
@@ -252,7 +268,7 @@ async function run() {
       `admin_inventory_audit_rls=enabled=${marker(inventory.auditRlsEnabled)}|forced=${marker(inventory.auditRlsForced)}`,
     );
     console.log(
-      `admin_inventory_audit_boundary=insert_granted=${marker(inventory.auditInsertGranted)}|select_granted=${marker(inventory.auditSelectGranted)}|delete_granted=${marker(inventory.auditDeleteGranted)}|user_select_granted=${marker(inventory.userSelectGranted)}|tenant_select_granted=${marker(inventory.tenantSelectGranted)}|membership_select_granted=${marker(inventory.membershipSelectGranted)}|user_references_granted=${marker(inventory.userReferencesGranted)}|tenant_references_granted=${marker(inventory.tenantReferencesGranted)}|membership_references_granted=${marker(inventory.membershipReferencesGranted)}|insert_policies=${inventory.auditInsertPolicyCount}|permissive_insert_policies=${inventory.auditInsertPermissivePolicyCount}|global_insert_policy=${marker(inventory.globalInsertPolicyPresent)}|tenant_insert_policy=${marker(inventory.tenantInsertPolicyPresent)}|append_only_trigger=${marker(inventory.appendOnlyTriggerPresent)}|foreign_keys=${inventory.auditForeignKeyCount}|trigger_execute=${marker(inventory.triggerFunctionExecuteGranted)}`,
+      `admin_inventory_audit_boundary=insert_granted=${marker(inventory.auditInsertGranted)}|select_granted=${marker(inventory.auditSelectGranted)}|delete_granted=${marker(inventory.auditDeleteGranted)}|user_select_granted=${marker(inventory.userSelectGranted)}|tenant_select_granted=${marker(inventory.tenantSelectGranted)}|membership_select_granted=${marker(inventory.membershipSelectGranted)}|user_references_granted=${marker(inventory.userReferencesGranted)}|tenant_references_granted=${marker(inventory.tenantReferencesGranted)}|membership_references_granted=${marker(inventory.membershipReferencesGranted)}|insert_policies=${inventory.auditInsertPolicyCount}|permissive_insert_policies=${inventory.auditInsertPermissivePolicyCount}|restrictive_insert_policies=${inventory.auditInsertRestrictivePolicyCount}|global_insert_policy=${marker(inventory.globalInsertPolicyPresent)}|tenant_insert_policy=${marker(inventory.tenantInsertPolicyPresent)}|append_only_trigger=${marker(inventory.appendOnlyTriggerPresent)}|foreign_keys=${inventory.auditForeignKeyCount}|trigger_execute=${marker(inventory.triggerFunctionExecuteGranted)}`,
     );
   } catch (error) {
     console.error(
