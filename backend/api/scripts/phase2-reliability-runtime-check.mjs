@@ -483,6 +483,12 @@ function safeErrorClass(error) {
   return /^[A-Za-z][A-Za-z0-9_]*$/.test(name) ? name : 'UnknownError';
 }
 
+function safeErrorCode(value) {
+  return typeof value === 'string' && /^[A-Z][A-Z0-9_]{2,64}$/.test(value)
+    ? value
+    : 'none';
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -627,6 +633,9 @@ async function main() {
       tenantOneId,
       0,
       randomUUID(),
+    );
+    console.log(
+      `audit_api_mutation_diagnostic=http=${firstSwitch.response.status}|success_field=${typeof firstSwitch.body?.success}|success_value=${firstSwitch.body?.success === true ? 'true' : firstSwitch.body?.success === false ? 'false' : 'absent'}|error_code=${safeErrorCode(firstSwitch.body?.error?.code)}`,
     );
     assert(
       firstSwitch.response.status === 200,
