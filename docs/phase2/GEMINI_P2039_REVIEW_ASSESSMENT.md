@@ -72,3 +72,24 @@ The live administrative inventory reports `user_references_granted=false`, `tena
 
 [8]: https://www.postgresql.org/docs/current/ddl-constraints.html "PostgreSQL Documentation: Constraints"
 [9]: https://www.postgresql.org/docs/current/sql-grant.html "PostgreSQL Documentation: GRANT"
+
+## Assessment of the Complete Gemini Review
+
+The supplied review is substantially useful, but it is not accepted without qualification. It correctly recognizes that the runtime role boundary is valid, that administrative fixture setup must be separate from restricted runtime assertions, and that the additive `AuditEvent` SELECT-policy correction resolved the original global OIDC `P2039/42501` failure. It also correctly rejects blind `REFERENCES` grants, RLS weakening, and using the restricted role for administrative tenant fixture creation.
+
+The review’s statement that Prisma inserts normally return the created row and that PostgreSQL may evaluate SELECT row security for `INSERT ... RETURNING` is consistent with the observed migration result: after the narrow global `tenantId IS NULL` SELECT-policy condition was applied, the OIDC session-creation failure disappeared and the verifier progressed to the real tenant-switch API mutation. That runtime progression is evidence for the correction; the earlier failure was not merely inferred from a log.
+
+The review is too absolute in a few places. The current evidence does not prove that the verifier’s later `real_api_audit_mutation` failure is an application-level defect; it proves only that the failure occurs after authenticated fixture setup and before the verifier’s success assertions. The bounded `audit_api_mutation_diagnostic` marker from the published verifier must be captured before assigning a cause. Similarly, the review’s claim that no application privileges are missing is limited to the source path shown and should not be generalized to every worker or observability operation. The explicit runtime matrix remains the source of truth for the audited slice.
+
+The proposed broad controller/exception-filter change is not the next action. The repository already has bounded API-side Prisma classification for the session-creation path, and the verifier now emits a bounded HTTP/envelope/error-code diagnostic for the real tenant-switch mutation. Adding a broad exception-filter diagnostic before capturing that marker would expand logging scope without evidence that it is necessary. If the bounded marker shows an internal server error without a safe code, a narrowly placed diagnostic at the first proven service boundary may then be justified.
+
+The review’s procedure inaccurately refers to restarting NestJS API and worker containers. In this Windows topology, API and worker are host PowerShell processes; only the named Docker dependencies are containers. The API and worker must be stopped and restarted as host processes, while PostgreSQL, Redis, MinIO, Keycloak, and unrelated containers remain untouched.
+
+The correct current decision is:
+
+1. Do not change database grants, RLS policies, foreign keys, trigger privileges, passwords, or protected environment values based on this review.
+2. Do not skip `real_api_audit_mutation`; it is the core proof that the restricted role can perform a real tenant-scoped API mutation and create the linked tenant-scoped audit/outbox records.
+3. Run the already-published bounded verifier diagnostic from commit `b1614aa5`. It reports only HTTP status, success-field shape, boolean success state, and an allowlisted error code.
+4. If the marker identifies a known business-envelope failure, diagnose that exact service boundary. If it identifies a Prisma/database failure, extend the existing allowlisted classifier only at the proven boundary. If it succeeds, continue with the existing RLS, append-only, retention/legal-hold, retry/dead-letter, and same-session concurrency assertions.
+
+Phase 2 remains open, the audit/reliability workstream remains unaccepted, and production readiness is not established.

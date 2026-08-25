@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { Injectable, Logger } from '@nestjs/common';
 import { AuditService } from '../infrastructure/audit/audit.service';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import {
@@ -28,6 +28,8 @@ const UUID_V4_PATTERN =
 
 @Injectable()
 export class MembershipService {
+  private readonly logger = new Logger(MembershipService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -37,14 +39,17 @@ export class MembershipService {
     validateInput(input);
     const now = new Date();
     const operationId = randomUUID();
+    let stage = 'membership_context';
     try {
       return await this.prisma.withMembershipSelectionContext(
         { userId: input.userId, operationId },
         async (transaction) => {
+          stage = 'user_lookup';
           const user = await transaction.user.findUnique({
             where: { id: input.userId },
             select: { id: true, status: true },
           });
+          stage = 'membership_lookup';
           const membership = await transaction.membership.findUnique({
             where: {
               userId_tenantId: {
@@ -54,6 +59,7 @@ export class MembershipService {
             },
             include: { tenant: true },
           });
+          stage = 'membership_validation';
           if (
             !user ||
             user.status !== 'ACTIVE' ||
@@ -66,6 +72,7 @@ export class MembershipService {
             throw new TenantContextRequiredError();
           }
 
+          stage = 'tenant_context_bind';
           const tenantContext = {
             tenantId: membership.tenantId,
             userId: input.userId,
@@ -73,6 +80,7 @@ export class MembershipService {
             operationId,
           };
           await this.prisma.bindTenantContext(transaction, tenantContext);
+          stage = 'session_update';
           const updated = await transaction.appSession.updateMany({
             where: {
               id: input.sessionId,
@@ -90,6 +98,7 @@ export class MembershipService {
             throw new TenantSwitchConflictError();
           }
 
+          stage = 'session_read';
           const session = await transaction.appSession.findUniqueOrThrow({
             where: { id: input.sessionId },
             select: { contextVersion: true },
@@ -99,6 +108,7 @@ export class MembershipService {
             membershipId: membership.id,
             contextVersion: session.contextVersion,
           };
+          stage = 'audit_event';
           await this.audit.recordInTransaction(
             {
               eventType: 'tenant.switch.succeeded',
@@ -119,10 +129,14 @@ export class MembershipService {
             },
             transaction,
           );
+          stage = 'completed';
           return result;
         },
       );
     } catch (error) {
+      this.logger.warn(
+        `tenant_switch_failed|stage=${safeStage(stage)}|error_class=${safeErrorName(error)}|db_code=${safeDatabaseCode(error)}|driver_code=${safeDriverCode(error)}|driver_boundary=${safeDriverBoundary(error)}`,
+      );
       if (error instanceof TenantContextRequiredError) {
         await this.recordDeniedSwitch(input, 'membership_not_eligible');
       } else if (error instanceof TenantSwitchConflictError) {
@@ -222,6 +236,60 @@ export class MembershipService {
       },
     });
   }
+}
+
+function safeStage(value: string): string {
+  return /^[a-z_]+$/.test(value) ? value : 'unknown';
+}
+
+function safeErrorName(error: unknown): string {
+  const name = error instanceof Error ? error.name : 'UnknownError';
+  return /^[A-Za-z][A-Za-z0-9_]*$/.test(name) ? name : 'UnknownError';
+}
+
+function safeDatabaseCode(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return 'none';
+  const code = (error as Record<string, unknown>).code;
+  return typeof code === 'string' && /^P[0-9]{4}$/.test(code) ? code : 'none';
+}
+
+function safeDriverCode(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return 'none';
+  const driver = (error as Record<string, unknown>).driverAdapterError;
+  const cause =
+    typeof driver === 'object' && driver !== null
+      ? (driver as Record<string, unknown>).cause
+      : null;
+  const originalCode =
+    typeof cause === 'object' && cause !== null
+      ? (cause as Record<string, unknown>).originalCode
+      : null;
+  if (typeof originalCode === 'string' && /^[0-9A-Z]{5}$/.test(originalCode)) {
+    return originalCode;
+  }
+  const message = error instanceof Error ? error.message : '';
+  const match = message.match(/Database error\. Code:\s*`?([0-9A-Z]{5})`?/i);
+  return match?.[1]?.toUpperCase() ?? 'none';
+}
+
+function safeDriverBoundary(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  if (/row-level security policy|violates row-level security/i.test(message)) {
+    return 'rls_policy';
+  }
+  if (
+    /permission denied for (table|schema|column|sequence|function)/i.test(
+      message,
+    )
+  ) {
+    return 'object_privilege';
+  }
+  if (/permission denied/i.test(message)) return 'permission_other';
+  if (/foreign key constraint/i.test(message)) return 'foreign_key';
+  if (/violates (a )?check constraint|check constraint/i.test(message)) {
+    return 'check_constraint';
+  }
+  return 'unknown';
 }
 
 function validateInput(input: TenantSwitchInput): void {
