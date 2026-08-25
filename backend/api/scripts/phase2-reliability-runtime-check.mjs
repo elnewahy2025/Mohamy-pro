@@ -391,6 +391,22 @@ async function readOutboxById(client, id) {
   );
 }
 
+async function readOutboxRetryState(client, id) {
+  return withSettings(
+    client,
+    { operationId: randomUUID(), outboxDispatcher: true },
+    async () => {
+      const result = await client.query(
+        `SELECT "status", "attempts", "availableAt",
+                "availableAt" > CURRENT_TIMESTAMP AS "availableAtInFuture"
+         FROM "OutboxMessage" WHERE "id" = $1`,
+        [id],
+      );
+      return result.rows[0] ?? null;
+    },
+  );
+}
+
 async function createTenant(client, tenantId, slug) {
   await withSettings(
     client,
@@ -994,20 +1010,20 @@ async function main() {
     try {
       retryState = await waitFor(
         'outbox retry scheduling',
-        () => readOutboxById(database, retryId),
+        () => readOutboxRetryState(database, retryId),
         (row) => row?.status === 'FAILED' && row.attempts === 1,
       );
     } catch (error) {
-      const observedRetryState = await readOutboxById(database, retryId).catch(
-        () => null,
-      );
+      const observedRetryState = await readOutboxRetryState(
+        database,
+        retryId,
+      ).catch(() => null);
       console.log(
-        `audit_outbox_retry_diagnostic=wait=timeout|status=${safeOutboxStatus(observedRetryState?.status)}|attempts=${safeAttemptCount(observedRetryState?.attempts)}|available_at_present=${String(observedRetryState?.availableAt instanceof Date || typeof observedRetryState?.availableAt === 'string').toLowerCase()}|error_class=${safeErrorClass(error)}`,
+        `audit_outbox_retry_diagnostic=wait=timeout|status=${safeOutboxStatus(observedRetryState?.status)}|attempts=${safeAttemptCount(observedRetryState?.attempts)}|available_at_present=${String(observedRetryState?.availableAtInFuture !== undefined).toLowerCase()}|error_class=${safeErrorClass(error)}`,
       );
       throw error;
     }
-    const futureBackoff =
-      new Date(retryState.availableAt).getTime() > Date.now();
+    const futureBackoff = retryState.availableAtInFuture === true;
     console.log(
       `audit_outbox_retry_diagnostic=wait=observed|status=${safeOutboxStatus(retryState.status)}|attempts=${safeAttemptCount(retryState.attempts)}|future_backoff=${String(futureBackoff).toLowerCase()}`,
     );

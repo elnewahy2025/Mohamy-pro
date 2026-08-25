@@ -88,3 +88,11 @@ The restricted-role runtime campaign passed the real tenant-switch mutation, ten
 The verifier’s append-only assertion was corrected to recognize both legitimate protected outcomes without exposing raw database messages: an attempted mutation is blocked either by the existing append-only trigger/RLS error or by a zero-row result caused by the forced-RLS boundary. It then verifies that the audit row remains present and unchanged. The verifier emits a bounded `audit_append_only_diagnostic` category for the UPDATE and DELETE attempts and emits PASS only when both are blocked and the row remains intact.
 
 No database policy, role privilege, trigger, migration, or existing data was changed. The correction is statically verified and remains unaccepted until the Windows runtime reaches and passes this boundary.
+
+## 2.6 Retry backoff assertion correction
+
+The restricted-role runtime campaign passed the real API mutation, audit/outbox delivery and duplicate suppression, RLS isolation, append-only protection, retention/legal hold, and cleanup, then stopped at `outbox_retry_boundary`. The worker correctly transitioned the generated message to `FAILED` with `attempts=1`, but the verifier reported `future_backoff=false`.
+
+Source inspection confirmed that `OutboxService.recordFailure()` schedules `availableAt` using `Date.now() + retryDelayMs(...)`, while the verifier was converting PostgreSQL timestamp data to a JavaScript `Date` and comparing it with the client clock. That comparison was not a reliable assertion of PostgreSQL temporal ordering because it crossed database and client timestamp interpretation.
+
+The verifier now asks PostgreSQL to evaluate `"availableAt" > CURRENT_TIMESTAMP` and asserts that boolean, while retaining bounded status and attempt diagnostics. This changes no worker behavior, retry policy, database data, or privileges; it corrects only the verifier’s temporal observation. The change is statically verified and remains unaccepted until the Windows runtime reaches and passes the retry boundary.

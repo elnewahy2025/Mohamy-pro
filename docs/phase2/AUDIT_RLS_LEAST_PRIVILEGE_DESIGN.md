@@ -232,3 +232,11 @@ The source-audited runtime privilege matrix intentionally grants `mohamy_app` `S
 The verifier correction now classifies an attempted UPDATE or DELETE as blocked when the operation raises the existing append-only/RLS boundary error or returns zero affected rows under forced RLS. It then reads the audit event through the named dispatcher context and verifies that exactly one row remains. The verifier emits only the bounded mutation categories and reports PASS only when both attempts are blocked and the row remains intact. No grant, RLS policy, trigger, migration, password, ownership, or existing data was changed.
 
 This correction is statically verified but not runtime-accepted. The next Windows run must prove the append-only marker and then continue to retention/legal-hold, retry/dead-letter, and same-session concurrency stages. Phase 2 remains open and production readiness is not established.
+
+## Retry boundary diagnosis and verifier correction
+
+The restricted-role runtime campaign reached the retry boundary after passing the real API tenant switch, tenant audit/outbox path, RLS isolation, append-only protection, retention/legal hold, and cleanup. The generated outbox message transitioned correctly to `FAILED` with `attempts=1`, but the verifier’s client-side comparison reported `future_backoff=false`.
+
+Source inspection confirmed that `OutboxService.recordFailure()` schedules `availableAt` from the application clock, while the verifier was converting the PostgreSQL timestamp to a JavaScript `Date` and comparing it with the client clock. That cross-clock comparison was not a reliable proof of PostgreSQL temporal ordering. The verifier now asks PostgreSQL to evaluate `"availableAt" > CURRENT_TIMESTAMP` and consumes only that boolean, with bounded status and attempt diagnostics. No retry behavior, database data, privilege, RLS policy, or production configuration changed.
+
+This verifier correction is statically verified but not runtime-accepted. Phase 2 remains open and production readiness is not established.
