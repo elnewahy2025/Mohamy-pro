@@ -96,3 +96,9 @@ The restricted-role runtime campaign passed the real API mutation, audit/outbox 
 Source inspection confirmed that `OutboxService.recordFailure()` schedules `availableAt` using `Date.now() + retryDelayMs(...)`, while the verifier was converting PostgreSQL timestamp data to a JavaScript `Date` and comparing it with the client clock. That comparison was not a reliable assertion of PostgreSQL temporal ordering because it crossed database and client timestamp interpretation.
 
 The verifier now asks PostgreSQL to evaluate `"availableAt" > CURRENT_TIMESTAMP` and asserts that boolean, while retaining bounded status and attempt diagnostics. This changes no worker behavior, retry policy, database data, or privileges; it corrects only the verifier’s temporal observation. The change is statically verified and remains unaccepted until the Windows runtime reaches and passes the retry boundary.
+
+## 2.7 Retry write-clock correction
+
+The first PostgreSQL-side verifier comparison still observed `FAILED`, `attempts=1`, with `availableAt` not in the future. Source inspection found that `OutboxService.recordFailure()` calculated the retry timestamp with the Node.js application clock and then wrote it through Prisma to a PostgreSQL `TIMESTAMP(3)` column. The runtime verifier correctly compared using PostgreSQL time, so the implementation and assertion were using different clock representations.
+
+The nonterminal failure path now writes `availableAt = CURRENT_TIMESTAMP + retry_delay` in PostgreSQL through a parameterized update, while preserving the current status predicate, lease-token predicate, failure error, claimed-at clearing, and existing terminal dead-letter update path. A regression test verifies that the retry path uses the database clock and retains the lease guard. No role privilege, RLS policy, migration, data, or worker state-machine semantics were weakened or changed intentionally; the source correction remains pending Windows runtime acceptance.

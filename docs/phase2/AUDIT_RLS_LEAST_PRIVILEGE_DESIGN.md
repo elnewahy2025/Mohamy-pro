@@ -240,3 +240,9 @@ The restricted-role runtime campaign reached the retry boundary after passing th
 Source inspection confirmed that `OutboxService.recordFailure()` schedules `availableAt` from the application clock, while the verifier was converting the PostgreSQL timestamp to a JavaScript `Date` and comparing it with the client clock. That cross-clock comparison was not a reliable proof of PostgreSQL temporal ordering. The verifier now asks PostgreSQL to evaluate `"availableAt" > CURRENT_TIMESTAMP` and consumes only that boolean, with bounded status and attempt diagnostics. No retry behavior, database data, privilege, RLS policy, or production configuration changed.
 
 This verifier correction is statically verified but not runtime-accepted. Phase 2 remains open and production readiness is not established.
+
+## Retry implementation correction
+
+The runtime retry boundary initially reported a stored `FAILED` row with `attempts=1` but no future backoff according to the verifier. Source and schema review established that `OutboxMessage.availableAt` is PostgreSQL `TIMESTAMP(3)` while the service previously computed the value with the Node.js clock. The verifier’s database-side comparison exposed a cross-clock assertion mismatch.
+
+The nonterminal `OutboxService.recordFailure()` path now calculates the delay in application code but writes `availableAt` from PostgreSQL `CURRENT_TIMESTAMP` plus the parameterized delay, preserving the current status and lease-token predicates. Terminal attempts retain the existing Prisma `DEAD_LETTER` update path. A regression test verifies that the nonterminal update uses the database clock. This is a source-level correctness fix only; no grant, RLS policy, migration, password, environment value, or existing row was changed. Windows runtime acceptance remains pending.

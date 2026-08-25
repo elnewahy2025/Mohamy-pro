@@ -181,6 +181,41 @@ describe('outbox delivery semantics', () => {
     );
   });
 
+  it('uses the database clock when scheduling a retry', async () => {
+    const executeRaw = jest.fn().mockResolvedValue(1);
+    const updateMany = jest.fn();
+    const transaction = {
+      outboxMessage: {
+        findUnique: jest.fn().mockResolvedValue(message),
+        updateMany,
+      },
+      $executeRaw: executeRaw,
+    };
+    const prisma = {
+      withOutboxDispatcherContext: jest
+        .fn()
+        .mockImplementation(
+          (_operationId: string, callback: (tx: unknown) => Promise<unknown>) =>
+            callback(transaction),
+        ),
+    };
+    const service = new OutboxService(prisma as never, {} as never);
+
+    await expect(
+      service.recordFailure('message-1', 'temporary failure', 'lease-1'),
+    ).resolves.toBe(true);
+
+    expect(updateMany).not.toHaveBeenCalled();
+    expect(executeRaw).toHaveBeenCalledTimes(1);
+    const [template] = executeRaw.mock.calls[0] as [
+      TemplateStringsArray,
+      ...unknown[],
+    ];
+    expect(template.join('')).toContain('CURRENT_TIMESTAMP');
+    expect(template.join('')).toContain('"availableAt"');
+    expect(template.join('')).toContain('"leaseToken"');
+  });
+
   it('records a failure and does not mark a message processed when its handler throws', async () => {
     const loggerError = jest
       .spyOn(Logger.prototype, 'error')

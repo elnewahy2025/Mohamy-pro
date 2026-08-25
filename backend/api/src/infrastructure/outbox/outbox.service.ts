@@ -259,30 +259,48 @@ export class OutboxService {
         }
 
         const terminal = current.attempts >= OUTBOX_MAX_ATTEMPTS;
-        return transaction.outboxMessage.updateMany({
-          where: {
-            id,
-            status: current.status,
-            ...(leaseToken ? { leaseToken } : {}),
-          },
-          data: terminal
-            ? {
-                status: 'DEAD_LETTER',
-                deadLetteredAt: new Date(),
-                claimedAt: null,
-                leaseToken: null,
-                error: safeError,
-              }
-            : {
-                status: 'FAILED',
-                availableAt: new Date(
-                  Date.now() + this.retryDelayMs(current.attempts),
-                ),
-                claimedAt: null,
-                leaseToken: null,
-                error: safeError,
-              },
-        });
+        const where = {
+          id,
+          status: current.status,
+          ...(leaseToken ? { leaseToken } : {}),
+        };
+        if (terminal) {
+          return transaction.outboxMessage.updateMany({
+            where,
+            data: {
+              status: 'DEAD_LETTER',
+              deadLetteredAt: new Date(),
+              claimedAt: null,
+              leaseToken: null,
+              error: safeError,
+            },
+          });
+        }
+
+        const delayMs = this.retryDelayMs(current.attempts);
+        const count = leaseToken
+          ? await transaction.$executeRaw`
+              UPDATE "OutboxMessage"
+              SET "status" = 'FAILED',
+                  "availableAt" = CURRENT_TIMESTAMP + (${delayMs}::double precision * INTERVAL '1 millisecond'),
+                  "claimedAt" = NULL,
+                  "leaseToken" = NULL,
+                  "error" = ${safeError}
+              WHERE "id" = ${id}
+                AND "status" = ${current.status}
+                AND "leaseToken" = ${leaseToken}
+            `
+          : await transaction.$executeRaw`
+              UPDATE "OutboxMessage"
+              SET "status" = 'FAILED',
+                  "availableAt" = CURRENT_TIMESTAMP + (${delayMs}::double precision * INTERVAL '1 millisecond'),
+                  "claimedAt" = NULL,
+                  "leaseToken" = NULL,
+                  "error" = ${safeError}
+              WHERE "id" = ${id}
+                AND "status" = ${current.status}
+            `;
+        return { count };
       },
     );
     if (result.count === 1) await this.refreshOutboxMetrics();
