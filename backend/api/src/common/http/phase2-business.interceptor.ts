@@ -29,6 +29,8 @@ import {
 const IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1_000;
 const IDEMPOTENCY_KEY_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ADMINISTRATIVE_REVOKE_PATH_PATTERN =
+  /^\/api\/v1\/authorization\/users\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/sessions\/revoke$/i;
 
 @Injectable()
 export class Phase2BusinessInterceptor implements NestInterceptor {
@@ -56,8 +58,10 @@ export class Phase2BusinessInterceptor implements NestInterceptor {
       contentType: request.header('content-type') ?? undefined,
       body: request.body,
     };
+    const requestPath = request.originalUrl.split('?', 1)[0];
     const forceGlobalScope =
-      request.originalUrl.split('?', 1)[0] === '/api/v1/session/tenant-switch';
+      requestPath === '/api/v1/session/tenant-switch' ||
+      ADMINISTRATIVE_REVOKE_PATH_PATTERN.test(requestPath);
     const scope: IdempotencyScope =
       !forceGlobalScope &&
       authSession.activeTenantId &&

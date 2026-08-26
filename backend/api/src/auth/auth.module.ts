@@ -12,6 +12,7 @@ import { IdempotencyModule } from '../infrastructure/idempotency/idempotency.mod
 import { Phase2BusinessInterceptor } from '../common/http/phase2-business.interceptor';
 import { MembershipService } from './membership.service';
 import { TenantSessionController } from './tenant-session.controller';
+import { AdministrativeSessionService } from './administrative-session.service';
 import { AuthorizationController } from '../authorization/authorization.controller';
 import { AuthorizationModule } from '../authorization/authorization.module';
 
@@ -33,6 +34,7 @@ import { AuthorizationModule } from '../authorization/authorization.module';
     SessionService,
     Phase2BusinessInterceptor,
     MembershipService,
+    AdministrativeSessionService,
   ],
   exports: [
     AuthService,

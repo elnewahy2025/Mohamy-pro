@@ -215,14 +215,20 @@ async function provisionFixtures(admin, userId) {
     tenantRoleId: randomUUID(),
     globalRoleId: randomUUID(),
     globalAssignmentId: randomUUID(),
+    platformAssignmentId: randomUUID(),
     otherUserId: randomUUID(),
     otherAssignmentId: randomUUID(),
     tenantPermissionId: randomUUID(),
     globalPermissionId: randomUUID(),
+    platformRoleId: randomUUID(),
+    platformPermissionId: randomUUID(),
     tenantSlug: `phase2-authz-${randomUUID().slice(0, 8)}`,
     globalRoleKey: `phase2_runtime_global_${randomUUID().slice(0, 8)}`,
     tenantRoleKey: `tenant_admin`,
+    platformRoleKey: 'platform_admin',
     permissionKey: `tenant.read`,
+    platformPermissionKey: 'tenant.platform_manage',
+    mfaIdempotencyKey: randomUUID(),
   };
   const original = await admin.query(
     'SELECT "status"::text AS status FROM "User" WHERE "id" = $1',
@@ -268,6 +274,21 @@ async function provisionFixtures(admin, userId) {
     if (permission.rowCount !== 1) throw new Error('TENANT_PERMISSION_MISSING');
     fixture.tenantPermissionId = permission.rows[0].id;
     await admin.query(
+      'INSERT INTO "Permission" ("id", "key", "description", "createdAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT ("key") DO NOTHING',
+      [
+        fixture.platformPermissionId,
+        fixture.platformPermissionKey,
+        'Platform tenant administration permission',
+      ],
+    );
+    const platformPermission = await admin.query(
+      'SELECT "id" FROM "Permission" WHERE "key" = $1',
+      [fixture.platformPermissionKey],
+    );
+    if (platformPermission.rowCount !== 1)
+      throw new Error('PLATFORM_PERMISSION_MISSING');
+    fixture.platformPermissionId = platformPermission.rows[0].id;
+    await admin.query(
       'INSERT INTO "Role" ("id", "tenantId", "scope", "key", "name", "createdAt", "updatedAt") VALUES ($1, $2, \'TENANT\', $3, \'Tenant Admin\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
       [fixture.tenantRoleId, fixture.tenantId, fixture.tenantRoleKey],
     );
@@ -296,6 +317,45 @@ async function provisionFixtures(admin, userId) {
       'INSERT INTO "GlobalRoleAssignment" ("id", "userId", "roleId", "assignedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)',
       [fixture.otherAssignmentId, fixture.otherUserId, fixture.globalRoleId],
     );
+    const existingPlatformRole = await admin.query(
+      'SELECT "id" FROM "Role" WHERE "tenantId" IS NULL AND "scope" = \'GLOBAL\' AND "key" = $1',
+      [fixture.platformRoleKey],
+    );
+    fixture.platformRoleCreated = existingPlatformRole.rowCount === 0;
+    if (fixture.platformRoleCreated) {
+      await admin.query(
+        'INSERT INTO "Role" ("id", "tenantId", "scope", "key", "name", "createdAt", "updatedAt") VALUES ($1, NULL, \'GLOBAL\', $2, \'Platform Admin\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+        [fixture.platformRoleId, fixture.platformRoleKey],
+      );
+    } else {
+      fixture.platformRoleId = existingPlatformRole.rows[0].id;
+    }
+    const existingPlatformRolePermission = await admin.query(
+      'SELECT 1 FROM "RolePermission" WHERE "roleId" = $1 AND "permissionId" = $2',
+      [fixture.platformRoleId, fixture.platformPermissionId],
+    );
+    fixture.platformRolePermissionCreated =
+      existingPlatformRolePermission.rowCount === 0;
+    if (fixture.platformRolePermissionCreated) {
+      await admin.query(
+        'INSERT INTO "RolePermission" ("roleId", "permissionId") VALUES ($1, $2)',
+        [fixture.platformRoleId, fixture.platformPermissionId],
+      );
+    }
+    const existingPlatformAssignment = await admin.query(
+      'SELECT "id" FROM "GlobalRoleAssignment" WHERE "userId" = $1 AND "roleId" = $2',
+      [userId, fixture.platformRoleId],
+    );
+    fixture.platformAssignmentCreated =
+      existingPlatformAssignment.rowCount === 0;
+    if (fixture.platformAssignmentCreated) {
+      await admin.query(
+        'INSERT INTO "GlobalRoleAssignment" ("id", "userId", "roleId", "assignedAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP)',
+        [fixture.platformAssignmentId, userId, fixture.platformRoleId],
+      );
+    } else {
+      fixture.platformAssignmentId = existingPlatformAssignment.rows[0].id;
+    }
     await admin.query('COMMIT');
   } catch (error) {
     await admin.query('ROLLBACK');
@@ -561,6 +621,14 @@ async function cleanupStaleAuthorizationFixtures(admin, protectedUserId) {
 }
 
 async function cleanupFixtures(admin, fixture, userId) {
+  const roleIds = [fixture.tenantRoleId, fixture.globalRoleId];
+  const rolePermissionIds = [fixture.tenantRoleId];
+  const assignmentIds = [fixture.globalAssignmentId, fixture.otherAssignmentId];
+  if (fixture.platformAssignmentCreated)
+    assignmentIds.push(fixture.platformAssignmentId);
+  if (fixture.platformRoleCreated) roleIds.push(fixture.platformRoleId);
+  if (fixture.platformRolePermissionCreated)
+    rolePermissionIds.push(fixture.platformRoleId);
   await admin.query('BEGIN');
   try {
     await admin.query('DELETE FROM "OutboxMessage" WHERE "tenantId" = $1', [
@@ -574,16 +642,15 @@ async function cleanupFixtures(admin, fixture, userId) {
       [fixture.membershipId],
     );
     await admin.query(
-      'DELETE FROM "GlobalRoleAssignment" WHERE "id" IN ($1, $2)',
-      [fixture.globalAssignmentId, fixture.otherAssignmentId],
+      'DELETE FROM "GlobalRoleAssignment" WHERE "id" = ANY($1::text[])',
+      [assignmentIds],
     );
     await admin.query(
-      'DELETE FROM "RolePermission" WHERE "roleId" IN ($1, $2)',
-      [fixture.tenantRoleId, fixture.globalRoleId],
+      'DELETE FROM "RolePermission" WHERE "roleId" = ANY($1::text[])',
+      [rolePermissionIds],
     );
-    await admin.query('DELETE FROM "Role" WHERE "id" IN ($1, $2)', [
-      fixture.tenantRoleId,
-      fixture.globalRoleId,
+    await admin.query('DELETE FROM "Role" WHERE "id" = ANY($1::text[])', [
+      roleIds,
     ]);
     await admin.query(
       `UPDATE "AppSession"
@@ -621,20 +688,18 @@ async function cleanupFixtures(admin, fixture, userId) {
       `SELECT
         (SELECT COUNT(*) FROM "Tenant" WHERE "id" = $1 AND "status" <> 'ARCHIVED') AS active_tenant_count,
         (SELECT COUNT(*) FROM "Membership" WHERE "id" = $2 AND "status" <> 'REMOVED') AS active_membership_count,
-        (SELECT COUNT(*) FROM "Role" WHERE "id" IN ($3, $4)) AS role_count,
+        (SELECT COUNT(*) FROM "Role" WHERE "id" = ANY($3::text[])) AS role_count,
         (SELECT COUNT(*) FROM "MembershipRole" WHERE "membershipId" = $2) AS membership_role_count,
-        (SELECT COUNT(*) FROM "GlobalRoleAssignment" WHERE "id" IN ($5, $6)) AS global_assignment_count,
+        (SELECT COUNT(*) FROM "GlobalRoleAssignment" WHERE "id" = ANY($4::text[])) AS global_assignment_count,
         (SELECT COUNT(*) FROM "AuditEvent" WHERE "tenantId" = $1) AS audit_count,
         (SELECT COUNT(*) FROM "OutboxMessage" WHERE "tenantId" = $1) AS outbox_count,
         (SELECT COUNT(*) FROM "IdempotencyKey" WHERE "tenantId" = $1) AS idempotency_count,
-        (SELECT COUNT(*) FROM "User" WHERE "id" = $7) AS fixture_user_count`,
+        (SELECT COUNT(*) FROM "User" WHERE "id" = $5) AS fixture_user_count`,
       [
         fixture.tenantId,
         fixture.membershipId,
-        fixture.tenantRoleId,
-        fixture.globalRoleId,
-        fixture.globalAssignmentId,
-        fixture.otherAssignmentId,
+        roleIds,
+        assignmentIds,
         fixture.otherUserId,
       ],
     );
@@ -744,6 +809,36 @@ async function main() {
     }
     console.log(
       'authorization_access_status=PASS|tenant_role_visible=true|global_role_visible=true|permission_visible=true|allowlisted=true',
+    );
+
+    stage = 'administrative_mfa';
+    const mfaResponse = await request(
+      `${apiBaseUrl}/api/v1/authorization/users/${fixture.otherUserId}/sessions/revoke`,
+      {
+        method: 'POST',
+        headers: {
+          origin,
+          'content-type': 'application/json',
+          'x-csrf-token': loggedIn.csrfToken,
+          'idempotency-key': fixture.mfaIdempotencyKey,
+        },
+        body: JSON.stringify({}),
+      },
+      loggedIn.jar,
+    );
+    const mfaBody = await readJson(mfaResponse, 'ADMINISTRATIVE_MFA');
+    const mfaErrorCode = mfaBody?.error?.code ?? 'none';
+    if (
+      mfaResponse.status !== 403 ||
+      mfaBody?.success !== false ||
+      mfaErrorCode !== 'MFA_STEP_UP_REQUIRED'
+    ) {
+      throw verifierFailure(
+        `ADMINISTRATIVE_MFA_DENIAL_INVALID_${mfaResponse.status}_${mfaErrorCode}`,
+      );
+    }
+    console.log(
+      'authorization_mfa_sensitive_status=PASS|missing_mfa_denied=true|http=403|error_code=MFA_STEP_UP_REQUIRED|provider_claim_not_fabricated=true',
     );
 
     stage = 'global_role_rls';
