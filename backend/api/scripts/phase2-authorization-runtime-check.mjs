@@ -317,6 +317,25 @@ async function assertGlobalAssignmentRls(runtime, userId, otherUserId) {
   }
 }
 
+async function logoutIfNeeded(loggedIn) {
+  if (!loggedIn?.jar?.has(cookieName)) return;
+  try {
+    const response = await request(
+      `${apiBaseUrl}/api/v1/auth/logout`,
+      {
+        method: 'POST',
+        headers: { origin, 'x-csrf-token': loggedIn.csrfToken },
+      },
+      loggedIn.jar,
+    );
+    if (response.status !== 204) {
+      console.error('authorization_session_cleanup_status=FAIL');
+    }
+  } catch {
+    console.error('authorization_session_cleanup_status=FAIL');
+  }
+}
+
 async function cleanupFixtures(admin, fixture, userId) {
   await admin.query('BEGIN');
   try {
@@ -476,6 +495,7 @@ async function main() {
     );
     process.exitCode = 1;
   } finally {
+    await logoutIfNeeded(loggedIn);
     if (fixture) {
       try {
         const userId = loggedIn?.session?.user?.id;
