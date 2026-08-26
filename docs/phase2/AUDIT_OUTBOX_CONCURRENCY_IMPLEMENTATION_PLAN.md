@@ -102,3 +102,30 @@ The verifier now asks PostgreSQL to evaluate `"availableAt" > CURRENT_TIMESTAMP`
 The first PostgreSQL-side verifier comparison still observed `FAILED`, `attempts=1`, with `availableAt` not in the future. Source inspection found that `OutboxService.recordFailure()` calculated the retry timestamp with the Node.js application clock and then wrote it through Prisma to a PostgreSQL `TIMESTAMP(3)` column. The runtime verifier correctly compared using PostgreSQL time, so the implementation and assertion were using different clock representations.
 
 The nonterminal failure path now writes `availableAt = CURRENT_TIMESTAMP + retry_delay` in PostgreSQL through a parameterized update, while preserving the current status predicate, lease-token predicate, failure error, claimed-at clearing, and existing terminal dead-letter update path. A regression test verifies that the retry path uses the database clock and retains the lease guard. No role privilege, RLS policy, migration, data, or worker state-machine semantics were weakened or changed intentionally; the source correction remains pending Windows runtime acceptance.
+
+## 2.8 Bounded Windows reliability evidence — accepted workstream result
+
+The latest bounded Windows run reached the complete reliability sequence under the deliberately separated connections: the protected migration connection administered generated fixtures, while the restricted runtime connection executed the role probe, real API assertions, and RLS checks. The exact user-supplied markers were:
+
+```text
+audit_rls_role_diagnostic=superuser=false|bypassrls=false|enabled=true|forced=true
+phase2_reliability_fixture_connection=admin_migration_url|runtime_assertions=database_url
+audit_api_mutation_diagnostic=http=200|success_field=boolean|success_value=true|error_code=none
+audit_outbox_source_status=PASS|http=200|server_derived_context=true
+audit_outbox_delivery_status=PASS|status=PROCESSED|attempts=1
+audit_outbox_duplicate_status=PASS|job_states=completed,completed|attempts_unchanged=true|audit_count=1
+audit_rls_diagnostic=same_tenant_visible|cross_tenant_hidden
+audit_rls_write_diagnostic=cross_tenant_write_blocked
+audit_rls_status=PASS|same_tenant_visible=true|cross_tenant_hidden=true|cross_tenant_write_blocked=true
+audit_append_only_diagnostic=update_boundary=object_privilege|delete_boundary=rls_filtered|row_count=1
+audit_append_only_status=PASS|update_blocked=true|delete_blocked=true|row_unchanged=true
+audit_retention_status=PASS|expired_purged=true|legal_hold_retained=true
+audit_outbox_retry_diagnostic=wait=observed|status=FAILED|attempts=1|future_backoff=true
+audit_outbox_retry_status=PASS|first_attempt_failed=true|future_backoff=true
+audit_outbox_dead_letter_status=PASS|attempts=5|terminal=true
+tenant_switch_concurrency_status=PASS|winners=1|conflicts=1|context_consistent=true
+phase2_reliability_cleanup_status=PASS|audit_residue=0|outbox_residue=0|active_fixture_tenants=0|active_fixture_memberships=0|active_fixture_contexts=0
+phase2_reliability_runtime_result=PASS
+```
+
+This is accepted as the real Windows runtime result for the audit/outbox/concurrency reliability workstream. It proves least-privilege role enforcement, forced AuditEvent RLS, the real API mutation, server-derived tenant context, linked audit/outbox creation, delivery, duplicate suppression, same-tenant visibility, cross-tenant isolation and write denial, append-only protection, retention/legal hold, retry backoff, dead-letter transition, same-session compare-and-set concurrency, and zero-residue cleanup. It does not close Phase 2. Authorization/MFA, invitation and administrative onboarding, generated-client completeness, frontend English/Arabic RTL/LTR behavior, broader abuse and identity-data lifecycle controls, complete integration topology and CI evidence, and future supported Linux KMS/object-storage/TLS/operations deployment remain open. Phase 3 remains not started and production readiness is not established.
