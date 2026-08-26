@@ -17,6 +17,16 @@ function createAudit() {
   };
 }
 
+function createAuthorization() {
+  return {
+    evaluateTenantSwitch: jest.fn().mockReturnValue({
+      allowed: true,
+      policy: 'CanSwitchTenant',
+      permissionKey: 'tenant.switch',
+    }),
+  };
+}
+
 function createFixture(overrides: Record<string, unknown> = {}) {
   const transaction = {
     user: {
@@ -54,12 +64,18 @@ function createFixture(overrides: Record<string, unknown> = {}) {
     ),
   };
   const audit = createAudit();
+  const authorization = createAuthorization();
   Object.assign(transaction, overrides);
   return {
     transaction,
     prisma,
     audit,
-    service: new MembershipService(prisma as never, audit as never),
+    authorization,
+    service: new MembershipService(
+      prisma as never,
+      audit as never,
+      authorization as never,
+    ),
   };
 }
 
@@ -83,6 +99,19 @@ describe('MembershipService', () => {
       contextVersion: 1,
     });
 
+    expect(fixture.authorization.evaluateTenantSwitch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: expect.objectContaining({
+          userId: USER_ID,
+          userStatus: 'ACTIVE',
+        }),
+        membership: expect.objectContaining({
+          id: MEMBERSHIP_ID,
+          tenantId: TARGET_TENANT_ID,
+          status: 'ACTIVE',
+        }),
+      }),
+    );
     expect(fixture.prisma.bindTenantContext).toHaveBeenCalledWith(
       fixture.transaction,
       {

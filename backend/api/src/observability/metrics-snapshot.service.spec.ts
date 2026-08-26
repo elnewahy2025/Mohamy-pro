@@ -32,10 +32,10 @@ describe('MetricsSnapshotService', () => {
       { status: 'PROCESSED', _count: { _all: 8 } },
     ]);
     prisma.withOutboxDispatcherContext.mockImplementation(
-      async (
-        _operationId: string,
-        callback: (transaction: unknown) => unknown,
-      ) => callback({ outboxMessage: { groupBy: outboxGroupBy } }),
+      (_operationId: string, callback: (transaction: unknown) => unknown) =>
+        Promise.resolve(
+          callback({ outboxMessage: { groupBy: outboxGroupBy } }),
+        ),
     );
     service = new MetricsSnapshotService(
       metrics as never,

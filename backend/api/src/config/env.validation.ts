@@ -40,6 +40,9 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   RATE_LIMIT_ENABLED: boolean;
   RATE_LIMIT_WINDOW_SECONDS: number;
   RATE_LIMIT_MAX_REQUESTS: number;
+  MFA_REQUIRED_AMR: string;
+  MFA_REQUIRED_ACR?: string;
+  MFA_MAX_AGE_SECONDS: number;
   METRICS_AUTH_TOKEN?: string;
   OTEL_ENABLED: boolean;
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
@@ -205,6 +208,9 @@ export function validateEnvironment(
           SESSION_ABSOLUTE_TTL_SECONDS: undefined,
           SESSION_SECURE_COOKIE: undefined,
           CSRF_HEADER_NAME: undefined,
+          MFA_REQUIRED_AMR: undefined,
+          MFA_REQUIRED_ACR: undefined,
+          MFA_MAX_AGE_SECONDS: undefined,
         }
       : {
           REDIS_URL: 'redis://localhost:56379',
@@ -232,6 +238,9 @@ export function validateEnvironment(
           SESSION_ABSOLUTE_TTL_SECONDS: 43_200,
           SESSION_SECURE_COOKIE: false,
           CSRF_HEADER_NAME: 'X-CSRF-Token',
+          MFA_REQUIRED_AMR: 'mfa',
+          MFA_REQUIRED_ACR: undefined,
+          MFA_MAX_AGE_SECONDS: 900,
         };
 
   const storageEncryptionMode = readStorageEncryptionMode(
@@ -330,6 +339,16 @@ export function validateEnvironment(
   const csrfHeaderName = readHeaderName(
     raw.CSRF_HEADER_NAME ?? defaults.CSRF_HEADER_NAME,
   );
+  const mfaRequiredAmr =
+    readString(raw.MFA_REQUIRED_AMR) ?? defaults.MFA_REQUIRED_AMR;
+  const mfaRequiredAcr =
+    readString(raw.MFA_REQUIRED_ACR) ?? defaults.MFA_REQUIRED_ACR;
+  const mfaMaxAgeSeconds = readPositiveInteger(
+    raw.MFA_MAX_AGE_SECONDS,
+    defaults.MFA_MAX_AGE_SECONDS ?? 900,
+    'MFA_MAX_AGE_SECONDS',
+    900,
+  );
   if (!oidcScopes.split(/\s+/).includes('openid')) {
     throw new Error('OIDC_SCOPES must include openid');
   }
@@ -402,6 +421,12 @@ export function validateEnvironment(
     }
     if (raw.SESSION_ABSOLUTE_TTL_SECONDS === undefined) {
       throw new Error('SESSION_ABSOLUTE_TTL_SECONDS is required in production');
+    }
+    if (raw.MFA_REQUIRED_AMR === undefined || !mfaRequiredAmr) {
+      throw new Error('MFA_REQUIRED_AMR is required in production');
+    }
+    if (raw.MFA_MAX_AGE_SECONDS === undefined) {
+      throw new Error('MFA_MAX_AGE_SECONDS is required in production');
     }
     if (raw.SESSION_COOKIE_NAME === undefined) {
       throw new Error('SESSION_COOKIE_NAME is required in production');
@@ -545,6 +570,9 @@ export function validateEnvironment(
     RATE_LIMIT_ENABLED: rateLimitEnabled,
     RATE_LIMIT_WINDOW_SECONDS: rateLimitWindowSeconds,
     RATE_LIMIT_MAX_REQUESTS: rateLimitMaxRequests,
+    MFA_REQUIRED_AMR: requiredValue('MFA_REQUIRED_AMR', mfaRequiredAmr),
+    ...(mfaRequiredAcr ? { MFA_REQUIRED_ACR: mfaRequiredAcr } : {}),
+    MFA_MAX_AGE_SECONDS: mfaMaxAgeSeconds,
     ...(values.METRICS_AUTH_TOKEN
       ? { METRICS_AUTH_TOKEN: values.METRICS_AUTH_TOKEN }
       : {}),

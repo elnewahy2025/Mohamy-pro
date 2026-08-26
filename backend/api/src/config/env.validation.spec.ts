@@ -14,6 +14,9 @@ describe('validateEnvironment telemetry settings', () => {
     expect(environment.RATE_LIMIT_ENABLED).toBe(true);
     expect(environment.RATE_LIMIT_WINDOW_SECONDS).toBe(60);
     expect(environment.RATE_LIMIT_MAX_REQUESTS).toBe(300);
+    expect(environment.MFA_REQUIRED_AMR).toBe('mfa');
+    expect(environment.MFA_REQUIRED_ACR).toBeUndefined();
+    expect(environment.MFA_MAX_AGE_SECONDS).toBe(900);
     expect(environment.OTEL_ENABLED).toBe(false);
     expect(environment.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
     expect(environment.OTEL_SERVICE_NAME).toBe('mohamy-api');
@@ -104,6 +107,8 @@ describe('validateEnvironment telemetry settings', () => {
       SESSION_IDLE_TTL_SECONDS: 1800,
       SESSION_ABSOLUTE_TTL_SECONDS: 43200,
       SESSION_SECURE_COOKIE: true,
+      MFA_REQUIRED_AMR: 'mfa',
+      MFA_MAX_AGE_SECONDS: 900,
     });
 
     expect(environment.S3_VERSIONING_ENABLED).toBe(true);
@@ -161,6 +166,9 @@ describe('validateEnvironment authentication settings', () => {
     SESSION_IDLE_TTL_SECONDS: 1800,
     SESSION_ABSOLUTE_TTL_SECONDS: 43200,
     SESSION_SECURE_COOKIE: true,
+    MFA_REQUIRED_AMR: 'mfa',
+    MFA_REQUIRED_ACR: 'urn:mohamy:loa:2',
+    MFA_MAX_AGE_SECONDS: 900,
   };
 
   it('provides the approved development authentication defaults', () => {
@@ -183,6 +191,9 @@ describe('validateEnvironment authentication settings', () => {
       productionEnvironment.SESSION_ENCRYPTION_KEY,
     );
     expect(environment.SESSION_SECURE_COOKIE).toBe(true);
+    expect(environment.MFA_REQUIRED_AMR).toBe('mfa');
+    expect(environment.MFA_REQUIRED_ACR).toBe('urn:mohamy:loa:2');
+    expect(environment.MFA_MAX_AGE_SECONDS).toBe(900);
   });
 
   it('rejects a production authentication configuration with HTTP endpoints', () => {
@@ -192,6 +203,30 @@ describe('validateEnvironment authentication settings', () => {
         OIDC_ISSUER_URL: 'http://issuer.invalid/realms/mohamy',
       }),
     ).toThrow('OIDC_ISSUER_URL must use HTTPS in production');
+  });
+
+  it('rejects an invalid MFA age', () => {
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        MFA_MAX_AGE_SECONDS: 901,
+      }),
+    ).toThrow('MFA_MAX_AGE_SECONDS must be an integer');
+  });
+
+  it('requires MFA assurance settings in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        MFA_REQUIRED_AMR: undefined,
+      }),
+    ).toThrow('MFA_REQUIRED_AMR is required in production');
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        MFA_MAX_AGE_SECONDS: undefined,
+      }),
+    ).toThrow('MFA_MAX_AGE_SECONDS is required in production');
   });
 
   it('rejects an invalid session encryption key', () => {

@@ -37,6 +37,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   TENANT_SWITCH_CONFLICT:
     'The session context changed; retry with a new request.',
   FORBIDDEN: 'The requested operation is not permitted.',
+  AUTHORIZATION_DENIED: 'The requested operation is not permitted.',
+  MFA_STEP_UP_REQUIRED:
+    'Additional authentication is required for this operation.',
 
   NOT_FOUND: 'The requested resource was not found.',
   CONFLICT: 'The request conflicts with the current state.',

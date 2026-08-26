@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import type { ApiErrorEnvelope } from '../common/http/api-envelope';
+import type { AuthorizationDecision } from '../authorization/authorization.types';
 
 export interface OidcDiscoveryDocument {
   issuer: string;
@@ -63,6 +64,9 @@ export interface AuthenticatedSession {
   lastUsedAt: Date;
   idleExpiresAt: Date;
   absoluteExpiresAt: Date;
+  mfaVerifiedAt: Date | null;
+  mfaAcr: string | null;
+  mfaAmr: unknown;
   activeMembershipCount: number;
   activeTenantId: string | null;
   activeMembershipId: string | null;
@@ -72,6 +76,7 @@ export interface AuthenticatedSession {
 export interface AuthenticatedRequest extends Request {
   authSession?: AuthenticatedSession;
   phase2ErrorEnvelope?: ApiErrorEnvelope;
+  authorizationDecision?: AuthorizationDecision;
 }
 
 export interface AuthSessionView {

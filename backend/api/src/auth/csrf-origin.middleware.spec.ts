@@ -12,7 +12,13 @@ const session: AuthenticatedSession = {
   lastUsedAt: new Date(),
   idleExpiresAt: new Date(Date.now() + 1_000),
   absoluteExpiresAt: new Date(Date.now() + 10_000),
+  mfaVerifiedAt: null,
+  mfaAcr: null,
+  mfaAmr: [],
   activeMembershipCount: 1,
+  activeTenantId: null,
+  activeMembershipId: null,
+  contextVersion: 0,
 };
 
 function makeMiddleware(found: AuthenticatedSession | null = session) {

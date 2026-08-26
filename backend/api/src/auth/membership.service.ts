@@ -6,6 +6,7 @@ import {
   TenantContextRequiredError,
   TenantSwitchConflictError,
 } from './membership.errors';
+import { AuthorizationService } from '../authorization/authorization.service';
 
 export interface TenantSwitchInput {
   sessionId: string;
@@ -33,6 +34,7 @@ export class MembershipService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly authorization: AuthorizationService,
   ) {}
 
   async switchTenant(input: TenantSwitchInput): Promise<TenantSwitchResult> {
@@ -69,6 +71,29 @@ export class MembershipService {
             (membership.activeUntil !== null && membership.activeUntil < now) ||
             membership.tenant.status !== 'ACTIVE'
           ) {
+            throw new TenantContextRequiredError();
+          }
+
+          stage = 'policy_evaluation';
+          const decision = this.authorization.evaluateTenantSwitch({
+            subject: {
+              userId: input.userId,
+              userStatus: user.status,
+              activeTenantId: input.sourceTenantId,
+              activeMembershipId: input.sourceMembershipId,
+            },
+            membership: {
+              id: membership.id,
+              tenantId: membership.tenantId,
+              userId: membership.userId,
+              status: membership.status,
+              activeFrom: membership.activeFrom,
+              activeUntil: membership.activeUntil,
+              tenantStatus: membership.tenant.status,
+            },
+            now,
+          });
+          if (!decision.allowed) {
             throw new TenantContextRequiredError();
           }
 

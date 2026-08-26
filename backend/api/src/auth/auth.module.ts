@@ -12,9 +12,10 @@ import { IdempotencyModule } from '../infrastructure/idempotency/idempotency.mod
 import { Phase2BusinessInterceptor } from '../common/http/phase2-business.interceptor';
 import { MembershipService } from './membership.service';
 import { TenantSessionController } from './tenant-session.controller';
+import { AuthorizationModule } from '../authorization/authorization.module';
 
 @Module({
-  imports: [IdempotencyModule],
+  imports: [IdempotencyModule, AuthorizationModule],
   controllers: [AuthController, TenantSessionController],
   providers: [
     AuthService,
