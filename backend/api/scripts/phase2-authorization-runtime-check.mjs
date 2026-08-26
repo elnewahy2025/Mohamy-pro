@@ -59,6 +59,21 @@ function requireStatus(response, expected, label) {
   }
 }
 
+function databaseErrorCode(error) {
+  return error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    typeof error.code === 'string'
+    ? error.code
+    : 'none';
+}
+
+function verifierFailure(code) {
+  const error = new Error(code);
+  error.verifierCode = code;
+  return error;
+}
+
 async function request(url, options = {}, jar) {
   const headers = new Headers(options.headers ?? {});
   const cookie = jar?.header();
@@ -289,9 +304,42 @@ async function provisionFixtures(admin, userId) {
   return fixture;
 }
 
-async function assertGlobalAssignmentRls(runtime, userId, otherUserId) {
+async function assertGlobalAssignmentRls(
+  runtime,
+  userId,
+  otherUserId,
+  fixtureAssignmentId,
+  otherAssignmentId,
+) {
   await runtime.query('BEGIN');
   try {
+    const catalog = await runtime.query(
+      `SELECT
+        has_table_privilege(current_user, 'public."GlobalRoleAssignment"', 'SELECT') AS select_granted,
+        c.relrowsecurity AS rls_enabled,
+        c.relforcerowsecurity AS rls_forced,
+        (
+          SELECT COUNT(*)::int
+          FROM pg_policies
+          WHERE schemaname = 'public'
+            AND tablename = 'GlobalRoleAssignment'
+            AND cmd = 'SELECT'
+        ) AS select_policy_count,
+        r.rolsuper AS superuser,
+        r.rolbypassrls AS bypassrls,
+        r.rolcanlogin AS canlogin
+       FROM pg_class AS c
+       JOIN pg_namespace AS n ON n.oid = c.relnamespace
+       JOIN pg_roles AS r ON r.rolname = current_user
+       WHERE n.nspname = 'public' AND c.relname = 'GlobalRoleAssignment'`,
+    );
+    const catalogState = catalog.rows[0];
+    if (!catalogState)
+      throw verifierFailure('GLOBAL_ROLE_ASSIGNMENT_CATALOG_UNAVAILABLE');
+    console.log(
+      `authorization_global_role_catalog=select=${catalogState.select_granted}|rls_enabled=${catalogState.rls_enabled}|rls_forced=${catalogState.rls_forced}|select_policy_count=${catalogState.select_policy_count}|superuser=${catalogState.superuser}|bypassrls=${catalogState.bypassrls}|canlogin=${catalogState.canlogin}`,
+    );
+
     await runtime.query(
       `SELECT
         set_config('app.tenant_id', '', true),
@@ -300,11 +348,32 @@ async function assertGlobalAssignmentRls(runtime, userId, otherUserId) {
         set_config('app.operation_id', '', true),
         set_config('app.global_operation', 'false', true)`,
     );
-    const unscoped = await runtime.query(
-      'SELECT "userId" FROM "GlobalRoleAssignment"',
+    const unscopedContext = await runtime.query(
+      'SELECT public.app_membership_selection_context_is_valid() AS context_valid',
     );
+    const unscopedHelper = unscopedContext.rows[0]?.context_valid === true;
+    console.log(
+      `authorization_global_role_context=unscoped|helper=${unscopedHelper}`,
+    );
+    if (unscopedHelper)
+      throw verifierFailure('GLOBAL_ROLE_UNSCOPED_CONTEXT_VALID');
+
+    let unscoped;
+    try {
+      unscoped = await runtime.query(
+        'SELECT "userId" FROM "GlobalRoleAssignment"',
+      );
+      console.log(
+        `authorization_global_role_rls_query=unscoped|status=PASS|row_count=${unscoped.rowCount}`,
+      );
+    } catch (error) {
+      console.error(
+        `authorization_global_role_rls_query=unscoped|status=ERROR|sqlstate=${databaseErrorCode(error)}`,
+      );
+      throw error;
+    }
     if (unscoped.rowCount !== 0) {
-      throw new Error('GLOBAL_ROLE_ASSIGNMENT_UNSCOPED_READ_FAILED');
+      throw verifierFailure('GLOBAL_ROLE_ASSIGNMENT_UNSCOPED_READ_FAILED');
     }
 
     await runtime.query(
@@ -316,18 +385,50 @@ async function assertGlobalAssignmentRls(runtime, userId, otherUserId) {
         set_config('app.global_operation', 'false', true)`,
       [userId, randomUUID()],
     );
-    const visible = await runtime.query(
-      'SELECT "userId" FROM "GlobalRoleAssignment" ORDER BY "userId"',
+    const authenticatedContext = await runtime.query(
+      'SELECT public.app_membership_selection_context_is_valid() AS context_valid',
     );
-    const ownVisible = visible.rows.some((row) => row.userId === userId);
-    const otherVisible = visible.rows.some((row) => row.userId === otherUserId);
-    if (!ownVisible || otherVisible || visible.rowCount !== 1) {
-      throw new Error('GLOBAL_ROLE_ASSIGNMENT_RLS_BOUNDARY_FAILED');
+    const authenticatedHelper =
+      authenticatedContext.rows[0]?.context_valid === true;
+    console.log(
+      `authorization_global_role_context=authenticated|helper=${authenticatedHelper}`,
+    );
+    if (!authenticatedHelper) {
+      throw verifierFailure('GLOBAL_ROLE_AUTHENTICATED_CONTEXT_INVALID');
+    }
+
+    let visible;
+    try {
+      visible = await runtime.query(
+        'SELECT "id", "userId" FROM "GlobalRoleAssignment" ORDER BY "userId", "id"',
+      );
+      console.log(
+        `authorization_global_role_rls_query=authenticated|status=PASS|row_count=${visible.rowCount}`,
+      );
+    } catch (error) {
+      console.error(
+        `authorization_global_role_rls_query=authenticated|status=ERROR|sqlstate=${databaseErrorCode(error)}`,
+      );
+      throw error;
+    }
+    const ownVisible = visible.rows.some(
+      (row) => row.id === fixtureAssignmentId && row.userId === userId,
+    );
+    const otherVisible = visible.rows.some(
+      (row) => row.id === otherAssignmentId || row.userId === otherUserId,
+    );
+    if (!ownVisible || otherVisible) {
+      throw verifierFailure('GLOBAL_ROLE_ASSIGNMENT_RLS_BOUNDARY_FAILED');
     }
     await runtime.query('COMMIT');
-    return { ownVisible, otherVisible, unscopedHidden: true };
+    return {
+      ownVisible,
+      otherVisible,
+      visibleRowCount: visible.rowCount,
+      unscopedHidden: true,
+    };
   } catch (error) {
-    await runtime.query('ROLLBACK');
+    await runtime.query('ROLLBACK').catch(() => undefined);
     throw error;
   }
 }
@@ -351,12 +452,117 @@ async function logoutIfNeeded(loggedIn) {
   }
 }
 
+async function cleanupStaleAuthorizationFixtures(admin, protectedUserId) {
+  const staleTenants = await admin.query(
+    `SELECT "id"
+     FROM "Tenant"
+     WHERE "slug" LIKE 'phase2-authz-%'
+       AND "name" = 'Phase 2 authorization runtime fixture'
+       AND "status" <> 'ARCHIVED'`,
+  );
+  let cleanedTenants = 0;
+  let retainedAuditEvents = 0;
+  for (const tenant of staleTenants.rows) {
+    await admin.query('BEGIN');
+    try {
+      const roles = await admin.query(
+        `SELECT "id"
+         FROM "Role"
+         WHERE "tenantId" = $1
+            OR ("tenantId" IS NULL AND "key" LIKE 'phase2_runtime_global_%')`,
+        [tenant.id],
+      );
+      const memberships = await admin.query(
+        'SELECT "id", "userId" FROM "Membership" WHERE "tenantId" = $1',
+        [tenant.id],
+      );
+      const fixtureUserIds = memberships.rows
+        .map((membership) => membership.userId)
+        .filter((userId) => userId !== protectedUserId);
+      const roleIds = roles.rows.map((role) => role.id);
+      retainedAuditEvents += Number(
+        (
+          await admin.query(
+            'SELECT COUNT(*)::int AS count FROM "AuditEvent" WHERE "tenantId" = $1',
+            [tenant.id],
+          )
+        ).rows[0]?.count ?? 0,
+      );
+      await admin.query('DELETE FROM "OutboxMessage" WHERE "tenantId" = $1', [
+        tenant.id,
+      ]);
+      await admin.query('DELETE FROM "IdempotencyKey" WHERE "tenantId" = $1', [
+        tenant.id,
+      ]);
+      await admin.query('DELETE FROM "AccessDenial" WHERE "tenantId" = $1', [
+        tenant.id,
+      ]);
+      await admin.query('DELETE FROM "MembershipRole" WHERE "tenantId" = $1', [
+        tenant.id,
+      ]);
+      await admin.query(
+        'DELETE FROM "GlobalRoleAssignment" WHERE "roleId" = ANY($1::text[])',
+        [roleIds],
+      );
+      await admin.query(
+        'DELETE FROM "RolePermission" WHERE "roleId" = ANY($1::text[])',
+        [roleIds],
+      );
+      await admin.query(
+        `UPDATE "AppSession"
+         SET "activeTenantId" = NULL,
+             "activeMembershipId" = NULL,
+             "contextVersion" = "contextVersion" + 1
+         WHERE "activeTenantId" = $1`,
+        [tenant.id],
+      );
+      await admin.query(
+        `UPDATE "Membership"
+         SET "status" = 'REMOVED',
+             "removedAt" = COALESCE("removedAt", CURRENT_TIMESTAMP),
+             "updatedAt" = CURRENT_TIMESTAMP
+         WHERE "tenantId" = $1`,
+        [tenant.id],
+      );
+      await admin.query(
+        `UPDATE "Tenant"
+         SET "status" = 'ARCHIVED',
+             "archivedAt" = COALESCE("archivedAt", CURRENT_TIMESTAMP),
+             "updatedAt" = CURRENT_TIMESTAMP
+         WHERE "id" = $1`,
+        [tenant.id],
+      );
+      if (roleIds.length > 0) {
+        await admin.query('DELETE FROM "Role" WHERE "id" = ANY($1::text[])', [
+          roleIds,
+        ]);
+      }
+      if (fixtureUserIds.length > 0) {
+        await admin.query(
+          `DELETE FROM "User"
+           WHERE "id" = ANY($1::text[])
+             AND "status" = 'PENDING'
+             AND NOT EXISTS (SELECT 1 FROM "ExternalIdentity" WHERE "userId" = "User"."id")
+             AND NOT EXISTS (SELECT 1 FROM "AppSession" WHERE "userId" = "User"."id")
+             AND NOT EXISTS (SELECT 1 FROM "Membership" WHERE "userId" = "User"."id")
+             AND NOT EXISTS (SELECT 1 FROM "IdempotencyKey" WHERE "userId" = "User"."id")
+             AND NOT EXISTS (SELECT 1 FROM "AuditEvent" WHERE "actorUserId" = "User"."id")`,
+          [fixtureUserIds],
+        );
+      }
+      await admin.query('COMMIT');
+      cleanedTenants += 1;
+    } catch (error) {
+      await admin.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    }
+  }
+  return { cleanedTenants, retainedAuditEvents };
+}
+
 async function cleanupFixtures(admin, fixture, userId) {
   await admin.query('BEGIN');
   try {
-    await admin.query('DELETE FROM "AuditEvent" WHERE "tenantId" = $1', [
-      fixture.tenantId,
-    ]);
     await admin.query('DELETE FROM "OutboxMessage" WHERE "tenantId" = $1', [
       fixture.tenantId,
     ]);
@@ -379,12 +585,30 @@ async function cleanupFixtures(admin, fixture, userId) {
       fixture.tenantRoleId,
       fixture.globalRoleId,
     ]);
-    await admin.query('DELETE FROM "Membership" WHERE "id" = $1', [
-      fixture.membershipId,
-    ]);
-    await admin.query('DELETE FROM "Tenant" WHERE "id" = $1', [
-      fixture.tenantId,
-    ]);
+    await admin.query(
+      `UPDATE "AppSession"
+       SET "activeTenantId" = NULL,
+           "activeMembershipId" = NULL,
+           "contextVersion" = "contextVersion" + 1
+       WHERE "userId" = $1 AND "activeTenantId" = $2`,
+      [userId, fixture.tenantId],
+    );
+    await admin.query(
+      `UPDATE "Membership"
+       SET "status" = 'REMOVED',
+           "removedAt" = COALESCE("removedAt", CURRENT_TIMESTAMP),
+           "updatedAt" = CURRENT_TIMESTAMP
+       WHERE "id" = $1 AND "tenantId" = $2`,
+      [fixture.membershipId, fixture.tenantId],
+    );
+    await admin.query(
+      `UPDATE "Tenant"
+       SET "status" = 'ARCHIVED',
+           "archivedAt" = COALESCE("archivedAt", CURRENT_TIMESTAMP),
+           "updatedAt" = CURRENT_TIMESTAMP
+       WHERE "id" = $1`,
+      [fixture.tenantId],
+    );
     await admin.query('DELETE FROM "User" WHERE "id" = $1', [
       fixture.otherUserId,
     ]);
@@ -395,8 +619,8 @@ async function cleanupFixtures(admin, fixture, userId) {
     await admin.query('COMMIT');
     const residue = await admin.query(
       `SELECT
-        (SELECT COUNT(*) FROM "Tenant" WHERE "id" = $1) AS tenant_count,
-        (SELECT COUNT(*) FROM "Membership" WHERE "id" = $2) AS membership_count,
+        (SELECT COUNT(*) FROM "Tenant" WHERE "id" = $1 AND "status" <> 'ARCHIVED') AS active_tenant_count,
+        (SELECT COUNT(*) FROM "Membership" WHERE "id" = $2 AND "status" <> 'REMOVED') AS active_membership_count,
         (SELECT COUNT(*) FROM "Role" WHERE "id" IN ($3, $4)) AS role_count,
         (SELECT COUNT(*) FROM "MembershipRole" WHERE "membershipId" = $2) AS membership_role_count,
         (SELECT COUNT(*) FROM "GlobalRoleAssignment" WHERE "id" IN ($5, $6)) AS global_assignment_count,
@@ -414,10 +638,26 @@ async function cleanupFixtures(admin, fixture, userId) {
         fixture.otherUserId,
       ],
     );
-    const counts = Object.values(residue.rows[0] ?? {}).map(Number);
-    if (counts.some((count) => count !== 0)) {
-      throw new Error('AUTHORIZATION_FIXTURE_RESIDUE');
+    const state = Object.fromEntries(
+      Object.entries(residue.rows[0] ?? {}).map(([key, value]) => [
+        key,
+        Number(value),
+      ]),
+    );
+    if (
+      state.active_tenant_count !== 0 ||
+      state.active_membership_count !== 0 ||
+      state.role_count !== 0 ||
+      state.membership_role_count !== 0 ||
+      state.global_assignment_count !== 0 ||
+      state.outbox_count !== 0 ||
+      state.idempotency_count !== 0 ||
+      state.fixture_user_count !== 0 ||
+      state.audit_count > 1
+    ) {
+      throw verifierFailure('AUTHORIZATION_FIXTURE_RESIDUE');
     }
+    return state;
   } catch (error) {
     await admin.query('ROLLBACK').catch(() => undefined);
     throw error;
@@ -439,8 +679,15 @@ async function main() {
     await admin.connect();
     await runtime.connect();
     loggedIn = await login();
-    stage = 'provision_fixtures';
     const userId = loggedIn.session.user.id;
+    stage = 'stale_fixture_cleanup';
+    const staleCleanup = await cleanupStaleAuthorizationFixtures(admin, userId);
+    if (staleCleanup.cleanedTenants > 0) {
+      console.log(
+        `authorization_stale_fixture_cleanup_status=PASS|archived_tenants=${staleCleanup.cleanedTenants}|retained_audit_events=${staleCleanup.retainedAuditEvents}|audit_append_only=true`,
+      );
+    }
+    stage = 'provision_fixtures';
     fixture = await provisionFixtures(admin, userId);
 
     stage = 'tenant_switch';
@@ -504,6 +751,8 @@ async function main() {
       runtime,
       userId,
       fixture.otherUserId,
+      fixture.globalAssignmentId,
+      fixture.otherAssignmentId,
     );
     const policyState = await admin.query(
       `SELECT c.relrowsecurity AS enabled, c.relforcerowsecurity AS forced
@@ -519,7 +768,7 @@ async function main() {
       throw new Error('GLOBAL_ROLE_ASSIGNMENT_RLS_STATE_INVALID');
     }
     console.log(
-      `authorization_global_role_rls_status=PASS|own_assignment_visible=${rls.ownVisible}|other_assignment_hidden=${rls.otherVisible === false}|unscoped_hidden=${rls.unscopedHidden}|enabled=true|forced=true`,
+      `authorization_global_role_rls_status=PASS|own_assignment_visible=${rls.ownVisible}|other_assignment_hidden=${rls.otherVisible === false}|unscoped_hidden=${rls.unscopedHidden}|visible_row_count=${rls.visibleRowCount}|enabled=true|forced=true`,
     );
 
     stage = 'logout';
@@ -534,13 +783,15 @@ async function main() {
     requireStatus(logout, 204, 'LOGOUT');
     console.log('authorization_session_cleanup_status=PASS|logout=204');
     stage = 'cleanup';
-    await cleanupFixtures(admin, fixture, userId);
+    const cleanupState = await cleanupFixtures(admin, fixture, userId);
     fixture = undefined;
-    console.log('authorization_fixture_cleanup_status=PASS');
+    console.log(
+      `authorization_fixture_cleanup_status=PASS|audit_retained=${cleanupState.audit_count}|audit_append_only=true|active_fixture_tenants=${cleanupState.active_tenant_count}|active_fixture_memberships=${cleanupState.active_membership_count}|outbox_residue=${cleanupState.outbox_count}|idempotency_residue=${cleanupState.idempotency_count}`,
+    );
     console.log('phase2_authorization_runtime_result=PASS');
   } catch (error) {
     console.error(
-      `phase2_authorization_runtime_result=FAIL|stage=${stage}|error_class=${error instanceof Error ? error.name : 'UnknownError'}`,
+      `phase2_authorization_runtime_result=FAIL|stage=${stage}|error_class=${error instanceof Error ? error.name : 'UnknownError'}|error_code=${databaseErrorCode(error)}|verifier_code=${error && typeof error === 'object' && 'verifierCode' in error && typeof error.verifierCode === 'string' ? error.verifierCode : 'none'}`,
     );
     process.exitCode = 1;
   } finally {
