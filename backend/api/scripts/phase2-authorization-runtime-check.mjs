@@ -393,8 +393,33 @@ async function cleanupFixtures(admin, fixture, userId) {
       [userId, fixture.originalUserStatus],
     );
     await admin.query('COMMIT');
+    const residue = await admin.query(
+      `SELECT
+        (SELECT COUNT(*) FROM "Tenant" WHERE "id" = $1) AS tenant_count,
+        (SELECT COUNT(*) FROM "Membership" WHERE "id" = $2) AS membership_count,
+        (SELECT COUNT(*) FROM "Role" WHERE "id" IN ($3, $4)) AS role_count,
+        (SELECT COUNT(*) FROM "MembershipRole" WHERE "membershipId" = $2) AS membership_role_count,
+        (SELECT COUNT(*) FROM "GlobalRoleAssignment" WHERE "id" IN ($5, $6)) AS global_assignment_count,
+        (SELECT COUNT(*) FROM "AuditEvent" WHERE "tenantId" = $1) AS audit_count,
+        (SELECT COUNT(*) FROM "OutboxMessage" WHERE "tenantId" = $1) AS outbox_count,
+        (SELECT COUNT(*) FROM "IdempotencyKey" WHERE "tenantId" = $1) AS idempotency_count,
+        (SELECT COUNT(*) FROM "User" WHERE "id" = $7) AS fixture_user_count`,
+      [
+        fixture.tenantId,
+        fixture.membershipId,
+        fixture.tenantRoleId,
+        fixture.globalRoleId,
+        fixture.globalAssignmentId,
+        fixture.otherAssignmentId,
+        fixture.otherUserId,
+      ],
+    );
+    const counts = Object.values(residue.rows[0] ?? {}).map(Number);
+    if (counts.some((count) => count !== 0)) {
+      throw new Error('AUTHORIZATION_FIXTURE_RESIDUE');
+    }
   } catch (error) {
-    await admin.query('ROLLBACK');
+    await admin.query('ROLLBACK').catch(() => undefined);
     throw error;
   }
 }
