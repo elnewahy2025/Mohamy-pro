@@ -354,6 +354,15 @@ async function logoutIfNeeded(loggedIn) {
 async function cleanupFixtures(admin, fixture, userId) {
   await admin.query('BEGIN');
   try {
+    await admin.query('DELETE FROM "AuditEvent" WHERE "tenantId" = $1', [
+      fixture.tenantId,
+    ]);
+    await admin.query('DELETE FROM "OutboxMessage" WHERE "tenantId" = $1', [
+      fixture.tenantId,
+    ]);
+    await admin.query('DELETE FROM "IdempotencyKey" WHERE "tenantId" = $1', [
+      fixture.tenantId,
+    ]);
     await admin.query(
       'DELETE FROM "MembershipRole" WHERE "membershipId" = $1',
       [fixture.membershipId],
@@ -515,8 +524,10 @@ async function main() {
       try {
         const userId = loggedIn?.session?.user?.id;
         if (userId) await cleanupFixtures(admin, fixture, userId);
-      } catch {
-        console.error('authorization_fixture_cleanup_status=FAIL');
+      } catch (error) {
+        console.error(
+          `authorization_fixture_cleanup_status=FAIL|error_class=${error instanceof Error ? error.name : 'UnknownError'}|error_code=${error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : 'none'}`,
+        );
       }
     }
     await runtime.end().catch(() => undefined);
