@@ -6,14 +6,14 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM pg_roles WHERE rolname = 'mohamy_app'
   ) THEN
-    GRANT SELECT ON TABLE
+    EXECUTE 'GRANT SELECT ON TABLE
       public."GlobalRoleAssignment",
       public."Role",
       public."RolePermission",
       public."Permission",
       public."MembershipRole",
       public."AccessDenial"
-      TO mohamy_app;
+      TO mohamy_app';
   END IF;
 END
 $$;
