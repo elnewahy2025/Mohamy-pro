@@ -295,6 +295,21 @@ async function assertGlobalAssignmentRls(runtime, userId, otherUserId) {
     await runtime.query(
       `SELECT
         set_config('app.tenant_id', '', true),
+        set_config('app.user_id', '', true),
+        set_config('app.membership_id', '', true),
+        set_config('app.operation_id', '', true),
+        set_config('app.global_operation', 'false', true)`,
+    );
+    const unscoped = await runtime.query(
+      'SELECT "userId" FROM "GlobalRoleAssignment"',
+    );
+    if (unscoped.rowCount !== 0) {
+      throw new Error('GLOBAL_ROLE_ASSIGNMENT_UNSCOPED_READ_FAILED');
+    }
+
+    await runtime.query(
+      `SELECT
+        set_config('app.tenant_id', '', true),
         set_config('app.user_id', $1, true),
         set_config('app.membership_id', '', true),
         set_config('app.operation_id', $2, true),
@@ -310,7 +325,7 @@ async function assertGlobalAssignmentRls(runtime, userId, otherUserId) {
       throw new Error('GLOBAL_ROLE_ASSIGNMENT_RLS_BOUNDARY_FAILED');
     }
     await runtime.query('COMMIT');
-    return { ownVisible, otherVisible };
+    return { ownVisible, otherVisible, unscopedHidden: true };
   } catch (error) {
     await runtime.query('ROLLBACK');
     throw error;
@@ -470,7 +485,7 @@ async function main() {
       throw new Error('GLOBAL_ROLE_ASSIGNMENT_RLS_STATE_INVALID');
     }
     console.log(
-      `authorization_global_role_rls_status=PASS|own_assignment_visible=${rls.ownVisible}|other_assignment_hidden=${rls.otherVisible === false}|enabled=true|forced=true`,
+      `authorization_global_role_rls_status=PASS|own_assignment_visible=${rls.ownVisible}|other_assignment_hidden=${rls.otherVisible === false}|unscoped_hidden=${rls.unscopedHidden}|enabled=true|forced=true`,
     );
 
     stage = 'logout';
