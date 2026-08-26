@@ -14,17 +14,17 @@ The authentication boundary follows [`AUTHENTICATION_ARCHITECTURE_DECISION.md`](
 
 The policy engine exposes named policies rather than raw role checks in controllers. The first implementation registers these names:
 
-| Policy | Purpose | Required context |
-|---|---|---|
-| `CanViewTenant` | Read a tenant-scoped resource or tenant context | Authenticated user, active membership, target tenant |
-| `CanManageMembership` | Create, update, remove, or otherwise administer tenant memberships | Authenticated user, active tenant membership, target tenant, recent MFA |
-| `CanSwitchTenant` | Select a different tenant through the dedicated server-validated switch flow | Authenticated user, target tenant membership, active target membership |
-| `CanReadOrganizationSettings` | Read tenant organization settings | Authenticated user, active tenant membership, target tenant |
-| `CanManageRole` | Create, update, assign, or revoke tenant roles | Authenticated user, tenant membership, target tenant, recent MFA |
-| `CanManagePermission` | Change permission assignments in the approved administration surface | Authenticated user, tenant membership or global administrator context, recent MFA |
-| `CanManageDenial` | Create, revoke, or update explicit tenant denials | Authenticated user, tenant membership, target tenant, recent MFA |
-| `CanAccessResource` | Evaluate resource-level and assignment attributes for legal-domain callers | Authenticated user, active membership, resource attributes, target tenant |
-| `CanPerformPlatformOperation` | Perform a global or cross-tenant operation | Authenticated user, active application session, global Platform Admin role, recent MFA |
+| Policy                        | Purpose                                                                      | Required context                                                                       |
+| ----------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `CanViewTenant`               | Read a tenant-scoped resource or tenant context                              | Authenticated user, active membership, target tenant                                   |
+| `CanManageMembership`         | Create, update, remove, or otherwise administer tenant memberships           | Authenticated user, active tenant membership, target tenant, recent MFA                |
+| `CanSwitchTenant`             | Select a different tenant through the dedicated server-validated switch flow | Authenticated user, target tenant membership, active target membership                 |
+| `CanReadOrganizationSettings` | Read tenant organization settings                                            | Authenticated user, active tenant membership, target tenant                            |
+| `CanManageRole`               | Create, update, assign, or revoke tenant roles                               | Authenticated user, tenant membership, target tenant, recent MFA                       |
+| `CanManagePermission`         | Change permission assignments in the approved administration surface         | Authenticated user, tenant membership or global administrator context, recent MFA      |
+| `CanManageDenial`             | Create, revoke, or update explicit tenant denials                            | Authenticated user, tenant membership, target tenant, recent MFA                       |
+| `CanAccessResource`           | Evaluate resource-level and assignment attributes for legal-domain callers   | Authenticated user, active membership, resource attributes, target tenant              |
+| `CanPerformPlatformOperation` | Perform a global or cross-tenant operation                                   | Authenticated user, active application session, global Platform Admin role, recent MFA |
 
 The registry is closed: unknown policy names fail closed as an internal programming error and are not interpreted as permission grants.
 
@@ -32,21 +32,21 @@ The registry is closed: unknown policy names fail closed as an internal programm
 
 Permission keys are normalized and stable. They are derived from the frozen matrix and do not encode user IDs, tenant IDs, resource IDs, or other unbounded values:
 
-| Key family | Meaning |
-|---|---|
-| `tenant.read` | Read an authorized tenant context or tenant-owned resource |
-| `tenant.manage` | Manage tenant-level administrative settings |
-| `organization_settings.read` | Read organization settings |
-| `membership.manage` | Manage tenant memberships |
-| `role.manage` | Manage role definitions and assignments |
-| `permission.manage` | Manage permission assignments |
-| `denial.manage` | Manage explicit denials |
-| `case.read` / `case.update` | Read or update cases subject to assignment and scope |
-| `financial.read` / `financial.approve` | Read or approve tenant financial records |
+| Key family                                              | Meaning                                                      |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| `tenant.read`                                           | Read an authorized tenant context or tenant-owned resource   |
+| `tenant.manage`                                         | Manage tenant-level administrative settings                  |
+| `organization_settings.read`                            | Read organization settings                                   |
+| `membership.manage`                                     | Manage tenant memberships                                    |
+| `role.manage`                                           | Manage role definitions and assignments                      |
+| `permission.manage`                                     | Manage permission assignments                                |
+| `denial.manage`                                         | Manage explicit denials                                      |
+| `case.read` / `case.update`                             | Read or update cases subject to assignment and scope         |
+| `financial.read` / `financial.approve`                  | Read or approve tenant financial records                     |
 | `document.create` / `document.read` / `document.update` | Create, read, or update documents subject to case assignment |
-| `invoice.read` / `invoice.pay` | Read or pay invoices for an authorized client case |
-| `tenant.platform_manage` | Global Platform Admin tenant operations |
-| `tenant.switch` | Dedicated tenant switching |
+| `invoice.read` / `invoice.pay`                          | Read or pay invoices for an authorized client case           |
+| `tenant.platform_manage`                                | Global Platform Admin tenant operations                      |
+| `tenant.switch`                                         | Dedicated tenant switching                                   |
 
 A global Platform Admin role is represented by a global `Role` with key `platform_admin` and an active `GlobalRoleAssignment`. Tenant roles use the frozen keys `tenant_admin`, `managing_partner`, `lawyer`, `paralegal`, and `client`. Role keys are catalog identifiers, not browser-provided authorities.
 
@@ -69,17 +69,17 @@ The session object carries only the already-persisted assurance metadata needed 
 
 The API configuration adds:
 
-| Setting | Development/test profile | Production-capable profile |
-|---|---|---|
-| `MFA_REQUIRED_AMR` | Defaults to `mfa` when omitted | Must be explicitly provided and non-empty |
-| `MFA_REQUIRED_ACR` | Optional additional exact assurance value | May be required when the provider profile defines one |
-| `MFA_MAX_AGE_SECONDS` | Defaults to 900 seconds | Must be explicitly provided, bounded, and no greater than 900 seconds |
+| Setting               | Development/test profile                  | Production-capable profile                                            |
+| --------------------- | ----------------------------------------- | --------------------------------------------------------------------- |
+| `MFA_REQUIRED_AMR`    | Defaults to `mfa` when omitted            | Must be explicitly provided and non-empty                             |
+| `MFA_REQUIRED_ACR`    | Optional additional exact assurance value | May be required when the provider profile defines one                 |
+| `MFA_MAX_AGE_SECONDS` | Defaults to 900 seconds                   | Must be explicitly provided, bounded, and no greater than 900 seconds |
 
 The default acceptance profile therefore requires an `amr` value of `mfa` and authentication no older than fifteen minutes. When `MFA_REQUIRED_ACR` is configured, the session `acr` must equal it exactly. Missing, malformed, stale, or insufficient assurance returns a controlled `MFA_STEP_UP_REQUIRED` denial without resource details.
 
 ## Database boundary
 
-The existing RLS migration protects tenant roles, membership-role assignments, role-permission rows, and explicit denials. The implementation adds an additive RLS policy for `GlobalRoleAssignment` so the runtime role can read only the authenticated user’s own active global assignments through a request transaction context. No applied migration is edited, no default-allow policy is introduced, and no runtime connection is granted migration privileges.
+The existing RLS migration protects tenant roles, membership-role assignments, role-permission rows, and explicit denials. The implementation adds an additive RLS policy for `GlobalRoleAssignment` so the runtime role can read only the authenticated user’s own active global assignments through a request transaction context. A second additive migration grants the restricted runtime role read-only access to the authorization tables needed to evaluate those policies; it does not grant write, ownership, migration, or role-management privileges. No applied migration is edited, no default-allow policy is introduced, and no runtime connection is granted migration privileges.
 
 Authorization reads use `withMembershipSelectionContext` for the authenticated user’s global assignments and `withTenantContext` for tenant assignments and denials after server-side membership validation. A policy evaluator may consume a transaction-local snapshot, but it must not perform unscoped reads through the runtime Prisma client.
 
@@ -93,14 +93,14 @@ The MFA guard is reusable for administrative controllers and is also invoked by 
 
 The workstream is not accepted on unit tests alone. It requires:
 
-| Layer | Required evidence |
-|---|---|
-| Pure evaluator | Positive and negative cases for every frozen role, assigned/unassigned resource boundaries, client ownership, shared documents, explicit denials, tenant escape, permanent deletion, Platform Admin restrictions, and unknown policies |
-| Session/MFA | Claim persistence/propagation, missing MFA, wrong `amr`, wrong `acr`, stale timestamp, and recent valid MFA cases |
-| Database | Additive migration applies to existing and fresh databases; global assignments are hidden from unrelated users and unscoped runtime reads |
-| API | Protected route or service path uses the policy layer, controlled denial envelopes, and correlation/audit behavior |
-| Runtime | Real Windows PostgreSQL/API flow proves policy decisions using the restricted runtime role; no frontend-only or mock authorization claim is accepted |
-| Static/security | Build, tests, Prisma validation/generation, formatting, syntax, security scan, and final diff review pass for affected files |
+| Layer           | Required evidence                                                                                                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pure evaluator  | Positive and negative cases for every frozen role, assigned/unassigned resource boundaries, client ownership, shared documents, explicit denials, tenant escape, permanent deletion, Platform Admin restrictions, and unknown policies |
+| Session/MFA     | Claim persistence/propagation, missing MFA, wrong `amr`, wrong `acr`, stale timestamp, and recent valid MFA cases                                                                                                                      |
+| Database        | Both additive migrations apply to existing and fresh databases; global assignments are hidden from unrelated users and unscoped runtime reads                                                                                          |
+| API             | Protected route or service path uses the policy layer, controlled denial envelopes, and correlation/audit behavior                                                                                                                     |
+| Runtime         | Real Windows PostgreSQL/API flow proves policy decisions using the restricted runtime role; no frontend-only or mock authorization claim is accepted                                                                                   |
+| Static/security | Build, tests, Prisma validation/generation, formatting, syntax, security scan, and final diff review pass for affected files                                                                                                           |
 
 Acceptance of this workstream does not close invitation/onboarding, generated-client, frontend, abuse/lifecycle, hosted CI, or supported production deployment gates.
 
