@@ -2,7 +2,7 @@
 
 **Workstream:** Phase 2 — roles, permissions, named policies, explicit denials, and provider MFA assurance.
 
-**Status:** Design baseline for implementation. Phase 2 remains open.
+**Status:** Bounded policy/RLS/API implementation and Windows runtime slice accepted; full authorization/MFA workstream remains open. Phase 2 remains open.
 
 ## Governing requirements
 
@@ -85,7 +85,7 @@ Authorization reads use `withMembershipSelectionContext` for the authenticated u
 
 ## Application integration
 
-The policy service is registered in a dedicated authorization module. A reusable policy decorator/guard is provided for future protected controllers, while the existing tenant-switch service calls the named `CanSwitchTenant` policy before session compare-and-set mutation. Existing membership validation remains authoritative for target membership eligibility; the policy layer must not remove or duplicate the transaction ordering that prevents rejected switches from changing session context.
+The policy service is registered in a dedicated authorization module. A reusable policy decorator/guard is provided for protected controllers, while the existing tenant-switch service calls the named `CanSwitchTenant` policy before session compare-and-set mutation. The current-access route uses `CanViewTenant` and returns an allowlisted server projection. Existing membership validation remains authoritative for target membership eligibility; the policy layer must not remove or duplicate the transaction ordering that prevents rejected switches from changing session context. Real Windows evidence for this bounded slice is recorded in [`AUTHORIZATION_MFA_RUNTIME_EVIDENCE.md`](AUTHORIZATION_MFA_RUNTIME_EVIDENCE.md).
 
 The MFA guard is reusable for administrative controllers and is also invoked by the policy service for Platform Admin and staff-sensitive policies. No new public self-registration or invitation behavior is introduced in this workstream; invitation endpoints remain the next workstream and will consume `CanManageMembership` after this policy boundary is verified.
 
@@ -102,7 +102,7 @@ The workstream is not accepted on unit tests alone. It requires:
 | Runtime         | Real Windows PostgreSQL/API flow proves policy decisions using the restricted runtime role; no frontend-only or mock authorization claim is accepted                                                                                   |
 | Static/security | Build, tests, Prisma validation/generation, formatting, syntax, security scan, and final diff review pass for affected files                                                                                                           |
 
-Acceptance of this workstream does not close invitation/onboarding, generated-client, frontend, abuse/lifecycle, hosted CI, or supported production deployment gates.
+The bounded policy/RLS/API slice is accepted by the evidence in [`AUTHORIZATION_MFA_RUNTIME_EVIDENCE.md`](AUTHORIZATION_MFA_RUNTIME_EVIDENCE.md). Full authorization/MFA workstream acceptance still requires a real protected administrative operation with provider MFA/step-up evidence and complete negative cases. Acceptance of the full workstream does not close invitation/onboarding, generated-client, frontend, abuse/lifecycle, hosted CI, or supported production deployment gates.
 
 ## References
 
