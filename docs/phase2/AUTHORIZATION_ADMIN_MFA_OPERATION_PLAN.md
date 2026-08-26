@@ -24,7 +24,7 @@ The endpoint is:
 POST /api/v1/authorization/users/:userId/sessions/revoke
 ```
 
-It requires an authenticated application session, a valid CSRF token and approved origin, a valid UUID route parameter, a valid idempotency key, an active server-derived tenant context, and a named `CanManageMembership` authorization decision with recent MFA. The target user must have an active membership in the caller’s current tenant. The endpoint must not accept a client-supplied tenant selector or role claim.
+It is a global session-administration operation and therefore requires an authenticated application session, a valid CSRF token and approved origin, a valid UUID route parameter, a valid idempotency key, a named `CanPerformPlatformOperation` authorization decision, and recent provider MFA. Only an active Platform Admin assignment with the persisted `tenant.platform_manage` permission may invoke it. The target user must exist in the application identity store; the service must not reveal whether an arbitrary unrelated identifier exists. The endpoint must not accept a client-supplied tenant selector or role claim.
 
 The success payload is an allowlisted object containing only the number of sessions revoked:
 
@@ -40,19 +40,17 @@ The endpoint returns the existing controlled authentication, authorization, MFA 
 
 ## Transaction and audit behavior
 
-The service must validate the target user’s active membership inside the same transaction context used for tenant authorization. It must update only active application sessions belonging to that target user, clearing provider refresh-token and CSRF ciphertext fields as part of revocation. It must emit one aggregate `auth.session.revoked` audit event with the named policy and a bounded numeric session count. The audit event must be tenant-scoped, use the actor’s server-derived membership context, and create its linked outbox message in the same transaction.
+The service must validate the target user’s application identity inside a global operation transaction. It must update only active application sessions belonging to that target user, clearing provider refresh-token and CSRF ciphertext fields as part of revocation. It must emit one aggregate `auth.session.revoked` audit event with the named `CanPerformPlatformOperation` policy and a bounded numeric session count. The audit event is global because the operation intentionally revokes sessions across any tenant context; it must use the global operation context and create its linked outbox message in the same transaction. The operation must never revoke sessions merely because a caller supplied a tenant identifier.
 
 The operation must be idempotent at the HTTP boundary and safe under concurrent requests. A second successful request after the first revocation may return a zero count under a new idempotency key, while the same key must replay the original response. The service must not revoke the caller’s own session through this endpoint; another-user targeting is an explicit invariant.
 
 ## Authorization semantics
 
-The endpoint uses `CanManageMembership`, because session revocation for another user is an administrative membership/security operation. The current policy engine must enforce an active authenticated user, active target-tenant membership, the persisted `membership.manage` permission, explicit-denial evaluation, tenant escape prevention, and recent MFA. The route must not use `CanPerformPlatformOperation` because this operation is tenant-scoped and must not create a cross-tenant path.
-
-Platform Admin remains the only cross-tenant role in the frozen matrix, but this endpoint does not expose cross-tenant behavior. Tenant Admin cannot use this operation to elevate anyone or alter roles. The target user’s membership is checked server-side and the actor’s active tenant is the only tenant boundary.
+The endpoint uses `CanPerformPlatformOperation`, because revoking all active sessions for another user has cross-tenant effect. The current policy engine must enforce an active authenticated session, an active Platform Admin assignment with the persisted `tenant.platform_manage` permission, explicit-denial evaluation where applicable, and recent MFA. Tenant Admin, Managing Partner, Lawyer, Paralegal, and Client roles must receive the controlled authorization denial. No tenant selector is used as authority, and the route does not create an alternate tenant boundary.
 
 ## Required tests
 
-Unit tests must cover target-user UUID validation, self-target rejection, missing target membership, target membership in the active tenant, no active target sessions, revocation of all active target sessions, preservation of already-revoked sessions, ciphertext clearing, aggregate audit input, tenant context binding, and error propagation. Authorization tests must cover missing permission, explicit denial, tenant escape, and missing/stale/wrong provider MFA claims. Interceptor tests must cover required idempotency and replay/conflict behavior.
+Unit tests must cover target-user UUID validation, self-target rejection, missing target identity, no active target sessions, revocation of all active target sessions, preservation of already-revoked sessions, ciphertext clearing, aggregate global audit input, global operation context binding, and error propagation. Authorization tests must cover non-Platform-Admin denial, missing platform permission, explicit denial, and missing/stale/wrong provider MFA claims. Interceptor tests must cover required idempotency and replay/conflict behavior.
 
 The real runtime verifier must use the actual Keycloak OIDC session and restricted PostgreSQL role. It must prove at least the missing-MFA denial path against the real route and, when a real provider test account with a recent configured MFA result is available, prove the successful administrative revocation path and audit/outbox evidence. It must never manufacture provider MFA claims by mutating application rows or accepting a frontend flag. If the positive provider-MFA case is not available in the current Keycloak realm, the result remains explicitly unverified rather than being relabeled as a pass.
 
