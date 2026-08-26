@@ -492,12 +492,13 @@ model RolePermission {
 }
 
 model MembershipRole {
-  id           String     @id @default(uuid())
-  tenantId     String
-  membershipId String
-  roleId       String
-  assignedAt   DateTime   @default(now())
-  revokedAt    DateTime?
+  id              String     @id @default(uuid())
+  tenantId        String
+  membershipId    String
+  roleId          String
+  assignmentScope Json?
+  assignedAt      DateTime   @default(now())
+  revokedAt       DateTime?
   membership   Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
   role         Role       @relation(fields: [roleId, tenantId], references: [id, tenantId], onDelete: Restrict)
 

@@ -14,6 +14,8 @@ describe('validateEnvironment telemetry settings', () => {
     expect(environment.RATE_LIMIT_ENABLED).toBe(true);
     expect(environment.RATE_LIMIT_WINDOW_SECONDS).toBe(60);
     expect(environment.RATE_LIMIT_MAX_REQUESTS).toBe(300);
+    expect(environment.INVITATION_ACCEPTANCE_WINDOW_SECONDS).toBe(3600);
+    expect(environment.INVITATION_ACCEPTANCE_MAX_ATTEMPTS).toBe(10);
     expect(environment.MFA_REQUIRED_AMR).toBe('mfa');
     expect(environment.MFA_REQUIRED_ACR).toBeUndefined();
     expect(environment.MFA_MAX_AGE_SECONDS).toBe(900);
@@ -107,6 +109,8 @@ describe('validateEnvironment telemetry settings', () => {
       SESSION_IDLE_TTL_SECONDS: 1800,
       SESSION_ABSOLUTE_TTL_SECONDS: 43200,
       SESSION_SECURE_COOKIE: true,
+      INVITATION_ACCEPTANCE_WINDOW_SECONDS: 3600,
+      INVITATION_ACCEPTANCE_MAX_ATTEMPTS: 10,
       MFA_REQUIRED_AMR: 'mfa',
       MFA_MAX_AGE_SECONDS: 900,
     });
@@ -166,6 +170,8 @@ describe('validateEnvironment authentication settings', () => {
     SESSION_IDLE_TTL_SECONDS: 1800,
     SESSION_ABSOLUTE_TTL_SECONDS: 43200,
     SESSION_SECURE_COOKIE: true,
+    INVITATION_ACCEPTANCE_WINDOW_SECONDS: 3600,
+    INVITATION_ACCEPTANCE_MAX_ATTEMPTS: 10,
     MFA_REQUIRED_AMR: 'mfa',
     MFA_REQUIRED_ACR: 'urn:mohamy:loa:2',
     MFA_MAX_AGE_SECONDS: 900,
@@ -193,6 +199,8 @@ describe('validateEnvironment authentication settings', () => {
     expect(environment.SESSION_SECURE_COOKIE).toBe(true);
     expect(environment.MFA_REQUIRED_AMR).toBe('mfa');
     expect(environment.MFA_REQUIRED_ACR).toBe('urn:mohamy:loa:2');
+    expect(environment.INVITATION_ACCEPTANCE_WINDOW_SECONDS).toBe(3600);
+    expect(environment.INVITATION_ACCEPTANCE_MAX_ATTEMPTS).toBe(10);
     expect(environment.MFA_MAX_AGE_SECONDS).toBe(900);
   });
 
@@ -227,6 +235,12 @@ describe('validateEnvironment authentication settings', () => {
         MFA_MAX_AGE_SECONDS: undefined,
       }),
     ).toThrow('MFA_MAX_AGE_SECONDS is required in production');
+    expect(() =>
+      validateEnvironment({
+        ...productionEnvironment,
+        INVITATION_ACCEPTANCE_MAX_ATTEMPTS: undefined,
+      }),
+    ).toThrow('INVITATION_ACCEPTANCE_MAX_ATTEMPTS is required in production');
   });
 
   it('rejects an invalid session encryption key', () => {

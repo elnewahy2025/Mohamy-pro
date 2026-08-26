@@ -117,6 +117,74 @@ describe('Phase2BusinessInterceptor', () => {
     );
   });
 
+  it('uses a stable global scope for invitation acceptance across tenant contexts', async () => {
+    const request = createRequest({
+      originalUrl: '/api/v1/invitations/accept',
+      body: { token: 'a'.repeat(43) },
+      authSession: {
+        userId: USER_ID,
+        activeTenantId: TENANT_ID,
+        activeMembershipId: MEMBERSHIP_ID,
+      },
+    });
+    const idempotency = {
+      register: jest.fn().mockResolvedValue({ kind: 'RESERVED', record: {} }),
+      complete: jest.fn().mockResolvedValue({}),
+    };
+    const interceptor = new Phase2BusinessInterceptor(idempotency as never);
+
+    const stream = await interceptor.intercept(createContext(request, {}), {
+      handle: () => of({ accepted: true }),
+    } as never);
+    await firstValueFrom(stream);
+
+    expect(idempotency.register).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: {
+          kind: 'GLOBAL',
+          actorScope: USER_ID,
+          operationId: expect.any(String),
+        },
+      }),
+    );
+  });
+
+  it('does not persist the raw invitation token in the idempotency replay', async () => {
+    const request = createRequest({
+      originalUrl: `/api/v1/tenants/${TENANT_ID}/invitations`,
+      body: { requestedRoleKeys: ['lawyer'] },
+    });
+    const idempotency = {
+      register: jest.fn().mockResolvedValue({ kind: 'RESERVED', record: {} }),
+      complete: jest.fn().mockResolvedValue({}),
+    };
+    const interceptor = new Phase2BusinessInterceptor(idempotency as never);
+    const stream = await interceptor.intercept(createContext(request, {}), {
+      handle: () =>
+        of({
+          invitationId: '66666666-6666-4666-8666-666666666666',
+          invitationToken: 'raw-one-time-token',
+          expiresAt: '2026-08-29T00:00:00.000Z',
+        }),
+    } as never);
+
+    const firstResponse = await firstValueFrom(stream);
+    expect(firstResponse).toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          invitationToken: 'raw-one-time-token',
+        }),
+      }),
+    );
+    const completion = idempotency.complete.mock.calls[0][2];
+    expect(completion.responseBody.data).toEqual(
+      expect.objectContaining({
+        invitationId: '66666666-6666-4666-8666-666666666666',
+      }),
+    );
+    expect(completion.responseBody.data).not.toHaveProperty('invitationToken');
+  });
+
   it('returns the stored body for an exact replay without invoking the handler', async () => {
     const request = createRequest();
     const response = {

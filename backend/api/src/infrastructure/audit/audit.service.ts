@@ -27,6 +27,10 @@ const ALLOWED_EVENT_TYPES = new Set([
   'identity.deleted',
   'tenant.switch.succeeded',
   'tenant.switch.denied',
+  'membership.invitation.created',
+  'membership.invitation.accepted',
+  'membership.invitation.revoked',
+  'membership.invitation.expired',
 ]);
 
 export interface AuditRecordInput {
@@ -362,6 +366,8 @@ function canonicalMetadata(
     'activeMembershipCount',
     'purgedCount',
     'purposeCode',
+    'requestedRoleCount',
+    'invitationStatus',
   ]);
   const entries = Object.entries(metadata)
     .filter(([key]) => allowedKeys.has(key))

@@ -94,11 +94,22 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
   public."ExternalIdentity",
   public."AppSession",
   public."StorageObject",
-  public."OutboxMessage"
+  public."OutboxMessage",
+  public."Invitation",
+  public."Membership",
+  public."MembershipRole"
   TO mohamy_app;
 GRANT SELECT ON TABLE
-  public."Membership",
-  public."Tenant"
+  public."Tenant",
+  public."Organization",
+  public."Branch",
+  public."Department",
+  public."Team",
+  public."Role",
+  public."RolePermission",
+  public."Permission",
+  public."GlobalRoleAssignment",
+  public."AccessDenial"
   TO mohamy_app;
 GRANT SELECT, INSERT, DELETE ON TABLE public."AuditEvent" TO mohamy_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public."IdempotencyKey" TO mohamy_app;
@@ -113,11 +124,13 @@ REVOKE EXECUTE ON FUNCTION public.app_membership_selection_context_is_valid() FR
 REVOKE EXECUTE ON FUNCTION public.app_outbox_dispatch_context_is_valid() FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.app_global_operation_context_is_valid() FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.app_idempotency_maintenance_context_is_valid() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.app_invitation_acceptance_context_is_valid() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.app_tenant_context_is_valid() TO mohamy_app;
 GRANT EXECUTE ON FUNCTION public.app_membership_selection_context_is_valid() TO mohamy_app;
 GRANT EXECUTE ON FUNCTION public.app_outbox_dispatch_context_is_valid() TO mohamy_app;
 GRANT EXECUTE ON FUNCTION public.app_global_operation_context_is_valid() TO mohamy_app;
 GRANT EXECUTE ON FUNCTION public.app_idempotency_maintenance_context_is_valid() TO mohamy_app;
+GRANT EXECUTE ON FUNCTION public.app_invitation_acceptance_context_is_valid() TO mohamy_app;
 
 -- No blanket ALTER DEFAULT PRIVILEGES is used. Future migrations must add an
 -- explicit, reviewed grant for each new runtime table or helper function.

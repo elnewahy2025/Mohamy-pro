@@ -244,6 +244,12 @@ function matchesRoleScope(
 ): boolean {
   if (!role?.assignmentScope) return true;
   const scope = role.assignmentScope;
+  if (
+    scope.organizationIds &&
+    !scope.organizationIds.includes(resource.organizationId ?? '')
+  ) {
+    return false;
+  }
   if (scope.branchIds && !scope.branchIds.includes(resource.branchId ?? '')) {
     return false;
   }

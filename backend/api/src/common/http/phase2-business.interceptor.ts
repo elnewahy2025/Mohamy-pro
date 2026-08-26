@@ -31,6 +31,7 @@ const IDEMPOTENCY_KEY_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ADMINISTRATIVE_REVOKE_PATH_PATTERN =
   /^\/api\/v1\/authorization\/users\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/sessions\/revoke$/i;
+const INVITATION_ACCEPTANCE_PATH = '/api/v1/invitations/accept';
 
 @Injectable()
 export class Phase2BusinessInterceptor implements NestInterceptor {
@@ -61,6 +62,7 @@ export class Phase2BusinessInterceptor implements NestInterceptor {
     const requestPath = request.originalUrl.split('?', 1)[0];
     const forceGlobalScope =
       requestPath === '/api/v1/session/tenant-switch' ||
+      requestPath === INVITATION_ACCEPTANCE_PATH ||
       ADMINISTRATIVE_REVOKE_PATH_PATTERN.test(requestPath);
     const scope: IdempotencyScope =
       !forceGlobalScope &&
@@ -131,9 +133,13 @@ export class Phase2BusinessInterceptor implements NestInterceptor {
     data: unknown,
   ): Promise<unknown> {
     const body = createSuccessEnvelope(data, request);
+    const replayBody = createSuccessEnvelope(
+      sanitizeIdempotencyResponse(request.originalUrl, data),
+      request,
+    );
     await this.idempotency.complete(idempotencyRequest, scope, {
       responseStatus: 200,
-      responseBody: body as unknown as Prisma.InputJsonValue,
+      responseBody: replayBody as unknown as Prisma.InputJsonValue,
       responseHeaders: { 'x-correlation-id': getCorrelationId(request) },
     });
     return body;
@@ -191,4 +197,21 @@ export class Phase2BusinessInterceptor implements NestInterceptor {
     }
     response.status(decision.record.responseStatus ?? 200).json(body);
   }
+}
+
+function sanitizeIdempotencyResponse(path: string, data: unknown): unknown {
+  const requestPath = path.split('?', 1)[0];
+  if (
+    !/^\/api\/v1\/tenants\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/invitations$/i.test(
+      requestPath,
+    ) ||
+    !data ||
+    typeof data !== 'object' ||
+    Array.isArray(data)
+  ) {
+    return data;
+  }
+  const sanitized = { ...(data as Record<string, unknown>) };
+  delete sanitized.invitationToken;
+  return sanitized;
 }

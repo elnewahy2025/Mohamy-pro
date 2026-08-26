@@ -40,6 +40,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   AUTHORIZATION_DENIED: 'The requested operation is not permitted.',
   MFA_STEP_UP_REQUIRED:
     'Additional authentication is required for this operation.',
+  INVITATION_INVALID: 'The invitation is invalid or cannot be accepted.',
+  INVITATION_NOT_ACTIONABLE: 'The invitation is no longer actionable.',
+  INVITATION_RATE_LIMITED: 'Too many invitation attempts.',
 
   NOT_FOUND: 'The requested resource was not found.',
   CONFLICT: 'The request conflicts with the current state.',

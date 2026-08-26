@@ -14,6 +14,7 @@ import type {
   AuthorizationMembership,
   AuthorizationRequest,
   AuthorizationRole,
+  AuthorizationScope,
   AuthorizationSnapshot,
   AuthorizationSubject,
   PolicyName,
@@ -196,7 +197,10 @@ export class AuthorizationService {
     return {
       membership,
       tenantMembershipRoles: tenantData.membershipRoles.map((assignment) =>
-        toAuthorizationRole(assignment.role),
+        withAssignmentScope(
+          toAuthorizationRole(assignment.role),
+          parseAuthorizationScope(assignment.assignmentScope),
+        ),
       ),
       globalRoles,
       denials: tenantData.denials.map((denial) => ({
@@ -246,6 +250,36 @@ function toAuthorizationRole(input: {
     scope: input.scope,
     permissions: input.permissions.map(({ permission }) => permission.key),
   };
+}
+
+function withAssignmentScope(
+  role: AuthorizationRole,
+  assignmentScope: AuthorizationScope | undefined,
+): AuthorizationRole {
+  return assignmentScope ? { ...role, assignmentScope } : role;
+}
+
+function parseAuthorizationScope(
+  value: unknown,
+): AuthorizationScope | undefined {
+  if (!isRecord(value)) return undefined;
+  const result: AuthorizationScope = {};
+  for (const field of [
+    'organizationIds',
+    'branchIds',
+    'departmentIds',
+    'teamIds',
+  ] as const) {
+    const raw = value[field];
+    if (Array.isArray(raw) && raw.every((item) => typeof item === 'string')) {
+      result[field] = [...new Set(raw)].sort();
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isEligibleMembership(

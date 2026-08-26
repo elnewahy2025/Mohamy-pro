@@ -15,6 +15,11 @@ import { TenantSessionController } from './tenant-session.controller';
 import { AdministrativeSessionService } from './administrative-session.service';
 import { AuthorizationController } from '../authorization/authorization.controller';
 import { AuthorizationModule } from '../authorization/authorization.module';
+import {
+  InvitationAcceptanceController,
+  TenantInvitationController,
+} from './invitation.controller';
+import { InvitationService } from './invitation.service';
 
 @Module({
   imports: [IdempotencyModule, AuthorizationModule],
@@ -22,6 +27,8 @@ import { AuthorizationModule } from '../authorization/authorization.module';
     AuthController,
     TenantSessionController,
     AuthorizationController,
+    TenantInvitationController,
+    InvitationAcceptanceController,
   ],
   providers: [
     AuthService,
@@ -35,6 +42,7 @@ import { AuthorizationModule } from '../authorization/authorization.module';
     Phase2BusinessInterceptor,
     MembershipService,
     AdministrativeSessionService,
+    InvitationService,
   ],
   exports: [
     AuthService,

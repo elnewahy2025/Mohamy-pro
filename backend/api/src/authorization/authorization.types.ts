@@ -55,6 +55,7 @@ export interface AuthorizationSession {
 export type AuthorizationSubject = AuthorizationSession;
 
 export interface AuthorizationScope {
+  organizationIds?: string[];
   branchIds?: string[];
   departmentIds?: string[];
   teamIds?: string[];
@@ -70,6 +71,7 @@ export interface AuthorizationResource {
   primaryClientUserId?: string;
   assignedMembershipIds?: string[];
   sharedWithClient?: boolean;
+  organizationId?: string;
   branchId?: string;
   departmentId?: string;
   teamId?: string;

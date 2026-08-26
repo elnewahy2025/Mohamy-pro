@@ -324,6 +324,10 @@ function normalizeAuditEventType(eventType: string): string {
     'privileged.operation.succeeded',
     'tenant.switch.succeeded',
     'tenant.switch.denied',
+    'membership.invitation.created',
+    'membership.invitation.accepted',
+    'membership.invitation.revoked',
+    'membership.invitation.expired',
   ].includes(eventType)
     ? eventType
     : 'other';
@@ -346,6 +350,10 @@ function normalizeAuditReason(reason: string): string {
     'membership_not_eligible',
     'stale_session_context',
     'retention_policy',
+    'invitation_created',
+    'invitation_revoked',
+    'invitation_expired',
+    'identity_bound',
   ].includes(reason)
     ? reason
     : 'other';

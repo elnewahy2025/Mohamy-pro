@@ -2,8 +2,10 @@ import { BadRequestException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from './prisma.service';
 import {
+  assertInvitationAcceptanceContext,
   assertMembershipSelectionContext,
   assertTenantTransactionContext,
+  type InvitationAcceptanceContext,
   type MembershipSelectionContext,
   type TenantTransactionContext,
 } from './tenant-context';
@@ -17,6 +19,16 @@ const tenantContext: TenantTransactionContext = {
 
 const membershipSelectionContext: MembershipSelectionContext = {
   userId: tenantContext.userId,
+  operationId: tenantContext.operationId,
+};
+
+const invitationAcceptanceContext: InvitationAcceptanceContext = {
+  tenantId: null,
+  userId: tenantContext.userId,
+  membershipId: null,
+  inviterMembershipId: null,
+  invitationTokenHash: 'a'.repeat(64),
+  invalidatedTokenHash: 'b'.repeat(64),
   operationId: tenantContext.operationId,
 };
 
@@ -65,7 +77,60 @@ describe('tenant database context', () => {
     ).toThrow(BadRequestException);
   });
 
-  it('clears tenant scope during pre-membership selection', async () => {
+  it('validates token-bound invitation acceptance context and rejects malformed hashes', () => {
+    expect(assertInvitationAcceptanceContext(invitationAcceptanceContext)).toBe(
+      invitationAcceptanceContext,
+    );
+    expect(() =>
+      assertInvitationAcceptanceContext({
+        ...invitationAcceptanceContext,
+        invitationTokenHash: 'not-a-hash',
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('binds invitation acceptance context with the token hash and resets tenant membership state', async () => {
+    const queryRaw = jest.fn<ReturnType<RawQuery>, Parameters<RawQuery>>();
+    queryRaw.mockResolvedValue([]);
+    const transaction = {
+      $queryRaw: queryRaw,
+    } as unknown as Prisma.TransactionClient;
+    const transactionRunner = jest.fn(
+      (callback: (client: Prisma.TransactionClient) => Promise<unknown>) =>
+        callback(transaction),
+    );
+    const prisma = Object.create(PrismaService.prototype) as PrismaService;
+    Object.defineProperty(prisma, '$transaction', {
+      configurable: true,
+      value: transactionRunner,
+    });
+
+    await prisma.withInvitationAcceptanceContext(
+      invitationAcceptanceContext,
+      () => Promise.resolve('acceptance-result'),
+    );
+
+    const callArguments: unknown[] = queryRaw.mock.calls[0] ?? [];
+    const template = callArguments[0] as readonly string[];
+    expect(template.join('')).toContain(
+      "set_config('app.invitation_acceptance', 'true', true)",
+    );
+    expect(template.join('')).toContain(
+      "set_config('app.invitation_token_hash', ",
+    );
+    expect(callArguments.slice(1)).toEqual([
+      '',
+      invitationAcceptanceContext.userId,
+      '',
+      invitationAcceptanceContext.inviterMembershipId ?? '',
+      invitationAcceptanceContext.operationId,
+      'false',
+      invitationAcceptanceContext.invitationTokenHash,
+      invitationAcceptanceContext.invalidatedTokenHash,
+    ]);
+  });
+
+  it('clears tenant scope during pre-membership selection, including invitation state', async () => {
     const queryRaw = jest.fn<ReturnType<RawQuery>, Parameters<RawQuery>>();
     queryRaw.mockResolvedValue([]);
     const transaction = {

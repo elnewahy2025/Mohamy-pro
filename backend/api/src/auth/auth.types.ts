@@ -59,6 +59,8 @@ export interface AuthenticatedSession {
   userId: string;
   userStatus: string;
   userLocale: string;
+  providerSubject: string;
+  emailNormalized: string | null;
   csrfTokenHash: string;
   issuedAt: Date;
   lastUsedAt: Date;

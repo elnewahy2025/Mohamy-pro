@@ -12,6 +12,10 @@ export const AUDIT_OUTBOX_EVENT_TYPES = [
   'identity.deleted',
   'tenant.switch.succeeded',
   'tenant.switch.denied',
+  'membership.invitation.created',
+  'membership.invitation.accepted',
+  'membership.invitation.revoked',
+  'membership.invitation.expired',
 ] as const;
 
 @Injectable()

@@ -10,9 +10,11 @@ import { ConfigService } from '@nestjs/config';
 import type { ValidatedEnvironment } from '../../config/env.validation';
 import { MetricsService } from '../../observability/metrics.service';
 import {
+  assertInvitationAcceptanceContext,
   assertMembershipSelectionContext,
   assertTenantTransactionContext,
   assertUuidContextField,
+  type InvitationAcceptanceContext,
   type MembershipSelectionContext,
   type TenantTransactionContext,
 } from './tenant-context';
@@ -81,6 +83,17 @@ export class PrismaService
     });
   }
 
+  async withInvitationAcceptanceContext<TResult>(
+    context: InvitationAcceptanceContext,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    const validatedContext = assertInvitationAcceptanceContext(context);
+    return this.$transaction(async (transaction) => {
+      await setInvitationAcceptanceContext(transaction, validatedContext);
+      return callback(transaction);
+    });
+  }
+
   async bindTenantContext(
     transaction: Prisma.TransactionClient,
     context: TenantTransactionContext,
@@ -95,6 +108,14 @@ export class PrismaService
   ): Promise<void> {
     const validatedContext = assertMembershipSelectionContext(context);
     await setMembershipSelectionContext(transaction, validatedContext);
+  }
+
+  async bindInvitationAcceptanceContext(
+    transaction: Prisma.TransactionClient,
+    context: InvitationAcceptanceContext,
+  ): Promise<void> {
+    const validatedContext = assertInvitationAcceptanceContext(context);
+    await setInvitationAcceptanceContext(transaction, validatedContext);
   }
 
   async bindGlobalOperationContext(
@@ -188,7 +209,11 @@ async function setTransactionContext(
       set_config('app.global_operation', 'false', true),
       set_config('app.outbox_dispatcher', 'false', true),
       set_config('app.idempotency_maintenance', 'false', true),
-      set_config('app.audit_retention_purge', 'false', true)
+      set_config('app.audit_retention_purge', 'false', true),
+      set_config('app.invitation_acceptance', 'false', true),
+      set_config('app.invitation_token_hash', '', true),
+      set_config('app.invitation_invalidated_token_hash', '', true),
+      set_config('app.inviter_membership_id', '', true)
   `;
 }
 
@@ -205,7 +230,32 @@ async function setMembershipSelectionContext(
       set_config('app.global_operation', 'false', true),
       set_config('app.outbox_dispatcher', 'false', true),
       set_config('app.idempotency_maintenance', 'false', true),
-      set_config('app.audit_retention_purge', 'false', true)
+      set_config('app.audit_retention_purge', 'false', true),
+      set_config('app.invitation_acceptance', 'false', true),
+      set_config('app.invitation_token_hash', '', true),
+      set_config('app.invitation_invalidated_token_hash', '', true),
+      set_config('app.inviter_membership_id', '', true)
+  `;
+}
+
+async function setInvitationAcceptanceContext(
+  transaction: Prisma.TransactionClient,
+  context: InvitationAcceptanceContext,
+): Promise<void> {
+  await transaction.$queryRaw`
+    SELECT
+      set_config('app.tenant_id', ${context.tenantId ?? ''}, true),
+      set_config('app.user_id', ${context.userId}, true),
+      set_config('app.membership_id', ${context.membershipId ?? ''}, true),
+      set_config('app.inviter_membership_id', ${context.inviterMembershipId ?? ''}, true),
+      set_config('app.operation_id', ${context.operationId}, true),
+      set_config('app.global_operation', ${String(context.globalOperation ?? false)}, true),
+      set_config('app.outbox_dispatcher', 'false', true),
+      set_config('app.idempotency_maintenance', 'false', true),
+      set_config('app.audit_retention_purge', 'false', true),
+      set_config('app.invitation_acceptance', 'true', true),
+      set_config('app.invitation_token_hash', ${context.invitationTokenHash}, true),
+      set_config('app.invitation_invalidated_token_hash', ${context.invalidatedTokenHash}, true)
   `;
 }
 
@@ -230,7 +280,11 @@ async function setControlContext(
       set_config('app.global_operation', ${String(context.globalOperation ?? false)}, true),
       set_config('app.outbox_dispatcher', ${String(context.outboxDispatcher ?? false)}, true),
       set_config('app.idempotency_maintenance', ${String(context.idempotencyMaintenance ?? false)}, true),
-      set_config('app.audit_retention_purge', ${String(context.auditRetentionPurge ?? false)}, true)
+      set_config('app.audit_retention_purge', ${String(context.auditRetentionPurge ?? false)}, true),
+      set_config('app.invitation_acceptance', 'false', true),
+      set_config('app.invitation_token_hash', '', true),
+      set_config('app.invitation_invalidated_token_hash', '', true),
+      set_config('app.inviter_membership_id', '', true)
   `;
 }
 

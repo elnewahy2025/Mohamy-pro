@@ -40,6 +40,8 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   RATE_LIMIT_ENABLED: boolean;
   RATE_LIMIT_WINDOW_SECONDS: number;
   RATE_LIMIT_MAX_REQUESTS: number;
+  INVITATION_ACCEPTANCE_WINDOW_SECONDS: number;
+  INVITATION_ACCEPTANCE_MAX_ATTEMPTS: number;
   MFA_REQUIRED_AMR: string;
   MFA_REQUIRED_ACR?: string;
   MFA_MAX_AGE_SECONDS: number;
@@ -208,6 +210,8 @@ export function validateEnvironment(
           SESSION_ABSOLUTE_TTL_SECONDS: undefined,
           SESSION_SECURE_COOKIE: undefined,
           CSRF_HEADER_NAME: undefined,
+          INVITATION_ACCEPTANCE_WINDOW_SECONDS: undefined,
+          INVITATION_ACCEPTANCE_MAX_ATTEMPTS: undefined,
           MFA_REQUIRED_AMR: undefined,
           MFA_REQUIRED_ACR: undefined,
           MFA_MAX_AGE_SECONDS: undefined,
@@ -238,6 +242,8 @@ export function validateEnvironment(
           SESSION_ABSOLUTE_TTL_SECONDS: 43_200,
           SESSION_SECURE_COOKIE: false,
           CSRF_HEADER_NAME: 'X-CSRF-Token',
+          INVITATION_ACCEPTANCE_WINDOW_SECONDS: 3_600,
+          INVITATION_ACCEPTANCE_MAX_ATTEMPTS: 10,
           MFA_REQUIRED_AMR: 'mfa',
           MFA_REQUIRED_ACR: undefined,
           MFA_MAX_AGE_SECONDS: 900,
@@ -373,6 +379,18 @@ export function validateEnvironment(
     'RATE_LIMIT_MAX_REQUESTS',
     100_000,
   );
+  const invitationAcceptanceWindowSeconds = readPositiveInteger(
+    raw.INVITATION_ACCEPTANCE_WINDOW_SECONDS,
+    defaults.INVITATION_ACCEPTANCE_WINDOW_SECONDS ?? 3_600,
+    'INVITATION_ACCEPTANCE_WINDOW_SECONDS',
+    3_600,
+  );
+  const invitationAcceptanceMaxAttempts = readPositiveInteger(
+    raw.INVITATION_ACCEPTANCE_MAX_ATTEMPTS,
+    defaults.INVITATION_ACCEPTANCE_MAX_ATTEMPTS ?? 10,
+    'INVITATION_ACCEPTANCE_MAX_ATTEMPTS',
+    10,
+  );
   const otelEnabled = readBoolean(raw.OTEL_ENABLED, Boolean(otelEndpoint));
   const metricsAuthToken = readString(raw.METRICS_AUTH_TOKEN);
   const otelServiceName =
@@ -424,6 +442,16 @@ export function validateEnvironment(
     }
     if (raw.MFA_REQUIRED_AMR === undefined || !mfaRequiredAmr) {
       throw new Error('MFA_REQUIRED_AMR is required in production');
+    }
+    if (raw.INVITATION_ACCEPTANCE_WINDOW_SECONDS === undefined) {
+      throw new Error(
+        'INVITATION_ACCEPTANCE_WINDOW_SECONDS is required in production',
+      );
+    }
+    if (raw.INVITATION_ACCEPTANCE_MAX_ATTEMPTS === undefined) {
+      throw new Error(
+        'INVITATION_ACCEPTANCE_MAX_ATTEMPTS is required in production',
+      );
     }
     if (raw.MFA_MAX_AGE_SECONDS === undefined) {
       throw new Error('MFA_MAX_AGE_SECONDS is required in production');
@@ -570,6 +598,8 @@ export function validateEnvironment(
     RATE_LIMIT_ENABLED: rateLimitEnabled,
     RATE_LIMIT_WINDOW_SECONDS: rateLimitWindowSeconds,
     RATE_LIMIT_MAX_REQUESTS: rateLimitMaxRequests,
+    INVITATION_ACCEPTANCE_WINDOW_SECONDS: invitationAcceptanceWindowSeconds,
+    INVITATION_ACCEPTANCE_MAX_ATTEMPTS: invitationAcceptanceMaxAttempts,
     MFA_REQUIRED_AMR: requiredValue('MFA_REQUIRED_AMR', mfaRequiredAmr),
     ...(mfaRequiredAcr ? { MFA_REQUIRED_ACR: mfaRequiredAcr } : {}),
     MFA_MAX_AGE_SECONDS: mfaMaxAgeSeconds,

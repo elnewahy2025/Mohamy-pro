@@ -116,6 +116,8 @@ export class SessionService {
           userId: current.id,
           userStatus: current.status,
           userLocale: current.locale,
+          providerSubject: claims.sub,
+          emailNormalized: current.emailNormalized,
           csrfTokenHash: created.csrfTokenHash,
           issuedAt: created.issuedAt,
           lastUsedAt: created.lastUsedAt,
@@ -274,6 +276,8 @@ export class SessionService {
           userId: session.userId,
           userStatus: session.user.status,
           userLocale: session.user.locale,
+          providerSubject: session.providerSubject,
+          emailNormalized: session.user.emailNormalized,
           csrfTokenHash: session.csrfTokenHash,
           issuedAt: session.issuedAt,
           lastUsedAt:
