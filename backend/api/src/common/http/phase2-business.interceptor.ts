@@ -5,6 +5,7 @@ import {
   ConflictException,
   ExecutionContext,
   Injectable,
+  Logger,
   NestInterceptor,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
@@ -35,6 +36,8 @@ const INVITATION_ACCEPTANCE_PATH = '/api/v1/invitations/accept';
 
 @Injectable()
 export class Phase2BusinessInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(Phase2BusinessInterceptor.name);
+
   constructor(private readonly idempotency: IdempotencyService) {}
 
   async intercept(
@@ -119,7 +122,17 @@ export class Phase2BusinessInterceptor implements NestInterceptor {
             scope,
             decision,
             error,
-          ),
+          ).catch((completionError: unknown) => {
+            this.logger.error(
+              {
+                errorClass:
+                  completionError instanceof Error
+                    ? completionError.name
+                    : 'UnknownError',
+              },
+              'Idempotency failure completion failed; preserving original exception',
+            );
+          }),
         ).pipe(mergeMap(() => throwError(() => error))),
       ),
     );

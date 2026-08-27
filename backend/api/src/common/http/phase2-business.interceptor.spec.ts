@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { createSuccessEnvelope } from './api-envelope';
 import { Phase2BusinessInterceptor } from './phase2-business.interceptor';
@@ -233,6 +234,34 @@ describe('Phase2BusinessInterceptor', () => {
       } as never),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(idempotency.register).not.toHaveBeenCalled();
+  });
+
+  it('preserves the original controlled exception when failure completion rejects', async () => {
+    const request = createRequest({
+      originalUrl: '/api/v1/invitations/accept',
+      body: { token: 'a'.repeat(43) },
+    });
+    const error = new ConflictException('INVITATION_NOT_ACTIONABLE');
+    const idempotency = {
+      register: jest.fn().mockResolvedValue({ kind: 'RESERVED', record: {} }),
+      complete: jest.fn().mockRejectedValue(new Error('completion failure')),
+      releaseForRetry: jest.fn(),
+    };
+    const interceptor = new Phase2BusinessInterceptor(idempotency as never);
+
+    const stream = await interceptor.intercept(createContext(request, {}), {
+      handle: () => throwError(() => error),
+    } as never);
+
+    await expect(firstValueFrom(stream)).rejects.toBe(error);
+    expect(idempotency.complete).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        terminalFailure: true,
+        responseStatus: 409,
+      }),
+    );
   });
 
   it('stores a terminal error envelope and rethrows the original controlled exception', async () => {
