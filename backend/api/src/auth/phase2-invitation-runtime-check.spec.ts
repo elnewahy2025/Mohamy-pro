@@ -49,7 +49,30 @@ describe('Phase 2 invitation runtime fixture SQL contract', () => {
     }
     expect(verifierSource).toContain(": 'UNKNOWN'");
     expect(verifierSource).toContain(
-      'INVITATION_CREATE_HTTP_403_CODE_${safeApiErrorCode(created.payload)}',
+      'INVITATION_CREATE_HTTP_403_CODE_${safeApiErrorCode(created.payload, SAFE_INVITATION_CREATE_ERROR_CODES)}',
+    );
+  });
+
+  it('uses an allowlisted expired-acceptance response-code diagnostic', () => {
+    const verifierPath = resolve(
+      __dirname,
+      '../../scripts/phase2-invitation-runtime-check.mjs',
+    );
+    const verifierSource = readFileSync(verifierPath, 'utf8');
+
+    expect(verifierSource).toContain(
+      'const SAFE_INVITATION_ACCEPT_ERROR_CODES = new Set([',
+    );
+    for (const code of [
+      'INVITATION_NOT_ACTIONABLE',
+      'INVITATION_INVALID',
+      'FORBIDDEN',
+      'INTERNAL_SERVER_ERROR',
+    ]) {
+      expect(verifierSource).toContain(`'${code}'`);
+    }
+    expect(verifierSource).toContain(
+      'INVITATION_EXPIRE_ACCEPT_HTTP_${expireAccept.response.status}_CODE_${safeApiErrorCode(expireAccept.payload, SAFE_INVITATION_ACCEPT_ERROR_CODES)}',
     );
   });
 

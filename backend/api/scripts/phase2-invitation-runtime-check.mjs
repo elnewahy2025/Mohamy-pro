@@ -183,16 +183,19 @@ const SAFE_INVITATION_CREATE_ERROR_CODES = new Set([
   'AUTHORIZATION_DENIED',
   'FORBIDDEN',
 ]);
+const SAFE_INVITATION_ACCEPT_ERROR_CODES = new Set([
+  'INVITATION_NOT_ACTIONABLE',
+  'INVITATION_INVALID',
+  'FORBIDDEN',
+  'INTERNAL_SERVER_ERROR',
+]);
 
-function safeApiErrorCode(payload) {
+function safeApiErrorCode(payload, allowlist) {
   const code =
     payload && typeof payload === 'object' && payload.error
       ? payload.error.code
       : undefined;
-  return typeof code === 'string' &&
-    SAFE_INVITATION_CREATE_ERROR_CODES.has(code)
-    ? code
-    : 'UNKNOWN';
+  return typeof code === 'string' && allowlist.has(code) ? code : 'UNKNOWN';
 }
 
 function apiJsonHeaders(csrfToken, idempotencyKey) {
@@ -711,7 +714,7 @@ async function run() {
     );
     if (created.response.status === 403) {
       throw new Error(
-        `INVITATION_CREATE_HTTP_403_CODE_${safeApiErrorCode(created.payload)}`,
+        `INVITATION_CREATE_HTTP_403_CODE_${safeApiErrorCode(created.payload, SAFE_INVITATION_CREATE_ERROR_CODES)}`,
       );
     }
     requireStatus(created.response, 200, 'INVITATION_CREATE');
@@ -885,8 +888,13 @@ async function run() {
       { token: expiredData.invitationToken },
       'INVITATION_EXPIRE_ACCEPT',
     );
-    requireStatus(expireAccept.response, 409, 'INVITATION_EXPIRE_ACCEPT');
+    if (expireAccept.response.status !== 409) {
+      throw new Error(
+        `INVITATION_EXPIRE_ACCEPT_HTTP_${expireAccept.response.status}_CODE_${safeApiErrorCode(expireAccept.payload, SAFE_INVITATION_ACCEPT_ERROR_CODES)}`,
+      );
+    }
     fixture.idempotencyKeys.push(expireAccept.idempotencyKey);
+
     await assertInvitationVisible(
       runtime,
       fixture.tenantId,
