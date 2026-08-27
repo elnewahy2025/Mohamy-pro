@@ -66,6 +66,18 @@ phase2_invitation_runtime_result=PASS
 
 These markers are **not yet evidence** because the verifier has not yet been executed against the user’s Windows topology.
 
+## Latest diagnostic and source correction
+
+The latest sanitized Windows run reached fixture provisioning and reported:
+
+```text
+phase2_invitation_runtime_result=FAIL|stage=fixture_provision|substage=admin_membership_role_create|error_class=error|error_code=UNCLASSIFIED|sqlstate=42703|sqlcategory=undefined_column
+```
+
+Source review confirmed the exact mismatch. The foundation migration and Prisma model define `MembershipRole` with `id`, `tenantId`, `membershipId`, `roleId`, `assignmentScope`, `assignedAt`, and `revokedAt`; they do not define `createdAt`. The verifier fixture insert had incorrectly included `createdAt`, causing PostgreSQL SQLSTATE `42703`. The verifier now inserts only the schema-defined columns and has a focused regression test that checks the MembershipRole column list and value count. This is a verifier fixture correction, not a database migration or privilege change.
+
+A new Windows runtime run is still required to verify that fixture provisioning proceeds to the actual invitation workflow. The runtime workstream remains unaccepted until that run and the remaining acceptance criteria pass.
+
 ## Remaining qualification
 
 The acceptance gate remains open until the Windows runtime run passes after synchronization and the output is reviewed. This workstream also does not provide a positive provider-MFA administrative success proof; the existing authorization runtime result proves fail-closed denial when provider MFA is absent. No positive MFA claim may be inferred from the missing-MFA test.

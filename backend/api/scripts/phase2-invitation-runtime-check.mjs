@@ -414,7 +414,7 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
     );
     currentSubstage = 'admin_membership_role_create';
     await admin.query(
-      'INSERT INTO "MembershipRole" ("id", "tenantId", "membershipId", "roleId", "createdAt", "assignedAt") VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+      'INSERT INTO "MembershipRole" ("id", "tenantId", "membershipId", "roleId", "assignedAt") VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)',
       [randomUuid(), fixture.tenantId, fixture.membershipId, fixture.roleId],
     );
     await admin.query('COMMIT');
