@@ -95,6 +95,28 @@ function htmlAttribute(tag, name) {
   return match?.[1]?.replaceAll('&amp;', '&') ?? '';
 }
 
+function classifyCallbackBody(body) {
+  if (/kc-otp-login-form|otp/i.test(body)) return 'KEYCLOAK_OTP_REQUIRED';
+  if (/update-password|password-update|kc-passwd/i.test(body)) {
+    return 'KEYCLOAK_PASSWORD_UPDATE_REQUIRED';
+  }
+  if (/verify-email|email-verification/i.test(body)) {
+    return 'KEYCLOAK_EMAIL_VERIFICATION_REQUIRED';
+  }
+  if (
+    /invalid credentials|invalid username|login-error|alert-error/i.test(body)
+  ) {
+    return 'KEYCLOAK_CREDENTIALS_REJECTED';
+  }
+  if (/required-action|kc-page-title/i.test(body)) {
+    return 'KEYCLOAK_REQUIRED_ACTION';
+  }
+  if (/application\/json|"success"|"error"/i.test(body)) {
+    return 'APPLICATION_CALLBACK_BODY';
+  }
+  return 'OIDC_CALLBACK_BODY_UNCLASSIFIED';
+}
+
 function loginForm(html, baseUrl) {
   const formTag = html.match(
     /<form\b[^>]*id=["'](?:kc-form-login|kc-otp-login-form)["'][^>]*>/i,
@@ -199,7 +221,13 @@ async function login(username, password, otp) {
     'KEYCLOAK_CREDENTIALS',
   );
   const callback = await request(callbackUrl, { headers: { origin } }, jar);
-  requireStatus(callback, 302, 'OIDC_CALLBACK');
+  if (callback.status !== 302) {
+    const body = callback.status === 200 ? await callback.text() : '';
+    const classification = body
+      ? classifyCallbackBody(body)
+      : 'OIDC_CALLBACK_NO_BODY';
+    throw new Error(`OIDC_CALLBACK_HTTP_${callback.status}_${classification}`);
+  }
   if (!jar.has(cookieName)) throw new Error('SESSION_COOKIE_MISSING');
   const returnLocation = absoluteLocation(
     apiBaseUrl,
