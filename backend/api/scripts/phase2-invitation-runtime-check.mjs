@@ -96,19 +96,28 @@ function htmlAttribute(tag, name) {
 }
 
 function classifyCallbackBody(body) {
-  if (/kc-otp-login-form|otp/i.test(body)) return 'KEYCLOAK_OTP_REQUIRED';
-  if (/update-password|password-update|kc-passwd/i.test(body)) {
-    return 'KEYCLOAK_PASSWORD_UPDATE_REQUIRED';
-  }
-  if (/verify-email|email-verification/i.test(body)) {
-    return 'KEYCLOAK_EMAIL_VERIFICATION_REQUIRED';
+  if (
+    /id=["']kc-otp-login-form["']/i.test(body) ||
+    /name=["']otp["']/i.test(body)
+  ) {
+    return 'KEYCLOAK_OTP_REQUIRED';
   }
   if (
-    /invalid credentials|invalid username|login-error|alert-error/i.test(body)
+    /id=["']kc-passwd-update-form["']/i.test(body) ||
+    /update-password|password-update/i.test(body)
   ) {
+    return 'KEYCLOAK_PASSWORD_UPDATE_REQUIRED';
+  }
+  if (
+    /id=["']kc-verify-email-form["']/i.test(body) ||
+    /verify-email|email-verification/i.test(body)
+  ) {
+    return 'KEYCLOAK_EMAIL_VERIFICATION_REQUIRED';
+  }
+  if (/invalid credentials|invalid username|login-error/i.test(body)) {
     return 'KEYCLOAK_CREDENTIALS_REJECTED';
   }
-  if (/required-action|kc-page-title/i.test(body)) {
+  if (/login-actions\/required-action|id=["']kc-select-/i.test(body)) {
     return 'KEYCLOAK_REQUIRED_ACTION';
   }
   if (/application\/json|"success"|"error"/i.test(body)) {
