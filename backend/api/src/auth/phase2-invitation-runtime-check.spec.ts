@@ -30,6 +30,29 @@ describe('Phase 2 invitation runtime fixture SQL contract', () => {
     expect(values).toHaveLength(columns.length);
   });
 
+  it('uses an allowlisted invitation-create response-code diagnostic', () => {
+    const verifierPath = resolve(
+      __dirname,
+      '../../scripts/phase2-invitation-runtime-check.mjs',
+    );
+    const verifierSource = readFileSync(verifierPath, 'utf8');
+
+    expect(verifierSource).toContain(
+      'const SAFE_INVITATION_CREATE_ERROR_CODES = new Set([',
+    );
+    for (const code of [
+      'MFA_STEP_UP_REQUIRED',
+      'AUTHORIZATION_DENIED',
+      'FORBIDDEN',
+    ]) {
+      expect(verifierSource).toContain(`'${code}'`);
+    }
+    expect(verifierSource).toContain(": 'UNKNOWN'");
+    expect(verifierSource).toContain(
+      'INVITATION_CREATE_HTTP_403_CODE_${safeApiErrorCode(created.payload)}',
+    );
+  });
+
   it('normalizes a pending admin for switching and restores original user statuses', () => {
     const verifierPath = resolve(
       __dirname,

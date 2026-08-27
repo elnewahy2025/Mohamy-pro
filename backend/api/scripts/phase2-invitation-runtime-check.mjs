@@ -178,6 +178,23 @@ function unwrap(value) {
   return value && value.success === true && value.data ? value.data : value;
 }
 
+const SAFE_INVITATION_CREATE_ERROR_CODES = new Set([
+  'MFA_STEP_UP_REQUIRED',
+  'AUTHORIZATION_DENIED',
+  'FORBIDDEN',
+]);
+
+function safeApiErrorCode(payload) {
+  const code =
+    payload && typeof payload === 'object' && payload.error
+      ? payload.error.code
+      : undefined;
+  return typeof code === 'string' &&
+    SAFE_INVITATION_CREATE_ERROR_CODES.has(code)
+    ? code
+    : 'UNKNOWN';
+}
+
 function apiJsonHeaders(csrfToken, idempotencyKey) {
   return {
     accept: 'application/json',
@@ -656,6 +673,11 @@ async function run() {
       },
       'INVITATION_CREATE',
     );
+    if (created.response.status === 403) {
+      throw new Error(
+        `INVITATION_CREATE_HTTP_403_CODE_${safeApiErrorCode(created.payload)}`,
+      );
+    }
     requireStatus(created.response, 200, 'INVITATION_CREATE');
     const createdData = unwrap(created.payload);
     requireValue('INVITATION_CREATE_TOKEN', createdData.invitationToken);

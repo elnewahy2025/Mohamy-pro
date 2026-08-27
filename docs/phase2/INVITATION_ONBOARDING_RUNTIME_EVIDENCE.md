@@ -32,7 +32,7 @@ The following checks were executed in the sandbox checkout after the implementat
 | Check                                                        | Result                          |
 | ------------------------------------------------------------ | ------------------------------- |
 | API build: `pnpm --filter api run build`                     | **PASS**                        |
-| Complete API Jest: `pnpm --filter api exec jest --runInBand` | **PASS — 34 suites, 170 tests** |
+| Complete API Jest: `pnpm --filter api exec jest --runInBand` | **PASS — 34 suites, 172 tests** |
 
 | Invitation-focused tests | **PASS**, including service, acceptance, controller, tenant-context, and interceptor tests |
 | ESLint without auto-fix | **PASS with 0 errors and 45 warnings**. The warnings are reported and remain distinct from errors; no auto-fix was run. |
@@ -51,6 +51,8 @@ The verifier is designed to prove real invitation creation, token-free persisted
 
 The verifier now reports only an allowlisted stage, an allowlisted fixture substage when applicable, JavaScript error class, uppercase error code, SQLSTATE, and SQL category on failure. It never prints usernames, passwords, provider authorization URLs, authorization codes, cookies, raw tokens, connection strings, or database error messages. This diagnostic was added because the prior generic `error_class=Error` output did not identify whether a failure occurred during database connection, either login, fixture provisioning, tenant switching, invitation mutation, outbox delivery, or cleanup. A bounded failure has this form: `phase2_invitation_runtime_result=FAIL|stage=...|substage=...|error_class=...|error_code=...|sqlstate=...|sqlcategory=...`.
 
+For invitation creation specifically, the verifier extracts only `payload.error.code` when the HTTP response is 403 and accepts only the source-established codes `MFA_STEP_UP_REQUIRED`, `AUTHORIZATION_DENIED`, and `FORBIDDEN`; every other response code or malformed payload becomes `UNKNOWN`. The bounded verifier error is therefore `INVITATION_CREATE_HTTP_403_CODE_<allowlisted-code>`. The response body, message, details, headers, cookies, identifiers, tokens, provider values, and session contents are not emitted.
+
 A successful run must include these markers, with the actual values produced by the Windows environment:
 
 ```text
@@ -68,22 +70,24 @@ These markers are **not yet evidence** because the verifier has not yet been exe
 
 ## Latest diagnostic and source correction
 
-The latest sanitized Windows run passed fixture provisioning and then reported:
+The latest sanitized Windows run passed fixture provisioning and tenant switching, then reported:
 
 ```text
-phase2_invitation_runtime_result=FAIL|stage=tenant_switch|substage=none|error_class=Error|error_code=TENANT_SWITCH_HTTP_403|sqlstate=none|sqlcategory=unknown
+phase2_invitation_runtime_result=FAIL|stage=invitation_create|substage=none|error_class=Error|error_code=INVITATION_CREATE_HTTP_403|sqlstate=none|sqlcategory=unknown
 invitation_fixture_cleanup_status=PASS|active_fixture_tenants=0|active_fixture_memberships=0|audit_append_only=true
 ```
 
-Source review confirmed that the failure is an application lifecycle precondition, not a database or RLS failure. OIDC session creation permits users in `PENDING` or `ACTIVE` status, while `MembershipService.switchTenant` requires the authenticated user to be `ACTIVE` before accepting an active membership. The existing accepted membership runtime verifier explicitly normalizes a PENDING test user to ACTIVE and restores the original status during cleanup. The invitation verifier previously created an ACTIVE fixture membership but did not normalize its authenticated admin user, so tenant switching correctly failed closed with HTTP 403. The verifier now performs that temporary admin-only normalization and restores the original statuses for both fixture users, including when primary cleanup fails. No database migration, privilege, or authorization-policy weakening was made.
+Source review confirms that the exact 403 reason is not yet established. The invitation creation controller is protected by `SessionGuard` and `AuthorizationGuard` with `CanManageMembership`; the policy is MFA-sensitive and also requires a persisted `membership.manage` permission visible through the RLS-aware authorization snapshot. The current verifier previously discarded the standard response error code, so this marker does not distinguish `MFA_STEP_UP_REQUIRED`, `AUTHORIZATION_DENIED`, `FORBIDDEN`, or another controlled 403 path. The application’s fail-closed behavior must not be weakened, and no positive provider-MFA result may be inferred.
 
-The focused verifier regression test now covers both the schema-correct MembershipRole insert and the temporary user-status lifecycle. A new Windows runtime run is still required to verify that tenant switching proceeds to the actual invitation workflow. The runtime workstream remains unaccepted until that run and the remaining acceptance criteria pass.
+A verifier-only diagnostic now preserves only an allowlisted response error code in the bounded failure marker. No database migration, privilege, RLS, authorization-policy, Keycloak, or application behavior change was made. The diagnostic is intended to establish whether the next run is an expected MFA denial or a persisted authorization/context problem before any manual action is considered.
+
+The focused verifier regression tests now cover the schema-correct MembershipRole insert, temporary user-status lifecycle, and invitation-create response-code allowlist. A new Windows runtime run is required to produce the bounded 403 code and proceed to the actual invitation workflow. The runtime workstream remains unaccepted until that run and the remaining acceptance criteria pass.
 
 ## Remaining qualification
 
 The acceptance gate remains open until the Windows runtime run passes after synchronization and the output is reviewed. This workstream also does not provide a positive provider-MFA administrative success proof; the existing authorization runtime result proves fail-closed denial when provider MFA is absent. No positive MFA claim may be inferred from the missing-MFA test.
 
-The next safe operation is the Windows invitation runtime rerun after this verifier-only lifecycle correction is synchronized. Before any future source synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched; no new migration is required for this correction.
+The next safe operation is the Windows invitation runtime rerun after this verifier-only response-code diagnostic is synchronized. Before any future source synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched; no new migration is required for this diagnostic.
 
 ## References
 
