@@ -324,20 +324,8 @@ export class InvitationService {
           throw new InvitationNotActionableError();
         }
         if (invitation.expiresAt <= now) {
-          let expiryStage = 'context_bind';
+          let expiryStage = 'invitation_terminalize';
           try {
-            const operationId = randomUUID();
-            await this.prisma.bindInvitationAcceptanceContext(transaction, {
-              tenantId: null,
-              userId: input.session.userId,
-              membershipId: null,
-              inviterMembershipId: invitation.inviterMembershipId,
-              invitationTokenHash: tokenHash,
-              invalidatedTokenHash,
-              operationId,
-              globalOperation: true,
-            });
-            expiryStage = 'invitation_terminalize';
             const terminalized = await terminalizeExpiredInvitation(
               transaction,
               invitation.tenantId,
@@ -345,6 +333,11 @@ export class InvitationService {
               invalidatedTokenHash,
             );
             if (!terminalized) throw new InvitationNotActionableError();
+            expiryStage = 'context_bind';
+            await this.prisma.bindGlobalOperationContext(
+              transaction,
+              randomUUID(),
+            );
             expiryStage = 'audit_record';
             await this.audit.recordInTransaction(
               {

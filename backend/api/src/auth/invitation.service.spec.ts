@@ -64,6 +64,7 @@ function createFixture() {
       callback(transaction),
     ),
     bindInvitationAcceptanceContext: jest.fn(),
+    bindGlobalOperationContext: jest.fn(),
   };
   const audit = { recordInTransaction: jest.fn() };
   const redis = { getClient: jest.fn() };
@@ -403,6 +404,20 @@ describe('InvitationService', () => {
         policy: 'InvitationAcceptance',
       }),
       fixture.transaction,
+    );
+    expect(fixture.prisma.bindGlobalOperationContext).toHaveBeenCalledWith(
+      fixture.transaction,
+      expect.any(String),
+    );
+    expect(
+      fixture.transaction.invitation.updateMany.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      fixture.prisma.bindGlobalOperationContext.mock.invocationCallOrder[0],
+    );
+    expect(
+      fixture.prisma.bindGlobalOperationContext.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      fixture.audit.recordInTransaction.mock.invocationCallOrder[0],
     );
   });
 

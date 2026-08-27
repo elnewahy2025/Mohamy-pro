@@ -10,13 +10,9 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
-import { EMPTY, Observable, from, throwError } from 'rxjs';
+import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, mergeMap } from 'rxjs/operators';
-import {
-  createErrorEnvelope,
-  createSuccessEnvelope,
-  isApiErrorEnvelope,
-} from './api-envelope';
+import { createErrorEnvelope, createSuccessEnvelope } from './api-envelope';
 import { getCorrelationId } from '../middleware/correlation-id.middleware';
 import { AuthenticationError } from '../../auth/auth.errors';
 import type { AuthenticatedRequest } from '../../auth/auth.types';
@@ -92,8 +88,7 @@ export class Phase2BusinessInterceptor implements NestInterceptor {
     });
 
     if (decision.kind === 'REPLAY') {
-      this.replay(response, decision);
-      return EMPTY;
+      return of(this.replay(response, decision));
     }
     if (decision.kind === 'CONFLICT') {
       throw new ConflictException('IDEMPOTENCY_CONFLICT');
@@ -193,7 +188,7 @@ export class Phase2BusinessInterceptor implements NestInterceptor {
   private replay(
     response: Response,
     decision: Extract<IdempotencyDecision, { kind: 'REPLAY' }>,
-  ): void {
+  ): unknown {
     const headers = decision.record.responseHeaders;
     if (headers && typeof headers === 'object' && !Array.isArray(headers)) {
       const correlationId = (headers as { 'x-correlation-id'?: unknown })[
@@ -203,12 +198,8 @@ export class Phase2BusinessInterceptor implements NestInterceptor {
         response.setHeader('x-correlation-id', correlationId);
       }
     }
-    const body = decision.record.responseBody;
-    if (isApiErrorEnvelope(body)) {
-      response.status(decision.record.responseStatus ?? 409).json(body);
-      return;
-    }
-    response.status(decision.record.responseStatus ?? 200).json(body);
+    response.status(decision.record.responseStatus ?? 200);
+    return decision.record.responseBody;
   }
 }
 

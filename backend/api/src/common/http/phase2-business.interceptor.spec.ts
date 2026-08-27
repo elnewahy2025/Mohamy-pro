@@ -217,8 +217,8 @@ describe('Phase2BusinessInterceptor', () => {
 
     expect(next.handle).not.toHaveBeenCalled();
     expect(response.status).toHaveBeenCalledWith(200);
-    expect(response.json).toHaveBeenCalledWith(storedBody);
-    await expect(firstValueFrom(stream)).rejects.toBeDefined();
+    expect(response.json).not.toHaveBeenCalled();
+    await expect(firstValueFrom(stream)).resolves.toEqual(storedBody);
   });
 
   it('rejects malformed idempotency keys before reservation', async () => {
