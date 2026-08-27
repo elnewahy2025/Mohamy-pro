@@ -45,11 +45,11 @@ The unit and focused tests include token hashing, one-time issuance, identity mi
 
 ## Windows runtime gate still required
 
-The runtime verifier is registered as `pnpm --filter api run db:phase2:invitation` and requires two real Keycloak test identities: one tenant administrator and one acceptance target. The credentials must be supplied through protected Windows environment variables; they must never be pasted into chat, committed, logged, or included in evidence.
+The runtime verifier is registered as `pnpm --filter api run db:phase2:invitations` and requires two real Keycloak test identities: one tenant administrator and one acceptance target. The credentials must be supplied through protected Windows environment variables; they must never be pasted into chat, committed, logged, or included in evidence.
 
 The verifier is designed to prove real invitation creation, token-free persisted idempotency replay, acceptance, active membership and role assignment, exact-token replay behavior, identity mismatch without mutation, revocation, expiry terminalization, worker processing, restricted-role visibility, audit retention, and fixture cleanup. It uses `MIGRATION_DATABASE_URL` only for isolated fixture setup/cleanup and `DATABASE_URL` for restricted runtime assertions. It does not delete append-only AuditEvent rows.
 
-The verifier now reports only an allowlisted stage, JavaScript error class, and uppercase error code on failure. It never prints usernames, passwords, provider authorization URLs, authorization codes, cookies, raw tokens, connection strings, or database error messages. This diagnostic was added because the prior generic `error_class=Error` output did not identify whether a failure occurred during database connection, either login, fixture provisioning, tenant switching, invitation mutation, outbox delivery, or cleanup.
+The verifier now reports only an allowlisted stage, an allowlisted fixture substage when applicable, JavaScript error class, uppercase error code, SQLSTATE, and SQL category on failure. It never prints usernames, passwords, provider authorization URLs, authorization codes, cookies, raw tokens, connection strings, or database error messages. This diagnostic was added because the prior generic `error_class=Error` output did not identify whether a failure occurred during database connection, either login, fixture provisioning, tenant switching, invitation mutation, outbox delivery, or cleanup. A bounded failure has this form: `phase2_invitation_runtime_result=FAIL|stage=...|substage=...|error_class=...|error_code=...|sqlstate=...|sqlcategory=...`.
 
 A successful run must include these markers, with the actual values produced by the Windows environment:
 
@@ -70,7 +70,7 @@ These markers are **not yet evidence** because the verifier has not yet been exe
 
 The acceptance gate remains open until the Windows runtime run passes after synchronization and the output is reviewed. This workstream also does not provide a positive provider-MFA administrative success proof; the existing authorization runtime result proves fail-closed denial when provider MFA is absent. No positive MFA claim may be inferred from the missing-MFA test.
 
-The next safe operation is source synchronization on Windows. Before synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched except for the additive migration deployment.
+The next safe operation is the Windows invitation runtime rerun after the verifier-only diagnostic and fixture corrections are synchronized. Before any future source synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched except for the already-applied additive migration.
 
 ## References
 

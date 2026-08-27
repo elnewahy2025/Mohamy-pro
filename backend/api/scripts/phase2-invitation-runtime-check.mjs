@@ -15,6 +15,7 @@ const databaseUrl = process.env.DATABASE_URL;
 const migrationDatabaseUrl = process.env.MIGRATION_DATABASE_URL;
 const timeoutMs = 30_000;
 let currentStage = 'startup';
+let currentSubstage = 'none';
 
 class CookieJar {
   #cookies = new Map();
@@ -52,6 +53,26 @@ class CookieJar {
 function splitSetCookie(value) {
   if (!value) return [];
   return value.split(/,(?=\s*[^;,=]+=[^;,]+)/);
+}
+
+function safeSqlState(error) {
+  if (typeof error !== 'object' || error === null) return 'none';
+  const code = error.code;
+  return typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code) ? code : 'none';
+}
+
+function safeSqlCategory(error) {
+  const code = safeSqlState(error);
+  if (code === '23505') return 'unique_violation';
+  if (code === '23503') return 'foreign_key_violation';
+  if (code === '23502') return 'not_null_violation';
+  if (code === '22P02') return 'invalid_text_representation';
+  if (code === '42501') return 'insufficient_privilege';
+  if (code === '42P01') return 'undefined_table';
+  if (code === '42703') return 'undefined_column';
+  if (code === '40001') return 'serialization_failure';
+  if (code === '40P01') return 'deadlock_detected';
+  return 'unknown';
 }
 
 function requireValue(name, value) {
@@ -338,10 +359,12 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
 
   await admin.query('BEGIN');
   try {
+    currentSubstage = 'permission_provision';
     for (const [key, description] of [
       ['membership.manage', 'Manage tenant memberships'],
       ['tenant.switch', 'Switch active tenant context'],
     ]) {
+      currentSubstage = `permission_${key.replaceAll('.', '_')}`;
       const permissionId = randomUuid();
       const inserted = await admin.query(
         'INSERT INTO "Permission" ("id", "key", "description", "createdAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT ("key") DO NOTHING RETURNING "id"',
@@ -358,6 +381,7 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
       );
       permissionIds.set(key, permission.id);
     }
+    currentSubstage = 'tenant_create';
     await admin.query(
       'INSERT INTO "Tenant" ("id", "slug", "name", "status", "createdAt", "updatedAt") VALUES ($1, $2, $3, \'ACTIVE\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
       [
@@ -366,6 +390,7 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
         'Phase 2 invitation runtime fixture',
       ],
     );
+    currentSubstage = 'role_create';
     await admin.query(
       'INSERT INTO "Role" ("id", "tenantId", "scope", "key", "name", "createdAt", "updatedAt") VALUES ($1, $2, \'TENANT\', $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
       [
@@ -375,16 +400,19 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
         'Invitation runtime administrator',
       ],
     );
+    currentSubstage = 'role_permission_create';
     for (const key of ['membership.manage', 'tenant.switch']) {
       await admin.query(
         'INSERT INTO "RolePermission" ("roleId", "permissionId") VALUES ($1, $2)',
         [fixture.roleId, permissionIds.get(key)],
       );
     }
+    currentSubstage = 'admin_membership_create';
     await admin.query(
       'INSERT INTO "Membership" ("id", "tenantId", "userId", "status", "activeFrom", "activatedAt", "createdAt", "updatedAt") VALUES ($1, $2, $3, \'ACTIVE\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
       [fixture.membershipId, fixture.tenantId, adminUserId],
     );
+    currentSubstage = 'admin_membership_role_create';
     await admin.query(
       'INSERT INTO "MembershipRole" ("id", "tenantId", "membershipId", "roleId", "createdAt", "assignedAt") VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
       [randomUuid(), fixture.tenantId, fixture.membershipId, fixture.roleId],
@@ -807,8 +835,10 @@ async function run() {
       error instanceof Error && /^[A-Z][A-Z0-9_]*$/.test(error.message)
         ? error.message
         : 'UNCLASSIFIED';
+    const fixtureSubstage =
+      currentStage === 'fixture_provision' ? currentSubstage : 'none';
     console.log(
-      `phase2_invitation_runtime_result=FAIL|stage=${currentStage}|error_class=${errorClass}|error_code=${errorCode}`,
+      `phase2_invitation_runtime_result=FAIL|stage=${currentStage}|substage=${fixtureSubstage}|error_class=${errorClass}|error_code=${errorCode}|sqlstate=${safeSqlState(error)}|sqlcategory=${safeSqlCategory(error)}`,
     );
     process.exitCode = 1;
   } finally {
