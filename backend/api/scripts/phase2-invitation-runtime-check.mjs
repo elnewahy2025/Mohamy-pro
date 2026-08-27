@@ -359,6 +359,20 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
 
   await admin.query('BEGIN');
   try {
+    currentSubstage = 'admin_user_activate';
+    const originalAdminStatus = fixture.originalUserStatuses.get(adminUserId);
+    if (originalAdminStatus !== 'ACTIVE' && originalAdminStatus !== 'PENDING') {
+      throw new Error('INVITATION_ADMIN_USER_STATUS_UNSUPPORTED');
+    }
+    if (originalAdminStatus === 'PENDING') {
+      const activated = await admin.query(
+        'UPDATE "User" SET "status" = \'ACTIVE\' WHERE "id" = $1 AND "status" = \'PENDING\'',
+        [adminUserId],
+      );
+      if (activated.rowCount !== 1) {
+        throw new Error('INVITATION_ADMIN_USER_STATUS_CHANGED');
+      }
+    }
     currentSubstage = 'permission_provision';
     for (const [key, description] of [
       ['membership.manage', 'Manage tenant memberships'],
@@ -503,6 +517,25 @@ async function waitForProcessedOutbox(admin, eventTypes, invitationIds) {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   return false;
+}
+
+async function restoreOriginalUserStatuses(admin, fixture) {
+  await admin.query('BEGIN');
+  try {
+    for (const [userId, status] of fixture.originalUserStatuses) {
+      const restored = await admin.query(
+        'UPDATE "User" SET "status" = $2 WHERE "id" = $1',
+        [userId, status],
+      );
+      if (restored.rowCount !== 1) {
+        throw new Error('INVITATION_USER_STATUS_RESTORE_FAILED');
+      }
+    }
+    await admin.query('COMMIT');
+  } catch (error) {
+    await admin.query('ROLLBACK');
+    throw error;
+  }
 }
 
 async function cleanup(admin, fixture) {
@@ -844,8 +877,20 @@ async function run() {
   } finally {
     if (fixture) {
       try {
+        let cleanupFailure;
         currentStage = 'cleanup';
-        await cleanup(admin, fixture);
+        try {
+          await cleanup(admin, fixture);
+        } catch (error) {
+          cleanupFailure = error;
+        }
+        currentStage = 'cleanup_user_status';
+        try {
+          await restoreOriginalUserStatuses(admin, fixture);
+        } catch (error) {
+          cleanupFailure ??= error;
+        }
+        if (cleanupFailure) throw cleanupFailure;
         const cleanupResult = await admin.query(
           'SELECT COUNT(*)::int AS active_memberships FROM "Membership" WHERE "id" = ANY($1) AND "status" IN (\'ACTIVE\', \'INVITED\', \'SUSPENDED\')',
           [[fixture.membershipId, fixture.targetMembershipId].filter(Boolean)],

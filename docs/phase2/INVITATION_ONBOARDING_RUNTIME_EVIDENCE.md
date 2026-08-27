@@ -32,7 +32,7 @@ The following checks were executed in the sandbox checkout after the implementat
 | Check                                                        | Result                          |
 | ------------------------------------------------------------ | ------------------------------- |
 | API build: `pnpm --filter api run build`                     | **PASS**                        |
-| Complete API Jest: `pnpm --filter api exec jest --runInBand` | **PASS — 33 suites, 169 tests** |
+| Complete API Jest: `pnpm --filter api exec jest --runInBand` | **PASS — 34 suites, 170 tests** |
 
 | Invitation-focused tests | **PASS**, including service, acceptance, controller, tenant-context, and interceptor tests |
 | ESLint without auto-fix | **PASS with 0 errors and 45 warnings**. The warnings are reported and remain distinct from errors; no auto-fix was run. |
@@ -68,21 +68,22 @@ These markers are **not yet evidence** because the verifier has not yet been exe
 
 ## Latest diagnostic and source correction
 
-The latest sanitized Windows run reached fixture provisioning and reported:
+The latest sanitized Windows run passed fixture provisioning and then reported:
 
 ```text
-phase2_invitation_runtime_result=FAIL|stage=fixture_provision|substage=admin_membership_role_create|error_class=error|error_code=UNCLASSIFIED|sqlstate=42703|sqlcategory=undefined_column
+phase2_invitation_runtime_result=FAIL|stage=tenant_switch|substage=none|error_class=Error|error_code=TENANT_SWITCH_HTTP_403|sqlstate=none|sqlcategory=unknown
+invitation_fixture_cleanup_status=PASS|active_fixture_tenants=0|active_fixture_memberships=0|audit_append_only=true
 ```
 
-Source review confirmed the exact mismatch. The foundation migration and Prisma model define `MembershipRole` with `id`, `tenantId`, `membershipId`, `roleId`, `assignmentScope`, `assignedAt`, and `revokedAt`; they do not define `createdAt`. The verifier fixture insert had incorrectly included `createdAt`, causing PostgreSQL SQLSTATE `42703`. The verifier now inserts only the schema-defined columns and has a focused regression test that checks the MembershipRole column list and value count. This is a verifier fixture correction, not a database migration or privilege change.
+Source review confirmed that the failure is an application lifecycle precondition, not a database or RLS failure. OIDC session creation permits users in `PENDING` or `ACTIVE` status, while `MembershipService.switchTenant` requires the authenticated user to be `ACTIVE` before accepting an active membership. The existing accepted membership runtime verifier explicitly normalizes a PENDING test user to ACTIVE and restores the original status during cleanup. The invitation verifier previously created an ACTIVE fixture membership but did not normalize its authenticated admin user, so tenant switching correctly failed closed with HTTP 403. The verifier now performs that temporary admin-only normalization and restores the original statuses for both fixture users, including when primary cleanup fails. No database migration, privilege, or authorization-policy weakening was made.
 
-A new Windows runtime run is still required to verify that fixture provisioning proceeds to the actual invitation workflow. The runtime workstream remains unaccepted until that run and the remaining acceptance criteria pass.
+The focused verifier regression test now covers both the schema-correct MembershipRole insert and the temporary user-status lifecycle. A new Windows runtime run is still required to verify that tenant switching proceeds to the actual invitation workflow. The runtime workstream remains unaccepted until that run and the remaining acceptance criteria pass.
 
 ## Remaining qualification
 
 The acceptance gate remains open until the Windows runtime run passes after synchronization and the output is reviewed. This workstream also does not provide a positive provider-MFA administrative success proof; the existing authorization runtime result proves fail-closed denial when provider MFA is absent. No positive MFA claim may be inferred from the missing-MFA test.
 
-The next safe operation is the Windows invitation runtime rerun after the verifier-only diagnostic and fixture corrections are synchronized. Before any future source synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched except for the already-applied additive migration.
+The next safe operation is the Windows invitation runtime rerun after this verifier-only lifecycle correction is synchronized. Before any future source synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched; no new migration is required for this correction.
 
 ## References
 
