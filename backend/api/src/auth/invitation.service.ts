@@ -210,7 +210,7 @@ export class InvitationService {
         });
         if (!current) throw new InvitationInvalidError();
         if (current.status === 'PENDING' && current.expiresAt <= now) {
-          const expired = await terminalizeExpiredInvitation(
+          const expired = await terminalizeRevokedInvitation(
             transaction,
             input.tenantId,
             input.invitationId,
@@ -292,6 +292,7 @@ export class InvitationService {
     );
     await this.enforceAcceptanceLimit(tokenHash, input.sourceIp);
     const now = new Date();
+    const acceptanceOperationId = randomUUID();
     const result = await this.prisma.withInvitationAcceptanceContext(
       {
         tenantId: null,
@@ -300,7 +301,7 @@ export class InvitationService {
         inviterMembershipId: null,
         invitationTokenHash: tokenHash,
         invalidatedTokenHash,
-        operationId: randomUUID(),
+        operationId: acceptanceOperationId,
       },
       async (
         transaction,
@@ -337,7 +338,10 @@ export class InvitationService {
               transaction,
               invitation.tenantId,
               invitation.id,
+              tokenHash,
               invalidatedTokenHash,
+              input.session.userId,
+              acceptanceOperationId,
             );
             if (!terminalized) throw new InvitationNotActionableError();
             expiryStage = 'context_bind';
@@ -951,6 +955,44 @@ async function readExpiryContextDiagnostic(
 }
 
 async function terminalizeExpiredInvitation(
+  transaction: Prisma.TransactionClient,
+  tenantId: string,
+  invitationId: string,
+  tokenHash: string,
+  invalidatedTokenHash: string,
+  userId: string,
+  operationId: string,
+): Promise<boolean> {
+  const updated = await transaction.$executeRaw`
+    WITH acceptance_context AS MATERIALIZED (
+      SELECT
+        set_config('app.tenant_id', '', true),
+        set_config('app.user_id', ${userId}, true),
+        set_config('app.membership_id', '', true),
+        set_config('app.operation_id', ${operationId}, true),
+        set_config('app.global_operation', 'false', true),
+        set_config('app.outbox_dispatcher', 'false', true),
+        set_config('app.idempotency_maintenance', 'false', true),
+        set_config('app.audit_retention_purge', 'false', true),
+        set_config('app.invitation_acceptance', 'true', true),
+        set_config('app.invitation_token_hash', ${tokenHash}, true),
+        set_config('app.invitation_invalidated_token_hash', ${invalidatedTokenHash}, true),
+        set_config('app.inviter_membership_id', '', true)
+    )
+    UPDATE "public"."Invitation"
+    SET
+      "status" = 'EXPIRED',
+      "tokenHash" = ${invalidatedTokenHash},
+      "updatedAt" = CURRENT_TIMESTAMP
+    FROM acceptance_context
+    WHERE "public"."Invitation"."id" = ${invitationId}
+      AND "public"."Invitation"."tenantId" = ${tenantId}
+      AND "public"."Invitation"."status" = 'PENDING'
+  `;
+  return updated === 1;
+}
+
+async function terminalizeRevokedInvitation(
   transaction: Prisma.TransactionClient,
   tenantId: string,
   invitationId: string,

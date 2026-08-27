@@ -66,6 +66,7 @@ function createFixture() {
         not_global_before_update: true,
       },
     ]),
+    $executeRaw: jest.fn(),
   };
   const prisma = {
     withTenantContext: jest.fn((_context, callback) => callback(transaction)),
@@ -385,7 +386,7 @@ describe('InvitationService', () => {
       status: 'PENDING',
       expiresAt: new Date(Date.now() - 60_000),
     });
-    fixture.transaction.invitation.updateMany.mockResolvedValue({ count: 1 });
+    fixture.transaction.$executeRaw.mockResolvedValue(1);
     const service = new InvitationService(
       fixture.prisma as never,
       fixture.audit as never,
@@ -402,11 +403,7 @@ describe('InvitationService', () => {
       }),
     ).rejects.toThrow('INVITATION_NOT_ACTIONABLE');
     expect(fixture.transaction.membership.create).not.toHaveBeenCalled();
-    expect(fixture.transaction.invitation.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { status: 'EXPIRED', tokenHash: expect.any(String) },
-      }),
-    );
+    expect(fixture.transaction.$executeRaw).toHaveBeenCalled();
     expect(fixture.audit.recordInTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: 'membership.invitation.expired',
@@ -419,7 +416,7 @@ describe('InvitationService', () => {
       expect.any(String),
     );
     expect(
-      fixture.transaction.invitation.updateMany.mock.invocationCallOrder[0],
+      fixture.transaction.$executeRaw.mock.invocationCallOrder[0],
     ).toBeLessThan(
       fixture.prisma.bindGlobalOperationContext.mock.invocationCallOrder[0],
     );
@@ -446,7 +443,7 @@ describe('InvitationService', () => {
       status: 'PENDING',
       expiresAt: new Date(Date.now() - 60_000),
     });
-    fixture.transaction.invitation.updateMany.mockResolvedValue({ count: 0 });
+    fixture.transaction.$executeRaw.mockResolvedValue(0);
     const service = new InvitationService(
       fixture.prisma as never,
       fixture.audit as never,
@@ -463,6 +460,7 @@ describe('InvitationService', () => {
       }),
     ).rejects.toThrow('INVITATION_NOT_ACTIONABLE');
     expect(fixture.audit.recordInTransaction).not.toHaveBeenCalled();
+    expect(fixture.prisma.bindGlobalOperationContext).not.toHaveBeenCalled();
   });
 
   it('rejects a non-pending invitation state without changing persisted state', async () => {
