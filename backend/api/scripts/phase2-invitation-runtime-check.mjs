@@ -14,6 +14,7 @@ const targetOtp = process.env.INVITATION_RUNTIME_TARGET_OTP;
 const databaseUrl = process.env.DATABASE_URL;
 const migrationDatabaseUrl = process.env.MIGRATION_DATABASE_URL;
 const timeoutMs = 30_000;
+let currentStage = 'startup';
 
 class CookieJar {
   #cookies = new Map();
@@ -260,6 +261,9 @@ async function queryOne(client, text, values, label) {
 }
 
 async function provisionFixtures(admin, adminUserId, targetUserId) {
+  if (adminUserId === targetUserId) {
+    throw new Error('INVITATION_DISTINCT_USERS_REQUIRED');
+  }
   const fixture = {
     tenantId: randomUuid(),
     roleId: randomUuid(),
@@ -493,16 +497,21 @@ async function run() {
   let targetUser;
   let fixture;
   try {
+    currentStage = 'database_connect';
     await admin.connect();
     await runtime.connect();
+    currentStage = 'admin_login';
     adminUser = await login(adminUsername, adminPassword, adminOtp);
+    currentStage = 'target_login';
     targetUser = await login(targetUsername, targetPassword, targetOtp);
+    currentStage = 'fixture_provision';
     fixture = await provisionFixtures(
       admin,
       adminUser.session.user.id,
       targetUser.session.user.id,
     );
 
+    currentStage = 'tenant_switch';
     const switched = await switchTenant(
       adminUser,
       fixture.tenantId,
@@ -510,6 +519,7 @@ async function run() {
     );
     if (switched.tenantId !== fixture.tenantId)
       throw new Error('INVITATION_SWITCH_TENANT_MISMATCH');
+    currentStage = 'admin_session_refresh';
     const adminSessionResponse = await request(
       `${apiBaseUrl}/api/v1/auth/session`,
       {},
@@ -519,6 +529,7 @@ async function run() {
       await readJson(adminSessionResponse, 'ADMIN_SESSION_AFTER_SWITCH'),
     );
 
+    currentStage = 'invitation_create';
     const created = await apiMutation(
       adminUser,
       `/api/v1/tenants/${fixture.tenantId}/invitations`,
@@ -554,6 +565,7 @@ async function run() {
       'invitation_create_status=PASS|hashed_token_returned_once=true|admin_policy=true',
     );
 
+    currentStage = 'invitation_accept';
     const accepted = await apiMutation(
       targetUser,
       '/api/v1/invitations/accept',
@@ -570,6 +582,7 @@ async function run() {
     }
     fixture.targetMembershipId = acceptedData.membershipId;
     fixture.idempotencyKeys.push(accepted.idempotencyKey);
+    currentStage = 'invitation_accept_replay';
     const replay = await request(
       `${apiBaseUrl}/api/v1/invitations/accept`,
       {
@@ -611,6 +624,7 @@ async function run() {
       'invitation_accept_status=PASS|membership_active=true|role_assigned=true|token_replay_idempotent=true',
     );
 
+    currentStage = 'identity_mismatch_create';
     const mismatch = await apiMutation(
       adminUser,
       `/api/v1/tenants/${fixture.tenantId}/invitations`,
@@ -625,6 +639,7 @@ async function run() {
     const mismatchData = unwrap(mismatch.payload);
     fixture.invitationIds.push(mismatchData.invitationId);
     fixture.idempotencyKeys.push(mismatch.idempotencyKey);
+    currentStage = 'identity_mismatch_accept';
     const mismatchAccept = await apiMutation(
       targetUser,
       '/api/v1/invitations/accept',
@@ -644,6 +659,7 @@ async function run() {
       'invitation_identity_mismatch_status=PASS|http=403|state_unchanged=true',
     );
 
+    currentStage = 'invitation_revoke_create';
     const revoked = await apiMutation(
       adminUser,
       `/api/v1/tenants/${fixture.tenantId}/invitations`,
@@ -657,6 +673,7 @@ async function run() {
     const revokedData = unwrap(revoked.payload);
     fixture.invitationIds.push(revokedData.invitationId);
     fixture.idempotencyKeys.push(revoked.idempotencyKey);
+    currentStage = 'invitation_revoke';
     const revoke = await apiMutation(
       adminUser,
       `/api/v1/tenants/${fixture.tenantId}/invitations/${revokedData.invitationId}/revoke`,
@@ -675,6 +692,7 @@ async function run() {
     );
     console.log('invitation_revoke_status=PASS|state=REVOKED');
 
+    currentStage = 'invitation_expiry_create';
     const expired = await apiMutation(
       adminUser,
       `/api/v1/tenants/${fixture.tenantId}/invitations`,
@@ -692,6 +710,7 @@ async function run() {
       'UPDATE "Invitation" SET "expiresAt" = CURRENT_TIMESTAMP - INTERVAL \'1 minute\' WHERE "id" = $1',
       [expiredData.invitationId],
     );
+    currentStage = 'invitation_expiry_accept';
     const expireAccept = await apiMutation(
       targetUser,
       '/api/v1/invitations/accept',
@@ -712,6 +731,7 @@ async function run() {
       'invitation_expiry_status=PASS|http=409|state=EXPIRED|audit_event=true',
     );
 
+    currentStage = 'outbox_delivery';
     const processed = await waitForProcessedOutbox(
       admin,
       [
@@ -726,15 +746,19 @@ async function run() {
     console.log('invitation_outbox_status=PASS|events_processed=true');
     console.log('phase2_invitation_runtime_result=PASS');
   } catch (error) {
+    const errorClass = error instanceof Error ? error.name : 'UnknownError';
+    const errorCode =
+      error instanceof Error && /^[A-Z][A-Z0-9_]*$/.test(error.message)
+        ? error.message
+        : 'UNCLASSIFIED';
     console.log(
-      `phase2_invitation_runtime_result=FAIL|error_class=${
-        error instanceof Error ? error.name : 'UnknownError'
-      }`,
+      `phase2_invitation_runtime_result=FAIL|stage=${currentStage}|error_class=${errorClass}|error_code=${errorCode}`,
     );
     process.exitCode = 1;
   } finally {
     if (fixture) {
       try {
+        currentStage = 'cleanup';
         await cleanup(admin, fixture);
         const cleanupResult = await admin.query(
           'SELECT COUNT(*)::int AS active_memberships FROM "Membership" WHERE "id" = ANY($1) AND "status" IN (\'ACTIVE\', \'INVITED\', \'SUSPENDED\')',

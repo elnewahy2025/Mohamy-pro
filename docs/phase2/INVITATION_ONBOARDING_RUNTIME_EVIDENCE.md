@@ -29,16 +29,17 @@ This record covers the application-owned invitation lifecycle implemented on bra
 
 The following checks were executed in the sandbox checkout after the implementation changes:
 
-| Check                                                                                           | Result                                                                                                                  |
-| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| API build: `pnpm --filter api run build`                                                        | **PASS**                                                                                                                |
-| Complete API Jest: `pnpm --filter api exec jest --runInBand`                                    | **PASS — 33 suites, 168 tests**                                                                                         |
-| Invitation-focused tests                                                                        | **PASS**, including service, acceptance, controller, tenant-context, and interceptor tests                              |
-| ESLint without auto-fix                                                                         | **PASS with 0 errors and 45 warnings**. The warnings are reported and remain distinct from errors; no auto-fix was run. |
-| Prisma schema validation                                                                        | **PASS**                                                                                                                |
-| Runtime verifier syntax: `node --check backend/api/scripts/phase2-invitation-runtime-check.mjs` | **PASS**                                                                                                                |
-| `git diff --check`                                                                              | **PASS**                                                                                                                |
-| Sensitive-log pattern scan excluding protected logs                                             | **0 matching lines**                                                                                                    |
+| Check                                                        | Result                          |
+| ------------------------------------------------------------ | ------------------------------- |
+| API build: `pnpm --filter api run build`                     | **PASS**                        |
+| Complete API Jest: `pnpm --filter api exec jest --runInBand` | **PASS — 33 suites, 169 tests** |
+
+| Invitation-focused tests | **PASS**, including service, acceptance, controller, tenant-context, and interceptor tests |
+| ESLint without auto-fix | **PASS with 0 errors and 45 warnings**. The warnings are reported and remain distinct from errors; no auto-fix was run. |
+| Prisma schema validation | **PASS** |
+| Runtime verifier syntax: `node --check backend/api/scripts/phase2-invitation-runtime-check.mjs` | **PASS** |
+| `git diff --check` | **PASS** |
+| Sensitive-log pattern scan excluding protected logs | **0 matching lines** |
 
 The unit and focused tests include token hashing, one-time issuance, identity mismatch, unknown persisted scope rejection, fail-closed limiter behavior, expired transition audit ordering, controller actor/session binding, global acceptance idempotency scope, token-free idempotency replay, and atomic acceptance sequencing. These are not substitutes for real Windows runtime evidence.
 
@@ -47,6 +48,8 @@ The unit and focused tests include token hashing, one-time issuance, identity mi
 The runtime verifier is registered as `pnpm --filter api run db:phase2:invitation` and requires two real Keycloak test identities: one tenant administrator and one acceptance target. The credentials must be supplied through protected Windows environment variables; they must never be pasted into chat, committed, logged, or included in evidence.
 
 The verifier is designed to prove real invitation creation, token-free persisted idempotency replay, acceptance, active membership and role assignment, exact-token replay behavior, identity mismatch without mutation, revocation, expiry terminalization, worker processing, restricted-role visibility, audit retention, and fixture cleanup. It uses `MIGRATION_DATABASE_URL` only for isolated fixture setup/cleanup and `DATABASE_URL` for restricted runtime assertions. It does not delete append-only AuditEvent rows.
+
+The verifier now reports only an allowlisted stage, JavaScript error class, and uppercase error code on failure. It never prints usernames, passwords, provider authorization URLs, authorization codes, cookies, raw tokens, connection strings, or database error messages. This diagnostic was added because the prior generic `error_class=Error` output did not identify whether a failure occurred during database connection, either login, fixture provisioning, tenant switching, invitation mutation, outbox delivery, or cleanup.
 
 A successful run must include these markers, with the actual values produced by the Windows environment:
 
