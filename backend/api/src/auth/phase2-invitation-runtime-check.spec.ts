@@ -72,6 +72,24 @@ describe('Phase 2 invitation runtime fixture SQL contract', () => {
     );
     expect(verifierSource).toContain("currentStage = 'cleanup_user_status'");
   });
+
+  it('asserts accepted membership through the restricted RLS transaction', () => {
+    const verifierPath = resolve(
+      __dirname,
+      '../../scripts/phase2-invitation-runtime-check.mjs',
+    );
+    const verifierSource = readFileSync(verifierPath, 'utf8');
+
+    expect(verifierSource).toContain(
+      'async function assertAcceptedMembershipVisible',
+    );
+    expect(verifierSource).toContain("await runtime.query('BEGIN')");
+    expect(verifierSource).toContain('await bindRuntimeTenantContext(');
+    expect(verifierSource).toContain('AND m."id" = $3`');
+    expect(verifierSource).toContain('[tenantId, userId, membershipId]');
+    expect(verifierSource).toContain("await runtime.query('COMMIT')");
+    expect(verifierSource).toContain("await runtime.query('ROLLBACK')");
+  });
 });
 
 export {};

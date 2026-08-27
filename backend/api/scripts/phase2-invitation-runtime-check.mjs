@@ -476,6 +476,30 @@ async function switchTenant(user, tenantId, contextVersion) {
   return unwrap(result.payload);
 }
 
+async function bindRuntimeTenantContext(
+  runtime,
+  tenantId,
+  userId,
+  membershipId,
+) {
+  await runtime.query(
+    `SELECT
+       set_config('app.tenant_id', $1, true),
+       set_config('app.user_id', $2, true),
+       set_config('app.membership_id', $3, true),
+       set_config('app.operation_id', $4, true),
+       set_config('app.global_operation', 'false', true),
+       set_config('app.outbox_dispatcher', 'false', true),
+       set_config('app.idempotency_maintenance', 'false', true),
+       set_config('app.audit_retention_purge', 'false', true),
+       set_config('app.invitation_acceptance', 'false', true),
+       set_config('app.invitation_token_hash', '', true),
+       set_config('app.invitation_invalidated_token_hash', '', true),
+       set_config('app.inviter_membership_id', '', true)`,
+    [tenantId, userId, membershipId, randomUuid()],
+  );
+}
+
 async function assertInvitationVisible(
   runtime,
   tenantId,
@@ -486,22 +510,7 @@ async function assertInvitationVisible(
 ) {
   await runtime.query('BEGIN');
   try {
-    await runtime.query(
-      `SELECT
-         set_config('app.tenant_id', $1, true),
-         set_config('app.user_id', $2, true),
-         set_config('app.membership_id', $3, true),
-         set_config('app.operation_id', $4, true),
-         set_config('app.global_operation', 'false', true),
-         set_config('app.outbox_dispatcher', 'false', true),
-         set_config('app.idempotency_maintenance', 'false', true),
-         set_config('app.audit_retention_purge', 'false', true),
-         set_config('app.invitation_acceptance', 'false', true),
-         set_config('app.invitation_token_hash', '', true),
-         set_config('app.invitation_invalidated_token_hash', '', true),
-         set_config('app.inviter_membership_id', '', true)`,
-      [tenantId, userId, membershipId, randomUuid()],
-    );
+    await bindRuntimeTenantContext(runtime, tenantId, userId, membershipId);
     const row = await queryOne(
       runtime,
       'SELECT "id", "status"::text AS status FROM "Invitation" WHERE "id" = $1 AND "tenantId" = $2',
@@ -515,6 +524,33 @@ async function assertInvitationVisible(
     await runtime.query('ROLLBACK');
     throw error;
   }
+}
+
+async function assertAcceptedMembershipVisible(
+  runtime,
+  tenantId,
+  userId,
+  membershipId,
+) {
+  await runtime.query('BEGIN');
+  let valid = false;
+  try {
+    await bindRuntimeTenantContext(runtime, tenantId, userId, membershipId);
+    const result = await runtime.query(
+      `SELECT m."status"::text AS status, mr."roleId"
+       FROM "Membership" m
+       JOIN "MembershipRole" mr ON mr."membershipId" = m."id" AND mr."tenantId" = m."tenantId"
+       WHERE m."tenantId" = $1 AND m."userId" = $2 AND m."id" = $3`,
+      [tenantId, userId, membershipId],
+    );
+    const row = result.rows[0];
+    valid = result.rowCount === 1 && row.status === 'ACTIVE' && row.roleId;
+    await runtime.query('COMMIT');
+  } catch (error) {
+    await runtime.query('ROLLBACK');
+    throw error;
+  }
+  if (!valid) throw new Error('INVITATION_ACCEPT_MEMBERSHIP_INVALID');
 }
 
 async function waitForProcessedOutbox(admin, eventTypes, invitationIds) {
@@ -746,19 +782,12 @@ async function run() {
       createdData.invitationId,
       'ACCEPTED',
     );
-    const acceptedMembership = await runtime.query(
-      `SELECT m."status"::text AS status, mr."roleId"
-       FROM "Membership" m
-       JOIN "MembershipRole" mr ON mr."membershipId" = m."id" AND mr."tenantId" = m."tenantId"
-       WHERE m."tenantId" = $1 AND m."userId" = $2`,
-      [fixture.tenantId, targetUser.session.user.id],
+    await assertAcceptedMembershipVisible(
+      runtime,
+      fixture.tenantId,
+      targetUser.session.user.id,
+      fixture.targetMembershipId,
     );
-    if (
-      acceptedMembership.rowCount !== 1 ||
-      acceptedMembership.rows[0].status !== 'ACTIVE'
-    ) {
-      throw new Error('INVITATION_ACCEPT_MEMBERSHIP_INVALID');
-    }
     console.log(
       'invitation_accept_status=PASS|membership_active=true|role_assigned=true|token_replay_idempotent=true',
     );

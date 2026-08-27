@@ -32,7 +32,7 @@ The following checks were executed in the sandbox checkout after the implementat
 | Check                                                        | Result                          |
 | ------------------------------------------------------------ | ------------------------------- |
 | API build: `pnpm --filter api run build`                     | **PASS**                        |
-| Complete API Jest: `pnpm --filter api exec jest --runInBand` | **PASS — 34 suites, 172 tests** |
+| Complete API Jest: `pnpm --filter api exec jest --runInBand` | **PASS — 34 suites, 173 tests** |
 
 | Invitation-focused tests | **PASS**, including service, acceptance, controller, tenant-context, and interceptor tests |
 | ESLint without auto-fix | **PASS with 0 errors and 45 warnings**. The warnings are reported and remain distinct from errors; no auto-fix was run. |
@@ -70,24 +70,27 @@ These markers are **not yet evidence** because the verifier has not yet been exe
 
 ## Latest diagnostic and source correction
 
-The latest sanitized Windows run passed fixture provisioning and tenant switching, then reported:
+The Windows runtime sequence first passed the fixture provisioning and tenant-switch boundaries. After the approved local Keycloak changes—an enrolled OTP credential for `phase2-invitation-admin`, the OTP execution reference `mfa`, and the built-in Authentication Method Reference mapper on `mohamy-api-dedicated`—the same real OIDC/PKCE verifier produced:
 
 ```text
-phase2_invitation_runtime_result=FAIL|stage=invitation_create|substage=none|error_class=Error|error_code=INVITATION_CREATE_HTTP_403|sqlstate=none|sqlcategory=unknown
+invitation_create_status=PASS|hashed_token_returned_once=true|admin_policy=true
+phase2_invitation_runtime_result=FAIL|stage=invitation_accept_replay|substage=none|error_class=Error|error_code=INVITATION_ACCEPT_MEMBERSHIP_INVALID|sqlstate=none|sqlcategory=unknown
 invitation_fixture_cleanup_status=PASS|active_fixture_tenants=0|active_fixture_memberships=0|audit_append_only=true
 ```
 
-Source review confirms that the exact 403 reason is not yet established. The invitation creation controller is protected by `SessionGuard` and `AuthorizationGuard` with `CanManageMembership`; the policy is MFA-sensitive and also requires a persisted `membership.manage` permission visible through the RLS-aware authorization snapshot. The current verifier previously discarded the standard response error code, so this marker does not distinguish `MFA_STEP_UP_REQUIRED`, `AUTHORIZATION_DENIED`, `FORBIDDEN`, or another controlled 403 path. The application’s fail-closed behavior must not be weakened, and no positive provider-MFA result may be inferred.
+This is positive evidence that the provider-MFA configuration now satisfies the application’s configured `mfa` AMR contract for the protected invitation-creation operation. It is not evidence that the complete invitation workstream has passed.
 
-A verifier-only diagnostic now preserves only an allowlisted response error code in the bounded failure marker. No database migration, privilege, RLS, authorization-policy, Keycloak, or application behavior change was made. The diagnostic is intended to establish whether the next run is an expected MFA denial or a persisted authorization/context problem before any manual action is considered.
+Source review identified the acceptance assertion defect in the verifier, not in the invitation transaction: after acceptance, the verifier queried `Membership` and `MembershipRole` through the restricted runtime connection without establishing a transaction-local tenant, user, and target-membership context. With RLS forced, that query can correctly return no visible row even though the application transaction committed the active membership. The application acceptance service already creates or activates the membership, assigns the requested roles, invalidates the token, records the audit event, and commits atomically.
 
-The focused verifier regression tests now cover the schema-correct MembershipRole insert, temporary user-status lifecycle, and invitation-create response-code allowlist. A new Windows runtime run is required to produce the bounded 403 code and proceed to the actual invitation workflow. The runtime workstream remains unaccepted until that run and the remaining acceptance criteria pass.
+The verifier now binds the accepted tenant, target user, and returned target membership inside an explicit RLS transaction before asserting the active membership and role. The assertion commits before evaluating the result and rolls back only on database failure; it does not bypass RLS or alter production authorization behavior. Focused coverage locks this transaction-boundary contract. This correction remains locally verified but requires a fresh Windows runtime run after publication.
+
+The previous verifier response-code allowlist remains in place for controlled invitation-create 403 diagnostics. No database migration, privilege, application-policy, RLS-policy, or Keycloak change is part of this source correction. The runtime workstream remains unaccepted until the complete Windows run and all remaining acceptance criteria pass.
 
 ## Remaining qualification
 
-The acceptance gate remains open until the Windows runtime run passes after synchronization and the output is reviewed. This workstream also does not provide a positive provider-MFA administrative success proof; the existing authorization runtime result proves fail-closed denial when provider MFA is absent. No positive MFA claim may be inferred from the missing-MFA test.
+The acceptance gate remains open until the corrected Windows runtime run passes after synchronization and the output is reviewed. The latest run provides positive provider-MFA evidence for the protected invitation-creation operation, while the earlier authorization run separately proves fail-closed denial when provider MFA is absent. This does not by itself close the complete authorization/MFA workstream or the remaining invitation acceptance, replay, revocation, expiry, outbox, RLS, and cleanup gates.
 
-The next safe operation is the Windows invitation runtime rerun after this verifier-only response-code diagnostic is synchronized. Before any future source synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched; no new migration is required for this diagnostic.
+The next safe operation is the Windows invitation runtime rerun after this verifier-only RLS assertion correction is synchronized. Before the runtime run, the local Keycloak configuration must be rechecked in the `mohamy` realm: the existing `mohamy-api` client, its `mohamy-api-dedicated` scope with `mohamy-api-amr` of type Authentication Method Reference, the OTP execution reference `mfa`, and the enrolled OTP credential for `phase2-invitation-admin`. Before any source synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched; no new migration is required for this verifier correction.
 
 ## References
 
