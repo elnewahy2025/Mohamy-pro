@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -93,6 +94,8 @@ function isExpiredTransition(
 
 @Injectable()
 export class InvitationService {
+  private readonly logger = new Logger(InvitationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -321,39 +324,57 @@ export class InvitationService {
           throw new InvitationNotActionableError();
         }
         if (invitation.expiresAt <= now) {
-          const operationId = randomUUID();
-          await this.prisma.bindInvitationAcceptanceContext(transaction, {
-            tenantId: null,
-            userId: input.session.userId,
-            membershipId: null,
-            inviterMembershipId: invitation.inviterMembershipId,
-            invitationTokenHash: tokenHash,
-            invalidatedTokenHash,
-            operationId,
-            globalOperation: true,
-          });
-          await terminalizeExpiredInvitation(
-            transaction,
-            invitation.tenantId,
-            invitation.id,
-            invalidatedTokenHash,
-          );
-          await this.audit.recordInTransaction(
-            {
-              eventType: 'membership.invitation.expired',
-              category: 'SECURITY',
-              outcome: 'DENIED',
-              actorUserId: input.session.userId,
-              targetType: 'Invitation',
-              targetId: invitation.id,
-              policy: 'InvitationAcceptance',
-              reasonCode: 'invitation_expired',
-              correlationId: input.correlationId,
-              metadata: { invitationStatus: 'EXPIRED' },
-            },
-            transaction,
-          );
-          return { kind: 'EXPIRED' };
+          let expiryStage = 'context_bind';
+          try {
+            const operationId = randomUUID();
+            await this.prisma.bindInvitationAcceptanceContext(transaction, {
+              tenantId: null,
+              userId: input.session.userId,
+              membershipId: null,
+              inviterMembershipId: invitation.inviterMembershipId,
+              invitationTokenHash: tokenHash,
+              invalidatedTokenHash,
+              operationId,
+              globalOperation: true,
+            });
+            expiryStage = 'invitation_terminalize';
+            const terminalized = await terminalizeExpiredInvitation(
+              transaction,
+              invitation.tenantId,
+              invitation.id,
+              invalidatedTokenHash,
+            );
+            if (!terminalized) throw new InvitationNotActionableError();
+            expiryStage = 'audit_record';
+            await this.audit.recordInTransaction(
+              {
+                eventType: 'membership.invitation.expired',
+                category: 'SECURITY',
+                outcome: 'DENIED',
+                actorUserId: input.session.userId,
+                targetType: 'Invitation',
+                targetId: invitation.id,
+                policy: 'InvitationAcceptance',
+                reasonCode: 'invitation_expired',
+                correlationId: input.correlationId,
+                metadata: { invitationStatus: 'EXPIRED' },
+              },
+              transaction,
+            );
+            return { kind: 'EXPIRED' };
+          } catch (error) {
+            this.logger.error(
+              {
+                stage: expiryStage,
+                errorClass:
+                  error instanceof Error ? error.name : 'UnknownError',
+                sqlstate: safeSqlState(error),
+                sqlcategory: safeSqlCategory(error),
+              },
+              'Invitation expiry transition failed',
+            );
+            throw error;
+          }
         }
         if (
           invitation.intendedProviderSubject !== null &&
@@ -892,6 +913,25 @@ async function terminalizeExpiredInvitation(
     data: { status: 'EXPIRED', tokenHash: invalidatedTokenHash },
   });
   return updated.count === 1;
+}
+
+function safeSqlState(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return 'none';
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code) ? code : 'none';
+}
+
+function safeSqlCategory(error: unknown): string {
+  const code = safeSqlState(error);
+  if (code === '23505') return 'unique_violation';
+  if (code === '23503') return 'foreign_key_violation';
+  if (code === '23502') return 'not_null_violation';
+  if (code === '22P02') return 'invalid_text_representation';
+  if (code === '23514') return 'check_constraint';
+  if (code === '42501') return 'insufficient_privilege';
+  if (code === '42P01') return 'undefined_table';
+  if (code === '42703') return 'undefined_column';
+  return 'unknown';
 }
 
 function hashInvitationToken(token: string): string {

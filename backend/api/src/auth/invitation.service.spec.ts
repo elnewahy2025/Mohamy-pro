@@ -406,6 +406,41 @@ describe('InvitationService', () => {
     );
   });
 
+  it('does not audit when expiry terminalization loses its pending row', async () => {
+    const fixture = createFixture();
+    fixture.redis.getClient.mockReturnValue({
+      eval: jest.fn().mockResolvedValue(1),
+    });
+    fixture.transaction.invitation.findFirst.mockResolvedValue({
+      id: INVITATION_ID,
+      tenantId: TENANT_ID,
+      inviterMembershipId: ACTOR_MEMBERSHIP_ID,
+      intendedEmailNormalized: 'target@example.invalid',
+      intendedProviderSubject: null,
+      requestedRoleKeys: ['lawyer'],
+      requestedScope: null,
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+    fixture.transaction.invitation.updateMany.mockResolvedValue({ count: 0 });
+    const service = new InvitationService(
+      fixture.prisma as never,
+      fixture.audit as never,
+      fixture.redis as never,
+      fixture.config as never,
+    );
+
+    await expect(
+      service.accept({
+        session: createSession(),
+        token: 'g'.repeat(43),
+        correlationId: CORRELATION_ID,
+        sourceIp: '127.0.0.1',
+      }),
+    ).rejects.toThrow('INVITATION_NOT_ACTIONABLE');
+    expect(fixture.audit.recordInTransaction).not.toHaveBeenCalled();
+  });
+
   it('rejects a non-pending invitation state without changing persisted state', async () => {
     const fixture = createFixture();
     fixture.redis.getClient.mockReturnValue({
