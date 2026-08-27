@@ -324,8 +324,15 @@ export class InvitationService {
           throw new InvitationNotActionableError();
         }
         if (invitation.expiresAt <= now) {
-          let expiryStage = 'invitation_terminalize';
+          let expiryStage = 'invitation_context_probe';
+          let expiryContext: ExpiryContextDiagnostic | null = null;
           try {
+            expiryContext = await readExpiryContextDiagnostic(
+              transaction,
+              tokenHash,
+              invalidatedTokenHash,
+            );
+            expiryStage = 'invitation_terminalize';
             const terminalized = await terminalizeExpiredInvitation(
               transaction,
               invitation.tenantId,
@@ -363,6 +370,15 @@ export class InvitationService {
                   error instanceof Error ? error.name : 'UnknownError',
                 sqlstate: safeSqlState(error),
                 sqlcategory: safeSqlCategory(error),
+                acceptanceContextValid:
+                  expiryContext?.acceptanceContextValid ?? false,
+                acceptanceFlag: expiryContext?.acceptanceFlag ?? false,
+                presentedHashMatches:
+                  expiryContext?.presentedHashMatches ?? false,
+                replacementHashMatches:
+                  expiryContext?.replacementHashMatches ?? false,
+                notGlobalBeforeUpdate:
+                  expiryContext?.notGlobalBeforeUpdate ?? false,
               },
               'Invitation expiry transition failed',
             );
@@ -895,6 +911,45 @@ async function assertScopeBelongsToTenant(
   }
 }
 
+interface ExpiryContextDiagnostic {
+  acceptanceContextValid: boolean;
+  acceptanceFlag: boolean;
+  presentedHashMatches: boolean;
+  replacementHashMatches: boolean;
+  notGlobalBeforeUpdate: boolean;
+}
+
+async function readExpiryContextDiagnostic(
+  transaction: Prisma.TransactionClient,
+  tokenHash: string,
+  invalidatedTokenHash: string,
+): Promise<ExpiryContextDiagnostic> {
+  const rows = await transaction.$queryRaw<
+    Array<{
+      acceptance_context_valid: boolean;
+      acceptance_flag: boolean;
+      presented_hash_matches: boolean;
+      replacement_hash_matches: boolean;
+      not_global_before_update: boolean;
+    }>
+  >`
+    SELECT
+      public.app_invitation_acceptance_context_is_valid() AS acceptance_context_valid,
+      current_setting('app.invitation_acceptance', true) = 'true' AS acceptance_flag,
+      current_setting('app.invitation_token_hash', true) = ${tokenHash} AS presented_hash_matches,
+      current_setting('app.invitation_invalidated_token_hash', true) = ${invalidatedTokenHash} AS replacement_hash_matches,
+      current_setting('app.global_operation', true) <> 'true' AS not_global_before_update
+  `;
+  const row = rows[0];
+  return {
+    acceptanceContextValid: row?.acceptance_context_valid === true,
+    acceptanceFlag: row?.acceptance_flag === true,
+    presentedHashMatches: row?.presented_hash_matches === true,
+    replacementHashMatches: row?.replacement_hash_matches === true,
+    notGlobalBeforeUpdate: row?.not_global_before_update === true,
+  };
+}
+
 async function terminalizeExpiredInvitation(
   transaction: Prisma.TransactionClient,
   tenantId: string,
@@ -910,7 +965,20 @@ async function terminalizeExpiredInvitation(
 
 function safeSqlState(error: unknown): string {
   if (typeof error !== 'object' || error === null) return 'none';
-  const code = (error as { code?: unknown }).code;
+  const record = error as Record<string, unknown>;
+  const driver = record.driverAdapterError;
+  const cause =
+    typeof driver === 'object' && driver !== null
+      ? (driver as Record<string, unknown>).cause
+      : null;
+  const nestedCode =
+    typeof cause === 'object' && cause !== null
+      ? (cause as Record<string, unknown>).originalCode
+      : null;
+  if (typeof nestedCode === 'string' && /^[0-9A-Z]{5}$/.test(nestedCode)) {
+    return nestedCode;
+  }
+  const code = record.code;
   return typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code) ? code : 'none';
 }
 

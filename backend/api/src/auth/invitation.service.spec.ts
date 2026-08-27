@@ -57,6 +57,15 @@ function createFixture() {
     },
     membershipRole: { upsert: jest.fn() },
     user: { findUnique: jest.fn(), update: jest.fn() },
+    $queryRaw: jest.fn().mockResolvedValue([
+      {
+        acceptance_context_valid: true,
+        acceptance_flag: true,
+        presented_hash_matches: true,
+        replacement_hash_matches: true,
+        not_global_before_update: true,
+      },
+    ]),
   };
   const prisma = {
     withTenantContext: jest.fn((_context, callback) => callback(transaction)),
