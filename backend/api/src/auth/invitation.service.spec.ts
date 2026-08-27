@@ -55,7 +55,10 @@ function createFixture() {
       findFirst: jest.fn(),
       updateMany: jest.fn(),
     },
-    membershipRole: { upsert: jest.fn() },
+    membershipRole: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'inviter-role-assignment' }),
+      upsert: jest.fn(),
+    },
     user: { findUnique: jest.fn(), update: jest.fn() },
     $queryRaw: jest.fn().mockResolvedValue([
       {
@@ -474,6 +477,66 @@ describe('InvitationService', () => {
     ).rejects.toThrow('INVITATION_NOT_ACTIONABLE');
     expect(fixture.audit.recordInTransaction).not.toHaveBeenCalled();
     expect(fixture.prisma.bindGlobalOperationContext).not.toHaveBeenCalled();
+  });
+
+  it('rejects an inviter whose membership.manage assignment was revoked', async () => {
+    const fixture = createFixture();
+    fixture.redis.getClient.mockReturnValue({
+      eval: jest.fn().mockResolvedValue(1),
+    });
+    fixture.transaction.invitation.findFirst.mockResolvedValue({
+      id: INVITATION_ID,
+      tenantId: TENANT_ID,
+      inviterMembershipId: ACTOR_MEMBERSHIP_ID,
+      intendedEmailNormalized: 'target@example.invalid',
+      intendedProviderSubject: null,
+      requestedRoleKeys: ['lawyer'],
+      requestedScope: null,
+      status: 'PENDING',
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    fixture.transaction.tenant.findUnique.mockResolvedValue({
+      id: TENANT_ID,
+      status: 'ACTIVE',
+    });
+    fixture.transaction.membership.findUnique.mockResolvedValue({
+      status: 'ACTIVE',
+      activeFrom: null,
+      activeUntil: null,
+    });
+    fixture.transaction.membershipRole.findFirst.mockResolvedValue(null);
+    const service = new InvitationService(
+      fixture.prisma as never,
+      fixture.audit as never,
+      fixture.redis as never,
+      fixture.config as never,
+    );
+
+    await expect(
+      service.accept({
+        session: createSession(),
+        token: 'h'.repeat(43),
+        correlationId: CORRELATION_ID,
+        sourceIp: '127.0.0.1',
+      }),
+    ).rejects.toThrow('INVITATION_INVALID');
+    expect(fixture.transaction.membershipRole.findFirst).toHaveBeenCalledWith({
+      where: {
+        tenantId: TENANT_ID,
+        membershipId: ACTOR_MEMBERSHIP_ID,
+        revokedAt: null,
+        role: {
+          scope: 'TENANT',
+          tenantId: TENANT_ID,
+          permissions: {
+            some: { permission: { key: 'membership.manage' } },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    expect(fixture.transaction.membership.create).not.toHaveBeenCalled();
+    expect(fixture.transaction.invitation.updateMany).not.toHaveBeenCalled();
   });
 
   it('rejects a non-pending invitation state without changing persisted state', async () => {

@@ -87,7 +87,12 @@ describe('InvitationService acceptance transaction', () => {
       branch: { count: jest.fn().mockResolvedValue(1) },
       department: { count: jest.fn().mockResolvedValue(0) },
       team: { count: jest.fn().mockResolvedValue(0) },
-      membershipRole: { upsert: jest.fn().mockResolvedValue({}) },
+      membershipRole: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'inviter-role-assignment' }),
+        upsert: jest.fn().mockResolvedValue({}),
+      },
     };
     const prisma = {
       withInvitationAcceptanceContext: jest.fn((_context, callback) =>
@@ -148,6 +153,21 @@ describe('InvitationService acceptance transaction', () => {
         }),
       }),
     );
+    expect(transaction.membershipRole.findFirst).toHaveBeenCalledWith({
+      where: {
+        tenantId: TENANT_ID,
+        membershipId: ACTOR_MEMBERSHIP_ID,
+        revokedAt: null,
+        role: {
+          scope: 'TENANT',
+          tenantId: TENANT_ID,
+          permissions: {
+            some: { permission: { key: 'membership.manage' } },
+          },
+        },
+      },
+      select: { id: true },
+    });
     expect(transaction.user.update).toHaveBeenCalledWith({
       where: { id: TARGET_USER_ID },
       data: { status: 'ACTIVE' },

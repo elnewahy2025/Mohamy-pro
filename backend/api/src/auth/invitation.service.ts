@@ -855,6 +855,25 @@ async function assertActiveInviterMembership(
   ) {
     throw new InvitationInvalidError();
   }
+
+  const authority = await transaction.membershipRole.findFirst({
+    where: {
+      tenantId,
+      membershipId: inviterMembershipId,
+      revokedAt: null,
+      role: {
+        scope: 'TENANT',
+        tenantId,
+        permissions: {
+          some: {
+            permission: { key: 'membership.manage' },
+          },
+        },
+      },
+    },
+    select: { id: true },
+  });
+  if (!authority) throw new InvitationInvalidError();
 }
 
 async function assertActiveTenant(
