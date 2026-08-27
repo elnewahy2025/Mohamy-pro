@@ -2,13 +2,13 @@
 
 **Workstream:** Invitation and administrative onboarding
 
-**Evidence status:** **IMPLEMENTED / STATICALLY VERIFIED / WINDOWS RUNTIME UNVERIFIED**
+**Evidence status:** **IMPLEMENTED / STATICALLY VERIFIED / WINDOWS RUNTIME VERIFIED FOR THIS INVITATION SLICE**
 
 **Phase status:** Phase 2 remains open. Phase 3 is prohibited. Production readiness is not established.
 
 ## Scope of this record
 
-This record covers the application-owned invitation lifecycle implemented on branch `phase2/legacy-tenant-boundaries`. It does not claim acceptance of the workstream until the real Windows PostgreSQL/Redis/Keycloak/API/worker runtime verifier passes and the remaining provider-MFA and contract gates are addressed.
+This record covers the application-owned invitation lifecycle implemented on branch `phase2/legacy-tenant-boundaries`. The invitation runtime gate below is qualified by a real Windows PostgreSQL/Redis/Keycloak/API/worker run. This record does not claim overall Phase 2 completion or production readiness.
 
 ## Implemented boundary
 
@@ -22,28 +22,27 @@ This record covers the application-owned invitation lifecycle implemented on bra
 | Role and scope        | Only existing tenant-scoped roles are accepted. Global roles are excluded. Organization, branch, department, and team scope is validated against the target tenant, persisted on `MembershipRole.assignmentScope`, loaded into authorization snapshots, and rejected when unknown keys are present. |
 | Revocation and expiry | Pending invitations can be revoked in tenant context. Expired pending invitations are terminalized with a replacement hash and redacted audit/outbox evidence; the controlled error is raised only after the transaction callback returns so the terminal evidence can commit.                      |
 | Abuse control         | Redis Lua counter limits acceptance attempts per invitation fingerprint and source-IP hash to the validated one-hour window and maximum. Redis failure is fail-closed. Raw tokens, provider subjects, and email values are excluded from runtime markers and audit metadata.                        |
-| Database boundary     | Additive migration only. Invitation acceptance uses a narrowly validated transaction-local context with token-bound lookup/invalidation hashes, accepting user, target tenant, and inviter membership selector. No `BYPASSRLS` or broad global visibility is introduced.                            |
+| Database boundary     | Additive migrations only. Invitation acceptance uses a narrowly validated transaction-local context with token-bound lookup/invalidation hashes, accepting user, target tenant, and inviter membership selector. The applied returning-visibility policy correction is constrained by the validated acceptance context; no `BYPASSRLS` or broad global visibility is introduced. |
 | Worker observability  | Invitation lifecycle events are allowlisted in AuditService, the audit outbox handler, and bounded metrics labels.                                                                                                                                                                                  |
 
 ## Executed local verification
 
-The following checks were executed in the sandbox checkout after the implementation changes:
+The following local checks were executed in the sandbox checkout after the source repair:
 
-| Check                                                        | Result                          |
-| ------------------------------------------------------------ | ------------------------------- |
-| API build: `pnpm --filter api run build`                     | **PASS**                        |
-| Complete API Jest: `pnpm --filter api exec jest --runInBand` | **PASS — 34 suites, 173 tests** |
-
-| Invitation-focused tests | **PASS**, including service, acceptance, controller, tenant-context, and interceptor tests |
-| ESLint without auto-fix | **PASS with 0 errors and 45 warnings**. The warnings are reported and remain distinct from errors; no auto-fix was run. |
-| Prisma schema validation | **PASS** |
-| Runtime verifier syntax: `node --check backend/api/scripts/phase2-invitation-runtime-check.mjs` | **PASS** |
-| `git diff --check` | **PASS** |
+| Check | Result |
+| --- | --- |
+| `pnpm --filter api run build` | **PASS**, exit code 0 |
+| `pnpm --filter api exec jest --runInBand --detectOpenHandles` | **PASS**, exit code 0, 34 suites / 176 tests |
+| `pnpm --filter api exec jest src/auth/invitation.service.spec.ts src/common/http/phase2-business.interceptor.spec.ts --runInBand` | **PASS**, exit code 0, 19 tests |
+| `pnpm --filter api exec eslint src/auth/invitation.service.ts src/auth/invitation.service.spec.ts src/common/http/phase2-business.interceptor.ts src/common/http/phase2-business.interceptor.spec.ts` | **PASS**, exit code 0, 0 errors / 30 warnings |
+| `pnpm --filter api exec prisma validate` | **PASS**, exit code 0 |
+| `node --check backend/api/scripts/phase2-invitation-runtime-check.mjs` | **PASS**, exit code 0 |
+| `git diff --check` | **PASS**, exit code 0 |
 | Sensitive-log pattern scan excluding protected logs | **0 matching lines** |
 
-The unit and focused tests include token hashing, one-time issuance, identity mismatch, unknown persisted scope rejection, fail-closed limiter behavior, expired transition audit ordering, controller actor/session binding, global acceptance idempotency scope, token-free idempotency replay, and atomic acceptance sequencing. These are not substitutes for real Windows runtime evidence.
+`pnpm --filter api exec prisma format --check` was also executed and returned nonzero because pre-existing Prisma files were unformatted; no auto-format was run and no unrelated schema file was overwritten. The unit and focused tests cover token hashing, one-time issuance, identity mismatch, unknown persisted scope rejection, fail-closed limiter behavior, expired transition audit ordering, controller actor/session binding, global acceptance idempotency scope, token-free idempotency replay, immediate acceptance-context rebinding, and atomic acceptance sequencing.
 
-## Windows runtime gate still required
+## Qualified Windows runtime gate
 
 The runtime verifier is registered as `pnpm --filter api run db:phase2:invitations` and requires two real Keycloak test identities: one tenant administrator and one acceptance target. The credentials must be supplied through protected Windows environment variables; they must never be pasted into chat, committed, logged, or included in evidence.
 
@@ -66,48 +65,44 @@ invitation_fixture_cleanup_status=PASS|active_fixture_tenants=0|active_fixture_m
 phase2_invitation_runtime_result=PASS
 ```
 
-These markers are **not yet evidence** because the verifier has not yet been executed against the user’s Windows topology.
+These markers are qualified Windows evidence from the run recorded below. They qualify the invitation/onboarding slice only; they do not establish overall Phase 2 completion.
 
-## Latest diagnostic and source correction
+## Latest runtime evidence and source corrections
 
-The Windows runtime sequence first passed the fixture provisioning and tenant-switch boundaries. After the approved local Keycloak changes—an enrolled OTP credential for `phase2-invitation-admin`, the OTP execution reference `mfa`, and the built-in Authentication Method Reference mapper on `mohamy-api-dedicated`—the same real OIDC/PKCE verifier produced the following progression:
+The successful Windows verifier output was submitted after the published `f2dcb620` repair request. The available runtime evidence contains the complete invitation marker set below. The chat record does not include the separate synchronization command output, so migration-count and build command exit codes are not restated as independently observed evidence here; the runtime result itself is the authoritative acceptance evidence for this slice. The existing local Keycloak MFA configuration had already been positively established for the protected creation path. The qualified markers were:
 
 ```text
 invitation_create_status=PASS|hashed_token_returned_once=true|admin_policy=true
 invitation_accept_status=PASS|membership_active=true|role_assigned=true|token_replay_idempotent=true
 invitation_identity_mismatch_status=PASS|http=403|state_unchanged=true
 invitation_revoke_status=PASS|state=REVOKED
-phase2_invitation_runtime_result=FAIL|stage=invitation_expiry_accept|substage=none|error_class=Error|error_code=INVITATION_EXPIRE_ACCEPT_HTTP_500_CODE_INTERNAL_SERVER_ERROR|sqlstate=none|sqlcategory=unknown
+invitation_expiry_status=PASS|http=409|state=EXPIRED|audit_event=true
+invitation_outbox_status=PASS|events_processed=true
+phase2_invitation_runtime_result=PASS
 invitation_fixture_cleanup_status=PASS|active_fixture_tenants=0|active_fixture_memberships=0|audit_append_only=true
 ```
 
-This is positive evidence that the provider-MFA configuration satisfies the application’s configured `mfa` AMR contract for the protected invitation-creation operation, and that ordinary acceptance, token replay idempotency, identity mismatch protection, and revocation passed in the same run. It is not evidence that the complete invitation workstream has passed.
+This is positive evidence that the provider-MFA configuration satisfies the application’s configured `mfa` AMR contract for protected invitation creation and that the complete verifier path for this invitation slice passed: creation, ordinary acceptance, role assignment, token replay idempotency, identity mismatch protection, revocation, expiry terminalization, audit/outbox processing, and cleanup. It does not establish overall Phase 2 completion.
 
-Source review identified and corrected the earlier acceptance assertion defect in the verifier, not in the invitation transaction: after acceptance, the verifier queried `Membership` and `MembershipRole` through the restricted runtime connection without establishing a transaction-local tenant, user, and target-membership context. With RLS forced, that query could correctly return no visible row even though the application transaction committed the active membership. The verifier now binds the accepted tenant, target user, and returned target membership inside an explicit RLS transaction before asserting the active membership and role. The assertion commits before evaluating the result and rolls back only on database failure; it does not bypass RLS or alter production authorization behavior.
+The expiry failure was resolved through two narrowly scoped published changes. Commit `ddb9d7d7` rebinds the token-bound acceptance context immediately before expiry terminalization and proves that ordering in focused tests. Commit `f2dcb620` adds an additive migration that extends `Invitation_acceptance_lookup` to recognize the transaction-local invalidated hash for the post-update row, while retaining the required acceptance context. It does not alter the acceptance `UPDATE` policy, tenant isolation, grants, `BYPASSRLS`, or applied migration history.
 
-The expiry diagnostic showed that the service’s intended `InvitationNotActionableError` path was being serialized as an HTTP 500 in the running Windows application. Source review confirmed the replacement point: `Phase2BusinessInterceptor.catchError()` awaited `completeFailure()`, and a rejection from idempotency completion could replace the original controlled exception before the observable rethrew it. The interceptor now catches only that secondary completion failure, emits a bounded error-class diagnostic, and always rethrows the original application exception. It does not fabricate a terminal idempotency record or suppress the failure semantics.
-
-Focused coverage now proves that a controlled `ConflictException('INVITATION_NOT_ACTIONABLE')` remains the propagated error even when `idempotency.complete()` rejects. The verifier retains only the allowlisted expiry response-code diagnostic and never emits response bodies or raw error details. No database migration, privilege, application-policy, RLS-policy, or Keycloak change is part of this correction. The runtime workstream remains unaccepted until a fresh Windows run proves the controlled expiry response and the remaining outbox, RLS, and cleanup criteria pass.
-
-The acceptance implementation now treats the expiry transition as a three-stage operation: it binds the global acceptance context, terminalizes the still-pending invitation, and records the expiry audit event. It fails closed if the conditional terminalization updates no row and does not write an expiry audit for that lost race. It emits only bounded stage, error-class, SQLSTATE, and SQL-category diagnostics if a service-side expiry stage fails; raw database messages, identifiers, tokens, and request data are never emitted. This is diagnostic hardening and acceptance-path correctness, not an infrastructure or RLS workaround.
+The same implementation retains bounded expiry-stage diagnostics and fail-closed lost-race handling. The idempotency replay path returns the stored response through Nest’s normal response pipeline rather than manually writing JSON and returning `EMPTY`; local focused tests cover the original controlled exception and replay behavior. The Windows run showed no expiry-stage error and produced the required controlled 409/audit/outbox markers.
 
 ## Remaining qualification
 
-The acceptance gate remains open until the corrected interceptor is synchronized to Windows, the expiry-acceptance HTTP response is proven as controlled HTTP 409 with `INVITATION_NOT_ACTIONABLE`, and the output is reviewed. The latest run provides positive provider-MFA evidence for the protected invitation-creation operation and passes ordinary acceptance, replay idempotency, identity mismatch, and revocation. Local static verification after the acceptance-service correction passed with 34 suites and 176 tests, but this does not replace the required Windows runtime proof or close the remaining expiry, outbox, RLS, and cleanup gates.
-
-The next safe operation is to synchronize the interceptor correction and run one Windows invitation verifier. Before that runtime run, the local Keycloak configuration must be rechecked in the `mohamy` realm: the existing `mohamy-api` client, its `mohamy-api-dedicated` scope with `mohamy-api-amr` of type Authentication Method Reference, the OTP execution reference `mfa`, and the enrolled OTP credential for `phase2-invitation-admin`; no Keycloak change is indicated by the latest evidence. Before any source synchronization, both API and worker terminals must be stopped. The user must run `git status --short` from the actual repository root and preserve all protected modifications and untracked files, then use `git pull --ff-only`, frozen pnpm installation, Prisma client generation, migration deployment, and API build. The Windows database and Docker Desktop volumes must remain untouched; no new migration is required for this correction.
+The invitation/onboarding runtime workstream is qualified as **PASS for the covered Windows slice**. Remaining Phase 2 work is outside this slice: persisted inviter-authority revalidation at acceptance must still be reviewed and evidenced, as must the broader authorization matrix, API contracts/generated client, frontend authentication and tenant switching with English/Arabic RTL/LTR behavior, broader abuse and identity-data lifecycle controls, full integration topology/CI, and the supported Linux KMS/object-storage deployment boundary. Phase 2 remains open and Phase 3 remains prohibited.
 
 ## References
 
-1. [`INVITATION_ONBOARDING_IMPLEMENTATION_PLAN.md`](INVITATION_ONBOARDING_IMPLEMENTATION_PLAN.md)
-2. [`PHASE2_IMPLEMENTATION_PLAN.md`](PHASE2_IMPLEMENTATION_PLAN.md)
-3. [`PHASE2_REMAINING_WORKSTREAM_AUDIT.md`](PHASE2_REMAINING_WORKSTREAM_AUDIT.md)
-4. [`ACCOUNT_LIFECYCLE_DECISION.md`](ACCOUNT_LIFECYCLE_DECISION.md)
-5. [`ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md`](ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md)
-6. [`TENANT_MEMBERSHIP_SWITCHING_DECISION.md`](TENANT_MEMBERSHIP_SWITCHING_DECISION.md)
-7. [`AUTHORIZATION_MFA_RUNTIME_EVIDENCE.md`](AUTHORIZATION_MFA_RUNTIME_EVIDENCE.md)
-8. [`AUTHORIZATION_ADMIN_MFA_OPERATION_PLAN.md`](AUTHORIZATION_ADMIN_MFA_OPERATION_PLAN.md)
-9. [`INTEGRATION_TEST_TOPOLOGY.md`](INTEGRATION_TEST_TOPOLOGY.md)
-10. [`../../skills/engineering-governance/SKILL.md`](../../skills/engineering-governance/SKILL.md)
-11. [`../../skills/persistent-computing/SKILL.md`](../../skills/persistent-computing/SKILL.md)
-12. [`../../skills/automation-and-scheduling/SKILL.md`](../../skills/automation-and-scheduling/SKILL.md)
+1. [`docs/phase2/INVITATION_ONBOARDING_IMPLEMENTATION_PLAN.md`](docs/phase2/INVITATION_ONBOARDING_IMPLEMENTATION_PLAN.md)
+2. [`docs/phase2/PHASE2_IMPLEMENTATION_PLAN.md`](docs/phase2/PHASE2_IMPLEMENTATION_PLAN.md)
+3. [`docs/phase2/PHASE2_REMAINING_WORKSTREAM_AUDIT.md`](docs/phase2/PHASE2_REMAINING_WORKSTREAM_AUDIT.md)
+4. [`docs/phase2/ACCOUNT_LIFECYCLE_DECISION.md`](docs/phase2/ACCOUNT_LIFECYCLE_DECISION.md)
+5. [`docs/phase2/ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md`](docs/phase2/ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md)
+6. [`docs/phase2/TENANT_MEMBERSHIP_SWITCHING_DECISION.md`](docs/phase2/TENANT_MEMBERSHIP_SWITCHING_DECISION.md)
+7. [`docs/phase2/AUTHORIZATION_MFA_RUNTIME_EVIDENCE.md`](docs/phase2/AUTHORIZATION_MFA_RUNTIME_EVIDENCE.md)
+8. [`docs/phase2/AUTHORIZATION_ADMIN_MFA_OPERATION_PLAN.md`](docs/phase2/AUTHORIZATION_ADMIN_MFA_OPERATION_PLAN.md)
+9. [`docs/phase2/INTEGRATION_TEST_TOPOLOGY.md`](docs/phase2/INTEGRATION_TEST_TOPOLOGY.md)
+10. [`skills/engineering-governance/SKILL.md`](skills/engineering-governance/SKILL.md)
+11. [`skills/persistent-computing/SKILL.md`](skills/persistent-computing/SKILL.md)
+12. [`skills/automation-and-scheduling/SKILL.md`](skills/automation-and-scheduling/SKILL.md)
