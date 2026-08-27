@@ -346,6 +346,7 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
     tenantId: randomUuid(),
     roleId: randomUuid(),
     membershipId: randomUuid(),
+    inviterMembershipRoleId: randomUuid(),
     targetMembershipId: null,
     tenantSlug: `phase2-invitation-${randomUuid().slice(0, 8)}`,
     roleKey: `invitation_admin_${randomUuid().slice(0, 8)}`,
@@ -449,7 +450,12 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
     currentSubstage = 'admin_membership_role_create';
     await admin.query(
       'INSERT INTO "MembershipRole" ("id", "tenantId", "membershipId", "roleId", "assignedAt") VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)',
-      [randomUuid(), fixture.tenantId, fixture.membershipId, fixture.roleId],
+      [
+        fixture.inviterMembershipRoleId,
+        fixture.tenantId,
+        fixture.membershipId,
+        fixture.roleId,
+      ],
     );
     await admin.query('COMMIT');
   } catch (error) {
@@ -554,6 +560,25 @@ async function assertAcceptedMembershipVisible(
     throw error;
   }
   if (!valid) throw new Error('INVITATION_ACCEPT_MEMBERSHIP_INVALID');
+}
+
+async function setInviterAuthorityRevoked(admin, fixture, revoked) {
+  const result = await admin.query(
+    'UPDATE "MembershipRole" SET "revokedAt" = $2 WHERE "id" = $1 AND "tenantId" = $3 AND "membershipId" = $4',
+    [
+      fixture.inviterMembershipRoleId,
+      revoked ? new Date() : null,
+      fixture.tenantId,
+      fixture.membershipId,
+    ],
+  );
+  if (result.rowCount !== 1) {
+    throw new Error(
+      revoked
+        ? 'INVITATION_INVITER_AUTHORITY_REVOKE_FAILED'
+        : 'INVITATION_INVITER_AUTHORITY_RESTORE_FAILED',
+    );
+  }
 }
 
 async function waitForProcessedOutbox(admin, eventTypes, invitationIds) {
@@ -794,6 +819,62 @@ async function run() {
     console.log(
       'invitation_accept_status=PASS|membership_active=true|role_assigned=true|token_replay_idempotent=true',
     );
+
+    currentStage = 'inviter_authority_create';
+    const authorityRevocation = await apiMutation(
+      adminUser,
+      `/api/v1/tenants/${fixture.tenantId}/invitations`,
+      {
+        intendedProviderSubject: fixture.targetSubject,
+        requestedRoleKeys: [fixture.roleKey],
+      },
+      'INVITATION_INVITER_AUTHORITY_CREATE',
+    );
+    requireStatus(
+      authorityRevocation.response,
+      200,
+      'INVITATION_INVITER_AUTHORITY_CREATE',
+    );
+    const authorityRevocationData = unwrap(authorityRevocation.payload);
+    fixture.invitationIds.push(authorityRevocationData.invitationId);
+    fixture.idempotencyKeys.push(authorityRevocation.idempotencyKey);
+    await setInviterAuthorityRevoked(admin, fixture, true);
+    try {
+      currentStage = 'inviter_authority_accept';
+      const authorityAccept = await apiMutation(
+        targetUser,
+        '/api/v1/invitations/accept',
+        { token: authorityRevocationData.invitationToken },
+        'INVITATION_INVITER_AUTHORITY_ACCEPT',
+      );
+      fixture.idempotencyKeys.push(authorityAccept.idempotencyKey);
+      if (authorityAccept.response.status !== 400) {
+        throw new Error(
+          `INVITATION_INVITER_AUTHORITY_HTTP_${authorityAccept.response.status}_CODE_${safeApiErrorCode(authorityAccept.payload, SAFE_INVITATION_ACCEPT_ERROR_CODES)}`,
+        );
+      }
+      if (
+        safeApiErrorCode(
+          authorityAccept.payload,
+          SAFE_INVITATION_ACCEPT_ERROR_CODES,
+        ) !== 'INVITATION_INVALID'
+      ) {
+        throw new Error('INVITATION_INVITER_AUTHORITY_ERROR_CODE_INVALID');
+      }
+      await assertInvitationVisible(
+        runtime,
+        fixture.tenantId,
+        adminUser.session.user.id,
+        fixture.membershipId,
+        authorityRevocationData.invitationId,
+        'PENDING',
+      );
+      console.log(
+        'invitation_inviter_authority_status=PASS|http=400|state_unchanged=true|authority_revalidation=true',
+      );
+    } finally {
+      await setInviterAuthorityRevoked(admin, fixture, false);
+    }
 
     currentStage = 'identity_mismatch_create';
     const mismatch = await apiMutation(

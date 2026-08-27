@@ -96,6 +96,27 @@ describe('Phase 2 invitation runtime fixture SQL contract', () => {
     expect(verifierSource).toContain("currentStage = 'cleanup_user_status'");
   });
 
+  it('covers persisted inviter authority revocation without mutating the pending invitation', () => {
+    const verifierPath = resolve(
+      __dirname,
+      '../../scripts/phase2-invitation-runtime-check.mjs',
+    );
+    const verifierSource = readFileSync(verifierPath, 'utf8');
+
+    expect(verifierSource).toContain(
+      'async function setInviterAuthorityRevoked',
+    );
+    expect(verifierSource).toContain(
+      'invitation_inviter_authority_status=PASS|http=400|state_unchanged=true|authority_revalidation=true',
+    );
+    expect(verifierSource).toContain(
+      'INVITATION_INVITER_AUTHORITY_ERROR_CODE_INVALID',
+    );
+    expect(verifierSource).toContain(
+      "await assertInvitationVisible(\n        runtime,\n        fixture.tenantId,\n        adminUser.session.user.id,\n        fixture.membershipId,\n        authorityRevocationData.invitationId,\n        'PENDING',\n      );",
+    );
+  });
+
   it('asserts accepted membership through the restricted RLS transaction', () => {
     const verifierPath = resolve(
       __dirname,
