@@ -404,6 +404,15 @@ describe('InvitationService', () => {
     ).rejects.toThrow('INVITATION_NOT_ACTIONABLE');
     expect(fixture.transaction.membership.create).not.toHaveBeenCalled();
     expect(fixture.transaction.$executeRaw).toHaveBeenCalled();
+    expect(fixture.prisma.bindInvitationAcceptanceContext).toHaveBeenCalledWith(
+      fixture.transaction,
+      expect.objectContaining({
+        tenantId: null,
+        membershipId: null,
+        invitationTokenHash: expect.any(String),
+        invalidatedTokenHash: expect.any(String),
+      }),
+    );
     expect(fixture.audit.recordInTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: 'membership.invitation.expired',
@@ -415,6 +424,10 @@ describe('InvitationService', () => {
       fixture.transaction,
       expect.any(String),
     );
+    expect(
+      fixture.prisma.bindInvitationAcceptanceContext.mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(fixture.transaction.$executeRaw.mock.invocationCallOrder[0]);
     expect(
       fixture.transaction.$executeRaw.mock.invocationCallOrder[0],
     ).toBeLessThan(

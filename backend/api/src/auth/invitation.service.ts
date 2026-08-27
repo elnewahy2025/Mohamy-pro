@@ -333,6 +333,16 @@ export class InvitationService {
               tokenHash,
               invalidatedTokenHash,
             );
+            expiryStage = 'context_bind';
+            await this.prisma.bindInvitationAcceptanceContext(transaction, {
+              tenantId: null,
+              userId: input.session.userId,
+              membershipId: null,
+              inviterMembershipId: null,
+              invitationTokenHash: tokenHash,
+              invalidatedTokenHash,
+              operationId: acceptanceOperationId,
+            });
             expiryStage = 'invitation_terminalize';
             const terminalized = await terminalizeExpiredInvitation(
               transaction,
