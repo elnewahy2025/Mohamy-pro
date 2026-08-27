@@ -308,6 +308,7 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
     targetMembershipId: null,
     tenantSlug: `phase2-invitation-${randomUuid().slice(0, 8)}`,
     roleKey: `invitation_admin_${randomUuid().slice(0, 8)}`,
+    createdPermissionIds: [],
   };
   const originalUsers = await admin.query(
     'SELECT "id", "status"::text AS status FROM "User" WHERE "id" = ANY($1)',
@@ -333,18 +334,30 @@ async function provisionFixtures(admin, adminUserId, targetUserId) {
     [targetUserId],
     'TARGET_EXTERNAL_IDENTITY',
   );
-  const permissionRows = await admin.query(
-    'SELECT "id", "key" FROM "Permission" WHERE "key" IN ($1, $2)',
-    ['membership.manage', 'tenant.switch'],
-  );
-  if (permissionRows.rowCount !== 2)
-    throw new Error('INVITATION_PERMISSIONS_NOT_FOUND');
-  const permissionIds = new Map(
-    permissionRows.rows.map((row) => [row.key, row.id]),
-  );
+  const permissionIds = new Map();
 
   await admin.query('BEGIN');
   try {
+    for (const [key, description] of [
+      ['membership.manage', 'Manage tenant memberships'],
+      ['tenant.switch', 'Switch active tenant context'],
+    ]) {
+      const permissionId = randomUuid();
+      const inserted = await admin.query(
+        'INSERT INTO "Permission" ("id", "key", "description", "createdAt") VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT ("key") DO NOTHING RETURNING "id"',
+        [permissionId, key, description],
+      );
+      if (inserted.rowCount === 1) {
+        fixture.createdPermissionIds.push(permissionId);
+      }
+      const permission = await queryOne(
+        admin,
+        'SELECT "id" FROM "Permission" WHERE "key" = $1',
+        [key],
+        `INVITATION_PERMISSION_${key.replaceAll('.', '_')}`,
+      );
+      permissionIds.set(key, permission.id);
+    }
     await admin.query(
       'INSERT INTO "Tenant" ("id", "slug", "name", "status", "createdAt", "updatedAt") VALUES ($1, $2, $3, \'ACTIVE\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
       [
@@ -502,6 +515,12 @@ async function cleanup(admin, fixture) {
       fixture.roleId,
     ]);
     await admin.query('DELETE FROM "Role" WHERE "id" = $1', [fixture.roleId]);
+    if (fixture.createdPermissionIds.length > 0) {
+      await admin.query(
+        'DELETE FROM "Permission" WHERE "id" = ANY($1) AND NOT EXISTS (SELECT 1 FROM "RolePermission" WHERE "permissionId" = "Permission"."id")',
+        [fixture.createdPermissionIds],
+      );
+    }
     await admin.query(
       'UPDATE "Membership" SET "status" = \'REMOVED\', "removedAt" = CURRENT_TIMESTAMP, "activeUntil" = CURRENT_TIMESTAMP, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ANY($1)',
       [membershipIds],
