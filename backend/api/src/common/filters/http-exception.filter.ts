@@ -1,5 +1,6 @@
 import {
   ArgumentsHost,
+  BadRequestException,
   Catch,
   ExceptionFilter,
   HttpException,
@@ -8,16 +9,29 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { getCorrelationId } from '../middleware/correlation-id.middleware';
+import { ApiError } from '../api/api-error';
 import { MetricsService } from '../../observability/metrics.service';
+import {
+  ERROR_CODES,
+  codeForHttpStatus,
+  defaultMessageForCode,
+  type ErrorCode,
+} from '../api/error-codes';
+import type { ApiErrorEnvelope } from '../api/envelope';
 
-interface ErrorResponseBody {
-  statusCode: number;
-  error: string;
-  message: string | string[];
-  path: string;
-  method: string;
-  timestamp: string;
-  correlationId: string;
+function validationDetails(exception: BadRequestException): string[] | null {
+  const raw = exception.getResponse();
+  const message =
+    typeof raw === 'object' && raw !== null && 'message' in raw
+      ? raw.message
+      : raw;
+  if (
+    Array.isArray(message) &&
+    message.every((item) => typeof item === 'string')
+  ) {
+    return message;
+  }
+  return null;
 }
 
 @Catch()
@@ -30,34 +44,54 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const http = host.switchToHttp();
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
-    const correlationId = getCorrelationId(request);
+    const requestId = getCorrelationId(request);
     const timestamp = new Date().toISOString();
 
     const status =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
-    const rawResponse =
-      exception instanceof HttpException ? exception.getResponse() : undefined;
-    const rawMessage =
-      typeof rawResponse === 'object' &&
-      rawResponse !== null &&
-      'message' in rawResponse
-        ? rawResponse.message
-        : typeof rawResponse === 'string'
-          ? rawResponse
+
+    let code: ErrorCode;
+    let message: string | string[];
+    let details: unknown[] = [];
+
+    if (exception instanceof ApiError) {
+      code = exception.code;
+      message = exception.message;
+      details = exception.details;
+    } else if (exception instanceof BadRequestException) {
+      const validation = validationDetails(exception);
+      if (validation) {
+        code = ERROR_CODES.VALIDATION_FAILED;
+        message = 'The provided input is invalid.';
+        details = validation;
+      } else {
+        code = ERROR_CODES.BAD_REQUEST;
+        message = 'The request is malformed.';
+        details = [];
+      }
+    } else if (exception instanceof HttpException) {
+      code =
+        exception.getStatus() === 409
+          ? ERROR_CODES.CONFLICT
+          : codeForHttpStatus(exception.getStatus(), 'BAD_REQUEST');
+      const raw = exception.getResponse();
+      const rawMessage =
+        typeof raw === 'object' &&
+        raw !== null &&
+        'message' in raw &&
+        typeof raw.message === 'string'
+          ? (raw as { message: string }).message
           : undefined;
-    const message: string | string[] =
-      status >= 500
-        ? 'Internal server error'
-        : typeof rawMessage === 'string'
-          ? rawMessage
-          : Array.isArray(rawMessage) &&
-              rawMessage.every(
-                (item): item is string => typeof item === 'string',
-              )
-            ? rawMessage
-            : 'Request failed';
+      message =
+        status >= 500
+          ? 'Internal server error'
+          : (rawMessage ?? defaultMessageForCode(code));
+    } else {
+      code = ERROR_CODES.INTERNAL_ERROR;
+      message = 'Internal server error';
+    }
 
     if (status >= 400) {
       this.metrics?.recordApplicationError(
@@ -68,7 +102,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (status >= 500) {
       this.logger.error(
         {
-          correlationId,
+          requestId,
           method: request.method,
           path: request.originalUrl,
           exception,
@@ -77,16 +111,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
-    const body: ErrorResponseBody = {
-      statusCode: status,
-      error: HttpStatus[status] ?? 'HTTP_ERROR',
-      message,
-      path: request.originalUrl,
-      method: request.method,
-      timestamp,
-      correlationId,
+    const errorEnvelope: ApiErrorEnvelope = {
+      success: false,
+      error: {
+        code,
+        message: Array.isArray(message) ? message.join('; ') : message,
+        details,
+      },
+      meta: { requestId, timestamp },
     };
 
-    response.status(status).json(body);
+    if (status === 429) {
+      response.setHeader('Retry-After', String(1));
+    }
+
+    response.status(status).json(errorEnvelope);
   }
 }

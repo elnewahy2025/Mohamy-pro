@@ -58,6 +58,7 @@ export class MetricsService {
   private readonly readinessStatus: Gauge<'dependency'>;
   private readonly workerJobDurationSeconds: Histogram<'job_name'>;
   private readonly applicationErrorsTotal: Counter<'error_type'>;
+  private readonly idempotencyOutcomesTotal: Counter<'outcome'>;
 
   constructor(config: ConfigService<ValidatedEnvironment, true>) {
     this.enabled = config.get<boolean>('METRICS_ENABLED', true);
@@ -117,6 +118,12 @@ export class MetricsService {
       name: 'mohamy_application_errors_total',
       help: 'Application errors by bounded category.',
       labelNames: ['error_type'],
+      registers: [this.registry],
+    });
+    this.idempotencyOutcomesTotal = new Counter({
+      name: 'mohamy_idempotency_outcomes_total',
+      help: 'Idempotency outcomes by bounded category.',
+      labelNames: ['outcome'],
       registers: [this.registry],
     });
 
@@ -212,6 +219,16 @@ export class MetricsService {
   recordApplicationError(errorType: string): void {
     if (!this.enabled) return;
     this.applicationErrorsTotal.labels(normalizeErrorType(errorType)).inc();
+  }
+
+  recordIdempotencyOutcome(outcome: string): void {
+    if (!this.enabled) return;
+    const bounded = ['reserved', 'replay', 'conflict', 'in_progress'].includes(
+      outcome,
+    )
+      ? outcome
+      : 'other';
+    this.idempotencyOutcomesTotal.labels(bounded).inc();
   }
 
   async render(): Promise<string> {

@@ -120,20 +120,34 @@ model OutboxMessage {
 }
 
 // Phase 1: Idempotency registry skeleton
-model IdempotencyKey {
-  key            String   @id
-  userId         String?
-  tenantId       String?
-  requestPath    String
-  responseStatus Int
-  responseBody   Json
-  createdAt      DateTime @default(now())
-  expiresAt      DateTime
-  tenant         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  user           User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+enum IdempotencyState {
+  RESERVED
+  COMPLETED
+  FAILED
+}
 
+model IdempotencyKey {
+  id              String             @id @default(uuid())
+  key             String
+  actorScope      String?
+  tenantScope     String?
+  method          String
+  route           String
+  fingerprint     String
+  state           IdempotencyState   @default(RESERVED)
+  responseStatus  Int?
+  responseBody    Json?
+  responseHeaders Json?
+  attemptVersion  Int                @default(0)
+  reservedAt      DateTime           @default(now())
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  expiresAt       DateTime
+  requestId       String?
+
+  @@unique([key, actorScope, tenantScope, method, route])
   @@index([expiresAt])
-  @@index([tenantId, userId])
+  @@index([state, expiresAt])
 }
 
 // Phase 2: Global application identity. Provider credentials and MFA secrets are not stored here.
@@ -153,7 +167,6 @@ model User {
   memberships           Membership[]
   globalRoleAssignments GlobalRoleAssignment[]
   denials               AccessDenial[]         @relation("DenialSubjectUser")
-  idempotencyKeys       IdempotencyKey[]
 
   @@index([status, createdAt])
 }
@@ -232,7 +245,6 @@ model Tenant {
   teamMembers        TeamMember[]
   storageObjects     StorageObject[]
   outboxMessages     OutboxMessage[]
-  idempotencyKeys    IdempotencyKey[]
 
   @@index([status, createdAt])
 }

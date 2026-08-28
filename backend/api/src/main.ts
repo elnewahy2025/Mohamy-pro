@@ -5,6 +5,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { SuccessEnvelopeInterceptor } from './common/api/success-envelope.interceptor';
+import { IdempotencyInterceptor } from './common/api/idempotency.interceptor';
+import { IdempotencyService } from './infrastructure/idempotency/idempotency.service';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { MetricsMiddleware } from './observability/metrics.middleware';
@@ -46,6 +49,10 @@ async function bootstrap(): Promise<void> {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter(app.get(MetricsService)));
+  app.useGlobalInterceptors(
+    new IdempotencyInterceptor(app.get(IdempotencyService)),
+    new SuccessEnvelopeInterceptor(),
+  );
 
   const openApiConfig = new DocumentBuilder()
     .setTitle('Mohamy Pro API')
