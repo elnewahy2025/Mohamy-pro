@@ -5,10 +5,12 @@ const apiBaseUrl =
   process.env.INVITATION_RUNTIME_API_BASE_URL ?? 'http://127.0.0.1:3000';
 const origin = process.env.INVITATION_RUNTIME_ORIGIN ?? 'http://localhost:5173';
 const cookieName = process.env.SESSION_COOKIE_NAME ?? 'mohamy_session';
-const adminUsername = process.env.INVITATION_RUNTIME_ADMIN_USERNAME;
+const adminUsername =
+  process.env.INVITATION_RUNTIME_ADMIN_USERNAME ?? 'phase2-invitation-admin';
 const adminPassword = process.env.INVITATION_RUNTIME_ADMIN_PASSWORD;
 const adminOtp = process.env.INVITATION_RUNTIME_ADMIN_OTP;
-const targetUsername = process.env.INVITATION_RUNTIME_TARGET_USERNAME;
+const targetUsername =
+  process.env.INVITATION_RUNTIME_TARGET_USERNAME ?? 'phase2-invitation-target';
 const targetPassword = process.env.INVITATION_RUNTIME_TARGET_PASSWORD;
 const targetOtp = process.env.INVITATION_RUNTIME_TARGET_OTP;
 const databaseUrl = process.env.DATABASE_URL;

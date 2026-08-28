@@ -30,6 +30,30 @@ describe('Phase 2 invitation runtime fixture SQL contract', () => {
     expect(values).toHaveLength(columns.length);
   });
 
+  it('defaults only the approved non-secret runtime usernames', () => {
+    const verifierPath = resolve(
+      __dirname,
+      '../../scripts/phase2-invitation-runtime-check.mjs',
+    );
+    const verifierSource = readFileSync(verifierPath, 'utf8');
+
+    expect(verifierSource).toContain(
+      "process.env.INVITATION_RUNTIME_ADMIN_USERNAME ?? 'phase2-invitation-admin'",
+    );
+    expect(verifierSource).toContain(
+      "process.env.INVITATION_RUNTIME_TARGET_USERNAME ?? 'phase2-invitation-target'",
+    );
+    expect(verifierSource).toContain(
+      'const adminPassword = process.env.INVITATION_RUNTIME_ADMIN_PASSWORD;',
+    );
+    expect(verifierSource).toContain(
+      'const targetPassword = process.env.INVITATION_RUNTIME_TARGET_PASSWORD;',
+    );
+    expect(verifierSource).toContain(
+      'const adminOtp = process.env.INVITATION_RUNTIME_ADMIN_OTP;',
+    );
+  });
+
   it('uses an allowlisted invitation-create response-code diagnostic', () => {
     const verifierPath = resolve(
       __dirname,
