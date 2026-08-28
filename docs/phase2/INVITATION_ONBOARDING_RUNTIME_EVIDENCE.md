@@ -18,7 +18,7 @@ This record covers the application-owned invitation lifecycle implemented on bra
 | Token handling        | 32 random bytes encoded as an opaque 43-character token; SHA-256 hash persisted; raw token returned only in the immediate issuance response.                                                                                                                                                        |
 | Idempotency           | Invitation acceptance is global-scoped because the target tenant is discovered from the token. Invitation creation idempotency replay records are sanitized so the raw issuance token is not persisted or replayed.                                                                                 |
 | Identity binding      | Exactly one normalized intended email or exact provider subject is required at issuance. Acceptance derives provider subject and provider-verified normalized email from the trusted authenticated session; browser identity fields are not authoritative.                                          |
-| Acceptance            | Token, tenant, inviter membership, role, scope, user, and existing-membership checks occur before membership activation. Membership, role assignment, invitation terminalization, audit, and outbox linkage use one controlled transaction.                                                         |
+| Acceptance            | Token, tenant, inviter membership, persisted active `membership.manage` authority, role, scope, user, and existing-membership checks occur before membership activation. Membership, role assignment, invitation terminalization, audit, and outbox linkage use one controlled transaction.                                                         |
 | Role and scope        | Only existing tenant-scoped roles are accepted. Global roles are excluded. Organization, branch, department, and team scope is validated against the target tenant, persisted on `MembershipRole.assignmentScope`, loaded into authorization snapshots, and rejected when unknown keys are present. |
 | Revocation and expiry | Pending invitations can be revoked in tenant context. Expired pending invitations are terminalized with a replacement hash and redacted audit/outbox evidence; the controlled error is raised only after the transaction callback returns so the terminal evidence can commit.                      |
 | Abuse control         | Redis Lua counter limits acceptance attempts per invitation fingerprint and source-IP hash to the validated one-hour window and maximum. Redis failure is fail-closed. Raw tokens, provider subjects, and email values are excluded from runtime markers and audit metadata.                        |
@@ -34,6 +34,9 @@ The following local checks were executed in the sandbox checkout after the sourc
 | `pnpm --filter api run build` | **PASS**, exit code 0 |
 | `pnpm --filter api exec jest --runInBand --detectOpenHandles` | **PASS**, exit code 0, 34 suites / 176 tests |
 | `pnpm --filter api exec jest src/auth/invitation.service.spec.ts src/common/http/phase2-business.interceptor.spec.ts --runInBand` | **PASS**, exit code 0, 19 tests |
+| `pnpm --filter api exec jest src/auth/phase2-invitation-runtime-check.spec.ts --runInBand` | **PASS**, exit code 0, 7 tests |
+| API Jest excluding known sandbox-hanging session-cookie suite | **PASS**, exit code 0, 33 suites / 175 tests |
+| Targeted inviter-authority lint | **PASS**, exit code 0, 0 errors / 25 warnings |
 | `pnpm --filter api exec eslint src/auth/invitation.service.ts src/auth/invitation.service.spec.ts src/common/http/phase2-business.interceptor.ts src/common/http/phase2-business.interceptor.spec.ts` | **PASS**, exit code 0, 0 errors / 30 warnings |
 | `pnpm --filter api exec prisma validate` | **PASS**, exit code 0 |
 | `node --check backend/api/scripts/phase2-invitation-runtime-check.mjs` | **PASS**, exit code 0 |
@@ -57,6 +60,7 @@ A successful run must include these markers, with the actual values produced by 
 ```text
 invitation_create_status=PASS|hashed_token_returned_once=true|admin_policy=true
 invitation_accept_status=PASS|membership_active=true|role_assigned=true|token_replay_idempotent=true
+invitation_inviter_authority_status=PASS|http=400|state_unchanged=true|authority_revalidation=true
 invitation_identity_mismatch_status=PASS|http=403|state_unchanged=true
 invitation_revoke_status=PASS|state=REVOKED
 invitation_expiry_status=PASS|http=409|state=EXPIRED|audit_event=true
@@ -69,11 +73,12 @@ These markers are qualified Windows evidence from the run recorded below. They q
 
 ## Latest runtime evidence and source corrections
 
-The successful Windows verifier output was submitted after the published `f2dcb620` repair request. The available runtime evidence contains the complete invitation marker set below. The chat record does not include the separate synchronization command output, so migration-count and build command exit codes are not restated as independently observed evidence here; the runtime result itself is the authoritative acceptance evidence for this slice. The existing local Keycloak MFA configuration had already been positively established for the protected creation path. The qualified markers were:
+The successful Windows verifier output was submitted after the approved Keycloak audit and Windows synchronization/build gates. The available runtime evidence contains the complete invitation marker set below, including persisted inviter-authority revocation. The chat record does not include the separate synchronization command output, so migration-count and build command exit codes are not restated as independently observed evidence here; the runtime result itself is the authoritative acceptance evidence for this slice. The existing local Keycloak MFA configuration had already been positively established for the protected creation path. The qualified markers were:
 
 ```text
 invitation_create_status=PASS|hashed_token_returned_once=true|admin_policy=true
 invitation_accept_status=PASS|membership_active=true|role_assigned=true|token_replay_idempotent=true
+invitation_inviter_authority_status=PASS|http=400|state_unchanged=true|authority_revalidation=true
 invitation_identity_mismatch_status=PASS|http=403|state_unchanged=true
 invitation_revoke_status=PASS|state=REVOKED
 invitation_expiry_status=PASS|http=409|state=EXPIRED|audit_event=true
@@ -82,7 +87,7 @@ phase2_invitation_runtime_result=PASS
 invitation_fixture_cleanup_status=PASS|active_fixture_tenants=0|active_fixture_memberships=0|audit_append_only=true
 ```
 
-This is positive evidence that the provider-MFA configuration satisfies the application’s configured `mfa` AMR contract for protected invitation creation and that the complete verifier path for this invitation slice passed: creation, ordinary acceptance, role assignment, token replay idempotency, identity mismatch protection, revocation, expiry terminalization, audit/outbox processing, and cleanup. It does not establish overall Phase 2 completion.
+This is positive evidence that the provider-MFA configuration satisfies the application’s configured `mfa` AMR contract for protected invitation creation and that the complete verifier path for this invitation slice passed: creation, ordinary acceptance, persisted inviter-authority revocation denial, role assignment, token replay idempotency, identity mismatch protection, revocation, expiry terminalization, audit/outbox processing, and cleanup. It does not establish overall Phase 2 completion.
 
 The expiry failure was resolved through two narrowly scoped published changes. Commit `ddb9d7d7` rebinds the token-bound acceptance context immediately before expiry terminalization and proves that ordering in focused tests. Commit `f2dcb620` adds an additive migration that extends `Invitation_acceptance_lookup` to recognize the transaction-local invalidated hash for the post-update row, while retaining the required acceptance context. It does not alter the acceptance `UPDATE` policy, tenant isolation, grants, `BYPASSRLS`, or applied migration history.
 
@@ -90,7 +95,7 @@ The same implementation retains bounded expiry-stage diagnostics and fail-closed
 
 ## Remaining qualification
 
-The invitation/onboarding runtime workstream is qualified as **PASS for the covered Windows slice**. Remaining Phase 2 work is outside this slice: persisted inviter-authority revalidation at acceptance must still be reviewed and evidenced, as must the broader authorization matrix, API contracts/generated client, frontend authentication and tenant switching with English/Arabic RTL/LTR behavior, broader abuse and identity-data lifecycle controls, full integration topology/CI, and the supported Linux KMS/object-storage deployment boundary. Phase 2 remains open and Phase 3 remains prohibited.
+The invitation/onboarding runtime workstream, including persisted inviter `membership.manage` authority revalidation at acceptance, is qualified as **PASS for the covered Windows slice**. Remaining Phase 2 work is outside this slice: the broader authorization matrix, API contracts/generated client, frontend authentication and tenant switching with English/Arabic RTL/LTR behavior, broader abuse and identity-data lifecycle controls, full integration topology/CI, and the supported Linux KMS/object-storage deployment boundary. Phase 2 remains open and Phase 3 remains prohibited.
 
 ## References
 
