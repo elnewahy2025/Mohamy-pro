@@ -90,12 +90,21 @@ describe('validateEnvironment telemetry settings', () => {
       S3_ENCRYPTION_MODE: 'AES256',
       MALWARE_SCAN_ENABLED: true,
       CLAMAV_HOST: 'clamav.invalid',
+      OIDC_ISSUER: 'https://issuer.invalid/oidc',
+      OIDC_CLIENT_ID: 'client-id',
+      OIDC_CLIENT_SECRET: 'client-secret',
+      OIDC_REDIRECT_URI: 'https://app.invalid/callback',
+      SESSION_SECRET: 'production-session-secret-that-is-long-enough-000000',
+      SESSION_SECURE_COOKIE: true,
+      OIDC_SCOPE: 'openid profile',
     });
 
     expect(environment.S3_VERSIONING_ENABLED).toBe(true);
     expect(environment.S3_OBJECT_LOCK_ENABLED).toBe(true);
     expect(environment.S3_ENCRYPTION_MODE).toBe('AES256');
     expect(environment.MALWARE_SCAN_ENABLED).toBe(true);
+    expect(environment.OIDC_ISSUER).toBe('https://issuer.invalid/oidc');
+    expect(environment.SESSION_SECURE_COOKIE).toBe(true);
   });
 
   it('rejects production storage without malware scanning', () => {

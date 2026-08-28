@@ -27,6 +27,18 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   OTEL_ENABLED: boolean;
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
   OTEL_SERVICE_NAME: string;
+  OIDC_ISSUER: string;
+  OIDC_CLIENT_ID?: string;
+  OIDC_CLIENT_SECRET?: string;
+  OIDC_REDIRECT_URI?: string;
+  OIDC_POST_LOGOUT_REDIRECT_URI?: string;
+  OIDC_SCOPE: string;
+  SESSION_COOKIE_NAME: string;
+  SESSION_SECRET: string;
+  SESSION_IDLE_TTL_SECONDS: number;
+  SESSION_ABSOLUTE_TTL_SECONDS: number;
+  SESSION_SECURE_COOKIE: boolean;
+  SESSION_CSRF_NAME: string;
 }
 
 function readString(value: unknown): string | undefined {
@@ -125,6 +137,9 @@ export function validateEnvironment(
           MALWARE_SCAN_ENABLED: false,
           CLAMAV_HOST: undefined,
           CORS_ORIGINS: 'http://localhost:5173',
+          OIDC_ISSUER: 'https://oidc.example.invalid',
+          OIDC_POST_LOGOUT_REDIRECT_URI: 'http://localhost:5173/auth/login',
+          SESSION_SECRET: 'dev-only-session-secret-not-for-production-use',
         };
 
   const storageEncryptionMode = readStorageEncryptionMode(
@@ -167,6 +182,42 @@ export function validateEnvironment(
     readString(raw.OTEL_SERVICE_NAME) ??
     (raw.WORKER_PROCESS === 'true' ? 'mohamy-worker' : 'mohamy-api');
 
+  const oidcIssuer = readString(raw.OIDC_ISSUER);
+  const oidcClientId = readString(raw.OIDC_CLIENT_ID);
+  const oidcClientSecret = readString(raw.OIDC_CLIENT_SECRET);
+  const oidcRedirectUri = readString(raw.OIDC_REDIRECT_URI);
+  const oidcPostLogoutRedirectUri = readString(
+    raw.OIDC_POST_LOGOUT_REDIRECT_URI,
+  );
+  const oidcScope =
+    readString(raw.OIDC_SCOPE) ?? 'openid profile email offline_access';
+
+  const sessionSecret = readString(raw.SESSION_SECRET);
+  if (sessionSecret && sessionSecret.length < 32) {
+    throw new Error('SESSION_SECRET must be at least 32 characters');
+  }
+  const sessionCookieName =
+    readString(raw.SESSION_COOKIE_NAME) ?? 'mohamy_session';
+  const sessionCsrfName = readString(raw.SESSION_CSRF_NAME) ?? 'mohamy_csrf';
+  const sessionIdleTtlSeconds = readPositiveInteger(
+    raw.SESSION_IDLE_TTL_SECONDS,
+    3_600,
+    'SESSION_IDLE_TTL_SECONDS',
+    86_400,
+  );
+  const sessionAbsoluteTtlSeconds = readPositiveInteger(
+    raw.SESSION_ABSOLUTE_TTL_SECONDS,
+    86_400,
+    'SESSION_ABSOLUTE_TTL_SECONDS',
+    2_592_000,
+  );
+  if (sessionAbsoluteTtlSeconds < sessionIdleTtlSeconds) {
+    throw new Error(
+      'SESSION_ABSOLUTE_TTL_SECONDS must not be lower than SESSION_IDLE_TTL_SECONDS',
+    );
+  }
+  const sessionSecureCookie = readBoolean(raw.SESSION_SECURE_COOKIE, false);
+
   if (nodeEnv === 'production') {
     if (!rateLimitEnabled) {
       throw new Error('RATE_LIMIT_ENABLED must be true in production');
@@ -190,6 +241,24 @@ export function validateEnvironment(
     }
     if (storageEncryptionMode === 'aws:kms' && !kmsKeyId) {
       throw new Error('S3_KMS_KEY_ID is required for aws:kms encryption');
+    }
+    const requiredOidc: Array<[string, string | undefined]> = [
+      ['OIDC_ISSUER', oidcIssuer],
+      ['OIDC_CLIENT_ID', oidcClientId],
+      ['OIDC_CLIENT_SECRET', oidcClientSecret],
+      ['OIDC_REDIRECT_URI', oidcRedirectUri],
+      ['SESSION_SECRET', sessionSecret],
+    ];
+    for (const [key, value] of requiredOidc) {
+      if (!value) {
+        throw new Error(`${key} is required in production`);
+      }
+    }
+    if (!sessionSecureCookie) {
+      throw new Error('SESSION_SECURE_COOKIE must be true in production');
+    }
+    if (!oidcScope.includes('openid')) {
+      throw new Error('OIDC_SCOPE must include the openid scope');
     }
   }
 
@@ -252,5 +321,28 @@ export function validateEnvironment(
       ? { OTEL_EXPORTER_OTLP_ENDPOINT: values.OTEL_EXPORTER_OTLP_ENDPOINT }
       : {}),
     OTEL_SERVICE_NAME: values.OTEL_SERVICE_NAME,
+    OIDC_ISSUER: requiredValue(
+      'OIDC_ISSUER',
+      oidcIssuer ?? defaults.OIDC_ISSUER,
+    ),
+    ...(oidcClientId ? { OIDC_CLIENT_ID: oidcClientId } : {}),
+    ...(oidcClientSecret ? { OIDC_CLIENT_SECRET: oidcClientSecret } : {}),
+    ...(oidcRedirectUri ? { OIDC_REDIRECT_URI: oidcRedirectUri } : {}),
+    ...((oidcPostLogoutRedirectUri ?? defaults.OIDC_POST_LOGOUT_REDIRECT_URI)
+      ? {
+          OIDC_POST_LOGOUT_REDIRECT_URI:
+            oidcPostLogoutRedirectUri ?? defaults.OIDC_POST_LOGOUT_REDIRECT_URI,
+        }
+      : {}),
+    OIDC_SCOPE: oidcScope,
+    SESSION_COOKIE_NAME: sessionCookieName,
+    SESSION_SECRET: requiredValue(
+      'SESSION_SECRET',
+      sessionSecret ?? defaults.SESSION_SECRET,
+    ),
+    SESSION_IDLE_TTL_SECONDS: sessionIdleTtlSeconds,
+    SESSION_ABSOLUTE_TTL_SECONDS: sessionAbsoluteTtlSeconds,
+    SESSION_SECURE_COOKIE: sessionSecureCookie,
+    SESSION_CSRF_NAME: sessionCsrfName,
   };
 }

@@ -14,6 +14,7 @@ import { OutboxDispatcher } from './infrastructure/outbox/outbox.dispatcher';
 import { IdempotencyModule } from './infrastructure/idempotency/idempotency.module';
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './observability/metrics.module';
+import { AuthModule } from './auth/auth.module';
 import { RateLimitMiddleware } from './security/rate-limit.middleware';
 
 @Module({
@@ -29,6 +30,7 @@ import { RateLimitMiddleware } from './security/rate-limit.middleware';
     IdempotencyModule,
     HealthModule,
     MetricsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

@@ -36,6 +36,9 @@ function redisConnection(url) {
     port: Number(parsed.port || 6379),
     ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
     ...(parsed.username ? { username: decodeURIComponent(parsed.username) } : {}),
+    ...(parsed.protocol === 'rediss:' ? { tls: {} } : {}),
+    enableOfflineQueue: false,
+    maxRetriesPerRequest: null,
   };
 }
 
