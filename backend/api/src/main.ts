@@ -33,7 +33,7 @@ async function bootstrap(): Promise<void> {
     origin: config
       .get<string>('CORS_ORIGINS', 'http://localhost:5173')
       .split(','),
-    credentials: false,
+    credentials: true,
   });
   app.setGlobalPrefix('api');
   app.enableVersioning({

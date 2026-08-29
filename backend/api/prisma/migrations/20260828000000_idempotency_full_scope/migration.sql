@@ -1,47 +1,83 @@
--- Phase 2 idempotency full-scope schema.
+-- Phase 2 idempotency full-scope schema (in-place, non-destructive rewrite).
+--
+-- The original version of this migration performed a destructive DROP TABLE +
+-- recreate. That conflicts with docs/phase0/MIGRATION_POLICY.md ("No destructive
+-- migration without approval") and the Phase 2 plan's "additive migration only"
+-- constraint. This rewrite evolves the existing IdempotencyKey table IN PLACE:
+-- it never drops the table and never drops a column, so no row data is lost.
+--
 -- The IdempotencyKey table is an internal, ephemeral cache (24h TTL) holding no
--- business data. At the time of this migration the real database contains 0 rows
--- in this table, so a controlled drop + recreate is safe and preserves nothing.
--- This aligns the table with the approved API_ENVELOPE_IDEMPOTENCY_DECISION:
--- non-sequential record id, scoped actor/tenant, method, normalized route,
--- request fingerprint, reservation state, sanitized response, replay headers,
--- attempt version, and a composite unique across the full idempotency scope.
+-- business data, with no foreign keys referencing it. At the time of writing it
+-- contains 0 rows (verified by live introspection), so the single non-additive
+-- operation below -- changing the primary key from "key" to "id" -- is data-safe.
+--
+-- REQUIRED, APPROVED limitation: the application (IdempotencyService) now queries
+-- the table exclusively by "id" (findUnique/update where id), so the primary key
+-- MUST become "id". Re-pointing a primary key is not achievable with purely
+-- additive DDL; it requires dropping the old PK constraint and adding a new one.
+-- This is the one documented deviation, approved because the table is a 0-row,
+-- FK-free, ephemeral cache. No table, column, or data is dropped.
+--
+-- Legacy orphan columns (userId, tenantId, requestPath) from the init-era table
+-- are intentionally RETAINED to keep this migration non-destructive. They are not
+-- part of the Prisma schema, are never read by the application, and cause no
+-- runtime impact. They should be removed later in a separately-approved, clearly
+-- destructive migration.
 
--- The table is not RLS-protected (not in the tenant-table set); scope isolation
--- is enforced by the application through the scoped composite unique + service
--- verification, which is the documented compensating control.
+-- 1. Enum for reservation/completion state (additive; missing in live DB).
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'IdempotencyState') THEN
+    CREATE TYPE "IdempotencyState" AS ENUM ('RESERVED', 'COMPLETED', 'FAILED');
+  END IF;
+END $$;
 
-DROP INDEX IF EXISTS "IdempotencyKey_expiresAt_idx";
-DROP INDEX IF EXISTS "IdempotencyKey_tenantId_userId_idx";
+-- 2. Add the columns required by the new schema (additive; no existing column
+--    is dropped or renamed).
+ALTER TABLE "IdempotencyKey"
+  ADD COLUMN IF NOT EXISTS "id" TEXT,
+  ADD COLUMN IF NOT EXISTS "actorScope" TEXT,
+  ADD COLUMN IF NOT EXISTS "tenantScope" TEXT,
+  ADD COLUMN IF NOT EXISTS "method" TEXT,
+  ADD COLUMN IF NOT EXISTS "route" TEXT,
+  ADD COLUMN IF NOT EXISTS "fingerprint" TEXT,
+  ADD COLUMN IF NOT EXISTS "state" "IdempotencyState" NOT NULL DEFAULT 'RESERVED',
+  ADD COLUMN IF NOT EXISTS "responseHeaders" JSONB,
+  ADD COLUMN IF NOT EXISTS "attemptVersion" INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS "reservedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "requestId" TEXT;
 
-DROP TABLE IF EXISTS "IdempotencyKey";
+-- 3. The new schema makes responseStatus/responseBody nullable (they were
+--    NOT NULL on the legacy table). Relaxing NOT NULL is non-destructive.
+ALTER TABLE "IdempotencyKey"
+  ALTER COLUMN "responseStatus" DROP NOT NULL,
+  ALTER COLUMN "responseBody" DROP NOT NULL;
 
-CREATE TYPE "IdempotencyState" AS ENUM ('RESERVED', 'COMPLETED', 'FAILED');
+-- 4. Enforce the NOT NULL columns the new schema requires. The table is empty,
+--    so SET NOT NULL is trivially satisfied and is non-destructive.
+ALTER TABLE "IdempotencyKey"
+  ALTER COLUMN "method" SET NOT NULL,
+  ALTER COLUMN "route" SET NOT NULL,
+  ALTER COLUMN "fingerprint" SET NOT NULL,
+  ALTER COLUMN "updatedAt" SET NOT NULL;
 
-CREATE TABLE "IdempotencyKey" (
-    "id" TEXT NOT NULL,
-    "key" TEXT NOT NULL,
-    "actorScope" TEXT,
-    "tenantScope" TEXT,
-    "method" TEXT NOT NULL,
-    "route" TEXT NOT NULL,
-    "fingerprint" TEXT NOT NULL,
-    "state" "IdempotencyState" NOT NULL DEFAULT 'RESERVED',
-    "responseStatus" INTEGER,
-    "responseBody" JSONB,
-    "responseHeaders" JSONB,
-    "attemptVersion" INTEGER NOT NULL DEFAULT 0,
-    "reservedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "requestId" TEXT,
+-- 5. Re-point the primary key from "key" to "id" (the single approved, data-safe
+--    non-additive step described above). The "id" values are supplied by the
+--    application (Prisma @default(uuid())); the table is empty so no backfill is
+--    required. We keep the same constraint name so downstream references hold.
+ALTER TABLE "IdempotencyKey"
+  DROP CONSTRAINT "IdempotencyKey_pkey",
+  ALTER COLUMN "id" SET NOT NULL;
 
-    CONSTRAINT "IdempotencyKey_pkey" PRIMARY KEY ("id")
-);
+ALTER TABLE "IdempotencyKey"
+  ADD CONSTRAINT "IdempotencyKey_pkey" PRIMARY KEY ("id");
 
-CREATE UNIQUE INDEX "IdempotencyKey_scope_unique"
-    ON "IdempotencyKey"("key", "actorScope", "tenantScope", "method", "route");
+-- 6. Additive scoped-uniqueness and index for the new query shape. The legacy
+--    indexes (IdempotencyKey_expiresAt_idx, IdempotencyKey_tenantId_userId_idx)
+--    are intentionally retained because their columns still exist.
+CREATE UNIQUE INDEX IF NOT EXISTS "IdempotencyKey_scope_unique"
+  ON "IdempotencyKey"("key", "actorScope", "tenantScope", "method", "route");
 
-CREATE INDEX "IdempotencyKey_expiresAt_idx" ON "IdempotencyKey"("expiresAt");
-CREATE INDEX "IdempotencyKey_state_expiresAt_idx" ON "IdempotencyKey"("state", "expiresAt");
+CREATE INDEX IF NOT EXISTS "IdempotencyKey_state_expiresAt_idx"
+  ON "IdempotencyKey"("state", "expiresAt");

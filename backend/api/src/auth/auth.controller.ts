@@ -35,6 +35,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @UseGuards(SessionGuard, CsrfGuard)
   async logout(@Req() req: Request, @Res() res: Response): Promise<void> {
     const { redirectUrl } = await this.auth.logout(req, res);
     res.redirect(302, redirectUrl);
