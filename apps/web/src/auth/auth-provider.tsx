@@ -25,14 +25,15 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({
   children,
-  client = new ApiClient(),
+  client,
 }: Readonly<{ children: ReactNode; client?: ApiClient }>): ReactNode {
+  const [currentClient] = useState<ApiClient>(() => client ?? new ApiClient());
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    void client
+    void currentClient
       .me()
       .then((current) => {
         if (!cancelled) {
@@ -52,21 +53,21 @@ export function AuthProvider({
     return () => {
       cancelled = true;
     };
-  }, [client]);
+  }, [currentClient]);
 
   const value = useMemo<AuthState>(
     () => ({
       user,
       isLoading,
       login: () => {
-        window.location.assign(client.loginUrl());
+        window.location.assign(currentClient.loginUrl());
       },
       logout: async () => {
-        await client.logout();
+        await currentClient.logout();
         setUser(null);
       },
     }),
-    [user, isLoading, client],
+    [user, isLoading, currentClient],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
