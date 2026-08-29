@@ -17,6 +17,7 @@ import { ApiClient, type AuthUser } from '@/lib/api';
 interface AuthState {
   user: AuthUser | null;
   isLoading: boolean;
+  error: Error | null;
   login: () => void;
   logout: () => Promise<void>;
 }
@@ -30,19 +31,32 @@ export function AuthProvider({
   const [currentClient] = useState<ApiClient>(() => client ?? new ApiClient());
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    console.log('[AuthProvider] MOUNT');
+    return () => {
+      console.log('[AuthProvider] UNMOUNT');
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
+    setError(null);
     void currentClient
       .me()
       .then((current) => {
+        console.log('[AuthProvider] me() resolved:', current, '| cancelled:', cancelled);
         if (!cancelled) {
           setUser(current);
         }
       })
-      .catch(() => {
+      .catch((reason: unknown) => {
+        console.error('[AuthProvider] me() rejected:', reason);
         if (!cancelled) {
           setUser(null);
+          setError(reason instanceof Error ? reason : new Error(String(reason)));
         }
       })
       .finally(() => {
@@ -59,6 +73,7 @@ export function AuthProvider({
     () => ({
       user,
       isLoading,
+      error,
       login: () => {
         window.location.assign(currentClient.loginUrl());
       },
@@ -67,7 +82,7 @@ export function AuthProvider({
         setUser(null);
       },
     }),
-    [user, isLoading, currentClient],
+    [user, isLoading, error, currentClient],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

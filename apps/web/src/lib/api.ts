@@ -31,13 +31,24 @@ export class ApiClient {
       credentials: 'include',
       headers: this.jsonHeaders(),
     });
+    console.log('[ApiClient.me] status:', res.status);
     if (res.status === 401) {
+      console.log('[ApiClient.me] returning null because status is 401');
       return null;
     }
     if (!res.ok) {
       throw new Error(`GET /auth/me failed with ${res.status}`);
     }
-    return (await res.json()) as AuthUser;
+    const body: unknown = await res.json();
+    console.log('[ApiClient.me] parsed JSON:', body, '| type:', typeof body);
+    if (
+      body === null ||
+      typeof body !== 'object' ||
+      typeof (body as Record<string, unknown>).userId !== 'string'
+    ) {
+      throw new Error('GET /auth/me returned an invalid AuthUser payload');
+    }
+    return body as AuthUser;
   }
 
   async csrfToken(): Promise<string> {

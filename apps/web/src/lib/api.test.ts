@@ -34,6 +34,16 @@ describe('ApiClient', () => {
     expect(await client.me()).toBeNull();
   });
 
+  it('throws from /auth/me when a 200 body is not a valid AuthUser payload', async () => {
+    const fetchMock = async (): Promise<Response> =>
+      okJson({ success: false, error: { code: 'FORBIDDEN' } });
+    const client = new ApiClient('http://localhost:3000/api/v1', fetchMock);
+
+    await expect(client.me()).rejects.toThrow(
+      'GET /auth/me returned an invalid AuthUser payload',
+    );
+  });
+
   it('sends the X-CSRF-Token on POST /auth/logout', async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
