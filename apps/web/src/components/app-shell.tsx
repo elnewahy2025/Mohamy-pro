@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogOut } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/auth/auth-provider';
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>): React.ReactNode {
   const locale = useLocale();
   const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
+  const { user, isLoading, login, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const navigation = [
     { href: '/', label: t('navigation.overview') },
@@ -80,7 +82,37 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>):
               ع
             </Button>
           </div>
-          <div className="profile-chip" aria-label={t('common.currentWorkspace')}>A</div>
+          <div className="profile-actions">
+            {isLoading ? (
+              <span className="profile-chip" aria-hidden="true">…</span>
+            ) : user ? (
+              <>
+                <span className="profile-chip" aria-label={t('common.authenticatedAs')}>
+                  {user.userId.slice(0, 1).toUpperCase()}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="sign-out-button"
+                  onClick={() => void logout()}
+                  aria-label={t('common.signOut')}
+                >
+                  <LogOut aria-hidden="true" size={14} />
+                  {t('common.signOut')}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="sign-in-button"
+                onClick={login}
+                aria-label={t('common.signIn')}
+              >
+                {t('common.signIn')}
+              </Button>
+            )}
+          </div>
         </div>
       </header>
       <main className="main-content">{children}</main>

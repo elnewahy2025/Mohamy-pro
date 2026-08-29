@@ -120,7 +120,9 @@ human browser round-trip with the API running on the user's PC at `http://localh
   session cookie, and exercising `/auth/me` (expect `{"userId": "b172d832-...", "activeTenantId": null}`),
   `/auth/csrf`, and `POST /auth/logout` end-to-end through the browser.
 - **Cross-origin browser behavior** of the `SameSite=Lax` cookie and the CSRF Origin check across
-  the real frontend origin (`http://localhost:5173`).
+  the real frontend origin (`http://localhost:5173`). A credentialed frontend API client now exists
+  (`apps/web/src/lib/api.ts`, `credentials:'include'` + `X-CSRF-Token`; `tsc` + vitest pass), so this
+  leg is now exercisable but still requires a human round-trip on the user's PC.
 
 Because of this, the adapter + session logic is **unit/build/lint verified**, the Keycloak
 **discovery** is **live-verified**, and the **code-exchange** fix is **verified via a reproduction

@@ -7,7 +7,10 @@
     "close": "Close navigation menu",
     "primaryNavigation": "Primary navigation",
     "currentWorkspace": "Current workspace",
-    "secureDocuments": "Legal documents are never exposed through public URLs."
+    "secureDocuments": "Legal documents are never exposed through public URLs.",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "authenticatedAs": "Authenticated as"
   },
   "navigation": {
     "overview": "Overview",
@@ -60,6 +63,16 @@
       "postgres": { "role": "Primary relational data", "status": "Ready", "port": "55432" },
       "redis": { "role": "Cache and queue transport", "status": "Ready", "port": "56379" },
       "minio": { "role": "Private object storage", "status": "Ready", "port": "59000" }
+    }
+  },
+  "auth": {
+    "login": {
+      "eyebrow": "Access",
+      "title": "Sign in to Mohamy Pro",
+      "description": "Use your workspace identity to access legal operations securely.",
+      "checking": "Checking your session…",
+      "authenticatedAs": "Authenticated as",
+      "notAuthenticated": "You are not signed in."
     }
   },
   "settings": {

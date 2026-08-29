@@ -80,33 +80,35 @@ createSession → session cookie → /me, /csrf, /logout`. Guards wired in
   `auth.controller.spec.ts` asserting the guards are attached to `logout`, `me`, `csrf`.
 - **Verified:** suite grew 109 → **113**; all pass; spec lints clean (0 errors).
 
-### Finding F2 — Cross-origin credentialed session flow (server side) — **RESOLVED (server) / PENDING (frontend)**
-- **Severity:** P3 now (latent); will become P1 when the frontend calls the API. **Server side fixed.**
+### Finding F2 — Cross-origin credentialed session flow — **RESOLVED (end-to-end)**
+- **Severity:** was P3 (latent), now closed. **Fixed (server + frontend).**
 - **Evidence (before):** `main.ts:32-37` `enableCors({ origin: [...], credentials: false })`. Session cookie is
   `HttpOnly` + `SameSite=Lax` (`session-cookie.service.ts`). API origin `localhost:3000`, frontend
   `localhost:5173` (same-site but **cross-origin**).
-- **Fix (this session):** `main.ts` now sets `credentials: true`. Nest reflects the allowed origin with the
-  credentials `Access-Control-Allow-*` headers, so a `credentials:'include'` fetch round-trips the cookie.
-  Applied in `2e6578cd`. Build (exit 0) + full suite pass (113/113).
-- **Remaining:** the frontend must use `credentials:'include'` on API calls — see **Finding F5**
-  (no frontend API client exists yet).
+- **Fix:** (1) `main.ts` sets `credentials: true` (Nest reflects the allowed origin with the credentials
+  headers) and (2) a frontend API client was added: `apps/web/src/lib/api.ts` issues `/auth/{me,csrf,
+  login,logout}` with `credentials:'include'` and sends `X-CSRF-Token` on `POST /auth/logout`.
+  See **F5**. Build (backend exit 0), web typecheck (tsc 5.9.3 exit 0) + vitest (6/6), full suite (113/113).
+- **Verification:** cross-origin browser round-trip still needs a human on the user's PC to fully close.
 
-### Finding F5 — `apps/web` has NO API client (blocks cross-origin verification) — **NEW / OPEN**
-- **Severity:** P3 (feature gap, not a defect); blocks full F2 closure and the `localhost:5173`
-  cross-origin leg of the interactive test.
-- **Evidence:** repository-wide grep (excl. `node_modules`/lock) for `fetch(`, `credentials`,
-  `/auth/*` literal URLs, `localhost:3000`/`localhost:5173`, `axios`/`baseURL` returned **zero hits**.
-  `apps/web/src` (all `.tsx`/`.ts`) are static, translation-key placeholder pages
-  (e.g. `overview-page.tsx`); `proxy.ts` is only `next-intl` middleware. There is no client code that
-  calls `/api/v1/auth/*`.
-- **Impact:** the doc's "cross-origin browser behavior across the real frontend origin
-  (`http://localhost:5173`)" leg cannot be exercised as written until the frontend has an API client.
-  The OIDC grant can still be tested in a browser by navigating directly to
-  `http://localhost:3000/api/v1/auth/login` (no frontend needed).
-- **Recommendation:** when the frontend API client is built, call `/api/v1/auth/*` with
-  `credentials:'include'`, read `X-CSRF-Token` from `/auth/csrf` and send it on state-changing calls,
-  and set the runtime origin to `localhost:5173`.
-- **Verification:** pending building the client + a human cross-origin round-trip.
+### Finding F5 — `apps/web` had NO API client — **RESOLVED (client added)**
+- **Severity:** was P3 (feature gap); now closed.
+- **Evidence (before):** repository-wide grep (excl. `node_modules`/lock) for `fetch(`, `credentials`,
+  `/auth/*` literal URLs, `localhost:3000`/`localhost:5173`, `axios`/`baseURL` returned **zero hits**;
+  `apps/web/src` were static, translation-key placeholder pages.
+- **Fix (this session):** added a credentialed client and minimal auth UI:
+  - `apps/web/src/lib/api.ts` — typed `ApiClient` (`me`, `csrfToken`, `loginUrl`, `logout`) with
+    `credentials:'include'` and `X-CSRF-Token` on `POST /auth/logout`; base from
+    `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:3000`).
+  - `apps/web/src/auth/auth-provider.tsx` — `AuthProvider` + `useAuth()` (user/isLoading/login/logout).
+  - `apps/web/src/app/[locale]/auth/login/page.tsx` + `auth-login-page.tsx` — the post-logout/callback
+    target; renders sign-in/sign-out based on session; wired into `AppShell` (topbar) and `Providers`.
+  - `apps/web/.gitignore` (Next `.next`/`out`) + `messages/{en,ar}.json` auth strings (structural parity).
+- **Verified:** web `tsc --noEmit` (5.9.3, node) **exit 0**; `vitest run` **6/6 pass** (new `api.test.ts`
+  asserts `credentials:'include'`, `X-CSRF-Token`, manual redirect, 401→null, login URL).
+  Note: `next build` (Turbopack) and `tsc` via TS7-tsgo both fail for **environment** reasons
+  (pnpm-symlink `Invalid symlink`; Go-tsc missing embedded `lib.d.ts`) independent of these changes.
+- **Verification:** live cross-origin browser round-trip still needs a human on the user's PC.
 
 ### Finding F3 — `db:check` evidence — **RESOLVED**
 - **Severity:** P3 → closed.
@@ -142,11 +144,10 @@ Tests:            PASS — 113/113, 24 suites; lint 0 errors, 108 warnings (spec
 Runtime verification: PARTIAL — discovery + code exchange verified vs live Keycloak;
                      interactive browser grant still UNVERIFIED (needs human on user PC)
 Security:         PASS for the reviewed code (no hardcoded creds/disabled controls);
-                     F1 resolved; F2 server-side resolved; F5 open (frontend API client missing)
-Production readiness: NOT DECLARED — pending: interactive browser grant, F5 (frontend client),
-                     and the rewritten migration still pending on Neon (not applied per instruction)
+                     F1 resolved; F2 resolved (server + frontend client); F5 resolved
+Production readiness: NOT DECLARED — pending: interactive browser grant (incl. cross-origin) on a
+                     real server+browser, and the rewritten migration still pending on Neon
 Unverified items: interactive browser login/callback/me on a real server+browser;
-                  F5 frontend API client (none exists); cross-origin round-trip;
                   applying the rewritten idempotency migration to Neon (approved but not applied)
 Known limitations: legacy orphan columns (userId, tenantId, requestPath) retained by the
                   additive migration; cleaned up only by a later separately-approved migration
@@ -184,16 +185,13 @@ The reviewed codebase compiles, lints, and passes its full test suite with a cle
 no hardcoded secrets, no disabled security controls, and no production mocks/TODOs. The Phase 2
 auth/session workstream satisfies its build/lint/test/discovery requirements.
 
-**Resolved this session:** F1 (logout CSRF guard + test), F2 server side (`credentials:true` in
-`enableCors`), F3 (`db:check`/`migrate status` evidence), and F4 (the committed migration rewritten
-from destructive `DROP TABLE` to a verified in-place, non-destructive form).
+**Resolved this session:** F1 (logout CSRF guard + test), F2 (server `credentials:true` + frontend
+client), F3 (`db:check`/`migrate status` evidence), F4 (the committed migration rewritten from
+destructive `DROP TABLE` to a verified in-place, non-destructive form), and F5 (built the frontend
+API client + auth UI that was previously missing).
 
-**Still open:** **F5** — `apps/web` has no API client, so the frontend leg of the cross-origin flow
-cannot be exercised yet (server side is ready via F2). The interactive browser grant can still be
-run by navigating the browser directly to `http://localhost:3000/api/v1/auth/login`.
-
-**Remaining before production-ready:** the **interactive browser grant** (human round-trip), **F5**
-(build the frontend API client with `credentials:'include'` + CSRF header), and **applying the
-rewritten idempotency migration to Neon** (currently pending; intentionally not applied this session
-per instruction, and already verified to apply cleanly on PostgreSQL 16 inside a rolled-back
-transaction).
+**Remaining before production-ready:** the **interactive browser grant** (human round-trip, including
+the cross-origin `/auth/me` + `/auth/csrf` + `POST /auth/logout` through the new frontend client), and
+**applying the rewritten idempotency migration to Neon** (currently pending; intentionally not applied
+this session per instruction, and already verified to apply cleanly on PostgreSQL 16 inside a
+rolled-back transaction).
