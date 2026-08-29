@@ -119,4 +119,41 @@ describe('IdentityService', () => {
     });
     expect(tx.user.create).not.toHaveBeenCalled();
   });
+
+  it('builds a display name from given and family names', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      displayName: null,
+      givenName: 'Jane',
+      familyName: 'Doe',
+      emailNormalized: 'jane@example.com',
+    });
+
+    await expect(service.getDisplayName('user-1')).resolves.toBe('Jane Doe');
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      select: {
+        displayName: true,
+        givenName: true,
+        familyName: true,
+        emailNormalized: true,
+      },
+    });
+  });
+
+  it('falls back to displayName then email when no given/family name is stored', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      displayName: 'Test User',
+      givenName: null,
+      familyName: null,
+      emailNormalized: 'test@example.com',
+    });
+
+    await expect(service.getDisplayName('user-1')).resolves.toBe('Test User');
+  });
+
+  it('returns null when no user exists', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.getDisplayName('missing')).resolves.toBeNull();
+  });
 });

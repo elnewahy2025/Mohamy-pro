@@ -90,6 +90,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>):
                 <span className="profile-chip" aria-label={t('common.authenticatedAs')}>
                   {user.userId.slice(0, 1).toUpperCase()}
                 </span>
+                <span className="profile-name">{user.username ?? user.userId}</span>
                 <Button
                   variant="ghost"
                   size="sm"

@@ -23,6 +23,26 @@ export class IdentityService {
     return this.createUser(profile);
   }
 
+  async getDisplayName(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        displayName: true,
+        givenName: true,
+        familyName: true,
+        emailNormalized: true,
+      },
+    });
+    if (!user) {
+      return null;
+    }
+    const fullName = [user.givenName, user.familyName]
+      .filter((part): part is string => Boolean(part))
+      .join(' ')
+      .trim();
+    return fullName || user.displayName || user.emailNormalized || null;
+  }
+
   private async createUser(
     profile: OidcProfile,
   ): Promise<{ id: string; status: UserStatus }> {

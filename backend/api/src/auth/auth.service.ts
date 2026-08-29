@@ -128,8 +128,17 @@ export class AuthService {
     return { redirectUrl: postLogout ?? '/' };
   }
 
-  me(auth: SessionDetails): { userId: string; activeTenantId: string | null } {
-    return { userId: auth.userId, activeTenantId: auth.activeTenantId };
+  async me(auth: SessionDetails): Promise<{
+    userId: string;
+    username: string | null;
+    activeTenantId: string | null;
+  }> {
+    const username = await this.identity.getDisplayName(auth.userId);
+    return {
+      userId: auth.userId,
+      username,
+      activeTenantId: auth.activeTenantId,
+    };
   }
 
   async issueCsrf(auth: SessionDetails): Promise<{ csrfToken: string }> {

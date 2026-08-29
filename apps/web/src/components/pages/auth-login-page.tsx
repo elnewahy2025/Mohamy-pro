@@ -40,7 +40,7 @@ export function AuthLoginPage(): React.ReactNode {
           <>
             <p>
               {t('auth.login.authenticatedAs')}{' '}
-              <code>{user.userId}</code>
+              <code>{user.username ?? user.userId}</code>
             </p>
             <Button variant="default" onClick={() => void logout()}>
               {t('common.signOut')}

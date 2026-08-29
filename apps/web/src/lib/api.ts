@@ -4,6 +4,7 @@
 
 export interface AuthUser {
   userId: string;
+  username: string | null;
   activeTenantId: string | null;
 }
 
