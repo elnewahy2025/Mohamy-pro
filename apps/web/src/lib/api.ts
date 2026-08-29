@@ -19,7 +19,7 @@ export const API_V1_URL = `${API_BASE_URL}/api/v1`;
 export class ApiClient {
   constructor(
     private readonly baseUrl: string = API_V1_URL,
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: typeof fetch = fetch.bind(globalThis),
   ) {}
 
   private jsonHeaders(): Record<string, string> {
