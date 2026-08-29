@@ -34,9 +34,11 @@ export class OidcProviderService implements OnModuleInit {
       );
     }
     try {
-      this.config = await client.discovery(new URL(issuer), clientId, {
+      this.config = await client.discovery(
+        new URL(issuer),
+        clientId,
         clientSecret,
-      });
+      );
     } catch (error) {
       this.logger.error(
         { issuer, errorName: error instanceof Error ? error.name : 'Unknown' },
