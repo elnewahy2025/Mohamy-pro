@@ -9,7 +9,7 @@ cross-layer checks). Applied `skills/engineering-governance/SKILL.md`.
 verified is asserted; critical-workflow/cross-layer/dependency-chain review; security scans; git
 diff review; severity classification; completion report).
 
-**Repository revision:** `c1dca7ea` on `elnewahy2025/Mohamy-pro` `main`. Working tree clean.
+**Repository revision:** `2e6578cd` on `elnewahy2025/Mohamy-pro` `main`. Working tree clean.
 
 ---
 
@@ -80,18 +80,33 @@ createSession → session cookie → /me, /csrf, /logout`. Guards wired in
   `auth.controller.spec.ts` asserting the guards are attached to `logout`, `me`, `csrf`.
 - **Verified:** suite grew 109 → **113**; all pass; spec lints clean (0 errors).
 
-### Finding F2 — Cross-origin credentialed session flow not yet wired
-- **Severity:** P3 now (latent); will become P1 when the frontend calls the API. **Open.**
-- **Evidence:** `main.ts:32-37` `enableCors({ origin: [...], credentials: false })`. Session cookie is
+### Finding F2 — Cross-origin credentialed session flow (server side) — **RESOLVED (server) / PENDING (frontend)**
+- **Severity:** P3 now (latent); will become P1 when the frontend calls the API. **Server side fixed.**
+- **Evidence (before):** `main.ts:32-37` `enableCors({ origin: [...], credentials: false })`. Session cookie is
   `HttpOnly` + `SameSite=Lax` (`session-cookie.service.ts`). API origin `localhost:3000`, frontend
   `localhost:5173` (same-site but **cross-origin**).
-- **Impact:** a browser `fetch(..., {credentials:'include'})` from the frontend to `/api/v1/auth/me`
-  would be rejected because CORS does not allow credentials; the session cookie would not round-trip.
-- **Root cause:** `credentials:false` + no frontend `credentials:'include'` fetch client yet
-  (`apps/web` currently has no API client).
-- **Recommendation:** when wiring the frontend, set `credentials:true` in `enableCors` and use
-  `credentials:'include'` on API calls; verify the `SameSite=Lax` cookie is sent cross-origin.
-- **Verification:** cross-origin browser test once the frontend API client is added.
+- **Fix (this session):** `main.ts` now sets `credentials: true`. Nest reflects the allowed origin with the
+  credentials `Access-Control-Allow-*` headers, so a `credentials:'include'` fetch round-trips the cookie.
+  Applied in `2e6578cd`. Build (exit 0) + full suite pass (113/113).
+- **Remaining:** the frontend must use `credentials:'include'` on API calls — see **Finding F5**
+  (no frontend API client exists yet).
+
+### Finding F5 — `apps/web` has NO API client (blocks cross-origin verification) — **NEW / OPEN**
+- **Severity:** P3 (feature gap, not a defect); blocks full F2 closure and the `localhost:5173`
+  cross-origin leg of the interactive test.
+- **Evidence:** repository-wide grep (excl. `node_modules`/lock) for `fetch(`, `credentials`,
+  `/auth/*` literal URLs, `localhost:3000`/`localhost:5173`, `axios`/`baseURL` returned **zero hits**.
+  `apps/web/src` (all `.tsx`/`.ts`) are static, translation-key placeholder pages
+  (e.g. `overview-page.tsx`); `proxy.ts` is only `next-intl` middleware. There is no client code that
+  calls `/api/v1/auth/*`.
+- **Impact:** the doc's "cross-origin browser behavior across the real frontend origin
+  (`http://localhost:5173`)" leg cannot be exercised as written until the frontend has an API client.
+  The OIDC grant can still be tested in a browser by navigating directly to
+  `http://localhost:3000/api/v1/auth/login` (no frontend needed).
+- **Recommendation:** when the frontend API client is built, call `/api/v1/auth/*` with
+  `credentials:'include'`, read `X-CSRF-Token` from `/auth/csrf` and send it on state-changing calls,
+  and set the runtime origin to `localhost:5173`.
+- **Verification:** pending building the client + a human cross-origin round-trip.
 
 ### Finding F3 — `db:check` evidence — **RESOLVED**
 - **Severity:** P3 → closed.
@@ -127,10 +142,11 @@ Tests:            PASS — 113/113, 24 suites; lint 0 errors, 108 warnings (spec
 Runtime verification: PARTIAL — discovery + code exchange verified vs live Keycloak;
                      interactive browser grant still UNVERIFIED (needs human on user PC)
 Security:         PASS for the reviewed code (no hardcoded creds/disabled controls);
-                     F1 resolved; F2 cross-origin open (P3, latent)
-Production readiness: NOT DECLARED — pending: interactive browser grant, F2, and the
-                     rewritten migration still pending on Neon (not applied per instruction)
+                     F1 resolved; F2 server-side resolved; F5 open (frontend API client missing)
+Production readiness: NOT DECLARED — pending: interactive browser grant, F5 (frontend client),
+                     and the rewritten migration still pending on Neon (not applied per instruction)
 Unverified items: interactive browser login/callback/me on a real server+browser;
+                  F5 frontend API client (none exists); cross-origin round-trip;
                   applying the rewritten idempotency migration to Neon (approved but not applied)
 Known limitations: legacy orphan columns (userId, tenantId, requestPath) retained by the
                   additive migration; cleaned up only by a later separately-approved migration
@@ -168,11 +184,16 @@ The reviewed codebase compiles, lints, and passes its full test suite with a cle
 no hardcoded secrets, no disabled security controls, and no production mocks/TODOs. The Phase 2
 auth/session workstream satisfies its build/lint/test/discovery requirements.
 
-**Resolved this session:** F1 (logout CSRF guard + test), F3 (`db:check`/`migrate status` evidence),
-and F4 (the committed migration rewritten from destructive `DROP TABLE` to a verified in-place,
-non-destructive form).
+**Resolved this session:** F1 (logout CSRF guard + test), F2 server side (`credentials:true` in
+`enableCors`), F3 (`db:check`/`migrate status` evidence), and F4 (the committed migration rewritten
+from destructive `DROP TABLE` to a verified in-place, non-destructive form).
 
-**Remaining before production-ready:** the **interactive browser grant** (human round-trip), **F2**
-(cross-origin credentials wiring when the frontend is added), and **applying the rewritten
-idempotency migration to Neon** (currently pending; intentionally not applied this session per
-instruction, and already verified to apply cleanly on PostgreSQL 16 inside a rolled-back transaction).
+**Still open:** **F5** — `apps/web` has no API client, so the frontend leg of the cross-origin flow
+cannot be exercised yet (server side is ready via F2). The interactive browser grant can still be
+run by navigating the browser directly to `http://localhost:3000/api/v1/auth/login`.
+
+**Remaining before production-ready:** the **interactive browser grant** (human round-trip), **F5**
+(build the frontend API client with `credentials:'include'` + CSRF header), and **applying the
+rewritten idempotency migration to Neon** (currently pending; intentionally not applied this session
+per instruction, and already verified to apply cleanly on PostgreSQL 16 inside a rolled-back
+transaction).
