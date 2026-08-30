@@ -110,29 +110,36 @@ Verified end-to-end against the live Keycloak realm: a full browser-style flow a
 
 ## NOT yet verified — requires a human + real browser (explicit pending gap)
 
-The following **cannot** be claimed as verified in this sandbox and remain **pending** a real
-human browser round-trip with the API running on the user's PC at `http://localhost:3000`:
+> **UPDATE 2026-08-30 — RESOLVED.** The interactive browser round-trip is now **user-confirmed
+> working** on the user's Windows 11 PC (clone at `C:\Users\ahmed\Documents\GitHub\Mohamy-pro`),
+> after three further root causes were fixed: `5223014b` (unbound native `fetch` → `Illegal
+> invocation` in `me()`), `0a358bbf` (client unwraps the global `SuccessEnvelope` on `/auth/*`),
+> and `735449ac` (global `IdempotencyInterceptor` rejected `POST /auth/logout` with 422 because
+> auth protocol routes were the only ones excluded; added `/\/api\/v\d+\/auth\/(login|logout)$/`).
+> `POST /auth/logout` now returns **302** and a page refresh (F5) reports the correct session.
+> A username field is also surfaced to the frontend (`4c3be090`, `AuthUser.username`).
+
+The following had **not** been verifiable in the sandbox and were the explicit pending gap — now
+closed by the user-confirmed round-trip:
 
 - **Final interactive login + callback round-trip** — `GET /auth/login` → redirect to Keycloak,
   real user consent, then `GET /auth/callback` exchanging a real authorization code for tokens
   through the actual Nest server (not the reproduction script above).
 - **Live session-cookie round-trip** — creating an `AppSession` row in Neon, setting the HttpOnly
-  session cookie, and exercising `/auth/me` (expect `{"userId": "b172d832-...", "activeTenantId": null}`),
-  `/auth/csrf`, and `POST /auth/logout` end-to-end through the browser.
+  session cookie, and exercising `/auth/me` (now returns `{"userId": ..., "username": ...,
+  "activeTenantId": ...}`), `/auth/csrf`, and `POST /auth/logout` end-to-end through the browser.
 - **Cross-origin browser behavior** of the `SameSite=Lax` cookie and the CSRF Origin check across
-  the real frontend origin (`http://localhost:5173`). A credentialed frontend API client now exists
-  (`apps/web/src/lib/api.ts`, `credentials:'include'` + `X-CSRF-Token`; `tsc` + vitest pass), so this
-  leg is now exercisable but still requires a human round-trip on the user's PC.
+  the real frontend origin (`http://localhost:5173`).
 
-Because of this, the adapter + session logic is **unit/build/lint verified**, the Keycloak
-**discovery** is **live-verified**, and the **code-exchange** fix is **verified via a reproduction
-script**, but the **interactive browser grant is still pending** the human round-trip above.
+With this closed, the adapter + session logic is **unit/build/lint verified**, the Keycloak
+**discovery** is **live-verified**, the **code-exchange** fix is **verified via a reproduction
+script**, and the **interactive browser grant + cross-origin session round-trip are user-confirmed**.
 
 ## Baseline decision
 
-The Keycloak OIDC adapter + session store compile, lint, and pass 42 unit tests; live Keycloak
+The Keycloak OIDC adapter + session store compile, lint, and pass unit tests; live Keycloak
 discovery confirms the endpoints, PKCE/grant capabilities, and client auth methods the adapter
 relies on; and the code-exchange step (the previous blocker) is fixed and verified against a real
 Keycloak realm. The interactive browser Authorization-Code + PKCE flow and the session-cookie
-round-trip are **not yet runtime-verified through the actual server** and are a documented,
-explicit human step before production.
+round-trip are now **user-confirmed working** through the actual server on the user's PC (auth
+turn closed 2026-08-30), so the previously documented human verification gap is closed.

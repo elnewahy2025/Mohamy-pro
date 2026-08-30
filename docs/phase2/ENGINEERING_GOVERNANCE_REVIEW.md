@@ -9,7 +9,8 @@ cross-layer checks). Applied `skills/engineering-governance/SKILL.md`.
 verified is asserted; critical-workflow/cross-layer/dependency-chain review; security scans; git
 diff review; severity classification; completion report).
 
-**Repository revision:** `00c2e1e1` on `elnewahy2025/Mohamy-pro` `main`. Working tree clean.
+**Repository revision:** `00c2e1e1` on `elnewahy2025/Mohamy-pro` `main` at time of review;
+**updated 2026-08-30** to reflect the closed auth turn and the applied idempotency migration.
 
 ---
 
@@ -42,7 +43,8 @@ diff review; severity classification; completion report).
 | Server-side session store + HttpOnly cookie | Phase 2 plan | `session/*` | `session.service.spec.ts`, `session-crypto.spec.ts`, `session.guard.spec.ts`, `csrf.guard.spec.ts` | suite 113 pass | PASS |
 | CSRF guard (Origin + X-CSRF-Token) | AUTHENTICATION_ARCHITECTURE_DECISION | `session/csrf.guard.ts` | `csrf.guard.spec.ts` | suite 113 pass | PASS |
 | Identity resolution / external link | Phase 2 plan | `identity.service.ts` | `identity.service.spec.ts` | suite 113 pass | PASS |
-| Interactive browser grant | HOSTED_OIDC_RUNTIME_VERIFICATION | auth flow | — | **pending** (needs human browser on user PC) | UNVERIFIED |
+| Username surfaced to client | Post-fix follow-up | `identity.service.ts` (`getDisplayName`), `auth.service.ts` (`me`) | `identity.service.spec.ts` (+3) | web `AuthUser.username`; AppShell/AuthLoginPage render | PASS |
+| Interactive browser grant | HOSTED_OIDC_RUNTIME_VERIFICATION | auth flow | — | **user-confirmed** on Windows PC (`735449ac`): native-fetch, envelope, idempotency-root causes fixed; logout 302 + F5 correct | **PASS** |
 
 ---
 
@@ -89,7 +91,8 @@ createSession → session cookie → /me, /csrf, /logout`. Guards wired in
   headers) and (2) a frontend API client was added: `apps/web/src/lib/api.ts` issues `/auth/{me,csrf,
   login,logout}` with `credentials:'include'` and sends `X-CSRF-Token` on `POST /auth/logout`.
   See **F5**. Build (backend exit 0), web typecheck (tsc 5.9.3 exit 0) + vitest (6/6), full suite (113/113).
-- **Verification:** cross-origin browser round-trip still needs a human on the user's PC to fully close.
+- **Verification:** cross-origin browser round-trip now **user-confirmed** on the user's Windows PC
+  (auth turn below) — logout returns 302 and page refresh (F5) reports the correct session state.
 
 ### Finding F5 — `apps/web` had NO API client — **RESOLVED (client added)**
 - **Severity:** was P3 (feature gap); now closed.
@@ -131,7 +134,12 @@ createSession → session cookie → /me, /csrf, /logout`. Guards wired in
 - **Verified:** executed against the live Neon engine inside a **rolled-back transaction**
   (DB unchanged) on PostgreSQL 16 — parses and applies cleanly; result has `id` PK,
   `IdempotencyKey_scope_unique`, and the `IdempotencyState` enum.
-- **Status:** migration is **still pending** (not applied to Neon) per instruction — see §5.
+- **Status:** **APPLIED to Neon 2026-08-30** after explicit user approval. `prisma migrate deploy`
+  → exit 0 ("All migrations have been successfully applied"); `prisma migrate status` → "Database
+  schema is up to date!"; `prisma validate` → valid. Post-deploy introspection confirmed: PK on
+  `id`, `rowCount = 0` (the 0-row guarantee held — no data lost), all new columns present, the
+  `IdempotencyState` enum created (`state = USER-DEFINED`), and the legacy orphan columns
+  (`userId`, `tenantId`, `requestPath`) retained, non-destructive. See also **F4 note** and §5.
 
 ---
 
@@ -140,20 +148,19 @@ createSession → session cookie → /me, /csrf, /logout`. Guards wired in
 ```
 Requirements:     PASS (auth workstream implemented; traceability above)
 Implementation:   VERIFIED (build + inspection)
-Tests:            PASS — 113/113, 24 suites; lint 0 errors, 108 warnings (spec-only)
-Runtime verification: PARTIAL — discovery + code exchange verified vs live Keycloak;
-                     interactive browser grant still UNVERIFIED (needs human on user PC)
+Tests:            PASS — 119/119, 25 suites (was 113); lint 0 errors, 108 warnings (spec-only)
+Runtime verification: PASS — auth turn user-confirmed on the user's Windows PC (735449ac):
+                     interactive login/callback/me/logout all correct, incl. cross-origin
+                     (logout 302 + F5-correct session); discovery + code exchange vs live Keycloak
 Security:         PASS for the reviewed code (no hardcoded creds/disabled controls);
                      F1 resolved; F2 resolved (server + frontend client); F5 resolved
-Production readiness: NOT DECLARED — pending: interactive browser grant (incl. cross-origin) on a
-                     real server+browser, and the rewritten migration still pending on Neon
-Unverified items: interactive browser login/callback/me on a real server+browser;
-                  applying the rewritten idempotency migration to Neon (approved but not applied)
+Production readiness: auth flow USERS-CONFIRMED working; idempotency migration APPLIED to Neon.
 Known limitations: legacy orphan columns (userId, tenantId, requestPath) retained by the
                   additive migration; cleaned up only by a later separately-approved migration
-Workarounds:      none introduced; the OIDC fix (7e0f0774) and migration rewrite are permanent fixes
-Blocking issues:  none hard-blocking code correctness; production gate blocked by pending
-                  browser grant + F2 + applying the rewritten pending migration
+Workarounds:      none introduced; the OIDC fix (7e0f0774), migration rewrite, and the
+                  auth-turn fixes (5223014b, 0a358bbf, 735449ac) are permanent fixes
+Blocking issues:  none — auth turn closed; migration applied; remaining items are optional
+                  cleanup (stale origin/debug-local branch) or new feature work
 ```
 
 ### Mandatory final questions (skill §29)
@@ -190,8 +197,16 @@ client), F3 (`db:check`/`migrate status` evidence), F4 (the committed migration 
 destructive `DROP TABLE` to a verified in-place, non-destructive form), and F5 (built the frontend
 API client + auth UI that was previously missing).
 
-**Remaining before production-ready:** the **interactive browser grant** (human round-trip, including
-the cross-origin `/auth/me` + `/auth/csrf` + `POST /auth/logout` through the new frontend client), and
-**applying the rewritten idempotency migration to Neon** (currently pending; intentionally not applied
-this session per instruction, and already verified to apply cleanly on PostgreSQL 16 inside a
-rolled-back transaction).
+**Auth turn closed (2026-08-30, user-confirmed on Windows PC):** three further root causes were
+found and fixed after the initial review — `5223014b` (unbound native `fetch` → `Illegal
+invocation` in `me()`), `0a358bbf` (client must unwrap the global `SuccessEnvelope` returned by
+`/auth/*`), and `735449ac` (global `IdempotencyInterceptor` 422'd `POST /auth/logout`; auth
+protocol routes now excluded, with `oidc-protocol-route.spec.ts`). Logout now returns 302 and F5
+reports the correct session. A username field is surfaced to the client (`4c3be090`). Full suite
+119/119 (was 113).
+
+**Migration applied (2026-08-30):** `20260828000000_idempotency_full_scope` was applied to Neon
+after explicit user approval and verified post-deploy (exit 0, "up to date", PK on `id`, 0 rows,
+all new columns + `IdempotencyState` enum present, legacy orphan columns retained). The Phase 2
+additive+pending migration gate is now closed. Remaining items are optional cleanup (stale
+`origin/debug-local` branch) or new feature work.
