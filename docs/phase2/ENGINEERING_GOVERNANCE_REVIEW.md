@@ -10,8 +10,8 @@ verified is asserted; critical-workflow/cross-layer/dependency-chain review; sec
 diff review; severity classification; completion report).
 
 **Repository revision:** `00c2e1e1` on `elnewahy2025/Mohamy-pro` `main` at time of review;
-**updated 2026-08-30** to reflect the closed auth turn, the applied idempotency migration, and the
-audit-foundation + tenant-switch slice (see §6).
+**updated 2026-08-30** to reflect the closed auth turn, the applied idempotency migration, the
+audit-foundation + tenant-switch slice, and the tenant-bootstrap slice (see §6).
 
 ---
 
@@ -193,10 +193,40 @@ Blocking issues:  none — auth turn closed; migration applied; remaining items 
   full API contract, bilingual frontend), and a browser/Keycloak round-trip of the new endpoint
   is a separate user-PC step.
 
+### Tenant-bootstrap slice (2026-08-30)
+
+- **Requirements:** `TENANT_MEMBERSHIP_SWITCHING_DECISION.md` §Tenant bootstrap (frozen
+  2026-08-22). No silent simplification (governance Rule 4).
+- **Implementation:** additive global migration `20260831000000_tenant_bootstrap_foundation`
+  (`PlatformBootstrap` table with `UNIQUE`+`CHECK` singleton gate, 2 FKs, 2 indexes, no RLS);
+  `BootstrapModule` with `BootstrapConfigService` (env-only `BOOTSTRAP_*`), `BootstrapDeniedError`
+  / `BootstrapNotConfiguredError`, `POST /api/v1/bootstrap` (SessionGuard+CsrfGuard, body = one-time
+  secret only), and a `BootstrapService` that creates Tenant/Organization/Membership/global
+  `platform.admin`+GRA/tenant `tenant.admin`+MembershipRole/marker + `tenant.bootstrap.succeeded`
+  audit+outbox in one `withTenantContext` transaction; `tenant.bootstrap.succeeded`/`denied` added
+  to all audit maps + `METADATA_ALLOWLIST`; `BOOTSTRAP_*` env validation (partial config and
+  short secret rejected).
+- **Static + tests:** `prisma validate` PASS; `nest build` exit 0; eslint 0 errors; focused new
+  tests **25/25** (3 suites); full `jest --silent` **31 suites / 154 tests** (baseline 136).
+- **Runtime (live Neon):** `prisma migrate deploy` applied the bootstrap migration;
+  `check-migrations.mjs` 9/9. Live introspection proves the singleton `UNIQUE`+`CHECK` and
+  global/no-RLS table (8 columns, PK + unique + check + 2 FKs + 2 indexes, RLS off). Functional
+  verification through the real service + real Prisma against live Neon: first bootstrap succeeded
+  and created the full hierarchy + marker + audit + outbox; repeat and wrong-subject invocations
+  were refused (`ALREADY_BOOTSTRAPPED`) with a `tenant.bootstrap.denied` audit written. Transient
+  operator rows cleaned up; the intentional non-repeatable bootstrap outcome retained.
+- **Full evidence:** [`TENANT_BOOTSTRAP_IMPLEMENTATION.md`](TENANT_BOOTSTRAP_IMPLEMENTATION.md) +
+  [`HOSTED_TENANT_BOOTSTRAP_RUNTIME_VERIFICATION.md`](HOSTED_TENANT_BOOTSTRAP_RUNTIME_VERIFICATION.md).
+  This closes the tenant-bootstrap slice; the full Phase 2 completion gate remains open
+  (membership/invitation endpoints, RBAC matrix, legacy tenant boundaries, full API contract,
+  abuse controls, bilingual frontend), and a browser/Keycloak HTTP round-trip of the bootstrap
+  endpoint is a separate user-PC step.
+
 ### Mandatory final questions (skill §29)
 1. Inspected actual implementation — **yes**.
 2. Verified every important claim — **yes** (evidence table above).
-3. Executed tests claimed — **yes** (113/113, exit 0).
+3. Executed tests claimed — **yes** (auth-stage 113/113; current full suite **31 suites /
+   154 tests**, exit 0).
 4. Inspected dependency chain — **yes** (auth/session traced).
 5. Inspected DB/API/backend/frontend/auth/tests — **yes** (migrations/schema, controllers,
    guards, frontend proxy, specs).
@@ -249,3 +279,16 @@ denial; idempotency actor-scope resolution now reads the authenticated session. 
 136/136, web 7/7, web type-check clean. The Phase 2 completion gate remains open for the remaining
 workstreams documented in `PHASE2_IMPLEMENTATION_PLAN.md`; a browser/Keycloak round-trip of the new
 endpoint is a separate user-PC step.
+
+**Tenant-bootstrap slice (2026-08-30):** implemented and verified per the slice doc. The additive
+global migration `20260831000000_tenant_bootstrap_foundation` is deployed to Neon and verified
+(introspection: 8 columns, PK + `UNIQUE`+`CHECK` singleton gate + 2 FKs + 2 indexes, no RLS;
+`check-migrations` 9/9). `POST /api/v1/bootstrap` (Session+CSRF guarded) is implemented with a
+fail-closed `withTenantContext` transaction and environment-only `BOOTSTRAP_*` config; the one-time
+secret is hashed (never stored in plaintext) and the marker is non-repeatable even under a
+concurrent race. Live Neon runtime verification: first bootstrap succeeded (marker + hierarchy +
+audit + outbox); repeat and wrong-subject invocations were refused and audited as
+`tenant.bootstrap.denied`. Full backend suite **31 suites / 154 tests** (baseline 136). The Phase 2
+completion gate remains open for the remaining workstreams (membership/invitation endpoints, RBAC
+matrix, legacy tenant boundaries, full API contract, abuse controls, bilingual frontend); a
+browser/Keycloak HTTP round-trip of the bootstrap endpoint is a separate user-PC step.
