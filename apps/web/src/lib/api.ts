@@ -12,6 +12,16 @@ export interface CsrfToken {
   csrfToken: string;
 }
 
+export interface SuccessEnvelope<T> {
+  success: boolean;
+  data: T;
+  meta: {
+    requestId: string;
+    timestamp: string;
+    pagination: unknown;
+  };
+}
+
 export const API_BASE_URL: string =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -40,16 +50,17 @@ export class ApiClient {
     if (!res.ok) {
       throw new Error(`GET /auth/me failed with ${res.status}`);
     }
-    const body: unknown = await res.json();
-    console.log('[ApiClient.me] parsed JSON:', body, '| type:', typeof body);
+    const envelope = (await res.json()) as SuccessEnvelope<unknown>;
+    const data = envelope?.data;
+    console.log('[ApiClient.me] unwrapped data:', data);
     if (
-      body === null ||
-      typeof body !== 'object' ||
-      typeof (body as Record<string, unknown>).userId !== 'string'
+      data === null ||
+      typeof data !== 'object' ||
+      typeof (data as Record<string, unknown>).userId !== 'string'
     ) {
       throw new Error('GET /auth/me returned an invalid AuthUser payload');
     }
-    return body as AuthUser;
+    return data as AuthUser;
   }
 
   async csrfToken(): Promise<string> {
@@ -60,8 +71,14 @@ export class ApiClient {
     if (!res.ok) {
       throw new Error(`GET /auth/csrf failed with ${res.status}`);
     }
-    const body = (await res.json()) as CsrfToken;
-    return body.csrfToken;
+    const envelope = (await res.json()) as SuccessEnvelope<CsrfToken>;
+    if (
+      !envelope?.data ||
+      typeof envelope.data.csrfToken !== 'string'
+    ) {
+      throw new Error('GET /auth/csrf returned an invalid CSRF payload');
+    }
+    return envelope.data.csrfToken;
   }
 
   loginUrl(): string {

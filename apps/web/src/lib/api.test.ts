@@ -9,6 +9,14 @@ function okJson(body: unknown, init?: ResponseInit): Response {
   });
 }
 
+function enveloped<T>(data: T): unknown {
+  return {
+    success: true,
+    data,
+    meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+  };
+}
+
 describe('ApiClient', () => {
   it('sends the session cookie with credentials include on /auth/me', async () => {
     const calls: RequestInit[] = [];
@@ -17,7 +25,7 @@ describe('ApiClient', () => {
       init?: RequestInit,
     ): Promise<Response> => {
       calls.push(init ?? {});
-      return okJson({ userId: 'u1', activeTenantId: null });
+      return okJson(enveloped({ userId: 'u1', activeTenantId: null }));
     };
     const client = new ApiClient('http://localhost:3000/api/v1', fetchMock);
 
@@ -34,9 +42,9 @@ describe('ApiClient', () => {
     expect(await client.me()).toBeNull();
   });
 
-  it('throws from /auth/me when a 200 body is not a valid AuthUser payload', async () => {
+  it('throws from /auth/me when the 200 envelope data is not a valid AuthUser payload', async () => {
     const fetchMock = async (): Promise<Response> =>
-      okJson({ success: false, error: { code: 'FORBIDDEN' } });
+      okJson({ success: true, data: { success: false, error: { code: 'FORBIDDEN' } } });
     const client = new ApiClient('http://localhost:3000/api/v1', fetchMock);
 
     await expect(client.me()).rejects.toThrow(
@@ -52,7 +60,7 @@ describe('ApiClient', () => {
     ): Promise<Response> => {
       calls.push({ url: String(url), init });
       if (String(url).endsWith('/auth/csrf')) {
-        return okJson({ csrfToken: 'csrf-token-1' });
+        return okJson(enveloped({ csrfToken: 'csrf-token-1' }));
       }
       return new Response(null, { status: 302 });
     };
