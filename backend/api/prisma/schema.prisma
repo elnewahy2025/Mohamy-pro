@@ -59,6 +59,18 @@ enum DenialStatus {
   EXPIRED
 }
 
+enum AuditCategory {
+  AUDIT
+  SECURITY
+}
+
+enum AuditOutcome {
+  SUCCEEDED
+  DENIED
+  FAILED
+  REVOKED
+}
+
 // Phase 1: Health check table to prove migrations work
 model Health {
   id        String   @id @default(uuid())
@@ -167,6 +179,7 @@ model User {
   memberships           Membership[]
   globalRoleAssignments GlobalRoleAssignment[]
   denials               AccessDenial[]         @relation("DenialSubjectUser")
+  auditEvents           AuditEvent[]           @relation("AuditActorUser")
 
   @@index([status, createdAt])
 }
@@ -245,6 +258,7 @@ model Tenant {
   teamMembers        TeamMember[]
   storageObjects     StorageObject[]
   outboxMessages     OutboxMessage[]
+  auditEvents        AuditEvent[]
 
   @@index([status, createdAt])
 }
@@ -339,6 +353,7 @@ model Membership {
   teamMembers     TeamMember[]
   invitationsSent Invitation[]     @relation("InvitationInviterMembership")
   denialsCreated  AccessDenial[]   @relation("DenialCreatedByMembership")
+  auditEvents     AuditEvent[]     @relation("AuditActorMembership")
 
   @@unique([userId, tenantId])
   @@unique([id, tenantId])
@@ -450,7 +465,7 @@ model GlobalRoleAssignment {
   @@index([userId, revokedAt])
 }
 
-// Tenant-owned explicit denials. The append-only audit record is added in the audit foundation workstream.
+// Tenant-owned explicit denials.
 model AccessDenial {
   id                    String       @id @default(uuid())
   tenantId              String
@@ -473,4 +488,40 @@ model AccessDenial {
   @@index([tenantId, status, permissionKey])
   @@index([tenantId, resourceType, resourceId])
   @@index([subjectUserId, status])
+}
+
+// Append-only audit/security event store (Phase 2). Written in the same
+// transaction as the state change it records; never updated or deleted by the
+// application runtime roles (enforced by migration-level privileges and a
+// reject-immutable-mutation trigger). `tenantId` is null only for
+// provider/global-boundary authentication events.
+model AuditEvent {
+  id                String         @id @default(uuid())
+  eventType         String
+  eventVersion      Int
+  category          AuditCategory
+  outcome           AuditOutcome
+  actorUserId       String?
+  actorMembershipId String?
+  tenantId          String?
+  targetType        String?
+  targetId          String?
+  policy            String?
+  reasonCode        String?
+  correlationId     String
+  traceId           String?
+  ipHash            String?
+  userAgentHash     String?
+  metadata          Json           @default("{}")
+  occurredAt        DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+  retentionUntil    DateTime
+  actorUser         User?          @relation("AuditActorUser", fields: [actorUserId], references: [id], onDelete: Restrict)
+  actorMembership   Membership?    @relation("AuditActorMembership", fields: [actorMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  tenant            Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, eventType, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([correlationId])
+  @@index([retentionUntil])
 }

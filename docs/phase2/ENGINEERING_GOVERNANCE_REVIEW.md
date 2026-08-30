@@ -10,7 +10,8 @@ verified is asserted; critical-workflow/cross-layer/dependency-chain review; sec
 diff review; severity classification; completion report).
 
 **Repository revision:** `00c2e1e1` on `elnewahy2025/Mohamy-pro` `main` at time of review;
-**updated 2026-08-30** to reflect the closed auth turn and the applied idempotency migration.
+**updated 2026-08-30** to reflect the closed auth turn, the applied idempotency migration, and the
+audit-foundation + tenant-switch slice (see §6).
 
 ---
 
@@ -163,6 +164,35 @@ Blocking issues:  none — auth turn closed; migration applied; remaining items 
                   cleanup (stale origin/debug-local branch) or new feature work
 ```
 
+### Audit-foundation + tenant-switch slice (2026-08-30)
+
+- **Requirements:** `AUDIT_EVENT_FOUNDATION_DECISION` + `TENANT_MEMBERSHIP_SWITCHING_DECISION`
+  (both frozen 2026-08-22). No silent simplification (governance Rule 4).
+- **Implementation:** additive migration `20260830000000_audit_event_foundation`
+  (`AuditEvent`, `AuditCategory`, `AuditOutcome`, indexes, FKs, two RLS policies, append-only
+  trigger, `app_audit_global_scope_is_valid()`); `AuditEventService` (transaction-aware, allowlist
+  + fail-closed metadata, retention derivation), `AuditOutboxHandler` (idempotent confirmation),
+  and `POST /api/v1/session/tenant-switch` (Session+CSRF guarded, server-side active-membership
+  verification, atomic session+audit write, non-enumerating `403 FORBIDDEN` denial). Actor-scope
+  idempotency resolution corrected to read `request.auth`.
+- **Static + tests:** `prisma validate` PASS; `nest build` exit 0; eslint 0 errors; full
+  `jest --runInBand` **29 suites / 136 tests** (baseline 119); web `vitest` 7/7; web `tsc
+  --noEmit` (stable JS compiler) exit 0.
+- **Runtime (live Neon):** `prisma migrate deploy` applied the audit migration; `migrate status`
+  "up to date" (8 migrations); `check-migrations.mjs` 8/8. Pre/post introspection proved
+  additivity (audit objects absent → present, 0 rows, none pre-existing altered). Functional
+  fail-closed check into a rolled-back transaction: global-scope INSERT ok, `UPDATE`/`DELETE`
+  rejected by the trigger, row survived, rolled back to 0 rows. Rollback check into a rolled-back
+  transaction: compensating reverse-DDL dropped only the new audit objects and restored cleanly.
+  Existing `phase2-rls-runtime-check` all ten security gates **PASS**; only the verifier's own
+  disposable database/role teardown reported `FAIL` (open connection / Neon permission),
+  independent of the additive audit migration.
+- **Full evidence:** [`AUDIT_TENANT_SWITCH_IMPLEMENTATION.md`](AUDIT_TENANT_SWITCH_IMPLEMENTATION.md).
+  This closes the audit-foundation + tenant-switch slice; the full Phase 2 completion gate remains
+  open (legacy-table boundaries, membership/invitation endpoints, RBAC matrix, abuse controls,
+  full API contract, bilingual frontend), and a browser/Keycloak round-trip of the new endpoint
+  is a separate user-PC step.
+
 ### Mandatory final questions (skill §29)
 1. Inspected actual implementation — **yes**.
 2. Verified every important claim — **yes** (evidence table above).
@@ -210,3 +240,12 @@ after explicit user approval and verified post-deploy (exit 0, "up to date", PK 
 all new columns + `IdempotencyState` enum present, legacy orphan columns retained). The Phase 2
 additive+pending migration gate is now closed. Remaining items are optional cleanup (stale
 `origin/debug-local` branch) or new feature work.
+
+**Audit-foundation + tenant-switch slice (2026-08-30):** implemented and verified per the slice
+doc. The additive audit migration is deployed to Neon and verified (introspection, append-only
+fail-closed, rollback). The `POST /api/v1/session/tenant-switch` endpoint is implemented with
+server-side active-membership verification, atomic session+audit write, and non-enumerating
+denial; idempotency actor-scope resolution now reads the authenticated session. Full backend suite
+136/136, web 7/7, web type-check clean. The Phase 2 completion gate remains open for the remaining
+workstreams documented in `PHASE2_IMPLEMENTATION_PLAN.md`; a browser/Keycloak round-trip of the new
+endpoint is a separate user-PC step.

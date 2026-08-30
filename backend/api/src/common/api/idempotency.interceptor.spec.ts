@@ -145,6 +145,53 @@ describe('IdempotencyInterceptor', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it('scopes the idempotency record to the authenticated session actor', async () => {
+    const service = {
+      reserve: jest.fn().mockResolvedValue({
+        outcome: 'reserved',
+        record: record({ state: 'RESERVED', responseStatus: null }),
+      }),
+      complete: jest.fn().mockResolvedValue(record()),
+    } as unknown as IdempotencyService;
+    const interceptor = new IdempotencyInterceptor(service);
+    const next: CallHandler = { handle: () => of({ ok: true }) };
+    const request = {
+      method: 'POST',
+      originalUrl: '/api/v1/session/tenant-switch',
+      body: { tenantId: 't-1' },
+      auth: { userId: 'user-1', activeTenantId: null },
+      header: (name: string) => {
+        const lower = name.toLowerCase();
+        if (lower === 'idempotency-key') return KEY;
+        if (lower === 'content-type') return 'application/json';
+        if (lower === 'x-correlation-id') return 'req-1';
+        return undefined;
+      },
+    };
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => request,
+        getResponse: () => ({
+          statusCode: 200,
+          setHeader: jest.fn(),
+          status: jest.fn(),
+        }),
+      }),
+    } as unknown as ExecutionContext;
+    await lastValueFrom(
+      interceptor.intercept(context, next) as any,
+    );
+    expect(
+      (service as unknown as { reserve: jest.Mock }).reserve,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorScope: 'user-1',
+        tenantScope: null,
+        route: '/session/tenant-switch',
+      }),
+    );
+  });
+
   it('propagates a conflict from the service', async () => {
     const service = {
       reserve: jest

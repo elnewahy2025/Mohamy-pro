@@ -7,9 +7,11 @@ import { SessionCookieService } from './session/session-cookie.service';
 import { SessionGuard } from './session/session.guard';
 import { CsrfGuard } from './session/csrf.guard';
 import { SessionService } from './session/session.service';
+import { TenantSwitchController } from './session/tenant-switch.controller';
+import { TenantSwitchService } from './session/tenant-switch.service';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, TenantSwitchController],
   providers: [
     AuthService,
     IdentityService,
@@ -18,6 +20,7 @@ import { SessionService } from './session/session.service';
     SessionCookieService,
     SessionGuard,
     CsrfGuard,
+    TenantSwitchService,
   ],
   exports: [SessionService, SessionGuard, CsrfGuard, SessionCookieService],
 })

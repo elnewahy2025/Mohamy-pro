@@ -154,12 +154,18 @@ function resolveScope(request: Request): {
   tenantScope: string | null;
   route: string;
 } {
-  const actor = (request as any).user?.id as string | undefined;
-  const tenant = (request as any).tenantId as string | undefined;
-  const serviceScope = (request as any).serviceScope as string | undefined;
+  const sessionAuth = (request as any).auth as
+    { userId?: string; activeTenantId?: string | null } | undefined;
+  const actor =
+    (request as any).serviceScope ??
+    (request as any).user?.id ??
+    sessionAuth?.userId ??
+    null;
+  const tenant =
+    (request as any).tenantId ?? sessionAuth?.activeTenantId ?? null;
   return {
-    actorScope: serviceScope ?? actor ?? null,
-    tenantScope: tenant ?? null,
+    actorScope: typeof actor === 'string' && actor ? actor : null,
+    tenantScope: typeof tenant === 'string' && tenant ? tenant : null,
     route: normalizedRoute(request),
   };
 }
