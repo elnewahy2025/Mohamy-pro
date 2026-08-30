@@ -3,24 +3,13 @@
 
 'use client';
 
-import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/auth-provider';
 
 export function AuthLoginPage(): React.ReactNode {
   const t = useTranslations();
-  const { user, isLoading, error, login, logout } = useAuth();
-
-  useEffect(() => {
-    console.log('[AuthLoginPage] auth state:', {
-      isLoading,
-      user,
-      userIsTruthy: Boolean(user),
-      userType: typeof user,
-      error,
-    });
-  }, [isLoading, user, error]);
+  const { user, isLoading, login, logout } = useAuth();
 
   return (
     <section className="page-section content-page">
@@ -32,10 +21,6 @@ export function AuthLoginPage(): React.ReactNode {
       <div className="settings-card" aria-live="polite">
         {isLoading ? (
           <p>{t('auth.login.checking')}</p>
-        ) : error ? (
-          <p style={{ color: 'var(--danger, #c0392b)' }}>
-            Error: {error.message}
-          </p>
         ) : user ? (
           <>
             <p>

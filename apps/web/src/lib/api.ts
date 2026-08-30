@@ -42,9 +42,7 @@ export class ApiClient {
       credentials: 'include',
       headers: this.jsonHeaders(),
     });
-    console.log('[ApiClient.me] status:', res.status);
     if (res.status === 401) {
-      console.log('[ApiClient.me] returning null because status is 401');
       return null;
     }
     if (!res.ok) {
@@ -52,7 +50,6 @@ export class ApiClient {
     }
     const envelope = (await res.json()) as SuccessEnvelope<unknown>;
     const data = envelope?.data;
-    console.log('[ApiClient.me] unwrapped data:', data);
     if (
       data === null ||
       typeof data !== 'object' ||

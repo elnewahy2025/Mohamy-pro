@@ -34,26 +34,17 @@ export function AuthProvider({
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    console.log('[AuthProvider] MOUNT');
-    return () => {
-      console.log('[AuthProvider] UNMOUNT');
-    };
-  }, []);
-
-  useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setError(null);
     void currentClient
       .me()
       .then((current) => {
-        console.log('[AuthProvider] me() resolved:', current, '| cancelled:', cancelled);
         if (!cancelled) {
           setUser(current);
         }
       })
       .catch((reason: unknown) => {
-        console.error('[AuthProvider] me() rejected:', reason);
         if (!cancelled) {
           setUser(null);
           setError(reason instanceof Error ? reason : new Error(String(reason)));
