@@ -39,6 +39,13 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   SESSION_ABSOLUTE_TTL_SECONDS: number;
   SESSION_SECURE_COOKIE: boolean;
   SESSION_CSRF_NAME: string;
+  BOOTSTRAP_SUBJECT?: string;
+  BOOTSTRAP_SECRET?: string;
+  BOOTSTRAP_TENANT_SLUG?: string;
+  BOOTSTRAP_TENANT_NAME?: string;
+  BOOTSTRAP_ORG_SLUG?: string;
+  BOOTSTRAP_ORG_NAME?: string;
+  BOOTSTRAP_MFA_MAX_AGE_SECONDS: number;
 }
 
 function readString(value: unknown): string | undefined {
@@ -218,6 +225,51 @@ export function validateEnvironment(
   }
   const sessionSecureCookie = readBoolean(raw.SESSION_SECURE_COOKIE, false);
 
+  // One-time Platform bootstrap configuration (all optional). Every value is
+  // fail-closed: an absent value simply disables bootstrap at runtime; a
+  // malformed value that is present fails validation.
+  const bootstrapSubject = readString(raw.BOOTSTRAP_SUBJECT);
+  const bootstrapSecret = readString(raw.BOOTSTRAP_SECRET);
+  const bootstrapTenantSlug = readString(raw.BOOTSTRAP_TENANT_SLUG);
+  const bootstrapTenantName = readString(raw.BOOTSTRAP_TENANT_NAME);
+  const bootstrapOrgSlug = readString(raw.BOOTSTRAP_ORG_SLUG);
+  const bootstrapOrgName = readString(raw.BOOTSTRAP_ORG_NAME);
+  if (bootstrapSecret !== undefined && bootstrapSecret.length < 16) {
+    throw new Error('BOOTSTRAP_SECRET must be at least 16 characters');
+  }
+  const bootstrapMfaMaxAgeSeconds = readPositiveInteger(
+    raw.BOOTSTRAP_MFA_MAX_AGE_SECONDS,
+    900,
+    'BOOTSTRAP_MFA_MAX_AGE_SECONDS',
+    86_400,
+  );
+  const bootstrapConfigured =
+    bootstrapSubject !== undefined ||
+    bootstrapSecret !== undefined ||
+    bootstrapTenantSlug !== undefined ||
+    bootstrapTenantName !== undefined ||
+    bootstrapOrgSlug !== undefined ||
+    bootstrapOrgName !== undefined;
+  if (bootstrapConfigured) {
+    // A partial bootstrap configuration is a deployment error: it would make
+    // the operator command unusable at runtime.
+    const required = [
+      bootstrapSubject,
+      bootstrapSecret,
+      bootstrapTenantSlug,
+      bootstrapTenantName,
+      bootstrapOrgSlug,
+      bootstrapOrgName,
+    ];
+    if (required.some((value) => value === undefined || value.length === 0)) {
+      throw new Error(
+        'BOOTSTRAP_SUBJECT, BOOTSTRAP_SECRET, BOOTSTRAP_TENANT_SLUG, ' +
+          'BOOTSTRAP_TENANT_NAME, BOOTSTRAP_ORG_SLUG, and BOOTSTRAP_ORG_NAME ' +
+          'must all be set together to enable Platform bootstrap',
+      );
+    }
+  }
+
   if (nodeEnv === 'production') {
     if (!rateLimitEnabled) {
       throw new Error('RATE_LIMIT_ENABLED must be true in production');
@@ -344,5 +396,16 @@ export function validateEnvironment(
     SESSION_ABSOLUTE_TTL_SECONDS: sessionAbsoluteTtlSeconds,
     SESSION_SECURE_COOKIE: sessionSecureCookie,
     SESSION_CSRF_NAME: sessionCsrfName,
+    BOOTSTRAP_MFA_MAX_AGE_SECONDS: bootstrapMfaMaxAgeSeconds,
+    ...(bootstrapSubject ? { BOOTSTRAP_SUBJECT: bootstrapSubject } : {}),
+    ...(bootstrapSecret ? { BOOTSTRAP_SECRET: bootstrapSecret } : {}),
+    ...(bootstrapTenantSlug
+      ? { BOOTSTRAP_TENANT_SLUG: bootstrapTenantSlug }
+      : {}),
+    ...(bootstrapTenantName
+      ? { BOOTSTRAP_TENANT_NAME: bootstrapTenantName }
+      : {}),
+    ...(bootstrapOrgSlug ? { BOOTSTRAP_ORG_SLUG: bootstrapOrgSlug } : {}),
+    ...(bootstrapOrgName ? { BOOTSTRAP_ORG_NAME: bootstrapOrgName } : {}),
   };
 }

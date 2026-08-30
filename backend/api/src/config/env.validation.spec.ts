@@ -54,6 +54,51 @@ describe('validateEnvironment telemetry settings', () => {
     ).toThrow('Expected a boolean value');
   });
 
+  it('leaves bootstrap unset when no BOOTSTRAP_* variables are present', () => {
+    const environment = validateEnvironment(baseEnvironment);
+    expect(environment.BOOTSTRAP_SUBJECT).toBeUndefined();
+    expect(environment.BOOTSTRAP_SECRET).toBeUndefined();
+    expect(environment.BOOTSTRAP_MFA_MAX_AGE_SECONDS).toBe(900);
+  });
+
+  it('parses a complete bootstrap configuration', () => {
+    const environment = validateEnvironment({
+      ...baseEnvironment,
+      BOOTSTRAP_SUBJECT: 'sub-bootstrapper',
+      BOOTSTRAP_SECRET: 'one-time-bootstrap-secret-123',
+      BOOTSTRAP_TENANT_SLUG: 'acme',
+      BOOTSTRAP_TENANT_NAME: 'Acme Corp',
+      BOOTSTRAP_ORG_SLUG: 'acme-inc',
+      BOOTSTRAP_ORG_NAME: 'Acme Incorporated',
+      BOOTSTRAP_MFA_MAX_AGE_SECONDS: 600,
+    });
+
+    expect(environment.BOOTSTRAP_SUBJECT).toBe('sub-bootstrapper');
+    expect(environment.BOOTSTRAP_SECRET).toBe('one-time-bootstrap-secret-123');
+    expect(environment.BOOTSTRAP_TENANT_NAME).toBe('Acme Corp');
+    expect(environment.BOOTSTRAP_MFA_MAX_AGE_SECONDS).toBe(600);
+  });
+
+  it('rejects a partial bootstrap configuration', () => {
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        BOOTSTRAP_SUBJECT: 'sub-bootstrapper',
+        BOOTSTRAP_SECRET: 'one-time-bootstrap-secret-123',
+      }),
+    ).toThrow('must all be set together to enable Platform bootstrap');
+  });
+
+  it('rejects a bootstrap secret that is too short', () => {
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        BOOTSTRAP_SUBJECT: 'sub-bootstrapper',
+        BOOTSTRAP_SECRET: 'short',
+      }),
+    ).toThrow('BOOTSTRAP_SECRET must be at least 16 characters');
+  });
+
   it('requires rate limiting in production', () => {
     expect(() =>
       validateEnvironment({

@@ -1,10 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import {
-  type AuditCategory,
-  type AuditOutcome,
-  Prisma,
-} from '@prisma/client';
+import { type AuditCategory, type AuditOutcome, Prisma } from '@prisma/client';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import {
   AUDIT_CATEGORY,
@@ -39,6 +34,8 @@ const MAX_METADATA_BYTES = 16 * 1024;
 const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'tenant.switch.succeeded': ['sourceTenantId'],
   'tenant.switch.denied': ['sourceTenantId', 'targetTenantId'],
+  'tenant.bootstrap.succeeded': ['tenantSlug', 'organizationSlug'],
+  'tenant.bootstrap.denied': ['reason'],
   'auth.login.start': [],
   'auth.login.succeeded': [],
   'auth.login.denied': ['reason'],
@@ -131,7 +128,9 @@ export class AuditEventService {
     }
     if (typeof value === 'number') {
       if (Number.isFinite(value)) return;
-      throw new AuditWriteError(`Metadata field '${key}' is not a finite number`);
+      throw new AuditWriteError(
+        `Metadata field '${key}' is not a finite number`,
+      );
     }
     if (typeof value === 'boolean') return;
     if (Array.isArray(value) || typeof value === 'object') {

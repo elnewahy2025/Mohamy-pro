@@ -180,6 +180,7 @@ model User {
   globalRoleAssignments GlobalRoleAssignment[]
   denials               AccessDenial[]         @relation("DenialSubjectUser")
   auditEvents           AuditEvent[]           @relation("AuditActorUser")
+  platformBootstraps    PlatformBootstrap[]    @relation("BootstrapOperatorUser")
 
   @@index([status, createdAt])
 }
@@ -259,6 +260,7 @@ model Tenant {
   storageObjects     StorageObject[]
   outboxMessages     OutboxMessage[]
   auditEvents        AuditEvent[]
+  platformBootstraps PlatformBootstrap[]
 
   @@index([status, createdAt])
 }
@@ -524,4 +526,26 @@ model AuditEvent {
   @@index([actorUserId, occurredAt])
   @@index([correlationId])
   @@index([retentionUntil])
+}
+
+// One-time Platform bootstrap marker. A row exists only after the operator
+// bootstrap has succeeded; its presence is the "secret already used, cannot
+// repeat" gate. `singleton` is always true and carries a unique constraint so
+// the database itself permits at most one marker row even under a concurrent
+// bootstrap race. Global/no-RLS table so the gate is readable before any
+// tenant context exists.
+model PlatformBootstrap {
+  id             String   @id @default(uuid())
+  singleton      Boolean  @default(true)
+  completedAt    DateTime @default(now())
+  operatorUserId String
+  tenantId       String
+  secretHash     String
+
+  operatorUser User   @relation("BootstrapOperatorUser", fields: [operatorUserId], references: [id], onDelete: Restrict)
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([singleton])
+  @@index([operatorUserId])
+  @@index([tenantId])
 }

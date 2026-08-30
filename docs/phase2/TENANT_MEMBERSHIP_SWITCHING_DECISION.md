@@ -65,6 +65,14 @@ After bootstrap, only an existing Platform Admin with recent MFA may create a Te
 
 The bootstrap procedure must be implemented as a controlled operator command or one-time protected deployment action, not as a hidden production bypass. Its configuration, use, invalidation, and removal must be documented and tested. No bootstrap secret, subject value, or provider credential may be committed or printed.
 
+### Implementation (backend)
+
+The Phase 2 implementation provides `POST /api/v1/bootstrap`, protected by `SessionGuard` + `CsrfGuard`, in `backend/api/src/bootstrap`. Configuration is environment-only (`BOOTSTRAP_SUBJECT`, `BOOTSTRAP_SECRET`, `BOOTSTRAP_TENANT_SLUG`, `BOOTSTRAP_TENANT_NAME`, `BOOTSTRAP_ORG_SLUG`, `BOOTSTRAP_ORG_NAME`, `BOOTSTRAP_MFA_MAX_AGE_SECONDS`); the request body carries only the one-time secret. The operator must set these on the deployment that performs bootstrap and remove them once bootstrap succeeds.
+
+The service performs a fail-closed single transaction (`withTenantContext`) that, on success, creates the `Tenant`, `Organization`, `Membership`, the global `platform.admin` Role + `GlobalRoleAssignment`, the tenant `tenant.admin` Role + `MembershipRole`, the `PlatformBootstrap` marker, an append-only `tenant.bootstrap.succeeded` audit event, and a `tenant.bootstrap.succeeded` outbox message. The subject and secret are compared in constant time, MFA must be verified within the configured maximum age, and the configured subject must match the authenticated OIDC subject.
+
+Invalidation: the one-time secret is never stored in plaintext; only its SHA-256 hash is persisted on the `PlatformBootstrap` marker. The marker is a singleton enforced at the database level (`UNIQUE` + `CHECK (singleton = true)`), so bootstrap is non-repeatable per environment: any subsequent invocation is refused (`ALREADY_BOOTSTRAPPED`) and recorded as a `tenant.bootstrap.denied` audit event, regardless of the presented secret. Because the marker is a global (non-RLS) row readable before any tenant context exists, it also guarantees no second tenant can ever bootstrap even if another deployment races a bootstrap. This was verified against a live Neon database: first bootstrap succeeds, repeat and wrong-subject invocations fail closed.
+
 ## Invitations and membership administration
 
 A membership invitation is a tenant-owned record with an opaque hashed token, intended normalized verified email, target role set, optional organization/branch/department/team scope, inviter, expiration, status, and audit linkage. Invitation status is `PENDING`, `ACCEPTED`, `EXPIRED`, `REVOKED`, or `REJECTED`.
