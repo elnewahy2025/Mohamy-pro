@@ -5,7 +5,9 @@
  */
 export function isOidcProtocolRoute(path: string): boolean {
   const normalized = path.toLowerCase();
-  return /login\/(callback|initiate)|authorize|token|\.well-known/.test(
-    normalized,
+  return (
+    /login\/(callback|initiate)|authorize|token|\.well-known/.test(
+      normalized,
+    ) || /\/api\/v\d+\/auth\/(login|logout)$/.test(normalized)
   );
 }
