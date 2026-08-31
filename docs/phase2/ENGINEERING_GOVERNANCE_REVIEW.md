@@ -222,6 +222,40 @@ Blocking issues:  none — auth turn closed; migration applied; remaining items 
   abuse controls, bilingual frontend), and a browser/Keycloak HTTP round-trip of the bootstrap
   endpoint is a separate user-PC step.
 
+### Membership, invitation & RBAC slice (2026-08-31)
+
+- **Requirements:** `TENANT_MEMBERSHIP_SWITCHING_DECISION.md` §Invitations and membership
+  administration + §Required acceptance evidence (frozen), implemented as **Option B** (Steps
+  1→2→3: real RBAC engine → MFA gate → membership slice), user-confirmed. No silent simplification
+  (governance Rule 4).
+- **Implementation:** RBAC engine (`PermissionsService.assertTenantPermission` two-phase
+  membership-selection → tenant-context evaluation; non-enumerating `PermissionDeniedError`;
+  idempotent `grantRolePermissions` + `reconcileBuiltInRoles`); dedicated MFA gate
+  (`MfaAssuranceService.assertRecentMfa` against `SENSITIVE_ACTION_MFA_MAX_AGE_SECONDS`);
+  invitation create/accept (`InvitationService`) and membership administration suspend/expire/
+  remove/reinstate (`MembershipAdminService`), plus an idempotent `InvitationOutboxHandler` for
+  `membership.invitation.created`. New audit event types + metadata allowlist; new env keys;
+  `app.module`/`auth.module`/`OutboxModule` wiring; `bootstrap.service` now grants role
+  permissions to new roles. Additive idempotent migration
+  `20260831120000_rbac_permission_catalog` (seeds the six-permission catalog + wires the global
+  `platform.admin` role).
+- **Static + tests:** `prisma migrate status` → only the new migration pending before deploy;
+  `prisma migrate deploy` → exit 0; `nest build` → exit 0; full `jest --runInBand` **36 suites /
+  176 tests** (baseline 154), exit 0.
+- **Runtime (live Neon):** the additive RBAC migration was applied; live introspection confirmed
+  the catalog and the global wiring; `reconcileBuiltInRoles` semantics were reproduced idempotently
+  for `bootstrap-tenant`'s `tenant.admin`; the operator resolves `CanManageMembership` through the
+  live role graph while a non-member is denied; FORCE RLS confirmed on the five tenant-scoped
+  tables; invitation create/accept (single-use) and suspend/reinstate committed real rows against
+  live Neon and were cleaned up. The runtime check surfaced and permanently fixed a defect where
+  the admin service wrote a non-existent `reason` column on `Membership` (reason now lives only in
+  audit metadata); a regression guard was added to the admin spec.
+- **Full evidence:** [`MEMBERSHIP_INVITATION_IMPLEMENTATION.md`](MEMBERSHIP_INVITATION_IMPLEMENTATION.md)
+  + [`HOSTED_MEMBERSHIP_INVITATION_RUNTIME_VERIFICATION.md`](HOSTED_MEMBERSHIP_INVITATION_RUNTIME_VERIFICATION.md).
+  The Phase 2 completion gate remains open for the legacy tenant boundaries, full API contract,
+  abuse controls, bilingual frontend, and the remaining named-policy matrix; a browser/Keycloak
+  HTTP round-trip of the new endpoints is a separate user-PC step.
+
 ### Mandatory final questions (skill §29)
 1. Inspected actual implementation — **yes**.
 2. Verified every important claim — **yes** (evidence table above).

@@ -9,6 +9,7 @@ import { CsrfGuard } from './session/csrf.guard';
 import { SessionService } from './session/session.service';
 import { TenantSwitchController } from './session/tenant-switch.controller';
 import { TenantSwitchService } from './session/tenant-switch.service';
+import { MfaAssuranceService } from './mfa/mfa-assurance.service';
 
 @Module({
   controllers: [AuthController, TenantSwitchController],
@@ -21,7 +22,14 @@ import { TenantSwitchService } from './session/tenant-switch.service';
     SessionGuard,
     CsrfGuard,
     TenantSwitchService,
+    MfaAssuranceService,
   ],
-  exports: [SessionService, SessionGuard, CsrfGuard, SessionCookieService],
+  exports: [
+    SessionService,
+    SessionGuard,
+    CsrfGuard,
+    SessionCookieService,
+    MfaAssuranceService,
+  ],
 })
 export class AuthModule {}

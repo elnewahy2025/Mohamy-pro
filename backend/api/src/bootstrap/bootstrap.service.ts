@@ -18,6 +18,12 @@ import { getCorrelationId } from '../common/middleware/correlation-id.middleware
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import { OutboxService } from '../infrastructure/outbox/outbox.service';
 import { constantTimeEqual, hashToken } from '../auth/session/session-crypto';
+import { PermissionsService } from '../permissions/permissions.service';
+import { ROLE_PERMISSIONS } from '../permissions/permission.constants';
+import {
+  ROLE_KEY_PLATFORM_ADMIN,
+  ROLE_KEY_TENANT_ADMIN,
+} from '../permissions/role.constants';
 import { BootstrapConfig, BootstrapConfigService } from './bootstrap.config';
 import {
   BOOTSTRAP_DENIED_REASON,
@@ -52,6 +58,7 @@ export class BootstrapService {
     private readonly audit: AuditEventService,
     private readonly outbox: OutboxService,
     private readonly configService: BootstrapConfigService,
+    private readonly permissions: PermissionsService,
   ) {}
 
   async bootstrap(request: Request, secret: string): Promise<BootstrapResult> {
@@ -141,6 +148,11 @@ export class BootstrapService {
               assignedAt: now,
             },
           });
+          await this.permissions.grantRolePermissions(
+            transaction,
+            globalRole.id,
+            ROLE_PERMISSIONS[ROLE_KEY_PLATFORM_ADMIN],
+          );
 
           const tenantRole = await transaction.role.create({
             data: {
@@ -150,6 +162,11 @@ export class BootstrapService {
               name: BOOTSTRAP_ROLE_NAME_TENANT,
             },
           });
+          await this.permissions.grantRolePermissions(
+            transaction,
+            tenantRole.id,
+            ROLE_PERMISSIONS[ROLE_KEY_TENANT_ADMIN],
+          );
           await transaction.membershipRole.create({
             data: {
               tenantId,

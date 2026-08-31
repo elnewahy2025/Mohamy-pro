@@ -4,6 +4,7 @@ import { AuditEventService } from '../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import type { OutboxService } from '../infrastructure/outbox/outbox.service';
+import type { PermissionsService } from '../permissions/permissions.service';
 import { BootstrapConfigService } from './bootstrap.config';
 import {
   BootstrapDeniedError,
@@ -128,7 +129,16 @@ function makeService(input: {
     withTenantContext: tenantContext,
   } as unknown as PrismaService;
 
-  const service = new BootstrapService(prisma, audit, outbox, configService);
+  const service = new BootstrapService(
+    prisma,
+    audit,
+    outbox,
+    configService,
+    {
+      grantRolePermissions: jest.fn().mockResolvedValue(undefined),
+      reconcileBuiltInRoles: jest.fn().mockResolvedValue(0),
+    } as unknown as PermissionsService,
+  );
   return {
     service,
     auditWrite,

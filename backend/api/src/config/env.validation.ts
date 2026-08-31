@@ -46,6 +46,8 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   BOOTSTRAP_ORG_SLUG?: string;
   BOOTSTRAP_ORG_NAME?: string;
   BOOTSTRAP_MFA_MAX_AGE_SECONDS: number;
+  SENSITIVE_ACTION_MFA_MAX_AGE_SECONDS: number;
+  INVITATION_TTL_SECONDS: number;
 }
 
 function readString(value: unknown): string | undefined {
@@ -243,6 +245,18 @@ export function validateEnvironment(
     'BOOTSTRAP_MFA_MAX_AGE_SECONDS',
     86_400,
   );
+  const sensitiveActionMfaMaxAgeSeconds = readPositiveInteger(
+    raw.SENSITIVE_ACTION_MFA_MAX_AGE_SECONDS,
+    900,
+    'SENSITIVE_ACTION_MFA_MAX_AGE_SECONDS',
+    86_400,
+  );
+  const invitationTtlSeconds = readPositiveInteger(
+    raw.INVITATION_TTL_SECONDS,
+    604_800,
+    'INVITATION_TTL_SECONDS',
+    2_592_000,
+  );
   const bootstrapConfigured =
     bootstrapSubject !== undefined ||
     bootstrapSecret !== undefined ||
@@ -397,6 +411,8 @@ export function validateEnvironment(
     SESSION_SECURE_COOKIE: sessionSecureCookie,
     SESSION_CSRF_NAME: sessionCsrfName,
     BOOTSTRAP_MFA_MAX_AGE_SECONDS: bootstrapMfaMaxAgeSeconds,
+    SENSITIVE_ACTION_MFA_MAX_AGE_SECONDS: sensitiveActionMfaMaxAgeSeconds,
+    INVITATION_TTL_SECONDS: invitationTtlSeconds,
     ...(bootstrapSubject ? { BOOTSTRAP_SUBJECT: bootstrapSubject } : {}),
     ...(bootstrapSecret ? { BOOTSTRAP_SECRET: bootstrapSecret } : {}),
     ...(bootstrapTenantSlug

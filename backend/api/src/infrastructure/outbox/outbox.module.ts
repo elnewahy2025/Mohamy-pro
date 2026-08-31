@@ -3,6 +3,7 @@ import { HealthStatusOutboxHandler } from './health-status-outbox.handler';
 import { OutboxHandlerRegistrar } from './outbox-handler.registrar';
 import { OutboxHandlerRegistry } from './outbox-handler.registry';
 import { OutboxService } from './outbox.service';
+import { InvitationOutboxHandler } from '../../membership/invitation/invitation-outbox.handler';
 
 @Global()
 @Module({
@@ -11,6 +12,7 @@ import { OutboxService } from './outbox.service';
     OutboxService,
     HealthStatusOutboxHandler,
     OutboxHandlerRegistrar,
+    InvitationOutboxHandler,
   ],
   exports: [OutboxHandlerRegistry, OutboxService],
 })

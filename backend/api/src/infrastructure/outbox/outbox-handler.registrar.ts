@@ -8,6 +8,10 @@ import {
   AUDIT_EVENT_CREATED_OUTBOX_EVENT,
   AuditOutboxHandler,
 } from '../../audit/audit-outbox.handler';
+import {
+  INVITATION_CREATED_OUTBOX_EVENT,
+  InvitationOutboxHandler,
+} from '../../membership/invitation/invitation-outbox.handler';
 
 @Injectable()
 export class OutboxHandlerRegistrar implements OnModuleInit {
@@ -15,6 +19,7 @@ export class OutboxHandlerRegistrar implements OnModuleInit {
     private readonly registry: OutboxHandlerRegistry,
     private readonly healthStatusHandler: HealthStatusOutboxHandler,
     private readonly auditHandler: AuditOutboxHandler,
+    private readonly invitationHandler: InvitationOutboxHandler,
   ) {}
 
   onModuleInit(): void {
@@ -23,6 +28,9 @@ export class OutboxHandlerRegistrar implements OnModuleInit {
     );
     this.registry.register(AUDIT_EVENT_CREATED_OUTBOX_EVENT, (message) =>
       this.auditHandler.handle(message),
+    );
+    this.registry.register(INVITATION_CREATED_OUTBOX_EVENT, (message) =>
+      this.invitationHandler.handle(message),
     );
   }
 }

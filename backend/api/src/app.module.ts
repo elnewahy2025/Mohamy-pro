@@ -17,6 +17,8 @@ import { MetricsModule } from './observability/metrics.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditModule } from './audit/audit.module';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
+import { PermissionsModule } from './permissions/permissions.module';
+import { MembershipModule } from './membership/membership.module';
 import { RateLimitMiddleware } from './security/rate-limit.middleware';
 
 @Module({
@@ -35,6 +37,8 @@ import { RateLimitMiddleware } from './security/rate-limit.middleware';
     AuthModule,
     AuditModule,
     BootstrapModule,
+    PermissionsModule,
+    MembershipModule,
   ],
   controllers: [AppController],
   providers: [
