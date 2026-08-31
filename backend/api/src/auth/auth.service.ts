@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
+import { AbuseControlService } from '../abuse/abuse-control.service';
+import { AbuseLimitReachedError } from '../abuse/abuse-control.errors';
 import type { ValidatedEnvironment } from '../config/env.validation';
 import {
   OidcInteractionError,
@@ -29,13 +31,30 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly cookies: SessionCookieService,
     private readonly configService: ConfigService<ValidatedEnvironment, true>,
+    private readonly abuse: AbuseControlService,
   ) {}
 
   private sessionSecret(): string {
     return this.configService.getOrThrow('SESSION_SECRET');
   }
 
-  async beginLogin(res: Response): Promise<BeginLoginResult> {
+  async beginLogin(req: Request, res: Response): Promise<BeginLoginResult> {
+    const ipDecision = await this.abuse.enforceLoginIp(req);
+    if (!ipDecision.allowed) {
+      await this.abuse.emitAbuseEvent(req, ipDecision.reason!);
+      throw new AbuseLimitReachedError(
+        ipDecision.reason!,
+        ipDecision.retryAfterSeconds!,
+      );
+    }
+    const identifierDecision = await this.abuse.enforceLoginIdentifier(req);
+    if (identifierDecision && !identifierDecision.allowed) {
+      await this.abuse.emitAbuseEvent(req, identifierDecision.reason!);
+      throw new AbuseLimitReachedError(
+        identifierDecision.reason!,
+        identifierDecision.retryAfterSeconds!,
+      );
+    }
     const auth = await this.oidc.buildAuthorizationUrl();
     const payload = JSON.stringify({
       state: auth.state,

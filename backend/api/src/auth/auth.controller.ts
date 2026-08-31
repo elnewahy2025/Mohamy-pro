@@ -11,8 +11,8 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Get('login')
-  async login(@Res() res: Response): Promise<void> {
-    const { redirectUrl } = await this.auth.beginLogin(res);
+  async login(@Req() req: Request, @Res() res: Response): Promise<void> {
+    const { redirectUrl } = await this.auth.beginLogin(req, res);
     res.redirect(307, redirectUrl);
   }
 

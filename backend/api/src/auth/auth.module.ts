@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AbuseModule } from '../abuse/abuse.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { IdentityService } from './identity.service';
@@ -12,6 +13,7 @@ import { TenantSwitchService } from './session/tenant-switch.service';
 import { MfaAssuranceService } from './mfa/mfa-assurance.service';
 
 @Module({
+  imports: [AbuseModule],
   controllers: [AuthController, TenantSwitchController],
   providers: [
     AuthService,

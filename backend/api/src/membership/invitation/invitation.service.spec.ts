@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { AbuseControlService } from '../../abuse/abuse-control.service';
 import type { ValidatedEnvironment } from '../../config/env.validation';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
@@ -49,6 +50,7 @@ function makeService(overrides: {
     expiresAt?: Date;
   } | null;
   tenantRoleCreatesNew?: boolean;
+  abuse?: AbuseControlService;
 } = {}) {
   const mfa = {
     assertRecentMfa: jest
@@ -148,7 +150,26 @@ function makeService(overrides: {
     $transaction: jest.fn(),
   } as unknown as PrismaService;
 
-  const service = new InvitationService(prisma, audit, outbox, permissions, mfa, configService);
+  const abuse =
+    overrides.abuse ??
+    ({
+      enforceInvitation: jest.fn().mockResolvedValue({
+        allowed: true,
+        reason: null,
+        retryAfterSeconds: null,
+      }),
+      emitAbuseEvent: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AbuseControlService);
+
+  const service = new InvitationService(
+    prisma,
+    audit,
+    outbox,
+    permissions,
+    mfa,
+    configService,
+    abuse,
+  );
   return { service, auditWrite, outboxCreate, tenantTx, permissions, mfa, prisma };
 }
 
@@ -216,6 +237,32 @@ describe('InvitationService', () => {
       await expect(
         service.accept(request(), { token: 'opaque-token' }),
       ).rejects.toBeInstanceOf(InvitationDeniedError);
+    });
+
+    it('denies acceptance when the invitation rate limit is reached and emits an abuse event', async () => {
+      const emitAbuseEvent = jest.fn().mockResolvedValue(undefined);
+      const abuse = {
+        enforceInvitation: jest.fn().mockResolvedValue({
+          allowed: false,
+          reason: 'INVITATION_RATE_LIMITED',
+          retryAfterSeconds: 3600,
+        }),
+        emitAbuseEvent,
+      } as unknown as AbuseControlService;
+
+      const { service, auditWrite } = makeService({ abuse });
+
+      await expect(
+        service.accept(request(), { token: 'opaque-token' }),
+      ).rejects.toBeInstanceOf(InvitationDeniedError);
+
+      expect(abuse.enforceInvitation).toHaveBeenCalledTimes(1);
+      expect(emitAbuseEvent).toHaveBeenCalledWith(
+        expect.anything(),
+        'INVITATION_RATE_LIMITED',
+        { actorUserId: USER_ID },
+      );
+      expect(auditWrite).toHaveBeenCalledTimes(0);
     });
   });
 });

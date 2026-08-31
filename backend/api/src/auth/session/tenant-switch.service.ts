@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Request } from 'express';
 import type { Membership, Tenant } from '@prisma/client';
+import { AbuseControlService } from '../../abuse/abuse-control.service';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { getCorrelationId } from '../../common/middleware/correlation-id.middleware';
@@ -40,6 +41,7 @@ export class TenantSwitchService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditEventService,
+    private readonly abuse: AbuseControlService,
   ) {}
 
   async switchTenant(
@@ -51,6 +53,20 @@ export class TenantSwitchService {
       throw new TenantSwitchDeniedError('UNAUTHENTICATED');
     }
     const { userId, sessionId, activeTenantId } = auth;
+
+    const abuseDecision = await this.abuse.enforceTenantSwitch(
+      request,
+      userId,
+    );
+    if (!abuseDecision.allowed) {
+      await this.abuse.emitAbuseEvent(
+        request,
+        abuseDecision.reason!,
+        { actorUserId: userId, tenantId },
+      );
+      throw new TenantSwitchDeniedError('RATE_LIMITED');
+    }
+
     const correlationId = getCorrelationId(request);
 
     const membership = await this.loadCandidateMembership(

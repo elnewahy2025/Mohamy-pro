@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
+import type { ValidatedEnvironment } from '../config/env.validation';
 import { getCorrelationId } from '../common/middleware/correlation-id.middleware';
 import { AuditEventService } from '../audit/audit-event.service';
 import {
@@ -47,7 +49,15 @@ export class AbuseControlService {
   constructor(
     private readonly counter: AbuseCounterService,
     private readonly audit: AuditEventService,
+    private readonly config: ConfigService<ValidatedEnvironment, true>,
   ) {}
+
+  private intLimit(key: keyof ValidatedEnvironment, fallback: number): number {
+    const value = this.config.get(key);
+    return typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : fallback;
+  }
 
   private async enforceRateLimit(
     request: Request,
@@ -78,8 +88,11 @@ export class AbuseControlService {
   async enforceLoginIp(request: Request): Promise<AbuseDecision> {
     return this.enforceRateLimit(request, {
       scopePrefix: 'login-ip',
-      limit: ABUSE_LIMITS.loginPerIp.max,
-      windowSeconds: ABUSE_LIMITS.loginPerIp.windowSeconds,
+      limit: this.intLimit('ABUSE_LOGIN_PER_IP_MAX', ABUSE_LIMITS.loginPerIp.max),
+      windowSeconds: this.intLimit(
+        'ABUSE_LOGIN_PER_IP_WINDOW_SECONDS',
+        ABUSE_LIMITS.loginPerIp.windowSeconds,
+      ),
       reason: AUTH_RATE_LIMITED,
     }, abuseClientIp(request));
   }
@@ -90,8 +103,14 @@ export class AbuseControlService {
     if (!identifier) return null;
     return this.enforceRateLimit(request, {
       scopePrefix: 'login-id',
-      limit: ABUSE_LIMITS.loginPerIdentifier.max,
-      windowSeconds: ABUSE_LIMITS.loginPerIdentifier.windowSeconds,
+      limit: this.intLimit(
+        'ABUSE_LOGIN_PER_IDENTIFIER_MAX',
+        ABUSE_LIMITS.loginPerIdentifier.max,
+      ),
+      windowSeconds: this.intLimit(
+        'ABUSE_LOGIN_PER_IDENTIFIER_WINDOW_SECONDS',
+        ABUSE_LIMITS.loginPerIdentifier.windowSeconds,
+      ),
       reason: AUTH_RATE_LIMITED,
     }, identifier);
   }
@@ -103,8 +122,11 @@ export class AbuseControlService {
     const actor = `${abuseClientIp(request)}::${token}`;
     return this.enforceRateLimit(request, {
       scopePrefix: 'invite',
-      limit: ABUSE_LIMITS.invitationPerFingerprint.max,
-      windowSeconds: ABUSE_LIMITS.invitationPerFingerprint.windowSeconds,
+      limit: this.intLimit('ABUSE_INVITATION_MAX', ABUSE_LIMITS.invitationPerFingerprint.max),
+      windowSeconds: this.intLimit(
+        'ABUSE_INVITATION_WINDOW_SECONDS',
+        ABUSE_LIMITS.invitationPerFingerprint.windowSeconds,
+      ),
       reason: INVITATION_RATE_LIMITED,
     }, actor);
   }
@@ -116,8 +138,11 @@ export class AbuseControlService {
   ): Promise<AbuseDecision> {
     return this.enforceRateLimit(request, {
       scopePrefix: 'switch',
-      limit: ABUSE_LIMITS.switchPerActor.max,
-      windowSeconds: ABUSE_LIMITS.switchPerActor.windowSeconds,
+      limit: this.intLimit('ABUSE_SWITCH_MAX', ABUSE_LIMITS.switchPerActor.max),
+      windowSeconds: this.intLimit(
+        'ABUSE_SWITCH_WINDOW_SECONDS',
+        ABUSE_LIMITS.switchPerActor.windowSeconds,
+      ),
       reason: TENANT_SWITCH_RATE_LIMITED,
     }, userId);
   }
@@ -129,31 +154,34 @@ export class AbuseControlService {
   async registerAuthenticationFailure(
     identifier: string,
   ): Promise<AbuseDecision> {
-    const hash = hashAbuseKey(identifier);
-    const bucket = Math.floor(
-      Date.now() / (ABUSE_LIMITS.lockoutSeconds * 1_000),
+    const lockoutSeconds = this.intLimit(
+      'ABUSE_LOCKOUT_SECONDS',
+      ABUSE_LIMITS.lockoutSeconds,
     );
+    const lockoutThreshold = this.intLimit(
+      'ABUSE_AUTH_FAILURE_THRESHOLD',
+      ABUSE_LIMITS.lockoutThreshold,
+    );
+    const hash = hashAbuseKey(identifier);
+    const bucket = Math.floor(Date.now() / (lockoutSeconds * 1_000));
     const counterKey = AbuseCounterService.scopedKey(
       'auth-fail',
       hash,
       String(bucket),
     );
-    const count = await this.counter.increment(
-      counterKey,
-      ABUSE_LIMITS.lockoutSeconds,
-    );
+    const count = await this.counter.increment(counterKey, lockoutSeconds);
     if (count === null) {
       return { allowed: true, reason: null, retryAfterSeconds: null };
     }
-    if (count >= ABUSE_LIMITS.lockoutThreshold) {
+    if (count >= lockoutThreshold) {
       await this.counter.setMarker(
         `mohamy:abuse:auth-lockout:${hash}`,
-        ABUSE_LIMITS.lockoutSeconds,
+        lockoutSeconds,
       );
       return {
         allowed: false,
         reason: ACCOUNT_LOCKED,
-        retryAfterSeconds: ABUSE_LIMITS.lockoutSeconds,
+        retryAfterSeconds: lockoutSeconds,
       };
     }
     return { allowed: true, reason: null, retryAfterSeconds: null };
@@ -161,6 +189,10 @@ export class AbuseControlService {
 
   /** Read-only lockout decision for an identifier (no increment). */
   async checkLockout(identifier: string): Promise<AbuseDecision> {
+    const lockoutSeconds = this.intLimit(
+      'ABUSE_LOCKOUT_SECONDS',
+      ABUSE_LIMITS.lockoutSeconds,
+    );
     const hash = hashAbuseKey(identifier);
     const locked = await this.counter.hasMarker(
       `mohamy:abuse:auth-lockout:${hash}`,
@@ -169,7 +201,7 @@ export class AbuseControlService {
       return {
         allowed: false,
         reason: ACCOUNT_LOCKED,
-        retryAfterSeconds: ABUSE_LIMITS.lockoutSeconds,
+        retryAfterSeconds: lockoutSeconds,
       };
     }
     return { allowed: true, reason: null, retryAfterSeconds: null };
@@ -181,8 +213,11 @@ export class AbuseControlService {
   ): Promise<AbuseDecision> {
     const policy: LimitPolicy = {
       scopePrefix: 'mfa',
-      limit: ABUSE_LIMITS.mfaPerActor.max,
-      windowSeconds: ABUSE_LIMITS.mfaPerActor.windowSeconds,
+      limit: this.intLimit('ABUSE_MFA_PER_ACTOR_MAX', ABUSE_LIMITS.mfaPerActor.max),
+      windowSeconds: this.intLimit(
+        'ABUSE_MFA_PER_ACTOR_WINDOW_SECONDS',
+        ABUSE_LIMITS.mfaPerActor.windowSeconds,
+      ),
       reason: MFA_RATE_LIMITED,
     };
     return this.enforceRateLimit(

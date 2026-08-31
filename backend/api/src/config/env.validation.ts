@@ -48,6 +48,18 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   BOOTSTRAP_MFA_MAX_AGE_SECONDS: number;
   SENSITIVE_ACTION_MFA_MAX_AGE_SECONDS: number;
   INVITATION_TTL_SECONDS: number;
+  ABUSE_LOGIN_PER_IP_MAX: number;
+  ABUSE_LOGIN_PER_IP_WINDOW_SECONDS: number;
+  ABUSE_LOGIN_PER_IDENTIFIER_MAX: number;
+  ABUSE_LOGIN_PER_IDENTIFIER_WINDOW_SECONDS: number;
+  ABUSE_AUTH_FAILURE_THRESHOLD: number;
+  ABUSE_LOCKOUT_SECONDS: number;
+  ABUSE_MFA_PER_ACTOR_MAX: number;
+  ABUSE_MFA_PER_ACTOR_WINDOW_SECONDS: number;
+  ABUSE_INVITATION_MAX: number;
+  ABUSE_INVITATION_WINDOW_SECONDS: number;
+  ABUSE_SWITCH_MAX: number;
+  ABUSE_SWITCH_WINDOW_SECONDS: number;
 }
 
 function readString(value: unknown): string | undefined {
@@ -284,6 +296,83 @@ export function validateEnvironment(
     }
   }
 
+  // Phase 2 abuse controls. Each limit/window is a validated positive integer
+  // with a fixed production upper bound (see ABUSE_LIMIT_UPPER_BOUNDS in the
+  // abuse constants); a configured value above its bound fails startup so a
+  // misconfiguration cannot silently weaken a control.
+  const abuseLoginPerIpMax = readPositiveInteger(
+    raw.ABUSE_LOGIN_PER_IP_MAX,
+    10,
+    'ABUSE_LOGIN_PER_IP_MAX',
+    10,
+  );
+  const abuseLoginPerIpWindowSeconds = readPositiveInteger(
+    raw.ABUSE_LOGIN_PER_IP_WINDOW_SECONDS,
+    900,
+    'ABUSE_LOGIN_PER_IP_WINDOW_SECONDS',
+    3_600,
+  );
+  const abuseLoginPerIdentifierMax = readPositiveInteger(
+    raw.ABUSE_LOGIN_PER_IDENTIFIER_MAX,
+    5,
+    'ABUSE_LOGIN_PER_IDENTIFIER_MAX',
+    5,
+  );
+  const abuseLoginPerIdentifierWindowSeconds = readPositiveInteger(
+    raw.ABUSE_LOGIN_PER_IDENTIFIER_WINDOW_SECONDS,
+    900,
+    'ABUSE_LOGIN_PER_IDENTIFIER_WINDOW_SECONDS',
+    3_600,
+  );
+  const abuseAuthFailureThreshold = readPositiveInteger(
+    raw.ABUSE_AUTH_FAILURE_THRESHOLD,
+    5,
+    'ABUSE_AUTH_FAILURE_THRESHOLD',
+    5,
+  );
+  const abuseLockoutSeconds = readPositiveInteger(
+    raw.ABUSE_LOCKOUT_SECONDS,
+    900,
+    'ABUSE_LOCKOUT_SECONDS',
+    3_600,
+  );
+  const abuseMfaPerActorMax = readPositiveInteger(
+    raw.ABUSE_MFA_PER_ACTOR_MAX,
+    5,
+    'ABUSE_MFA_PER_ACTOR_MAX',
+    5,
+  );
+  const abuseMfaPerActorWindowSeconds = readPositiveInteger(
+    raw.ABUSE_MFA_PER_ACTOR_WINDOW_SECONDS,
+    900,
+    'ABUSE_MFA_PER_ACTOR_WINDOW_SECONDS',
+    3_600,
+  );
+  const abuseInvitationMax = readPositiveInteger(
+    raw.ABUSE_INVITATION_MAX,
+    10,
+    'ABUSE_INVITATION_MAX',
+    10,
+  );
+  const abuseInvitationWindowSeconds = readPositiveInteger(
+    raw.ABUSE_INVITATION_WINDOW_SECONDS,
+    3_600,
+    'ABUSE_INVITATION_WINDOW_SECONDS',
+    86_400,
+  );
+  const abuseSwitchMax = readPositiveInteger(
+    raw.ABUSE_SWITCH_MAX,
+    20,
+    'ABUSE_SWITCH_MAX',
+    20,
+  );
+  const abuseSwitchWindowSeconds = readPositiveInteger(
+    raw.ABUSE_SWITCH_WINDOW_SECONDS,
+    600,
+    'ABUSE_SWITCH_WINDOW_SECONDS',
+    3_600,
+  );
+
   if (nodeEnv === 'production') {
     if (!rateLimitEnabled) {
       throw new Error('RATE_LIMIT_ENABLED must be true in production');
@@ -413,6 +502,19 @@ export function validateEnvironment(
     BOOTSTRAP_MFA_MAX_AGE_SECONDS: bootstrapMfaMaxAgeSeconds,
     SENSITIVE_ACTION_MFA_MAX_AGE_SECONDS: sensitiveActionMfaMaxAgeSeconds,
     INVITATION_TTL_SECONDS: invitationTtlSeconds,
+    ABUSE_LOGIN_PER_IP_MAX: abuseLoginPerIpMax,
+    ABUSE_LOGIN_PER_IP_WINDOW_SECONDS: abuseLoginPerIpWindowSeconds,
+    ABUSE_LOGIN_PER_IDENTIFIER_MAX: abuseLoginPerIdentifierMax,
+    ABUSE_LOGIN_PER_IDENTIFIER_WINDOW_SECONDS:
+      abuseLoginPerIdentifierWindowSeconds,
+    ABUSE_AUTH_FAILURE_THRESHOLD: abuseAuthFailureThreshold,
+    ABUSE_LOCKOUT_SECONDS: abuseLockoutSeconds,
+    ABUSE_MFA_PER_ACTOR_MAX: abuseMfaPerActorMax,
+    ABUSE_MFA_PER_ACTOR_WINDOW_SECONDS: abuseMfaPerActorWindowSeconds,
+    ABUSE_INVITATION_MAX: abuseInvitationMax,
+    ABUSE_INVITATION_WINDOW_SECONDS: abuseInvitationWindowSeconds,
+    ABUSE_SWITCH_MAX: abuseSwitchMax,
+    ABUSE_SWITCH_WINDOW_SECONDS: abuseSwitchWindowSeconds,
     ...(bootstrapSubject ? { BOOTSTRAP_SUBJECT: bootstrapSubject } : {}),
     ...(bootstrapSecret ? { BOOTSTRAP_SECRET: bootstrapSecret } : {}),
     ...(bootstrapTenantSlug

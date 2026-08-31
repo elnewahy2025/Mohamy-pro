@@ -28,8 +28,8 @@ export function abuseAccountIdentifier(request: Request): string | null {
  */
 export function abuseInvitationToken(request: Request): string | null {
   const body = request.body as Record<string, unknown> | undefined;
-  if (body && typeof body.invitationToken === 'string' && body.invitationToken) {
-    return body.invitationToken;
+  if (body && typeof body.token === 'string' && body.token) {
+    return body.token;
   }
   return null;
 }

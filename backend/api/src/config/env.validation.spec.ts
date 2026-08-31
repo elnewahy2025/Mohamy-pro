@@ -99,6 +99,60 @@ describe('validateEnvironment telemetry settings', () => {
     ).toThrow('BOOTSTRAP_SECRET must be at least 16 characters');
   });
 
+  it('defaults abuse controls to the reviewed Phase 2 limits', () => {
+    const environment = validateEnvironment(baseEnvironment);
+
+    expect(environment.ABUSE_LOGIN_PER_IP_MAX).toBe(10);
+    expect(environment.ABUSE_LOGIN_PER_IP_WINDOW_SECONDS).toBe(900);
+    expect(environment.ABUSE_LOGIN_PER_IDENTIFIER_MAX).toBe(5);
+    expect(environment.ABUSE_LOGIN_PER_IDENTIFIER_WINDOW_SECONDS).toBe(900);
+    expect(environment.ABUSE_AUTH_FAILURE_THRESHOLD).toBe(5);
+    expect(environment.ABUSE_LOCKOUT_SECONDS).toBe(900);
+    expect(environment.ABUSE_MFA_PER_ACTOR_MAX).toBe(5);
+    expect(environment.ABUSE_MFA_PER_ACTOR_WINDOW_SECONDS).toBe(900);
+    expect(environment.ABUSE_INVITATION_MAX).toBe(10);
+    expect(environment.ABUSE_INVITATION_WINDOW_SECONDS).toBe(3_600);
+    expect(environment.ABUSE_SWITCH_MAX).toBe(20);
+    expect(environment.ABUSE_SWITCH_WINDOW_SECONDS).toBe(600);
+  });
+
+  it('parses explicitly configured abuse limits', () => {
+    const environment = validateEnvironment({
+      ...baseEnvironment,
+      ABUSE_LOGIN_PER_IP_MAX: 6,
+      ABUSE_SWITCH_WINDOW_SECONDS: 900,
+    });
+
+    expect(environment.ABUSE_LOGIN_PER_IP_MAX).toBe(6);
+    expect(environment.ABUSE_SWITCH_WINDOW_SECONDS).toBe(900);
+  });
+
+  it('rejects abuse limits above their production upper bound', () => {
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        ABUSE_LOGIN_PER_IP_MAX: 11,
+      }),
+    ).toThrow('ABUSE_LOGIN_PER_IP_MAX must be an integer between 1 and 10');
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        ABUSE_INVITATION_WINDOW_SECONDS: 90_000,
+      }),
+    ).toThrow(
+      'ABUSE_INVITATION_WINDOW_SECONDS must be an integer between 1 and 86400',
+    );
+  });
+
+  it('rejects malformed abuse limits', () => {
+    expect(() =>
+      validateEnvironment({
+        ...baseEnvironment,
+        ABUSE_AUTH_FAILURE_THRESHOLD: 'many',
+      }),
+    ).toThrow('ABUSE_AUTH_FAILURE_THRESHOLD must be an integer');
+  });
+
   it('requires rate limiting in production', () => {
     expect(() =>
       validateEnvironment({

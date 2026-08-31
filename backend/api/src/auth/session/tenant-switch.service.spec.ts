@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import { AbuseControlService } from '../../abuse/abuse-control.service';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
@@ -44,10 +45,22 @@ function request(overrides: { auth?: unknown } = {}): Request {
 function makeService(input: {
   loadMembership: unknown;
   auditWrite?: jest.Mock;
+  abuse?: AbuseControlService;
 }) {
   const auditWrite =
     input.auditWrite ?? jest.fn().mockResolvedValue({ id: 'audit-1' });
   const audit = { write: auditWrite } as unknown as AuditEventService;
+
+  const abuse =
+    input.abuse ??
+    ({
+      enforceTenantSwitch: jest.fn().mockResolvedValue({
+        allowed: true,
+        reason: null,
+        retryAfterSeconds: null,
+      }),
+      emitAbuseEvent: jest.fn().mockResolvedValue(undefined),
+    } as unknown as AbuseControlService);
 
   const membershipTx = {
     membership: {
@@ -75,7 +88,7 @@ function makeService(input: {
     withTenantContext: tenantContext,
   } as unknown as PrismaService;
 
-  const service = new TenantSwitchService(prisma, audit);
+  const service = new TenantSwitchService(prisma, audit, abuse);
   return {
     service,
     auditWrite,
@@ -169,5 +182,34 @@ describe('TenantSwitchService', () => {
     await expect(
       service.switchTenant(request({ auth: null }), TENANT_ID),
     ).rejects.toBeInstanceOf(TenantSwitchDeniedError);
+  });
+
+  it('denies the switch when the tenant-switch rate limit is reached and emits an abuse event', async () => {
+    const emitAbuseEvent = jest.fn().mockResolvedValue(undefined);
+    const abuse = {
+      enforceTenantSwitch: jest.fn().mockResolvedValue({
+        allowed: false,
+        reason: 'TENANT_SWITCH_RATE_LIMITED',
+        retryAfterSeconds: 600,
+      }),
+      emitAbuseEvent,
+    } as unknown as AbuseControlService;
+
+    const { service, auditWrite } = makeService({
+      loadMembership: activeMembership(),
+      abuse,
+    });
+
+    await expect(
+      service.switchTenant(request(), TENANT_ID),
+    ).rejects.toBeInstanceOf(TenantSwitchDeniedError);
+
+    expect(abuse.enforceTenantSwitch).toHaveBeenCalledTimes(1);
+    expect(emitAbuseEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      'TENANT_SWITCH_RATE_LIMITED',
+      { actorUserId: USER_ID, tenantId: TENANT_ID },
+    );
+    expect(auditWrite).toHaveBeenCalledTimes(0);
   });
 });

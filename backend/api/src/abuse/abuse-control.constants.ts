@@ -19,10 +19,33 @@ export interface AbuseRateLimit {
 }
 
 /**
+ * Production upper bounds for each abuse-control configuration value. These are
+ * the fixed, reviewed caps from the Phase 2 abuse decision; a configured value
+ * above its bound is rejected at startup so a misconfiguration cannot silently
+ * weaken an abuse control.
+ */
+export const ABUSE_LIMIT_UPPER_BOUNDS = {
+  loginPerIpMax: 10,
+  loginPerIpWindowSeconds: 3_600,
+  loginPerIdentifierMax: 5,
+  loginPerIdentifierWindowSeconds: 3_600,
+  lockoutThreshold: 5,
+  lockoutSeconds: 3_600,
+  mfaPerActorMax: 5,
+  mfaPerActorWindowSeconds: 3_600,
+  invitationMax: 10,
+  invitationWindowSeconds: 86_400,
+  switchMax: 20,
+  switchWindowSeconds: 3_600,
+} as const;
+
+/**
  * Abuse-control limits and lockout thresholds per the Phase 2
- * ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md. These are fixed configuration
- * values with production upper bounds; changing the threat-model numbers
- * requires an architecture/configuration review.
+ * ABUSE_AND_IDENTITY_DATA_LIFECYCLE_DECISION.md. These are the default
+ * configuration values; each is overridable by validated environment
+ * configuration (see env.validation.ts) and never exceeds its production upper
+ * bound. Changing the threat-model numbers requires an architecture/
+ * configuration review.
  */
 export const ABUSE_LIMITS = {
   /** Login initiation: 10 attempts per source IP in 15 minutes. */

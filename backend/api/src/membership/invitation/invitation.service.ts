@@ -10,6 +10,7 @@ import {
   UserStatus,
 } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import { AbuseControlService } from '../../abuse/abuse-control.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { MfaAssuranceService } from '../../auth/mfa/mfa-assurance.service';
@@ -61,6 +62,7 @@ export class InvitationService {
     private readonly permissions: PermissionsService,
     private readonly mfa: MfaAssuranceService,
     private readonly configService: ConfigService<ValidatedEnvironment, true>,
+    private readonly abuse: AbuseControlService,
   ) {}
 
   async create(
@@ -190,6 +192,17 @@ export class InvitationService {
       throw new InvitationDeniedError('UNAUTHENTICATED', 401);
     }
     const { sessionId, userId, provider, providerSubject } = auth;
+
+    const abuseDecision = await this.abuse.enforceInvitation(request);
+    if (abuseDecision && !abuseDecision.allowed) {
+      await this.abuse.emitAbuseEvent(
+        request,
+        abuseDecision.reason!,
+        { actorUserId: userId },
+      );
+      throw new InvitationDeniedError('RATE_LIMITED', 429);
+    }
+
     const correlationId = getCorrelationId(request);
 
     if (!dto.token || dto.token.length > 4096) {
