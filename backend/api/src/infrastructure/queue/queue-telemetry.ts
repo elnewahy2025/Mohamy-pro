@@ -12,12 +12,12 @@ export interface QueueTelemetryMetadata {
   traceContext?: Record<string, string>;
 }
 
-export const QUEUE_TELEMETRY_FIELD = '__mohamyTelemetry';
+export const QUEUE_TELEMETRY_FIELD = '__mohamyTelemetry' as const;
 const w3cPropagator = new W3CTraceContextPropagator();
 
 export function attachQueueTelemetry<T extends Record<string, unknown>>(
   payload: T,
-): T {
+): T & { readonly [QUEUE_TELEMETRY_FIELD]: QueueTelemetryMetadata } {
   const traceContext: Record<string, string> = {};
   w3cPropagator.inject(context.active(), traceContext, defaultTextMapSetter);
   const correlationId = getActiveCorrelationId();

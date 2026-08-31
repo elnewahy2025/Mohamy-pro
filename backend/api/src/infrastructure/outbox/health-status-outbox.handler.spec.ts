@@ -8,6 +8,7 @@ function message(payload: unknown): OutboxMessage {
     aggregateId: 'health-1',
     eventType: 'health.status.updated',
     payload: payload as OutboxMessage['payload'],
+    tenantId: null,
     status: 'PROCESSING',
     error: null,
     attempts: 1,

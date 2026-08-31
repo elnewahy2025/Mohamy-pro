@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import type { ValidatedEnvironment } from '../../config/env.validation';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { MfaAssuranceService } from './mfa-assurance.service';
 import { MfaStepUpRequiredError } from './mfa.errors';
@@ -16,7 +17,7 @@ function makeService(input: {
   } as unknown as PrismaService;
   const configService = {
     getOrThrow: jest.fn().mockReturnValue(input.maxAgeSeconds ?? MAX_AGE_SECONDS),
-  } as unknown as ConfigService;
+  } as unknown as ConfigService<ValidatedEnvironment, true>;
   const service = new MfaAssuranceService(prisma, configService);
   return { service, findUnique };
 }

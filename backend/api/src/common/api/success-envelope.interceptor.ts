@@ -13,7 +13,10 @@ import { isOperationalExclusion } from './envelope-exclusions';
 
 @Injectable()
 export class SuccessEnvelopeInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<ApiSuccessEnvelope> {
     const http = context.switchToHttp();
     const request = http.getRequest<Request>();
 

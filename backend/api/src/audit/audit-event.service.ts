@@ -49,6 +49,12 @@ const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'invitation.revoked': ['reason'],
   'role.assigned': ['roleKey'],
   'permission.denied': ['permissionKey'],
+  'auth.rate.limited': ['reason'],
+  'auth.account.locked': ['reason'],
+  'auth.account.lock.released': [],
+  'mfa.rate.limited': ['reason'],
+  'tenant.switch.rate.limited': ['reason', 'sourceTenantId', 'targetTenantId'],
+  'invitation.rate.limited': ['reason'],
 };
 
 @Injectable()

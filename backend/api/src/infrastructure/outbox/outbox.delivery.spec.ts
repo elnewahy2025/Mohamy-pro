@@ -11,6 +11,7 @@ const message: OutboxMessage = {
   aggregateId: 'aggregate-1',
   eventType: 'test.created',
   payload: { value: 'ok' },
+  tenantId: null,
   status: 'PROCESSING',
   error: null,
   attempts: 1,

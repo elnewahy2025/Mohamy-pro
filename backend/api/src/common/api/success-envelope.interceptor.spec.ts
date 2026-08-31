@@ -1,6 +1,7 @@
 import { CallHandler, ExecutionContext } from '@nestjs/common';
 import { lastValueFrom, of } from 'rxjs';
 import { SuccessEnvelopeInterceptor } from './success-envelope.interceptor';
+import type { ApiSuccessEnvelope } from './envelope';
 import { CORRELATION_ID_HEADER } from '../middleware/correlation-id.middleware';
 
 function executionContext(originalUrl: string): ExecutionContext {
@@ -20,7 +21,7 @@ describe('SuccessEnvelopeInterceptor', () => {
   it('wraps an object response in the success envelope', async () => {
     const next: CallHandler = { handle: () => of({ id: 'x' }) };
     const result = await lastValueFrom(
-      interceptor.intercept(executionContext('/api/v1/users'), next) as any,
+      interceptor.intercept(executionContext('/api/v1/users'), next),
     );
     expect(result).toEqual({
       success: true,
@@ -36,7 +37,7 @@ describe('SuccessEnvelopeInterceptor', () => {
   it('wraps array responses without pagination', async () => {
     const next: CallHandler = { handle: () => of([1, 2, 3]) };
     const result = await lastValueFrom(
-      interceptor.intercept(executionContext('/api/v1/users'), next) as any,
+      interceptor.intercept(executionContext('/api/v1/users'), next),
     );
     expect(result.data).toEqual([1, 2, 3]);
     expect(result.meta.pagination).toBeNull();
@@ -51,7 +52,7 @@ describe('SuccessEnvelopeInterceptor', () => {
         }),
     };
     const result = await lastValueFrom(
-      interceptor.intercept(executionContext('/api/v1/users'), next) as any,
+      interceptor.intercept(executionContext('/api/v1/users'), next),
     );
     expect(result.data).toEqual([{ id: 'a' }]);
     expect(result.meta.pagination).toEqual({
@@ -67,7 +68,7 @@ describe('SuccessEnvelopeInterceptor', () => {
       interceptor.intercept(
         executionContext('/api/v1/health/live'),
         next,
-      ) as any,
+      ),
     );
     expect(result).toEqual({ status: 'ok' });
   });

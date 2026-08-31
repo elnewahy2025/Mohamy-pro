@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+import type { ValidatedEnvironment } from '../../config/env.validation';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { MfaAssuranceService } from '../../auth/mfa/mfa-assurance.service';
@@ -76,7 +77,7 @@ function makeService(overrides: {
     getOrThrow: jest.fn().mockImplementation((key: string) =>
       key === 'INVITATION_TTL_SECONDS' ? 604800 : 900,
     ),
-  } as unknown as ConfigService;
+  } as unknown as ConfigService<ValidatedEnvironment, true>;
 
   const selectionTx = {
     auditEvent: { create: jest.fn().mockResolvedValue({ id: 'a' }) },

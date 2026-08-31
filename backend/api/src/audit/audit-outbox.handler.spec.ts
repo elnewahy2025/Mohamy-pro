@@ -8,6 +8,7 @@ function message(payload: unknown): OutboxMessage {
     aggregateId: 'event-1',
     eventType: 'audit.event.created',
     payload: payload as OutboxMessage['payload'],
+    tenantId: null,
     status: 'PROCESSING',
     error: null,
     attempts: 1,

@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import { AuditEventService } from '../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { PrismaService } from '../infrastructure/database/prisma.service';
+import type { TenantTransactionContext } from '../infrastructure/database/tenant-context';
 import type { OutboxService } from '../infrastructure/outbox/outbox.service';
 import type { PermissionsService } from '../permissions/permissions.service';
 import { BootstrapConfigService } from './bootstrap.config';
@@ -97,7 +98,7 @@ function makeService(input: {
   };
 
   const tenantContext = jest.fn(
-    (context: unknown, callback: (tx: unknown) => Promise<unknown>) => {
+    (context: TenantTransactionContext, callback: (tx: unknown) => Promise<unknown>) => {
       void context;
       if (input.withTenantContextError) {
         return Promise.reject(input.withTenantContextError);

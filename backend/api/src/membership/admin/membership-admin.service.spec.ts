@@ -113,14 +113,10 @@ describe('MembershipAdminService', () => {
 
   it('requires an active tenant context', async () => {
     const { service } = makeService({ targetStatus: 'ACTIVE' });
+    const req = request();
+    req.auth = { ...AUTH, activeTenantId: null };
     await expect(
-      service.suspend(
-        {
-          ...request(),
-          auth: { ...AUTH, activeTenantId: null },
-        },
-        { membershipId: TARGET_MEMBERSHIP },
-      ),
+      service.suspend(req, { membershipId: TARGET_MEMBERSHIP }),
     ).rejects.toBeInstanceOf(MembershipAdminDeniedError);
   });
 });
