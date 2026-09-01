@@ -219,7 +219,7 @@ model AppSession {
   activeTenantId                 String?
   activeMembershipId             String?
   contextVersion                 Int           @default(0)
-  issuedAt                       DateTime      @default(now())
+  createdAt                      DateTime      @default(now())
   lastUsedAt                     DateTime      @default(now())
   idleExpiresAt                  DateTime
   absoluteExpiresAt              DateTime
@@ -228,6 +228,7 @@ model AppSession {
   mfaAmr                         Json?
   providerRefreshTokenCiphertext String?
   providerRefreshTokenKeyVersion String?
+  providerIdTokenCiphertext      String?
   userAgentHash                  String?
   ipHash                         String?
   revokedAt                      DateTime?
@@ -237,6 +238,7 @@ model AppSession {
   activeMembership               Membership?   @relation("SessionActiveMembership", fields: [activeMembershipId, activeTenantId], references: [id, tenantId], onDelete: SetNull)
 
   @@index([userId, status])
+  @@index([userId, activeTenantId, status])
   @@index([activeTenantId, status])
   @@index([idleExpiresAt])
   @@index([absoluteExpiresAt])
@@ -317,7 +319,6 @@ model Department {
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   branch    Branch          @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
-  @@unique([id, tenantId])
   @@unique([tenantId, branchId, slug])
   @@index([tenantId, status])
 }
