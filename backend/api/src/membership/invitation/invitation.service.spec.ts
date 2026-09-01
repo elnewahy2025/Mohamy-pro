@@ -306,9 +306,16 @@ describe('InvitationService', () => {
       const result = await service.accept(request(), { token: 'opaque-token' });
       expect(result.status).toBe('ACTIVE');
       expect(result.tenantId).toBe(TENANT_ID);
-      expect(auditWrite).toHaveBeenCalledTimes(1);
+      expect(auditWrite).toHaveBeenCalledTimes(2);
       expect(
         (auditWrite.mock.calls[0][0] as { eventType: string }).eventType,
+      ).toBe(AUDIT_EVENT_TYPES.ROLE_ASSIGNED);
+      expect(
+        (auditWrite.mock.calls[0][0] as { metadata: { roleKey: string } })
+          .metadata,
+      ).toEqual({ roleKey: 'tenant.admin' });
+      expect(
+        (auditWrite.mock.calls[1][0] as { eventType: string }).eventType,
       ).toBe(AUDIT_EVENT_TYPES.MEMBERSHIP_ACCEPTED);
     });
 

@@ -300,6 +300,8 @@ export class InvitationService {
             membershipId,
             tenantId: validInvitation.tenantId,
             roleKeys: requestedRoleKeys,
+            actorUserId: userId,
+            correlationId,
           });
           await this.audit.write(
             {
@@ -421,7 +423,13 @@ export class InvitationService {
 
   private async assignRoles(
     transaction: Prisma.TransactionClient,
-    input: { membershipId: string; tenantId: string; roleKeys: string[] },
+    input: {
+      membershipId: string;
+      tenantId: string;
+      roleKeys: string[];
+      actorUserId: string;
+      correlationId: string;
+    },
   ): Promise<void> {
     if (input.roleKeys.length === 0) return;
     const roles = await transaction.role.findMany({
@@ -430,7 +438,7 @@ export class InvitationService {
         scope: RoleScope.TENANT,
         key: { in: input.roleKeys },
       },
-      select: { id: true },
+      select: { id: true, key: true },
     });
     for (const role of roles) {
       await transaction.membershipRole.create({
@@ -440,6 +448,22 @@ export class InvitationService {
           roleId: role.id,
         },
       });
+      await this.audit.write(
+        {
+          eventType: AUDIT_EVENT_TYPES.ROLE_ASSIGNED,
+          outcome: 'SUCCEEDED',
+          actorUserId: input.actorUserId,
+          actorMembershipId: input.membershipId,
+          tenantId: input.tenantId,
+          targetType: 'membership',
+          targetId: input.membershipId,
+          policy: 'AuthLifecycle',
+          reasonCode: null,
+          correlationId: input.correlationId,
+          metadata: { roleKey: role.key },
+        },
+        transaction,
+      );
     }
   }
 

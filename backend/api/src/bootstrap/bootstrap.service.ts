@@ -175,6 +175,22 @@ export class BootstrapService {
               assignedAt: now,
             },
           });
+          await this.audit.write(
+            {
+              eventType: AUDIT_EVENT_TYPES.ROLE_ASSIGNED,
+              outcome: 'SUCCEEDED',
+              actorUserId: userId,
+              actorMembershipId: membershipId,
+              tenantId,
+              targetType: 'membership',
+              targetId: membershipId,
+              policy: 'AuthLifecycle',
+              reasonCode: null,
+              correlationId,
+              metadata: { roleKey: BOOTSTRAP_ROLE_KEY_TENANT },
+            },
+            transaction,
+          );
 
           await transaction.platformBootstrap.create({
             data: {

@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
+import { AuditEventService } from '../audit/audit-event.service';
+import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { AbuseControlService } from '../abuse/abuse-control.service';
 import { AbuseLimitReachedError } from '../abuse/abuse-control.errors';
 import type { ValidatedEnvironment } from '../config/env.validation';
+import { getCorrelationId } from '../common/middleware/correlation-id.middleware';
 import {
   OidcInteractionError,
   OidcTokenValidationError,
@@ -12,7 +15,11 @@ import {
 import { IdentityService } from './identity.service';
 import { OidcProviderService } from './oidc/oidc-provider.service';
 import { SessionCookieService } from './session/session-cookie.service';
-import { decryptSecret, encryptSecret } from './session/session-crypto';
+import {
+  decryptSecret,
+  encryptSecret,
+  hashToken,
+} from './session/session-crypto';
 import { SessionService, type SessionDetails } from './session/session.service';
 
 export interface BeginLoginResult {
@@ -32,7 +39,35 @@ export class AuthService {
     private readonly cookies: SessionCookieService,
     private readonly configService: ConfigService<ValidatedEnvironment, true>,
     private readonly abuse: AbuseControlService,
+    private readonly audit: AuditEventService,
   ) {}
+
+  private privateAsHash(value: string | undefined): string | null {
+    return value ? hashToken(value) : null;
+  }
+
+  private async emitLoginDenied(
+    request: Request,
+    reason: string,
+  ): Promise<void> {
+    try {
+      await this.audit.write({
+        eventType: AUDIT_EVENT_TYPES.LOGIN_DENIED,
+        outcome: 'DENIED',
+        actorUserId: null,
+        tenantId: null,
+        policy: 'AuthLifecycle',
+        reasonCode: reason,
+        correlationId: getCorrelationId(request),
+        ipHash: this.privateAsHash(request.ip),
+        userAgentHash: this.privateAsHash(request.headers['user-agent']),
+        metadata: { reason },
+      });
+    } catch {
+      // A failed login is already denied; an audit write must not change the
+      // controlled denial outcome.
+    }
+  }
 
   private sessionSecret(): string {
     return this.configService.getOrThrow('SESSION_SECRET');
@@ -62,6 +97,22 @@ export class AuthService {
       codeVerifier: auth.codeVerifier,
     });
     this.cookies.setOidc(res, encryptSecret(this.sessionSecret(), payload));
+    try {
+      await this.audit.write({
+        eventType: AUDIT_EVENT_TYPES.LOGIN_STARTED,
+        outcome: 'SUCCEEDED',
+        actorUserId: null,
+        tenantId: null,
+        policy: 'AuthLifecycle',
+        correlationId: getCorrelationId(req),
+        ipHash: this.privateAsHash(req.ip),
+        userAgentHash: this.privateAsHash(req.headers['user-agent']),
+        metadata: {},
+      });
+    } catch {
+      // A login initiation is not a privileged state change; an audit write
+      // failure must not block the redirect to the provider.
+    }
     return { redirectUrl: auth.url };
   }
 
@@ -118,6 +169,7 @@ export class AuthService {
           failureDecision.retryAfterSeconds!,
         );
       }
+      await this.emitLoginDenied(req, 'NO_REFRESH_TOKEN');
       throw new OidcTokenValidationError(
         'Provider did not return a refresh token',
       );
@@ -130,6 +182,23 @@ export class AuthService {
       userAgent: req.headers['user-agent'],
       ip: req.ip,
     });
+
+    try {
+      await this.audit.write({
+        eventType: AUDIT_EVENT_TYPES.LOGIN_SUCCEEDED,
+        outcome: 'SUCCEEDED',
+        actorUserId: user.id,
+        tenantId: null,
+        policy: 'AuthLifecycle',
+        correlationId: getCorrelationId(req),
+        ipHash: this.privateAsHash(req.ip),
+        userAgentHash: this.privateAsHash(req.headers['user-agent']),
+        metadata: {},
+      });
+    } catch {
+      // Session creation already succeeded; record the lifecycle event but do
+      // not fail the established session over a secondary audit write.
+    }
 
     await this.abuse.releaseLockout(req, identifier);
 
@@ -150,6 +219,22 @@ export class AuthService {
         const refresh = await this.sessions.getRefreshToken(details.sessionId);
         const idToken = await this.sessions.getIdToken(details.sessionId);
         await this.sessions.revokeSession(details.sessionId, 'logout');
+        try {
+          await this.audit.write({
+            eventType: AUDIT_EVENT_TYPES.LOGOUT,
+            outcome: 'SUCCEEDED',
+            actorUserId: details.userId,
+            tenantId: details.activeTenantId,
+            policy: 'AuthLifecycle',
+            correlationId: getCorrelationId(req),
+            ipHash: this.privateAsHash(req.ip),
+            userAgentHash: this.privateAsHash(req.headers['user-agent']),
+            metadata: {},
+          });
+        } catch {
+          // The session is already revoked; do not fail logout over the
+          // secondary audit write.
+        }
         if (refresh) {
           try {
             await this.oidc.revoke(refresh);

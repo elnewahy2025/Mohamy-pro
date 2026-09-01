@@ -1,4 +1,4 @@
-import { AuditEventService } from './audit-event.service';
+import { AuditEventService, METADATA_ALLOWLIST } from './audit-event.service';
 import { AUDIT_EVENT_TYPES } from './audit-constants';
 import { AuditWriteError } from './audit.errors';
 
@@ -9,6 +9,20 @@ function clientWithCreate(
 }
 
 describe('AuditEventService', () => {
+  it('guards that every declared event type has a metadata allowlist entry', () => {
+    for (const eventType of Object.values(AUDIT_EVENT_TYPES)) {
+      if (METADATA_ALLOWLIST[eventType] === undefined) {
+        throw new Error(
+          `Event type '${eventType}' must have an allowlist entry`,
+        );
+      }
+    }
+    expect(METADATA_ALLOWLIST[AUDIT_EVENT_TYPES.LOGIN_STARTED]).toEqual([]);
+    expect(METADATA_ALLOWLIST[AUDIT_EVENT_TYPES.ROLE_ASSIGNED]).toEqual([
+      'roleKey',
+    ]);
+  });
+
   it('writes an event with category, outcome, version and derived defaults', async () => {
     const create = jest.fn().mockResolvedValue({ id: 'event-1' });
     const client = clientWithCreate(create);
@@ -96,9 +110,7 @@ describe('AuditEventService', () => {
   });
 
   it('wraps database failures as AuditWriteError', async () => {
-    const create = jest
-      .fn()
-      .mockRejectedValue(new Error('db down'));
+    const create = jest.fn().mockRejectedValue(new Error('db down'));
     const service = new AuditEventService(clientWithCreate(create) as never);
 
     await expect(

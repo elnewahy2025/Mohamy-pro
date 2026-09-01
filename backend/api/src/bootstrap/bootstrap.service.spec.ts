@@ -98,7 +98,10 @@ function makeService(input: {
   };
 
   const tenantContext = jest.fn(
-    (context: TenantTransactionContext, callback: (tx: unknown) => Promise<unknown>) => {
+    (
+      context: TenantTransactionContext,
+      callback: (tx: unknown) => Promise<unknown>,
+    ) => {
       void context;
       if (input.withTenantContextError) {
         return Promise.reject(input.withTenantContextError);
@@ -130,16 +133,10 @@ function makeService(input: {
     withTenantContext: tenantContext,
   } as unknown as PrismaService;
 
-  const service = new BootstrapService(
-    prisma,
-    audit,
-    outbox,
-    configService,
-    {
-      grantRolePermissions: jest.fn().mockResolvedValue(undefined),
-      reconcileBuiltInRoles: jest.fn().mockResolvedValue(0),
-    } as unknown as PermissionsService,
-  );
+  const service = new BootstrapService(prisma, audit, outbox, configService, {
+    grantRolePermissions: jest.fn().mockResolvedValue(undefined),
+    reconcileBuiltInRoles: jest.fn().mockResolvedValue(0),
+  } as unknown as PermissionsService);
   return {
     service,
     auditWrite,
@@ -158,6 +155,7 @@ describe('BootstrapService', () => {
       service,
       tenantContext,
       tenantTx,
+      auditWrite,
       outboxCreate,
       appSessionFindUnique,
     } = makeService({});
@@ -195,6 +193,14 @@ describe('BootstrapService', () => {
         roleId: 'tenant-role',
         assignedAt: expect.any(Date),
       },
+    });
+    const roleAssignedEvent = auditWrite.mock.calls[0][0] as {
+      eventType: string;
+      metadata: { roleKey: string };
+    };
+    expect(roleAssignedEvent.eventType).toBe(AUDIT_EVENT_TYPES.ROLE_ASSIGNED);
+    expect(roleAssignedEvent.metadata).toEqual({
+      roleKey: 'tenant.admin',
     });
     expect(outboxCreate).toHaveBeenCalledTimes(1);
     expect(appSessionFindUnique).toHaveBeenCalledWith({

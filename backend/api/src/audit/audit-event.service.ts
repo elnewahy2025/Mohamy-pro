@@ -3,6 +3,7 @@ import { type AuditCategory, type AuditOutcome, Prisma } from '@prisma/client';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import {
   AUDIT_CATEGORY,
+  AUDIT_EVENT_TYPES,
   AUDIT_EVENT_VERSIONS,
   type AuditEventType,
 } from './audit-constants';
@@ -31,15 +32,16 @@ const MAX_METADATA_BYTES = 16 * 1024;
 
 // Per-event-type allowlist of safe metadata keys. A key absent from the
 // allowlist is rejected, so an unknown or sensitive field cannot be persisted.
-const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
+// Exported for the allowlist-consistency guard test.
+export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'tenant.switch.succeeded': ['sourceTenantId'],
   'tenant.switch.denied': ['sourceTenantId', 'targetTenantId'],
   'tenant.bootstrap.succeeded': ['tenantSlug', 'organizationSlug'],
   'tenant.bootstrap.denied': ['reason'],
-  'auth.login.start': [],
-  'auth.login.succeeded': [],
-  'auth.login.denied': ['reason'],
-  'auth.logout': [],
+  [AUDIT_EVENT_TYPES.LOGIN_STARTED]: [],
+  [AUDIT_EVENT_TYPES.LOGIN_SUCCEEDED]: [],
+  [AUDIT_EVENT_TYPES.LOGIN_DENIED]: ['reason'],
+  [AUDIT_EVENT_TYPES.LOGOUT]: [],
   'membership.invited': ['roleKeysCount', 'expiresAtIso'],
   'membership.accepted': ['roleKeysCount'],
   'membership.suspended': ['reason'],
