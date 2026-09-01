@@ -5,13 +5,15 @@ import { OutboxHandlerRegistry } from './outbox-handler.registry';
 import { OutboxService, type OutboxJobPayload } from './outbox.service';
 import { OutboxWorker } from './outbox.worker';
 
+const tenantId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
 const message: OutboxMessage = {
   id: 'message-1',
   aggregateType: 'TestAggregate',
   aggregateId: 'aggregate-1',
   eventType: 'test.created',
   payload: { value: 'ok' },
-  tenantId: null,
+  tenantId,
   status: 'PROCESSING',
   error: null,
   attempts: 1,
@@ -23,6 +25,16 @@ const message: OutboxMessage = {
   processedAt: null,
 };
 
+const scopePrisma = {
+  withWorkerTenantContext: async (
+    _tenant: string,
+    _operation: string,
+    cb: (tx: unknown) => Promise<void>,
+  ) => cb({} as never),
+  withDeliveryScope: async (cb: (tx: unknown) => Promise<void>) =>
+    cb({} as never),
+} as never;
+
 describe('outbox delivery semantics', () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -32,6 +44,8 @@ describe('outbox delivery semantics', () => {
     const enqueue = jest.fn().mockResolvedValue({ id: 'outbox:message-1' });
     const prisma = {
       $transaction: jest.fn(),
+      withDeliveryScope: async (cb: (tx: unknown) => Promise<void>) =>
+        cb({} as never),
       outboxMessage: {
         updateMany: jest.fn(),
         update: jest.fn(),
@@ -45,7 +59,7 @@ describe('outbox delivery semantics', () => {
 
     expect(enqueue).toHaveBeenCalledWith(
       'outbox.dispatch',
-      { outboxMessageId: 'message-1', attempt: 1 },
+      { outboxMessageId: 'message-1', attempt: 1, tenantId },
       { jobId: 'outbox-message-1-attempt-1' },
     );
     expect(markProcessed).not.toHaveBeenCalled();
@@ -64,18 +78,23 @@ describe('outbox delivery semantics', () => {
       { getClient: jest.fn() } as never,
       outbox as never,
       registry,
+      scopePrisma,
     );
     const process = Reflect.get(worker, 'process') as (
       job: Job<OutboxJobPayload>,
     ) => Promise<void>;
 
     await process.call(worker, {
-      data: { outboxMessageId: 'message-1', attempt: 1 },
+      data: { outboxMessageId: 'message-1', attempt: 1, tenantId },
       id: 'job-1',
     } as Job<OutboxJobPayload>);
 
-    expect(handler).toHaveBeenCalledWith(message);
-    expect(outbox.markProcessed).toHaveBeenCalledWith('message-1', 'lease-1');
+    expect(handler).toHaveBeenCalledWith(message, expect.anything());
+    expect(outbox.markProcessed).toHaveBeenCalledWith(
+      'message-1',
+      'lease-1',
+      expect.anything(),
+    );
     expect(outbox.recordFailure).not.toHaveBeenCalled();
   });
 
@@ -131,13 +150,14 @@ describe('outbox delivery semantics', () => {
       { getClient: jest.fn() } as never,
       outbox as never,
       registry,
+      scopePrisma,
     );
     const process = Reflect.get(worker, 'process') as (
       job: Job<OutboxJobPayload>,
     ) => Promise<void>;
 
     await process.call(worker, {
-      data: { outboxMessageId: 'message-1', attempt: 1 },
+      data: { outboxMessageId: 'message-1', attempt: 1, tenantId },
       id: 'job-1',
     } as Job<OutboxJobPayload>);
 
@@ -145,12 +165,12 @@ describe('outbox delivery semantics', () => {
     expect(outbox.recordFailure).toHaveBeenCalledWith(
       'message-1',
       'handler failed',
-      'lease-1',
+      null,
+      expect.anything(),
     );
     expect(loggerError).toHaveBeenCalledWith(
       {
         outboxMessageId: 'message-1',
-        eventType: 'test.created',
         errorName: 'Error',
         errorMessage:
           'Outbox handler failed; retry or dead-letter state recorded',

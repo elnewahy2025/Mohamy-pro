@@ -4,15 +4,22 @@ import { ReserveIdempotencyInput } from './idempotency.types';
 import { IdempotencyConflictError } from './idempotency-errors';
 
 function prismaMock() {
+  const keyClient = {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  };
   return {
-    idempotencyKey: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      deleteMany: jest.fn(),
-    },
+    idempotencyKey: keyClient,
+    withWorkerTenantContext: jest.fn((_tenantId, _opId, callback) =>
+      callback({ idempotencyKey: keyClient }),
+    ),
+    withActorScopeContext: jest.fn((_userId, _opId, callback) =>
+      callback({ idempotencyKey: keyClient }),
+    ),
   };
 }
 
@@ -79,6 +86,7 @@ describe('IdempotencyService', () => {
           key: baseReserve.key,
           actorScope: 'user-a',
           tenantScope: 'tenant-a',
+          tenantId: 'tenant-a',
           method: 'POST',
           fingerprint: 'fp-1',
           state: 'RESERVED',
@@ -171,14 +179,45 @@ describe('IdempotencyService', () => {
       fingerprint: 'fp-1',
       responseStatus: 201,
       responseBody: '{"ok":true}',
+      tenantId: 'tenant-a',
+      actorScope: 'user-a',
     });
 
+    expect(prisma.withWorkerTenantContext).toHaveBeenCalled();
     expect(prisma.idempotencyKey.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           state: 'COMPLETED',
           responseStatus: 201,
           attemptVersion: { increment: 1 },
+        }),
+      }),
+    );
+  });
+
+  it('reserves an actor-only key under the actor scope with no tenant', async () => {
+    const actorReserve: ReserveIdempotencyInput = {
+      ...baseReserve,
+      tenantScope: null,
+    };
+    const created = record({
+      state: 'RESERVED',
+      responseStatus: null,
+      tenantScope: null,
+      tenantId: null,
+    });
+    prisma.idempotencyKey.create.mockResolvedValue(created);
+
+    const result = await service.reserve(actorReserve);
+
+    expect(result.outcome).toBe('reserved');
+    expect(prisma.withActorScopeContext).toHaveBeenCalled();
+    expect(prisma.idempotencyKey.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          actorScope: 'user-a',
+          tenantScope: null,
+          tenantId: null,
         }),
       }),
     );

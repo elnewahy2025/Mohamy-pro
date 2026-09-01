@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { OutboxMessage } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 
 export const INVITATION_CREATED_OUTBOX_EVENT = 'membership.invitation.created';
@@ -15,6 +16,9 @@ interface InvitationCreatedPayload {
  * in the same transaction as the outbox message, so this handler is idempotent:
  * it verifies the invitation exists and does not re-create it. A duplicate
  * delivery never produces a second invitation.
+ *
+ * The read runs on the worker's tenant-scoped transaction so it is covered by
+ * the outbox/invitation RLS policy for exactly that tenant.
  */
 @Injectable()
 export class InvitationOutboxHandler {
@@ -22,9 +26,12 @@ export class InvitationOutboxHandler {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async handle(message: OutboxMessage): Promise<void> {
+  async handle(
+    message: OutboxMessage,
+    transaction: Prisma.TransactionClient,
+  ): Promise<void> {
     const payload = parsePayload(message.payload);
-    const invitation = await this.prisma.invitation.findUnique({
+    const invitation = await transaction.invitation.findUnique({
       where: { id: payload.invitationId },
       select: { id: true, tenantId: true },
     });

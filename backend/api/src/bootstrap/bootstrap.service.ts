@@ -209,6 +209,7 @@ export class BootstrapService {
               aggregateType: 'bootstrap',
               aggregateId: tenantId,
               eventType: TENANT_OUTBOX_EVENT,
+              tenantId,
               payload: {
                 tenantId,
                 organizationId,

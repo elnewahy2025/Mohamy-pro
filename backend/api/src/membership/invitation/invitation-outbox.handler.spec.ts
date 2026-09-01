@@ -1,5 +1,4 @@
 import type { OutboxMessage } from '@prisma/client';
-import { PrismaService } from '../../infrastructure/database/prisma.service';
 import {
   INVITATION_CREATED_OUTBOX_EVENT,
   InvitationOutboxHandler,
@@ -26,15 +25,18 @@ function message(payload: unknown): OutboxMessage {
 }
 
 describe('InvitationOutboxHandler', () => {
+  const transaction = (findUnique: jest.Mock) =>
+    ({ invitation: { findUnique } }) as never;
+
   it('confirms an invitation that exists in the same tenant', async () => {
     const findUnique = jest
       .fn()
       .mockResolvedValue({ id: 'inv-1', tenantId: 'tenant-1' });
-    const prisma = { invitation: { findUnique } } as unknown as PrismaService;
-    const handler = new InvitationOutboxHandler(prisma);
+    const handler = new InvitationOutboxHandler({} as never);
     await expect(
       handler.handle(
         message({ invitationId: 'inv-1', tenantId: 'tenant-1', correlationId: 'c' }),
+        transaction(findUnique),
       ),
     ).resolves.toBeUndefined();
     expect(findUnique).toHaveBeenCalledWith({
@@ -44,23 +46,23 @@ describe('InvitationOutboxHandler', () => {
   });
 
   it('fails when the referenced invitation is missing', async () => {
-    const prisma = {
-      invitation: { findUnique: jest.fn().mockResolvedValue(null) },
-    } as unknown as PrismaService;
-    const handler = new InvitationOutboxHandler(prisma);
+    const findUnique = jest.fn().mockResolvedValue(null);
+    const handler = new InvitationOutboxHandler({} as never);
     await expect(
       handler.handle(
         message({ invitationId: 'missing', tenantId: 'tenant-1', correlationId: 'c' }),
+        transaction(findUnique),
       ),
     ).rejects.toThrow(/missing invitation/);
   });
 
   it('rejects an invalid payload', async () => {
-    const handler = new InvitationOutboxHandler({
-      invitation: { findUnique: jest.fn() },
-    } as unknown as PrismaService);
+    const handler = new InvitationOutboxHandler({} as never);
     await expect(
-      handler.handle(message({ invitationId: 5 })),
+      handler.handle(
+        message({ invitationId: 5 }),
+        transaction(jest.fn()),
+      ),
     ).rejects.toThrow(/payload is invalid/);
   });
 });

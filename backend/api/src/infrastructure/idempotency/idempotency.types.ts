@@ -21,6 +21,8 @@ export interface CompleteIdempotencyInput {
   responseStatus: number;
   responseBody: string;
   responseHeaders?: Record<string, string>;
+  tenantId?: string | null;
+  actorScope?: string | null;
 }
 
 export type IdempotencyReservationOutcome =

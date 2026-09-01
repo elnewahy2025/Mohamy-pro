@@ -42,6 +42,7 @@ function record(overrides: Record<string, unknown> = {}) {
     key: KEY,
     actorScope: null,
     tenantScope: null,
+    tenantId: null,
     method: 'POST',
     route: '/x',
     fingerprint: 'fp',

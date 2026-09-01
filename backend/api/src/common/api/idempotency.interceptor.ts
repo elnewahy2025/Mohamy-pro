@@ -89,6 +89,8 @@ export class IdempotencyInterceptor implements NestInterceptor {
                   typeof value === 'string'
                     ? value
                     : JSON.stringify(value ?? {}),
+                tenantId: record.tenantId,
+                actorScope: record.actorScope,
               })
               .catch((error) => {
                 this.logger.error(
@@ -98,7 +100,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
             return of(value);
           }),
           catchError((error) => {
-            return from(this.handleHandlerError(record.id, error)).pipe(
+            return from(this.handleHandlerError(record, error)).pipe(
               mergeMap(() => throwError(() => error)),
             );
           }),
@@ -120,7 +122,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return true;
   }
 
-  private async handleHandlerError(id: string, error: unknown): Promise<void> {
+  private async handleHandlerError(
+    record: { id: string; tenantId: string | null; actorScope: string | null },
+    error: unknown,
+  ): Promise<void> {
     const status = error instanceof ApiError ? error.getStatus() : undefined;
     const isControlled =
       error instanceof ApiError &&
@@ -128,9 +133,13 @@ export class IdempotencyInterceptor implements NestInterceptor {
       status >= 400 &&
       status < 500;
     if (isControlled) {
-      await this.idempotency.markFailed(id).catch(() => undefined);
+      await this.idempotency
+        .markFailed(record.id, record.tenantId, record.actorScope)
+        .catch(() => undefined);
     } else {
-      await this.idempotency.releaseReservation(id).catch(() => undefined);
+      await this.idempotency
+        .releaseReservation(record.id, record.tenantId, record.actorScope)
+        .catch(() => undefined);
     }
   }
 }

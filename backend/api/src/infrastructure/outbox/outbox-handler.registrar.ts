@@ -23,14 +23,19 @@ export class OutboxHandlerRegistrar implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.registry.register(HEALTH_STATUS_UPDATED_EVENT, (message) =>
-      this.healthStatusHandler.handle(message),
+    this.registry.register(
+      HEALTH_STATUS_UPDATED_EVENT,
+      (message, transaction) =>
+        this.healthStatusHandler.handle(message, transaction),
     );
-    this.registry.register(AUDIT_EVENT_CREATED_OUTBOX_EVENT, (message) =>
-      this.auditHandler.handle(message),
+    this.registry.register(
+      AUDIT_EVENT_CREATED_OUTBOX_EVENT,
+      (message, transaction) => this.auditHandler.handle(message, transaction),
     );
-    this.registry.register(INVITATION_CREATED_OUTBOX_EVENT, (message) =>
-      this.invitationHandler.handle(message),
+    this.registry.register(
+      INVITATION_CREATED_OUTBOX_EVENT,
+      (message, transaction) =>
+        this.invitationHandler.handle(message, transaction),
     );
   }
 }

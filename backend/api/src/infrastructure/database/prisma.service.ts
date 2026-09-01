@@ -80,6 +80,55 @@ export class PrismaService
     });
   }
 
+  /**
+   * Global delivery scope for the outbox claim/dispatch path. This is an
+   * explicit, bounded operational scope that allows the dispatcher to read and
+   * advance any OutboxMessage row (tenant or global) without requiring per-row
+   * tenant context. Per-job processing later re-scopes to the job's tenant.
+   */
+  async withDeliveryScope<TResult>(
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    return this.$transaction(async (transaction) => {
+      await setDeliveryScope(transaction);
+      return callback(transaction);
+    });
+  }
+
+  /**
+   * Worker tenant context: the worker validates the job's tenant scope from
+   * the payload, opens a transaction, sets the context (tenant + operation), and
+   * processes the job through an idempotent handler. No membership is required
+   * for the worker boundary.
+   */
+  async withWorkerTenantContext<TResult>(
+    tenantId: string,
+    operationId: string,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    return this.$transaction(async (transaction) => {
+      await setWorkerTenantContext(transaction, tenantId, operationId);
+      return callback(transaction);
+    });
+  }
+
+  /**
+   * Actor scope: an authenticated actor with no active tenant/membership (e.g.
+   * tenant-switch pre-selection). Establishes user + operation but no tenant,
+   * so actor-only rows (tenantId IS NULL) are reachable without exposing them
+   * to any tenant context.
+   */
+  async withActorScopeContext<TResult>(
+    userId: string,
+    operationId: string,
+    callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+  ): Promise<TResult> {
+    return this.withMembershipSelectionContext(
+      { userId, operationId },
+      callback,
+    );
+  }
+
   async onModuleInit(): Promise<void> {
     await this.$connect();
     this.logger.log('PostgreSQL connection established');
@@ -113,6 +162,34 @@ async function setMembershipSelectionContext(
       set_config('app.user_id', ${context.userId}, true),
       set_config('app.membership_id', '', true),
       set_config('app.operation_id', ${context.operationId}, true)
+  `;
+}
+
+async function setDeliveryScope(
+  transaction: Prisma.TransactionClient,
+): Promise<void> {
+  const operationId = crypto.randomUUID();
+  await transaction.$queryRaw`
+    SELECT
+      set_config('app.delivery_scope', 'true', true),
+      set_config('app.tenant_id', '', true),
+      set_config('app.user_id', '', true),
+      set_config('app.membership_id', '', true),
+      set_config('app.operation_id', ${operationId}, true)
+  `;
+}
+
+async function setWorkerTenantContext(
+  transaction: Prisma.TransactionClient,
+  tenantId: string,
+  operationId: string,
+): Promise<void> {
+  await transaction.$queryRaw`
+    SELECT
+      set_config('app.tenant_id', ${tenantId}, true),
+      set_config('app.user_id', '', true),
+      set_config('app.membership_id', '', true),
+      set_config('app.operation_id', ${operationId}, true)
   `;
 }
 

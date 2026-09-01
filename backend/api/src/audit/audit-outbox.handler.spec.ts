@@ -22,17 +22,19 @@ function message(payload: unknown): OutboxMessage {
 }
 
 describe('AuditOutboxHandler', () => {
+  const transaction = (findUnique: jest.Mock) =>
+    ({ auditEvent: { findUnique } }) as never;
+
   it('confirms a persisted audit event without re-creating it', async () => {
     const findUnique = jest
       .fn()
       .mockResolvedValue({ id: 'event-1', correlationId: 'corr-1' });
-    const handler = new AuditOutboxHandler({
-      auditEvent: { findUnique },
-    } as never);
+    const handler = new AuditOutboxHandler({} as never);
 
     await expect(
       handler.handle(
         message({ auditEventId: 'event-1', correlationId: 'corr-1' }),
+        transaction(findUnique),
       ),
     ).resolves.toBeUndefined();
 
@@ -44,13 +46,12 @@ describe('AuditOutboxHandler', () => {
 
   it('throws when the referenced audit event is missing', async () => {
     const findUnique = jest.fn().mockResolvedValue(null);
-    const handler = new AuditOutboxHandler({
-      auditEvent: { findUnique },
-    } as never);
+    const handler = new AuditOutboxHandler({} as never);
 
     await expect(
       handler.handle(
         message({ auditEventId: 'missing', correlationId: 'corr-1' }),
+        transaction(findUnique),
       ),
     ).rejects.toThrow(/references missing audit event/);
   });
@@ -59,27 +60,28 @@ describe('AuditOutboxHandler', () => {
     const findUnique = jest
       .fn()
       .mockResolvedValue({ id: 'event-1', correlationId: 'other' });
-    const handler = new AuditOutboxHandler({
-      auditEvent: { findUnique },
-    } as never);
+    const handler = new AuditOutboxHandler({} as never);
 
     await expect(
       handler.handle(
         message({ auditEventId: 'event-1', correlationId: 'corr-1' }),
+        transaction(findUnique),
       ),
     ).rejects.toThrow(/correlation mismatch/);
   });
 
   it('rejects malformed payloads before any lookup', async () => {
     const findUnique = jest.fn();
-    const handler = new AuditOutboxHandler({
-      auditEvent: { findUnique },
-    } as never);
+    const handler = new AuditOutboxHandler({} as never);
 
-    await expect(handler.handle(message({ auditEventId: 'event-1' }))).rejects
-      .toThrow('audit.event.created payload is invalid');
     await expect(
-      handler.handle(message('not-an-object')),
+      handler.handle(
+        message({ auditEventId: 'event-1' }),
+        transaction(findUnique),
+      ),
+    ).rejects.toThrow('audit.event.created payload is invalid');
+    await expect(
+      handler.handle(message('not-an-object'), transaction(findUnique)),
     ).rejects.toThrow('payload must be an object');
     expect(findUnique).not.toHaveBeenCalled();
   });

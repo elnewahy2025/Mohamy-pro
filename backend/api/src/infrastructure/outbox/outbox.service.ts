@@ -9,6 +9,12 @@ export interface CreateOutboxMessageInput {
   aggregateType: string;
   aggregateId: string;
   eventType: string;
+  /**
+   * Server-derived tenant scope for the delivered message. Null denotes a
+   * genuinely global operational event. The value is validated and written to
+   * the row's tenantId column; OutboxMessage RLS requires a matching context.
+   */
+  tenantId: string | null;
   payload: Prisma.InputJsonValue;
 }
 
@@ -16,6 +22,8 @@ export interface OutboxJobPayload {
   [key: string]: unknown;
   outboxMessageId: string;
   attempt: number;
+  /** Server-derived tenant scope carried to the worker; null for global jobs. */
+  tenantId: string | null;
 }
 
 export const OUTBOX_MAX_ATTEMPTS = 5;
@@ -38,6 +46,7 @@ export class OutboxService {
     const client = transaction ?? this.prisma;
     return client.outboxMessage.create({
       data: {
+        tenantId: input.tenantId,
         aggregateType: input.aggregateType,
         aggregateId: input.aggregateId,
         eventType: input.eventType,
@@ -46,11 +55,17 @@ export class OutboxService {
     });
   }
 
+  /**
+   * Claims and dispatches in the global delivery scope. The claim poll
+   * legitimately spans tenants; it runs under the explicit OutboxMessage
+   * delivery scope (see the tenant-boundary migration) rather than any tenant
+   * context. Per-job processing later re-scopes to the job's tenant.
+   */
   async claimBatch(limit = 50): Promise<OutboxMessage[]> {
     const now = new Date();
     const leaseCutoff = new Date(now.getTime() - OUTBOX_LEASE_MS);
 
-    const claimed = await this.prisma.$transaction(async (transaction) => {
+    const claimed = await this.prisma.withDeliveryScope(async (transaction) => {
       await transaction.outboxMessage.updateMany({
         where: {
           status: 'PROCESSING',
@@ -82,7 +97,7 @@ export class OutboxService {
       });
 
       const messages = await transaction.$queryRaw<OutboxMessage[]>(Prisma.sql`
-        SELECT "id", "aggregateType", "aggregateId", "eventType", "payload", "status", "error",
+        SELECT "id", "tenantId", "aggregateType", "aggregateId", "eventType", "payload", "status", "error",
                "attempts", "availableAt", "claimedAt", "leaseToken", "deadLetteredAt",
                "createdAt", "processedAt"
         FROM "OutboxMessage"
@@ -123,16 +138,20 @@ export class OutboxService {
           {
             outboxMessageId: message.id,
             attempt: message.attempts,
+            tenantId: message.tenantId,
           },
           { jobId: `outbox-${message.id}-attempt-${message.attempts}` },
         );
       } catch (error) {
-        await this.recordFailure(
-          message.id,
-          error instanceof Error
-            ? error.message
-            : 'Unknown queue submission error',
-          message.leaseToken,
+        await this.prisma.withDeliveryScope((transaction) =>
+          this.recordFailure(
+            message.id,
+            error instanceof Error
+              ? error.message
+              : 'Unknown queue submission error',
+            message.leaseToken,
+            transaction,
+          ),
         );
         this.logger.error(
           {
@@ -151,12 +170,28 @@ export class OutboxService {
     return messages.length;
   }
 
-  getById(id: string): Promise<OutboxMessage | null> {
-    return this.prisma.outboxMessage.findUnique({ where: { id } });
+  /**
+   * Reads a message in the worker's per-job tenant scope (or the delivery scope
+   * for global jobs). Pass the transaction opened by the worker so the read is
+   * covered by the RLS scope that the subsequent handler and state write use.
+   */
+  getById(
+    id: string,
+    transaction?: Prisma.TransactionClient,
+  ): Promise<OutboxMessage | null> {
+    const client = transaction ?? this.prisma;
+    return client.outboxMessage.findUnique({
+      where: { id },
+    });
   }
 
-  async markProcessed(id: string, leaseToken: string): Promise<boolean> {
-    const result = await this.prisma.outboxMessage.updateMany({
+  async markProcessed(
+    id: string,
+    leaseToken: string,
+    transaction?: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const client = transaction ?? this.prisma;
+    const result = await client.outboxMessage.updateMany({
       where: { id, status: 'PROCESSING', leaseToken },
       data: {
         status: 'PROCESSED',
@@ -174,8 +209,10 @@ export class OutboxService {
     id: string,
     error: string,
     leaseToken?: string | null,
+    transaction?: Prisma.TransactionClient,
   ): Promise<boolean> {
-    const current = await this.prisma.outboxMessage.findUnique({
+    const client = transaction ?? this.prisma;
+    const current = await client.outboxMessage.findUnique({
       where: { id },
     });
     if (
@@ -191,7 +228,7 @@ export class OutboxService {
 
     const safeError = error.slice(0, 2_000);
     const terminal = current.attempts >= OUTBOX_MAX_ATTEMPTS;
-    const result = await this.prisma.outboxMessage.updateMany({
+    const result = await client.outboxMessage.updateMany({
       where: {
         id,
         status: current.status,
@@ -221,10 +258,12 @@ export class OutboxService {
 
   private async refreshOutboxMetrics(): Promise<void> {
     if (!this.metrics) return;
-    const grouped = await this.prisma.outboxMessage.groupBy({
-      by: ['status'],
-      _count: { _all: true },
-    });
+    const grouped = await this.prisma.withDeliveryScope(async (transaction) =>
+      transaction.outboxMessage.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+    );
     this.metrics.setOutboxStateCounts(
       Object.fromEntries(
         grouped.map((item) => [item.status, item._count._all]),

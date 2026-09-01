@@ -22,13 +22,17 @@ function message(payload: unknown): OutboxMessage {
 }
 
 describe('HealthStatusOutboxHandler', () => {
+  const transaction = (update: jest.Mock) =>
+    ({ health: { update } }) as never;
+
   it('persists a valid health status event', async () => {
     const update = jest.fn().mockResolvedValue({ id: 'health-1' });
-    const handler = new HealthStatusOutboxHandler({
-      health: { update },
-    } as never);
+    const handler = new HealthStatusOutboxHandler({} as never);
 
-    await handler.handle(message({ healthId: 'health-1', status: 'DEGRADED' }));
+    await handler.handle(
+      message({ healthId: 'health-1', status: 'DEGRADED' }),
+      transaction(update),
+    );
 
     expect(update).toHaveBeenCalledWith({
       where: { id: 'health-1' },
@@ -38,12 +42,13 @@ describe('HealthStatusOutboxHandler', () => {
 
   it('rejects malformed payloads before persistence', async () => {
     const update = jest.fn();
-    const handler = new HealthStatusOutboxHandler({
-      health: { update },
-    } as never);
+    const handler = new HealthStatusOutboxHandler({} as never);
 
     await expect(
-      handler.handle(message({ status: 'DEGRADED' })),
+      handler.handle(
+        message({ status: 'DEGRADED' }),
+        transaction(update),
+      ),
     ).rejects.toThrow('health.status.updated payload is invalid');
     expect(update).not.toHaveBeenCalled();
   });

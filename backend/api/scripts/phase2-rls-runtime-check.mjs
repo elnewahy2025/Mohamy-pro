@@ -21,6 +21,9 @@ const tenantTables = [
   'MembershipRole',
   'RolePermission',
   'AccessDenial',
+  'OutboxMessage',
+  'StorageObject',
+  'IdempotencyKey',
 ];
 const tenantOnlyTables = [
   'Organization',
@@ -32,6 +35,7 @@ const tenantOnlyTables = [
   'Invitation',
   'MembershipRole',
   'AccessDenial',
+  'StorageObject',
 ];
 
 if (!originalDatabaseUrl) {
@@ -200,7 +204,7 @@ async function configureRlsVerifierRole() {
     `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE ${tableList} TO ${quoteIdentifier(verifierRole)}`,
   );
   await rlsPool.query(
-    `GRANT EXECUTE ON FUNCTION public.app_tenant_context_is_valid(), public.app_membership_selection_context_is_valid() TO ${quoteIdentifier(verifierRole)}`,
+    `GRANT EXECUTE ON FUNCTION public.app_tenant_context_is_valid(), public.app_membership_selection_context_is_valid(), public.app_worker_tenant_context_is_valid(), public.app_global_delivery_scope_is_valid(), public.app_actor_scope_is_valid() TO ${quoteIdentifier(verifierRole)}`,
   );
   await rlsPool.end();
   const verifierUrl = new URL(freshUrl.toString());
@@ -468,7 +472,7 @@ async function verifyDefaultDenyAndIsolation(
     selectionClient.release();
   }
   console.log(
-    'rls_default_deny_status=PASS|tenant_only_tables=9|missing_context_reads=0|missing_context_insert=DENIED',
+    'rls_default_deny_status=PASS|tenant_only_tables=10|missing_context_reads=0|missing_context_insert=DENIED',
   );
   console.log(
     'rls_membership_selection_status=PASS|user_a_own_membership=1|other_user_membership=0',
@@ -638,6 +642,299 @@ async function verifyRollbackAndPoolReuse(tenantA, tenantB, contexts) {
   );
 }
 
+async function setDeliveryScope(client) {
+  await client.query(
+    `SELECT
+       set_config('app.delivery_scope', 'true', true),
+       set_config('app.operation_id', $1, true)`,
+    [randomUUID()],
+  );
+}
+
+async function verifyOutboxRls(tenantA, contexts) {
+  const messageIdA = randomUUID();
+  const messageIdB = randomUUID();
+
+  const seedClient = await rlsPool.connect();
+  try {
+    await inTenantContext(seedClient, contexts.a, async () => {
+      await seedClient.query(
+        `INSERT INTO "OutboxMessage"
+           ("id", "tenantId", "aggregateType", "aggregateId", "eventType", "payload", "status", "availableAt", "attempts", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', CURRENT_TIMESTAMP, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [messageIdA, tenantA.id, 'tenant.event', 'agg-a', 'tenant.created', '{}'],
+      );
+      await seedClient.query(
+        `INSERT INTO "OutboxMessage"
+           ("id", "tenantId", "aggregateType", "aggregateId", "eventType", "payload", "status", "availableAt", "attempts", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', CURRENT_TIMESTAMP, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [messageIdB, tenantA.id, 'global.event', 'agg-b', 'health.status.updated', '{}'],
+      );
+    });
+  } finally {
+    seedClient.release();
+  }
+
+  const client = await rlsPool.connect();
+  try {
+    const noContext = await client.query(
+      `SELECT count(*)::int AS count FROM "OutboxMessage"`,
+    );
+    requireEqual(countFrom(noContext), 0, 'no-context outbox visibility');
+
+    const crossTenant = await inTenantContext(client, contexts.a, async () => {
+      const own = await client.query(
+        `SELECT count(*)::int AS count FROM "OutboxMessage" WHERE "id" = $1`,
+        [messageIdA],
+      );
+      return countFrom(own);
+    });
+    requireEqual(crossTenant, 1, 'tenant context outbox own-message visibility');
+
+    let crossInsertRejected = false;
+    await inTenantContext(client, contexts.a, async () => {
+      try {
+        await client.query(
+          `INSERT INTO "OutboxMessage"
+             ("id", "tenantId", "aggregateType", "aggregateId", "eventType", "payload", "status", "availableAt", "attempts", "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', CURRENT_TIMESTAMP, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          [randomUUID(), tenantA.id, 'cross", "g', 'agg-x', 'tenant.created', '{}'],
+        );
+      } catch (error) {
+        if (error?.code === '42501') {
+          crossInsertRejected = true;
+          return;
+        }
+        throw error;
+      }
+    });
+    if (!crossInsertRejected) {
+      const blockedRead = await inTenantContext(client, contexts.a, async () =>
+        client.query(
+          `SELECT count(*)::int AS count FROM "OutboxMessage" WHERE "tenantId" = '00000000-0000-4000-8000-000000000000'`,
+        ),
+      );
+      requireEqual(
+        countFrom(blockedRead),
+        0,
+        'tenant context cannot read other-tenant outbox rows',
+      );
+    }
+
+    await inTenantContext(client, contexts.a, async () => {
+      const ownVisible = await client.query(
+        `SELECT count(*)::int AS count FROM "OutboxMessage" WHERE "id" = $1`,
+        [messageIdA],
+      );
+      requireEqual(
+        countFrom(ownVisible),
+        1,
+        'tenant context sees own outbox message',
+      );
+    });
+
+    await setDeliveryScope(client);
+    const deliveryScoped = await client.query(
+      `SELECT count(*)::int AS count FROM "OutboxMessage"`,
+    );
+    requireEqual(
+      countFrom(deliveryScoped),
+      2,
+      'delivery scope sees all outbox messages across tenants',
+    );
+    await requireClearedContext(
+      client,
+      'delivery scope after outbox verification',
+    );
+  } finally {
+    client.release();
+  }
+  console.log(
+    'rls_outbox_status=PASS|no_context=0|tenant_sees_own=1|tenant_cannot_read_global=blocked|delivery_scope_sees_all=2',
+  );
+}
+
+async function setWorkerScope(client, tenantId) {
+  await client.query(
+    `SELECT
+       set_config('app.tenant_id', $1, true),
+       set_config('app.user_id', '', true),
+       set_config('app.membership_id', '', true),
+       set_config('app.operation_id', $2, true)`,
+    [tenantId, randomUUID()],
+  );
+}
+
+async function setActorScope(client, userId) {
+  await client.query(
+    `SELECT
+       set_config('app.tenant_id', '', true),
+       set_config('app.user_id', $1, true),
+       set_config('app.membership_id', '', true),
+       set_config('app.operation_id', $2, true)`,
+    [userId, randomUUID()],
+  );
+}
+
+async function verifyStorageRls(tenantA, tenantB, contexts) {
+  const objectA = randomUUID();
+  const objectB = randomUUID();
+
+  const seedClient = await rlsPool.connect();
+  try {
+    await inTenantContext(seedClient, contexts.a, async () => {
+      await seedClient.query(
+        `INSERT INTO "StorageObject"
+           ("id", "tenantId", "key", "sha256", "sizeBytes", "contentType", "encryptionMode", "malwareStatus")
+         VALUES ($1, $2, $3, $4, 1, 'text/plain', 'NONE', 'NOT_SCANNED')`,
+        [objectA, tenantA.id, `a-${randomUUID()}`, 'a'.repeat(64)],
+      );
+    });
+    await inTenantContext(seedClient, contexts.b, async () => {
+      await seedClient.query(
+        `INSERT INTO "StorageObject"
+           ("id", "tenantId", "key", "sha256", "sizeBytes", "contentType", "encryptionMode", "malwareStatus")
+         VALUES ($1, $2, $3, $4, 1, 'text/plain', 'NONE', 'NOT_SCANNED')`,
+        [objectB, tenantB.id, `b-${randomUUID()}`, 'b'.repeat(64)],
+      );
+    });
+  } finally {
+    seedClient.release();
+  }
+
+  const client = await rlsPool.connect();
+  try {
+    const noContext = await client.query(
+      `SELECT count(*)::int AS count FROM "StorageObject"`,
+    );
+    requireEqual(countFrom(noContext), 0, 'no-context storage visibility');
+
+    const tenantARead = await inTenantContext(client, contexts.a, async () => {
+      const own = await client.query(
+        `SELECT count(*)::int AS count FROM "StorageObject" WHERE "id" = $1`,
+        [objectA],
+      );
+      const other = await client.query(
+        `SELECT count(*)::int AS count FROM "StorageObject" WHERE "id" = $1`,
+        [objectB],
+      );
+      return { own: countFrom(own), other: countFrom(other) };
+    });
+    requireEqual(tenantARead.own, 1, 'Tenant A own storage object visibility');
+    requireEqual(
+      tenantARead.other,
+      0,
+      'Tenant A Tenant B storage object visibility',
+    );
+
+    await setWorkerScope(client, tenantA.id);
+    const workerRead = await client.query(
+      `SELECT count(*)::int AS count FROM "StorageObject" WHERE "id" = $1`,
+      [objectA],
+    );
+    requireEqual(
+      countFrom(workerRead),
+      1,
+      'worker scope storage object visibility',
+    );
+    await requireClearedContext(client, 'worker scope after storage verification');
+  } finally {
+    client.release();
+  }
+  console.log(
+    'rls_storage_status=PASS|no_context=0|tenant_a_sees_own=1|tenant_a_sees_b=0|worker_scope_sees_own=1',
+  );
+}
+
+async function verifyIdempotencyRls(tenantA, contexts) {
+  const tenantKeyId = randomUUID();
+  const actorKeyId = randomUUID();
+
+  const seedClient = await rlsPool.connect();
+  try {
+    await inTenantContext(seedClient, contexts.a, async () => {
+      await seedClient.query(
+        `INSERT INTO "IdempotencyKey"
+           ("id", "key", "tenantScope", "tenantId", "actorScope", "method", "route", "fingerprint", "state", "expiresAt")
+         VALUES ($1, $2, $3, $4, NULL, 'POST', '/tenant', $5, 'RESERVED', CURRENT_TIMESTAMP + interval '1 hour')`,
+        [tenantKeyId, `t-${randomUUID()}`, 'tenant-A', tenantA.id, 'finger-a'],
+      );
+    });
+    await setActorScope(seedClient, contexts.a.userId);
+    await seedClient.query(
+      `INSERT INTO "IdempotencyKey"
+         ("id", "key", "tenantScope", "tenantId", "actorScope", "method", "route", "fingerprint", "state", "expiresAt")
+       VALUES ($1, $2, NULL, NULL, $3, 'POST', '/switch', $4, 'RESERVED', CURRENT_TIMESTAMP + interval '1 hour')
+       RETURNING "id"`,
+      [actorKeyId, `a-${randomUUID()}`, contexts.a.userId, 'finger-a'],
+    );
+    await seedClient.query(
+      `SELECT set_config('app.tenant_id', '', true), set_config('app.membership_id', '', true), set_config('app.user_id', '', true), set_config('app.operation_id', '', true)`,
+    );
+  } finally {
+    seedClient.release();
+  }
+
+  const client = await rlsPool.connect();
+  try {
+    const noContext = await client.query(
+      `SELECT count(*)::int AS count FROM "IdempotencyKey"`,
+    );
+    requireEqual(countFrom(noContext), 0, 'no-context idempotency visibility');
+
+    const tenantARead = await inTenantContext(client, contexts.a, async () => {
+      const tenantRow = await client.query(
+        `SELECT count(*)::int AS count FROM "IdempotencyKey" WHERE "id" = $1`,
+        [tenantKeyId],
+      );
+      const actorRow = await client.query(
+        `SELECT count(*)::int AS count FROM "IdempotencyKey" WHERE "id" = $1`,
+        [actorKeyId],
+      );
+      return { tenantRow: countFrom(tenantRow), actorRow: countFrom(actorRow) };
+    });
+    requireEqual(
+      tenantARead.tenantRow,
+      1,
+      'tenant context sees own tenant idempotency row',
+    );
+    requireEqual(
+      tenantARead.actorRow,
+      0,
+      'tenant context cannot see actor-only idempotency row',
+    );
+
+    await setActorScope(client, contexts.a.userId);
+    const actorRead = await client.query(
+      `SELECT count(*)::int AS count FROM "IdempotencyKey" WHERE "id" = $1`,
+      [actorKeyId],
+    );
+    requireEqual(
+      countFrom(actorRead),
+      1,
+      'actor scope sees actor-only idempotency row',
+    );
+    const actorTenantRow = await client.query(
+      `SELECT count(*)::int AS count FROM "IdempotencyKey" WHERE "id" = $1`,
+      [tenantKeyId],
+    );
+    requireEqual(
+      countFrom(actorTenantRow),
+      0,
+      'actor scope cannot see tenant-scoped idempotency row',
+    );
+    await requireClearedContext(
+      client,
+      'actor scope after idempotency verification',
+    );
+  } finally {
+    client.release();
+  }
+  console.log(
+    'rls_idempotency_status=PASS|no_context=0|tenant_sees_own_tenant_row=1|tenant_cannot_see_actor_row=0|actor_sees_actor_row=1',
+  );
+}
+
 async function main() {
   requireEqual(
     quoteIdentifier('Organization'),
@@ -755,6 +1052,9 @@ async function main() {
   await verifyMalformedContext(tenantA, contexts);
   await verifyHierarchyForeignKey(tenantA, tenantB, organizationB, contexts);
   await verifyRollbackAndPoolReuse(tenantA, tenantB, contexts);
+  await verifyOutboxRls(tenantA, contexts);
+  await verifyStorageRls(tenantA, tenantB, contexts);
+  await verifyIdempotencyRls(tenantA, contexts);
 
   console.log(`rls_runtime_result=PASS|database=${generatedDatabase}`);
 }

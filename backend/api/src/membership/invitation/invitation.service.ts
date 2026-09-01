@@ -156,6 +156,7 @@ export class InvitationService {
               aggregateType: 'invitation',
               aggregateId: invitation.id,
               eventType: INVITATION_OUTBOX_EVENT,
+              tenantId,
               payload: {
                 invitationId: invitation.id,
                 tenantId,
