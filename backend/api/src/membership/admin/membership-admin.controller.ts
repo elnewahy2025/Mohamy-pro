@@ -1,5 +1,5 @@
 import { Body, Controller, Patch, Req, UseGuards } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CsrfGuard } from '../../auth/session/csrf.guard';
 import { SessionGuard } from '../../auth/session/session.guard';
@@ -19,6 +19,18 @@ export class MembershipAdminController {
   constructor(private readonly admin: MembershipAdminService) {}
 
   @Patch('suspend')
+  @ApiOperation({ summary: 'Suspend a tenant membership' })
+  @ApiBody({ type: MembershipAdminDto })
+  @ApiResponse({ status: 200, description: 'Membership suspended.' })
+  @ApiResponse({ status: 401, description: 'Session is not authenticated.' })
+  @ApiResponse({
+    status: 403,
+    description: 'CSRF token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller lacks the required permission.',
+  })
   suspend(
     @Req() req: Request,
     @Body() dto: MembershipAdminDto,
@@ -27,6 +39,18 @@ export class MembershipAdminController {
   }
 
   @Patch('expire')
+  @ApiOperation({ summary: 'Expire a tenant membership' })
+  @ApiBody({ type: MembershipAdminDto })
+  @ApiResponse({ status: 200, description: 'Membership expired.' })
+  @ApiResponse({ status: 401, description: 'Session is not authenticated.' })
+  @ApiResponse({
+    status: 403,
+    description: 'CSRF token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller lacks the required permission.',
+  })
   expire(
     @Req() req: Request,
     @Body() dto: MembershipAdminDto,
@@ -35,6 +59,18 @@ export class MembershipAdminController {
   }
 
   @Patch('remove')
+  @ApiOperation({ summary: 'Remove a tenant membership' })
+  @ApiBody({ type: MembershipAdminDto })
+  @ApiResponse({ status: 200, description: 'Membership removed.' })
+  @ApiResponse({ status: 401, description: 'Session is not authenticated.' })
+  @ApiResponse({
+    status: 403,
+    description: 'CSRF token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller lacks the required permission.',
+  })
   remove(
     @Req() req: Request,
     @Body() dto: MembershipAdminDto,
@@ -43,6 +79,18 @@ export class MembershipAdminController {
   }
 
   @Patch('reinstate')
+  @ApiOperation({ summary: 'Reinstate a tenant membership' })
+  @ApiBody({ type: MembershipReinstateDto })
+  @ApiResponse({ status: 200, description: 'Membership reinstated.' })
+  @ApiResponse({ status: 401, description: 'Session is not authenticated.' })
+  @ApiResponse({
+    status: 403,
+    description: 'CSRF token is missing or invalid.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller lacks the required permission.',
+  })
   reinstate(
     @Req() req: Request,
     @Body() dto: MembershipReinstateDto,
