@@ -88,6 +88,11 @@ export class S3ObjectStorageService
         accessKeyId: config.getOrThrow('S3_ACCESS_KEY'),
         secretAccessKey: config.getOrThrow('S3_SECRET_KEY'),
       },
+      maxAttempts: 3,
+      requestHandler: {
+        connectionTimeout: 5_000,
+        requestTimeout: 10_000,
+      },
     });
   }
 

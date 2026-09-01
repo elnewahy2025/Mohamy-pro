@@ -108,13 +108,33 @@ describe('IdempotencyInterceptor', () => {
     } as unknown as IdempotencyService;
     const interceptor = new IdempotencyInterceptor(service);
     const next: CallHandler = { handle: () => of({ id: 'created' }) };
+    const setHeader = jest.fn();
+    const freshCtx = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'POST',
+          originalUrl: '/api/v1/x',
+          body: { a: 1 },
+          header: (name: string) => {
+            const lower = name.toLowerCase();
+            if (lower === 'idempotency-key') return KEY;
+            if (lower === 'content-type') return 'application/json';
+            if (lower === 'x-correlation-id') return 'req-1';
+            return undefined;
+          },
+        }),
+        getResponse: () => ({
+          statusCode: 201,
+          setHeader,
+          status: jest.fn(),
+        }),
+      }),
+    } as unknown as ExecutionContext;
     const result = await lastValueFrom(
-      interceptor.intercept(
-        ctx('POST', '/api/v1/x', { a: 1 }, KEY),
-        next,
-      ) as any,
+      interceptor.intercept(freshCtx, next) as any,
     );
     expect(result).toEqual({ id: 'created' });
+    expect(setHeader).toHaveBeenCalledWith('Idempotency-Key', KEY);
     expect(
       (service as unknown as { complete: jest.Mock }).complete,
     ).toHaveBeenCalledWith(
@@ -133,16 +153,36 @@ describe('IdempotencyInterceptor', () => {
     const next: CallHandler = {
       handle: jest.fn().mockReturnValue(of({ nope: true })),
     };
+    const setHeader = jest.fn();
+    const replayCtx = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'POST',
+          originalUrl: '/api/v1/x',
+          body: { a: 1 },
+          header: (name: string) => {
+            const lower = name.toLowerCase();
+            if (lower === 'idempotency-key') return KEY;
+            if (lower === 'content-type') return 'application/json';
+            if (lower === 'x-correlation-id') return 'req-1';
+            return undefined;
+          },
+        }),
+        getResponse: () => ({
+          statusCode: 201,
+          setHeader,
+          status: jest.fn(),
+        }),
+      }),
+    } as unknown as ExecutionContext;
     const result = await lastValueFrom(
-      interceptor.intercept(
-        ctx('POST', '/api/v1/x', { a: 1 }, KEY),
-        next,
-      ) as any,
+      interceptor.intercept(replayCtx, next) as any,
     );
     expect(result).toEqual({ id: 'stored' });
     expect(
       (next as unknown as { handle: jest.Mock }).handle,
     ).not.toHaveBeenCalled();
+    expect(setHeader).toHaveBeenCalledWith('Idempotency-Key', KEY);
   });
 
   it('scopes the idempotency record to the authenticated session actor', async () => {

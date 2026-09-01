@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SessionStatus, UserStatus } from '@prisma/client';
+import { MembershipStatus, SessionStatus, UserStatus } from '@prisma/client';
 import type { ValidatedEnvironment } from '../../config/env.validation';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { AUTH_PROVIDER } from '../auth.constants';
@@ -16,6 +16,8 @@ import {
   generateOpaqueToken,
   hashToken,
 } from './session-crypto';
+
+const LAST_USED_THROTTLE_MS = 5 * 60 * 1_000;
 
 export interface SessionDetails {
   sessionId: string;
@@ -67,6 +69,20 @@ export class SessionService {
     const refreshCiphertext = tokens.refreshToken
       ? encryptSecret(this.sessionSecret(), tokens.refreshToken)
       : null;
+    const idTokenCiphertext = tokens.idToken
+      ? encryptSecret(this.sessionSecret(), tokens.idToken)
+      : null;
+
+    const activeMemberships = await this.prisma.membership.findMany({
+      where: {
+        userId: user.id,
+        status: MembershipStatus.ACTIVE,
+      },
+      select: { id: true, tenantId: true },
+      take: 2,
+    });
+    const defaultMembership =
+      activeMemberships.length === 1 ? activeMemberships[0] : null;
 
     const session = await this.prisma.appSession.create({
       data: {
@@ -79,6 +95,9 @@ export class SessionService {
         providerSessionId: profile.providerSessionId ?? null,
         providerRefreshTokenCiphertext: refreshCiphertext,
         providerRefreshTokenKeyVersion: refreshCiphertext ? 'v1' : null,
+        providerIdTokenCiphertext: idTokenCiphertext,
+        activeTenantId: defaultMembership?.tenantId ?? null,
+        activeMembershipId: defaultMembership?.id ?? null,
         idleExpiresAt: new Date(now.getTime() + idleTtl * 1000),
         absoluteExpiresAt: new Date(now.getTime() + absoluteTtl * 1000),
         userAgentHash: userAgent ? hashToken(userAgent) : null,
@@ -121,14 +140,16 @@ export class SessionService {
     const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
     });
-    if (!user || user.status === UserStatus.DISABLED) {
+    if (!user || user.status !== UserStatus.ACTIVE) {
       throw new SessionNotAuthenticatedError('User is not permitted');
     }
 
-    await this.prisma.appSession.update({
-      where: { id: session.id },
-      data: { lastUsedAt: now },
-    });
+    if (now.getTime() - session.lastUsedAt.getTime() >= LAST_USED_THROTTLE_MS) {
+      await this.prisma.appSession.update({
+        where: { id: session.id },
+        data: { lastUsedAt: now },
+      });
+    }
 
     return {
       sessionId: session.id,
@@ -158,6 +179,17 @@ export class SessionService {
     return decryptSecret(
       this.sessionSecret(),
       session.providerRefreshTokenCiphertext,
+    );
+  }
+
+  async getIdToken(sessionId: string): Promise<string | null> {
+    const session = await this.prisma.appSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session?.providerIdTokenCiphertext) return null;
+    return decryptSecret(
+      this.sessionSecret(),
+      session.providerIdTokenCiphertext,
     );
   }
 

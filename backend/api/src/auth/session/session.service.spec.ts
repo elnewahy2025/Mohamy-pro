@@ -1,4 +1,4 @@
-import { SessionStatus, UserStatus } from '@prisma/client';
+import { MembershipStatus, SessionStatus, UserStatus } from '@prisma/client';
 import {
   SessionNotFoundError,
   SessionNotAuthenticatedError,
@@ -14,6 +14,9 @@ function prismaMock() {
     },
     user: {
       findUnique: jest.fn(),
+    },
+    membership: {
+      findMany: jest.fn(),
     },
   };
 }
@@ -60,6 +63,7 @@ const sessionRecord = (overrides: Record<string, unknown> = {}) =>
     providerSessionId: 'sid-1',
     providerRefreshTokenCiphertext: null,
     providerRefreshTokenKeyVersion: null,
+    providerIdTokenCiphertext: null,
     idleExpiresAt: new Date(Date.now() + 3600_000),
     absoluteExpiresAt: new Date(Date.now() + 86_400_000),
     lastUsedAt: new Date(),
@@ -90,6 +94,7 @@ describe('SessionService', () => {
       prisma.appSession.create.mockResolvedValue(
         sessionRecord({ providerRefreshTokenCiphertext: 'v1.x.y.z' }),
       );
+      prisma.membership.findMany.mockResolvedValue([]);
 
       const result = await service.createSession({
         user: { id: 'user-1', status: UserStatus.ACTIVE },
@@ -120,6 +125,7 @@ describe('SessionService', () => {
 
     it('stores no refresh ciphertext when the provider omits a refresh token', async () => {
       prisma.appSession.create.mockResolvedValue(sessionRecord());
+      prisma.membership.findMany.mockResolvedValue([]);
       await service.createSession({
         user: { id: 'user-1', status: UserStatus.ACTIVE },
         profile,
@@ -130,11 +136,56 @@ describe('SessionService', () => {
           .providerRefreshTokenCiphertext,
       ).toBeNull();
     });
+
+    it('selects the single active membership as the default tenant', async () => {
+      prisma.appSession.create.mockResolvedValue(sessionRecord());
+      prisma.membership.findMany.mockResolvedValue([
+        { id: 'member-1', tenantId: 'tenant-1' },
+      ]);
+
+      await service.createSession({
+        user: { id: 'user-1', status: UserStatus.ACTIVE },
+        profile,
+        tokens,
+      });
+
+      expect(prisma.membership.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            status: MembershipStatus.ACTIVE,
+          }),
+        }),
+      );
+      const data = prisma.appSession.create.mock.calls[0][0].data;
+      expect(data.activeTenantId).toBe('tenant-1');
+      expect(data.activeMembershipId).toBe('member-1');
+    });
+
+    it('leaves the active tenant null with zero or multiple active memberships', async () => {
+      prisma.appSession.create.mockResolvedValue(sessionRecord());
+      prisma.membership.findMany.mockResolvedValue([
+        { id: 'member-1', tenantId: 'tenant-1' },
+        { id: 'member-2', tenantId: 'tenant-2' },
+      ]);
+
+      await service.createSession({
+        user: { id: 'user-1', status: UserStatus.ACTIVE },
+        profile,
+        tokens,
+      });
+
+      const data = prisma.appSession.create.mock.calls[0][0].data;
+      expect(data.activeTenantId).toBeNull();
+      expect(data.activeMembershipId).toBeNull();
+    });
   });
 
   describe('validateSession', () => {
     it('returns session details for an active, unexpired session', async () => {
-      const rec = sessionRecord();
+      const rec = sessionRecord({
+        lastUsedAt: new Date(Date.now() - 10 * 60 * 1000),
+      });
       prisma.appSession.findUnique.mockResolvedValue(rec);
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
@@ -155,6 +206,18 @@ describe('SessionService', () => {
           data: expect.objectContaining({ lastUsedAt: expect.any(Date) }),
         }),
       );
+    });
+
+    it('does not rewrite lastUsedAt when it is recently updated', async () => {
+      prisma.appSession.findUnique.mockResolvedValue(sessionRecord());
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        status: UserStatus.ACTIVE,
+      });
+
+      await service.validateSession('the-token');
+
+      expect(prisma.appSession.update).not.toHaveBeenCalled();
     });
 
     it('throws SessionNotFoundError for an unknown token', async () => {
@@ -200,6 +263,21 @@ describe('SessionService', () => {
         SessionNotAuthenticatedError,
       );
     });
+
+    it.each([
+      [UserStatus.PENDING],
+      [UserStatus.SUSPENDED],
+      [UserStatus.DELETED],
+    ])('rejects a non-active user with status %s', async (status) => {
+      prisma.appSession.findUnique.mockResolvedValue(sessionRecord());
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        status,
+      });
+      await expect(service.validateSession('x')).rejects.toThrow(
+        SessionNotAuthenticatedError,
+      );
+    });
   });
 
   describe('refresh token handling', () => {
@@ -220,6 +298,47 @@ describe('SessionService', () => {
       const data = prisma.appSession.update.mock.calls[0][0].data;
       expect(data.providerRefreshTokenCiphertext).toMatch(/^v1\./);
       expect(data.providerRefreshTokenKeyVersion).toBe('v1');
+    });
+
+    it.each([['refresh'], ['id']])(
+      'creates a session persisting the provider %s token as ciphertext',
+      async (kind) => {
+        const tokensOverrides =
+          kind === 'refresh'
+            ? { refreshToken: 'refresh-1' }
+            : { idToken: 'id-token-1' };
+        prisma.appSession.create.mockResolvedValue(sessionRecord());
+        prisma.membership.findMany.mockResolvedValue([]);
+        await service.createSession({
+          user: { id: 'user-1', status: UserStatus.ACTIVE },
+          profile,
+          tokens: { accessToken: 'access', ...tokensOverrides },
+        });
+        const data = prisma.appSession.create.mock.calls[0][0].data;
+        const ciphertext = data['provider' + kind[0].toUpperCase() + kind.slice(1) + 'TokenCiphertext'];
+        expect(ciphertext).toMatch(/^v1\./);
+      },
+    );
+
+    it('returns the decrypted provider id token when present', async () => {
+      prisma.appSession.findUnique.mockResolvedValue(
+        sessionRecord({ providerIdTokenCiphertext: null }),
+      );
+      await expect(service.getIdToken('session-1')).resolves.toBeNull();
+
+      const { encryptSecret } = jest.requireActual(
+        '../../auth/session/session-crypto',
+      );
+      const ciphertext = encryptSecret(
+        'test-session-secret-that-is-long-enough-000000',
+        'id-token-original',
+      );
+      prisma.appSession.findUnique.mockResolvedValue(
+        sessionRecord({ providerIdTokenCiphertext: ciphertext }),
+      );
+      await expect(service.getIdToken('session-1')).resolves.toBe(
+        'id-token-original',
+      );
     });
   });
 

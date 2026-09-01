@@ -73,9 +73,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return reservation.pipe(
       mergeMap(({ outcome, record }) => {
         if (outcome === 'replay') {
-          applyReplay(response, record);
+          applyReplay(response, record, key);
           return of(record.responseBody);
         }
+        response.setHeader(IDEMPOTENCY_KEY_HEADER, key);
         return next.handle().pipe(
           mergeMap((value) => {
             const status = safeStatus(response.statusCode);
@@ -173,8 +174,10 @@ function resolveScope(request: Request): {
 function applyReplay(
   response: Response,
   record: { responseStatus: number | null },
+  key: string,
 ): void {
   response.status(record.responseStatus ?? HttpStatus.OK);
+  response.setHeader(IDEMPOTENCY_KEY_HEADER, key);
   if (IDEMPOTENCY_RETRY_AFTER > 0) {
     response.setHeader(
       'Idempotency-Retry-After',

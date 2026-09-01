@@ -181,7 +181,10 @@ export class OidcProviderService implements OnModuleInit {
     }
   }
 
-  buildLogoutUrl(): string {
+  buildLogoutUrl(params: {
+    idTokenHint?: string;
+    postLogoutRedirectUri?: string;
+  } = {}): string {
     const config = this.getConfiguration();
     const endSession = config.serverMetadata().end_session_endpoint;
     if (!endSession) {
@@ -190,6 +193,15 @@ export class OidcProviderService implements OnModuleInit {
       );
     }
     const url = new URL(endSession);
+    if (params.idTokenHint) {
+      url.searchParams.set('id_token_hint', params.idTokenHint);
+    }
+    if (params.postLogoutRedirectUri) {
+      url.searchParams.set(
+        'post_logout_redirect_uri',
+        params.postLogoutRedirectUri,
+      );
+    }
     return url.href;
   }
 

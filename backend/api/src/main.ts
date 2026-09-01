@@ -54,18 +54,20 @@ async function bootstrap(): Promise<void> {
     new SuccessEnvelopeInterceptor(),
   );
 
-  const openApiConfig = new DocumentBuilder()
-    .setTitle('Mohamy Pro API')
-    .setDescription(
-      'Production API foundation for the Mohamy legal operations platform.',
-    )
-    .setVersion('1.0.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, openApiConfig);
-  SwaggerModule.setup('api/docs', app, document, {
-    jsonDocumentUrl: 'api/docs-json',
-  });
+  if (config.get<string>('NODE_ENV', 'development') !== 'production') {
+    const openApiConfig = new DocumentBuilder()
+      .setTitle('Mohamy Pro API')
+      .setDescription(
+        'Production API foundation for the Mohamy legal operations platform.',
+      )
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, openApiConfig);
+    SwaggerModule.setup('api/docs', app, document, {
+      jsonDocumentUrl: 'api/docs-json',
+    });
+  }
 
   const port = config.get<number>('PORT', 3000);
   await app.listen(port, '0.0.0.0');

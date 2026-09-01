@@ -233,4 +233,20 @@ describe('OidcProviderService', () => {
       'https://issuer.example/oidc/session/end',
     );
   });
+
+  it('builds a logout url with id_token_hint and post_logout_redirect_uri', async () => {
+    await configure();
+    const url = service.buildLogoutUrl({
+      idTokenHint: 'id-token-value',
+      postLogoutRedirectUri: 'https://app.example/after-logout',
+    });
+    const parsed = new URL(url);
+    expect(parsed.origin + parsed.pathname).toBe(
+      'https://issuer.example/oidc/session/end',
+    );
+    expect(parsed.searchParams.get('id_token_hint')).toBe('id-token-value');
+    expect(parsed.searchParams.get('post_logout_redirect_uri')).toBe(
+      'https://app.example/after-logout',
+    );
+  });
 });

@@ -126,6 +126,7 @@ export class AuthService {
       try {
         const details = await this.sessions.validateSession(token);
         const refresh = await this.sessions.getRefreshToken(details.sessionId);
+        const idToken = await this.sessions.getIdToken(details.sessionId);
         await this.sessions.revokeSession(details.sessionId, 'logout');
         if (refresh) {
           try {
@@ -134,6 +135,21 @@ export class AuthService {
             // Provider revocation is best-effort; the local session is already revoked.
           }
         }
+        const postLogout = this.configService.get<string>(
+          'OIDC_POST_LOGOUT_REDIRECT_URI',
+        );
+        let endSession: string;
+        try {
+          endSession = this.oidc.buildLogoutUrl({
+            idTokenHint: idToken ?? undefined,
+            postLogoutRedirectUri: postLogout ?? undefined,
+          });
+        } catch {
+          endSession = postLogout ?? '/';
+        }
+        this.cookies.clearSession(res);
+        this.cookies.clearOidc(res);
+        return { redirectUrl: endSession };
       } catch (error) {
         if (!(error instanceof SessionNotFoundError)) {
           throw error;
