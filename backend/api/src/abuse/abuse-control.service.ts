@@ -86,33 +86,46 @@ export class AbuseControlService {
 
   /** Login initiation per source IP: 10 in 15 minutes. */
   async enforceLoginIp(request: Request): Promise<AbuseDecision> {
-    return this.enforceRateLimit(request, {
-      scopePrefix: 'login-ip',
-      limit: this.intLimit('ABUSE_LOGIN_PER_IP_MAX', ABUSE_LIMITS.loginPerIp.max),
-      windowSeconds: this.intLimit(
-        'ABUSE_LOGIN_PER_IP_WINDOW_SECONDS',
-        ABUSE_LIMITS.loginPerIp.windowSeconds,
-      ),
-      reason: AUTH_RATE_LIMITED,
-    }, abuseClientIp(request));
+    return this.enforceRateLimit(
+      request,
+      {
+        scopePrefix: 'login-ip',
+        limit: this.intLimit(
+          'ABUSE_LOGIN_PER_IP_MAX',
+          ABUSE_LIMITS.loginPerIp.max,
+        ),
+        windowSeconds: this.intLimit(
+          'ABUSE_LOGIN_PER_IP_WINDOW_SECONDS',
+          ABUSE_LIMITS.loginPerIp.windowSeconds,
+        ),
+        reason: AUTH_RATE_LIMITED,
+      },
+      abuseClientIp(request),
+    );
   }
 
   /** Login initiation per account identifier: 5 in 15 minutes (null when absent). */
-  async enforceLoginIdentifier(request: Request): Promise<AbuseDecision | null> {
+  async enforceLoginIdentifier(
+    request: Request,
+  ): Promise<AbuseDecision | null> {
     const identifier = abuseAccountIdentifier(request);
     if (!identifier) return null;
-    return this.enforceRateLimit(request, {
-      scopePrefix: 'login-id',
-      limit: this.intLimit(
-        'ABUSE_LOGIN_PER_IDENTIFIER_MAX',
-        ABUSE_LIMITS.loginPerIdentifier.max,
-      ),
-      windowSeconds: this.intLimit(
-        'ABUSE_LOGIN_PER_IDENTIFIER_WINDOW_SECONDS',
-        ABUSE_LIMITS.loginPerIdentifier.windowSeconds,
-      ),
-      reason: AUTH_RATE_LIMITED,
-    }, identifier);
+    return this.enforceRateLimit(
+      request,
+      {
+        scopePrefix: 'login-id',
+        limit: this.intLimit(
+          'ABUSE_LOGIN_PER_IDENTIFIER_MAX',
+          ABUSE_LIMITS.loginPerIdentifier.max,
+        ),
+        windowSeconds: this.intLimit(
+          'ABUSE_LOGIN_PER_IDENTIFIER_WINDOW_SECONDS',
+          ABUSE_LIMITS.loginPerIdentifier.windowSeconds,
+        ),
+        reason: AUTH_RATE_LIMITED,
+      },
+      identifier,
+    );
   }
 
   /** Invitation acceptance per fingerprint + IP: 10 in one hour (null when absent). */
@@ -120,15 +133,22 @@ export class AbuseControlService {
     const token = abuseInvitationToken(request);
     if (!token) return null;
     const actor = `${abuseClientIp(request)}::${token}`;
-    return this.enforceRateLimit(request, {
-      scopePrefix: 'invite',
-      limit: this.intLimit('ABUSE_INVITATION_MAX', ABUSE_LIMITS.invitationPerFingerprint.max),
-      windowSeconds: this.intLimit(
-        'ABUSE_INVITATION_WINDOW_SECONDS',
-        ABUSE_LIMITS.invitationPerFingerprint.windowSeconds,
-      ),
-      reason: INVITATION_RATE_LIMITED,
-    }, actor);
+    return this.enforceRateLimit(
+      request,
+      {
+        scopePrefix: 'invite',
+        limit: this.intLimit(
+          'ABUSE_INVITATION_MAX',
+          ABUSE_LIMITS.invitationPerFingerprint.max,
+        ),
+        windowSeconds: this.intLimit(
+          'ABUSE_INVITATION_WINDOW_SECONDS',
+          ABUSE_LIMITS.invitationPerFingerprint.windowSeconds,
+        ),
+        reason: INVITATION_RATE_LIMITED,
+      },
+      actor,
+    );
   }
 
   /** Tenant switching per user/session: 20 in 10 minutes. */
@@ -136,15 +156,22 @@ export class AbuseControlService {
     request: Request,
     userId: string,
   ): Promise<AbuseDecision> {
-    return this.enforceRateLimit(request, {
-      scopePrefix: 'switch',
-      limit: this.intLimit('ABUSE_SWITCH_MAX', ABUSE_LIMITS.switchPerActor.max),
-      windowSeconds: this.intLimit(
-        'ABUSE_SWITCH_WINDOW_SECONDS',
-        ABUSE_LIMITS.switchPerActor.windowSeconds,
-      ),
-      reason: TENANT_SWITCH_RATE_LIMITED,
-    }, userId);
+    return this.enforceRateLimit(
+      request,
+      {
+        scopePrefix: 'switch',
+        limit: this.intLimit(
+          'ABUSE_SWITCH_MAX',
+          ABUSE_LIMITS.switchPerActor.max,
+        ),
+        windowSeconds: this.intLimit(
+          'ABUSE_SWITCH_WINDOW_SECONDS',
+          ABUSE_LIMITS.switchPerActor.windowSeconds,
+        ),
+        reason: TENANT_SWITCH_RATE_LIMITED,
+      },
+      userId,
+    );
   }
 
   /**
@@ -207,13 +234,45 @@ export class AbuseControlService {
     return { allowed: true, reason: null, retryAfterSeconds: null };
   }
 
+  /**
+   * Release a lockout marker for an identifier that has just authenticated
+   * successfully. Emits an honest `ACCOUNT_LOCK_RELEASED` audit event only when
+   * a marker was present; never throws into the request path.
+   */
+  async releaseLockout(request: Request, identifier: string): Promise<void> {
+    const hash = hashAbuseKey(identifier);
+    const scope = `mohamy:abuse:auth-lockout:${hash}`;
+    const present = await this.counter.hasMarker(scope);
+    if (!present) return;
+    await this.counter.clearMarker(scope);
+    try {
+      await this.audit.write({
+        eventType: AUDIT_EVENT_TYPES.ACCOUNT_LOCK_RELEASED,
+        outcome: 'SUCCEEDED',
+        actorUserId: null,
+        actorMembershipId: null,
+        tenantId: null,
+        targetType: 'account',
+        targetId: identifier,
+        policy: 'AbuseControl',
+        reasonCode: ACCOUNT_LOCKED,
+        correlationId: getCorrelationId(request),
+        ipHash: hashAbuseKey(abuseClientIp(request)),
+        metadata: {},
+      });
+    } catch {
+      // Audit write failure must not amplify a successful login into a 500.
+    }
+  }
+
   /** MFA step-up: 5 failed challenges per session/user/IP in 15 minutes. */
-  async enforceMfaFailure(
-    actor: string,
-  ): Promise<AbuseDecision> {
+  async enforceMfaFailure(actor: string): Promise<AbuseDecision> {
     const policy: LimitPolicy = {
       scopePrefix: 'mfa',
-      limit: this.intLimit('ABUSE_MFA_PER_ACTOR_MAX', ABUSE_LIMITS.mfaPerActor.max),
+      limit: this.intLimit(
+        'ABUSE_MFA_PER_ACTOR_MAX',
+        ABUSE_LIMITS.mfaPerActor.max,
+      ),
       windowSeconds: this.intLimit(
         'ABUSE_MFA_PER_ACTOR_WINDOW_SECONDS',
         ABUSE_LIMITS.mfaPerActor.windowSeconds,

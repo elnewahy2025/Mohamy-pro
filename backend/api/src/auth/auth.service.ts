@@ -96,8 +96,28 @@ export class AuthService {
       parsed.nonce,
     );
 
+    const identifier = profile.subject;
+
+    const lockDecision = await this.abuse.checkLockout(identifier);
+    if (!lockDecision.allowed) {
+      await this.abuse.emitAbuseEvent(req, lockDecision.reason!);
+      throw new AbuseLimitReachedError(
+        lockDecision.reason!,
+        lockDecision.retryAfterSeconds!,
+      );
+    }
+
     const user = await this.identity.resolveUser(profile);
     if (!tokens.refreshToken) {
+      const failureDecision =
+        await this.abuse.registerAuthenticationFailure(identifier);
+      if (!failureDecision.allowed) {
+        await this.abuse.emitAbuseEvent(req, failureDecision.reason!);
+        throw new AbuseLimitReachedError(
+          failureDecision.reason!,
+          failureDecision.retryAfterSeconds!,
+        );
+      }
       throw new OidcTokenValidationError(
         'Provider did not return a refresh token',
       );
@@ -110,6 +130,8 @@ export class AuthService {
       userAgent: req.headers['user-agent'],
       ip: req.ip,
     });
+
+    await this.abuse.releaseLockout(req, identifier);
 
     this.cookies.setSession(res, created.token, created.maxAgeSeconds);
     this.cookies.clearOidc(res);

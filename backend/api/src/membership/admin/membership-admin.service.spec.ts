@@ -1,7 +1,11 @@
 import type { Request } from 'express';
+import { AbuseControlService } from '../../abuse/abuse-control.service';
+import { MFA_RATE_LIMITED } from '../../abuse/abuse-control.constants';
+import { AbuseLimitReachedError } from '../../abuse/abuse-control.errors';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { MfaAssuranceService } from '../../auth/mfa/mfa-assurance.service';
+import { MfaStepUpRequiredError } from '../../auth/mfa/mfa.errors';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { PermissionsService } from '../../permissions/permissions.service';
 import { MembershipAdminDeniedError } from './membership-admin.errors';
@@ -33,9 +37,15 @@ function request(): Request {
 function makeService(input: {
   targetStatus: string;
   auditEvent?: string;
+  mfa?: { assertRecentMfa: jest.Mock };
+  abuse?: {
+    enforceMfaFailure?: jest.Mock;
+    emitAbuseEvent?: jest.Mock;
+  };
 }) {
   const mfa = {
     assertRecentMfa: jest.fn().mockResolvedValue(undefined),
+    ...input.mfa,
   } as unknown as MfaAssuranceService;
   const permissions = {
     assertTenantPermission: jest
@@ -44,6 +54,19 @@ function makeService(input: {
   } as unknown as PermissionsService;
   const auditWrite = jest.fn().mockResolvedValue({ id: 'audit-1' });
   const audit = { write: auditWrite } as unknown as AuditEventService;
+  const enforceMfaFailure =
+    input.abuse?.enforceMfaFailure ??
+    jest.fn().mockResolvedValue({
+      allowed: true,
+      reason: null,
+      retryAfterSeconds: null,
+    });
+  const emitAbuseEvent =
+    input.abuse?.emitAbuseEvent ?? jest.fn().mockResolvedValue(undefined);
+  const abuse = {
+    enforceMfaFailure,
+    emitAbuseEvent,
+  } as unknown as AbuseControlService;
 
   const tenantTx = {
     membership: {
@@ -63,13 +86,30 @@ function makeService(input: {
     withTenantContext: tenantContext,
   } as unknown as PrismaService;
 
-  const service = new MembershipAdminService(prisma, audit, permissions, mfa);
-  return { service, auditWrite, permissions, mfa, tenantTx };
+  const service = new MembershipAdminService(
+    prisma,
+    audit,
+    permissions,
+    mfa,
+    abuse,
+  );
+  return {
+    service,
+    auditWrite,
+    permissions,
+    mfa,
+    abuse,
+    enforceMfaFailure,
+    emitAbuseEvent,
+    tenantTx,
+  };
 }
 
 describe('MembershipAdminService', () => {
   it('suspends an active membership with a SECURITY audit event', async () => {
-    const { service, auditWrite, tenantTx } = makeService({ targetStatus: 'ACTIVE' });
+    const { service, auditWrite, tenantTx } = makeService({
+      targetStatus: 'ACTIVE',
+    });
     const result = await service.suspend(request(), {
       membershipId: TARGET_MEMBERSHIP,
       reason: 'misconduct',
@@ -78,8 +118,8 @@ describe('MembershipAdminService', () => {
     expect(
       (auditWrite.mock.calls[0][0] as { eventType: string }).eventType,
     ).toBe(AUDIT_EVENT_TYPES.MEMBERSHIP_SUSPENDED);
-    const updateData = (tenantTx.membership.update as jest.Mock).mock.calls[0][0]
-      .data as Record<string, unknown>;
+    const updateData = (tenantTx.membership.update as jest.Mock).mock
+      .calls[0][0].data as Record<string, unknown>;
     expect(updateData.reason).toBeUndefined();
     expect(updateData.status).toBe('SUSPENDED');
     expect(updateData.suspendedAt).toBeInstanceOf(Date);
@@ -118,5 +158,61 @@ describe('MembershipAdminService', () => {
     await expect(
       service.suspend(req, { membershipId: TARGET_MEMBERSHIP }),
     ).rejects.toBeInstanceOf(MembershipAdminDeniedError);
+  });
+
+  it('enumerates a failed MFA step-up toward the failure limit and rethrows', async () => {
+    const emitAbuseEvent = jest.fn().mockResolvedValue(undefined);
+    const enforceMfaFailure = jest.fn().mockResolvedValue({
+      allowed: true,
+      reason: null,
+      retryAfterSeconds: null,
+    });
+    const { service, auditWrite } = makeService({
+      targetStatus: 'ACTIVE',
+      mfa: {
+        assertRecentMfa: jest
+          .fn()
+          .mockRejectedValue(new MfaStepUpRequiredError('MFA_REQUIRED')),
+      },
+      abuse: { enforceMfaFailure, emitAbuseEvent },
+    });
+
+    await expect(
+      service.suspend(request(), { membershipId: TARGET_MEMBERSHIP }),
+    ).rejects.toBeInstanceOf(MfaStepUpRequiredError);
+
+    expect(enforceMfaFailure).toHaveBeenCalledWith(SESSION_ID);
+    expect(emitAbuseEvent).not.toHaveBeenCalled();
+    expect(auditWrite).not.toHaveBeenCalled();
+  });
+
+  it('rejects with AbuseLimitReachedError once the failed-MFA limit is reached and emits the abuse event', async () => {
+    const emitAbuseEvent = jest.fn().mockResolvedValue(undefined);
+    const enforceMfaFailure = jest.fn().mockResolvedValue({
+      allowed: false,
+      reason: 'MFA_RATE_LIMITED',
+      retryAfterSeconds: 900,
+    });
+    const { service, auditWrite } = makeService({
+      targetStatus: 'ACTIVE',
+      mfa: {
+        assertRecentMfa: jest
+          .fn()
+          .mockRejectedValue(new MfaStepUpRequiredError('MFA_REQUIRED')),
+      },
+      abuse: { enforceMfaFailure, emitAbuseEvent },
+    });
+
+    await expect(
+      service.suspend(request(), { membershipId: TARGET_MEMBERSHIP }),
+    ).rejects.toBeInstanceOf(AbuseLimitReachedError);
+
+    expect(enforceMfaFailure).toHaveBeenCalledWith(SESSION_ID);
+    expect(emitAbuseEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      MFA_RATE_LIMITED,
+      { actorUserId: USER_ID, tenantId: TENANT_ID },
+    );
+    expect(auditWrite).not.toHaveBeenCalled();
   });
 });

@@ -1,10 +1,13 @@
 import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AbuseControlService } from '../../abuse/abuse-control.service';
+import { MFA_RATE_LIMITED } from '../../abuse/abuse-control.constants';
+import { AbuseLimitReachedError } from '../../abuse/abuse-control.errors';
 import type { ValidatedEnvironment } from '../../config/env.validation';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { MfaAssuranceService } from '../../auth/mfa/mfa-assurance.service';
+import { MfaStepUpRequiredError } from '../../auth/mfa/mfa.errors';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { OutboxService } from '../../infrastructure/outbox/outbox.service';
 import { PERMISSION_KEYS } from '../../permissions/permission.constants';
@@ -35,29 +38,32 @@ function request(overrides: { auth?: unknown } = {}): Request {
   } as unknown as Request;
 }
 
-function makeService(overrides: {
-  assertPermission?: 'grant' | 'deny';
-  mfa?: 'ok' | 'deny';
-  invitation?: {
-    id?: string;
-    status?: string;
-    tokenHash?: string;
-    tenantId?: string;
-    tenantStatus?: string;
-    intendedProviderSubject?: string | null;
-    intendedEmailNormalized?: string | null;
-    requestedRoleKeys?: string[];
-    expiresAt?: Date;
-  } | null;
-  tenantRoleCreatesNew?: boolean;
-  abuse?: AbuseControlService;
-} = {}) {
+function makeService(
+  overrides: {
+    assertPermission?: 'grant' | 'deny';
+    mfa?: 'ok' | 'deny';
+    mfaError?: Error;
+    invitation?: {
+      id?: string;
+      status?: string;
+      tokenHash?: string;
+      tenantId?: string;
+      tenantStatus?: string;
+      intendedProviderSubject?: string | null;
+      intendedEmailNormalized?: string | null;
+      requestedRoleKeys?: string[];
+      expiresAt?: Date;
+    } | null;
+    tenantRoleCreatesNew?: boolean;
+    abuse?: AbuseControlService;
+  } = {},
+) {
   const mfa = {
     assertRecentMfa: jest
       .fn()
       .mockImplementation(() =>
         overrides.mfa === 'deny'
-          ? Promise.reject(new Error('step-up'))
+          ? Promise.reject(overrides.mfaError ?? new Error('step-up'))
           : Promise.resolve(),
       ),
   } as unknown as MfaAssuranceService;
@@ -68,17 +74,21 @@ function makeService(overrides: {
   const outbox = { create: outboxCreate } as unknown as OutboxService;
 
   const permissions = {
-    assertTenantPermission: jest.fn().mockImplementation(() =>
-      overrides.assertPermission === 'deny'
-        ? Promise.reject(new Error('denied'))
-        : Promise.resolve({ membershipId: MEMBERSHIP_ID }),
-    ),
+    assertTenantPermission: jest
+      .fn()
+      .mockImplementation(() =>
+        overrides.assertPermission === 'deny'
+          ? Promise.reject(new Error('denied'))
+          : Promise.resolve({ membershipId: MEMBERSHIP_ID }),
+      ),
   } as unknown as PermissionsService;
 
   const configService = {
-    getOrThrow: jest.fn().mockImplementation((key: string) =>
-      key === 'INVITATION_TTL_SECONDS' ? 604800 : 900,
-    ),
+    getOrThrow: jest
+      .fn()
+      .mockImplementation((key: string) =>
+        key === 'INVITATION_TTL_SECONDS' ? 604800 : 900,
+      ),
   } as unknown as ConfigService<ValidatedEnvironment, true>;
 
   const selectionTx = {
@@ -88,40 +98,51 @@ function makeService(overrides: {
     (ctx: unknown, cb: (tx: unknown) => Promise<unknown>) => cb(selectionTx),
   );
 
-  const invitationRow = overrides.invitation === null ? null : {
-    id: overrides.invitation?.id ?? 'inv-1',
-    status: overrides.invitation?.status ?? 'PENDING',
-    tokenHash: 'hash',
-    tenantId: overrides.invitation?.tenantId ?? TENANT_ID,
-    expiresAt: overrides.invitation?.expiresAt ?? new Date(Date.now() + 86_400_000),
-    intendedProviderSubject: overrides.invitation?.intendedProviderSubject ?? 'sub-1',
-    intendedEmailNormalized: overrides.invitation?.intendedEmailNormalized ?? null,
-    requestedRoleKeys: overrides.invitation?.requestedRoleKeys ?? ['tenant.admin'],
-    tenant: { status: overrides.invitation?.tenantStatus ?? 'ACTIVE' },
-    updatedAt: new Date(),
-    createdAt: new Date(),
-    inviterMembershipId: MEMBERSHIP_ID,
-    revokedAt: null,
-    rejectedAt: null,
-    acceptedAt: null,
-    requestedScope: null,
-  };
+  const invitationRow =
+    overrides.invitation === null
+      ? null
+      : {
+          id: overrides.invitation?.id ?? 'inv-1',
+          status: overrides.invitation?.status ?? 'PENDING',
+          tokenHash: 'hash',
+          tenantId: overrides.invitation?.tenantId ?? TENANT_ID,
+          expiresAt:
+            overrides.invitation?.expiresAt ??
+            new Date(Date.now() + 86_400_000),
+          intendedProviderSubject:
+            overrides.invitation?.intendedProviderSubject ?? 'sub-1',
+          intendedEmailNormalized:
+            overrides.invitation?.intendedEmailNormalized ?? null,
+          requestedRoleKeys: overrides.invitation?.requestedRoleKeys ?? [
+            'tenant.admin',
+          ],
+          tenant: { status: overrides.invitation?.tenantStatus ?? 'ACTIVE' },
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          inviterMembershipId: MEMBERSHIP_ID,
+          revokedAt: null,
+          rejectedAt: null,
+          acceptedAt: null,
+          requestedScope: null,
+        };
 
   const tenantTx = {
     invitation: {
-      create: jest.fn().mockResolvedValue({ id: 'inv-new', expiresAt: new Date() }),
+      create: jest
+        .fn()
+        .mockResolvedValue({ id: 'inv-new', expiresAt: new Date() }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     membershipRole: {
-      findMany: jest.fn().mockResolvedValue([
-        { role: { key: 'tenant.admin' } },
-      ]),
+      findMany: jest
+        .fn()
+        .mockResolvedValue([{ role: { key: 'tenant.admin' } }]),
       create: jest.fn().mockResolvedValue({ id: 'mr-1' }),
     },
     role: {
-      findMany: jest.fn().mockResolvedValue([
-        { id: 'role-1', key: 'tenant.admin' },
-      ]),
+      findMany: jest
+        .fn()
+        .mockResolvedValue([{ id: 'role-1', key: 'tenant.admin' }]),
     },
     membership: { create: jest.fn().mockResolvedValue({ id: 'm' }) },
     user: {
@@ -146,7 +167,9 @@ function makeService(overrides: {
       findUnique: jest.fn().mockResolvedValue(invitationRow),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
-    user: { findUnique: jest.fn().mockResolvedValue({ emailNormalized: 'a@x.test' }) },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ emailNormalized: 'a@x.test' }),
+    },
     $transaction: jest.fn(),
   } as unknown as PrismaService;
 
@@ -154,6 +177,11 @@ function makeService(overrides: {
     overrides.abuse ??
     ({
       enforceInvitation: jest.fn().mockResolvedValue({
+        allowed: true,
+        reason: null,
+        retryAfterSeconds: null,
+      }),
+      enforceMfaFailure: jest.fn().mockResolvedValue({
         allowed: true,
         reason: null,
         retryAfterSeconds: null,
@@ -170,7 +198,16 @@ function makeService(overrides: {
     configService,
     abuse,
   );
-  return { service, auditWrite, outboxCreate, tenantTx, permissions, mfa, prisma };
+  return {
+    service,
+    auditWrite,
+    outboxCreate,
+    tenantTx,
+    permissions,
+    mfa,
+    abuse,
+    prisma,
+  };
 }
 
 describe('InvitationService', () => {
@@ -195,8 +232,69 @@ describe('InvitationService', () => {
     it('requires an active tenant context', async () => {
       const { service } = makeService();
       await expect(
-        service.create(request({ auth: { ...AUTH, activeTenantId: null } }), createDto),
+        service.create(
+          request({ auth: { ...AUTH, activeTenantId: null } }),
+          createDto,
+        ),
       ).rejects.toBeInstanceOf(InvitationDeniedError);
+    });
+
+    it('enumerates a failed MFA step-up toward the failure limit and rethrows', async () => {
+      const emitAbuseEvent = jest.fn().mockResolvedValue(undefined);
+      const enforceMfaFailure = jest.fn().mockResolvedValue({
+        allowed: true,
+        reason: null,
+        retryAfterSeconds: null,
+      });
+      const abuse = {
+        enforceMfaFailure,
+        emitAbuseEvent,
+      } as unknown as AbuseControlService;
+
+      const { service, auditWrite } = makeService({
+        mfa: 'deny',
+        mfaError: new MfaStepUpRequiredError('MFA_REQUIRED'),
+        abuse,
+      });
+
+      await expect(service.create(request(), createDto)).rejects.toBeInstanceOf(
+        MfaStepUpRequiredError,
+      );
+
+      expect(enforceMfaFailure).toHaveBeenCalledWith(SESSION_ID);
+      expect(emitAbuseEvent).not.toHaveBeenCalled();
+      expect(auditWrite).not.toHaveBeenCalled();
+    });
+
+    it('rejects with AbuseLimitReachedError once the failed-MFA limit is reached and emits the abuse event', async () => {
+      const emitAbuseEvent = jest.fn().mockResolvedValue(undefined);
+      const enforceMfaFailure = jest.fn().mockResolvedValue({
+        allowed: false,
+        reason: 'MFA_RATE_LIMITED',
+        retryAfterSeconds: 900,
+      });
+      const abuse = {
+        enforceMfaFailure,
+        emitAbuseEvent,
+      } as unknown as AbuseControlService;
+
+      const { service, auditWrite } = makeService({
+        mfa: 'deny',
+        mfaError: new MfaStepUpRequiredError('MFA_REQUIRED'),
+        abuse,
+      });
+
+      await expect(service.create(request(), createDto)).rejects.toBeInstanceOf(
+        AbuseLimitReachedError,
+      );
+
+      expect(enforceMfaFailure).toHaveBeenCalledWith(SESSION_ID);
+      expect(emitAbuseEvent).toHaveBeenCalledWith(
+        expect.anything(),
+        MFA_RATE_LIMITED,
+        { actorUserId: USER_ID, tenantId: TENANT_ID },
+      );
+      expect(auditWrite).not.toHaveBeenCalled();
     });
   });
 

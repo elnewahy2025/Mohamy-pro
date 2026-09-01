@@ -11,10 +11,16 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { AbuseControlService } from '../../abuse/abuse-control.service';
+import { MFA_RATE_LIMITED } from '../../abuse/abuse-control.constants';
+import { AbuseLimitReachedError } from '../../abuse/abuse-control.errors';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { MfaAssuranceService } from '../../auth/mfa/mfa-assurance.service';
-import { generateOpaqueToken, hashToken } from '../../auth/session/session-crypto';
+import { MfaStepUpRequiredError } from '../../auth/mfa/mfa.errors';
+import {
+  generateOpaqueToken,
+  hashToken,
+} from '../../auth/session/session-crypto';
 import { getCorrelationId } from '../../common/middleware/correlation-id.middleware';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { OutboxService } from '../../infrastructure/outbox/outbox.service';
@@ -81,7 +87,14 @@ export class InvitationService {
     }
     const tenantId = activeTenantId;
 
-    await this.mfa.assertRecentMfa(sessionId);
+    try {
+      await this.mfa.assertRecentMfa(sessionId);
+    } catch (error) {
+      if (error instanceof MfaStepUpRequiredError) {
+        await this.enforceMfaFailureLimit(request, sessionId, userId, tenantId);
+      }
+      throw error;
+    }
 
     const { membershipId } = await this.permissions.assertTenantPermission({
       request,
@@ -123,7 +136,8 @@ export class InvitationService {
               intendedEmailNormalized,
               intendedProviderSubject: dto.intendedProviderSubject ?? null,
               requestedRoleKeys: dto.requestedRoleKeys as Prisma.InputJsonValue,
-              requestedScope: (dto.requestedScope ?? null) as Prisma.InputJsonValue,
+              requestedScope: (dto.requestedScope ??
+                null) as Prisma.InputJsonValue,
               status: InvitationStatus.PENDING,
               expiresAt,
             },
@@ -196,11 +210,9 @@ export class InvitationService {
 
     const abuseDecision = await this.abuse.enforceInvitation(request);
     if (abuseDecision && !abuseDecision.allowed) {
-      await this.abuse.emitAbuseEvent(
-        request,
-        abuseDecision.reason!,
-        { actorUserId: userId },
-      );
+      await this.abuse.emitAbuseEvent(request, abuseDecision.reason!, {
+        actorUserId: userId,
+      });
       throw new InvitationDeniedError('RATE_LIMITED', 429);
     }
 
@@ -324,11 +336,11 @@ export class InvitationService {
   }
 
   private acceptDenialReason(
-    invitation: (Awaited<
-      ReturnType<PrismaService['invitation']['findUnique']>
-    > & {
-      tenant: { status: TenantStatus };
-    }) | null,
+    invitation:
+      | (Awaited<ReturnType<PrismaService['invitation']['findUnique']>> & {
+          tenant: { status: TenantStatus };
+        })
+      | null,
   ): string | null {
     if (!invitation) return 'NOT_FOUND';
     if (invitation.status !== InvitationStatus.PENDING) return 'NOT_PENDING';
@@ -340,7 +352,10 @@ export class InvitationService {
   }
 
   private async identityMatches(
-    invitation: { intendedProviderSubject: string | null; intendedEmailNormalized: string | null },
+    invitation: {
+      intendedProviderSubject: string | null;
+      intendedEmailNormalized: string | null;
+    },
     identity: { userId: string; provider: string; providerSubject: string },
   ): Promise<boolean> {
     if (invitation.intendedProviderSubject) {
@@ -392,9 +407,7 @@ export class InvitationService {
         select: { key: true },
       }),
     ]);
-    const inviterRoleSet = new Set(
-      inviterRoles.map((entry) => entry.role.key),
-    );
+    const inviterRoleSet = new Set(inviterRoles.map((entry) => entry.role.key));
     const tenantRoleSet = new Set(tenantRoles.map((role) => role.key));
     for (const key of input.requestedRoleKeys) {
       if (!tenantRoleSet.has(key)) {
@@ -438,7 +451,10 @@ export class InvitationService {
       where: { id: userId },
       select: { status: true },
     });
-    if (user && (user.status === UserStatus.PENDING || user.status === UserStatus.ACTIVE)) {
+    if (
+      user &&
+      (user.status === UserStatus.PENDING || user.status === UserStatus.ACTIVE)
+    ) {
       if (user.status === UserStatus.PENDING) {
         await transaction.user.update({
           where: { id: userId },
@@ -528,6 +544,30 @@ export class InvitationService {
     if (!value) return null;
     const raw = Array.isArray(value) ? value.join(',') : value;
     return raw.length === 0 ? null : hashToken(raw);
+  }
+
+  /**
+   * Applies the per-actor failed-MFA limit when a sensitive-action MFA
+   * step-up is required. Enumerates the failure toward the limit; once the
+   * limit is reached the caller is rejected fail-closed with a non-enumerating
+   * abuse-control error and an `MFA_RATE_LIMITED` audit event is emitted.
+   */
+  private async enforceMfaFailureLimit(
+    request: Request,
+    sessionId: string,
+    userId: string,
+    tenantId: string,
+  ): Promise<void> {
+    const decision = await this.abuse.enforceMfaFailure(sessionId);
+    if (decision.allowed) return;
+    await this.abuse.emitAbuseEvent(request, MFA_RATE_LIMITED, {
+      actorUserId: userId,
+      tenantId,
+    });
+    throw new AbuseLimitReachedError(
+      decision.reason!,
+      decision.retryAfterSeconds!,
+    );
   }
 }
 
