@@ -6,6 +6,8 @@ import { AuditEventService } from '../../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { getCorrelationId } from '../../common/middleware/correlation-id.middleware';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { PERMISSION_KEYS } from '../../permissions/permission.constants';
+import { PermissionsService } from '../../permissions/permissions.service';
 import { hashToken } from './session-crypto';
 import { TenantSwitchDeniedError } from './tenant-switch.errors';
 
@@ -42,6 +44,7 @@ export class TenantSwitchService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditEventService,
     private readonly abuse: AbuseControlService,
+    private readonly permissions: PermissionsService,
   ) {}
 
   async switchTenant(
@@ -54,16 +57,12 @@ export class TenantSwitchService {
     }
     const { userId, sessionId, activeTenantId } = auth;
 
-    const abuseDecision = await this.abuse.enforceTenantSwitch(
-      request,
-      userId,
-    );
+    const abuseDecision = await this.abuse.enforceTenantSwitch(request, userId);
     if (!abuseDecision.allowed) {
-      await this.abuse.emitAbuseEvent(
-        request,
-        abuseDecision.reason!,
-        { actorUserId: userId, tenantId },
-      );
+      await this.abuse.emitAbuseEvent(request, abuseDecision.reason!, {
+        actorUserId: userId,
+        tenantId,
+      });
       throw new TenantSwitchDeniedError('RATE_LIMITED');
     }
 
@@ -90,6 +89,15 @@ export class TenantSwitchService {
     }
 
     const activeMembership = membership as CandidateMembership;
+
+    await this.permissions.assertTenantPermission({
+      request,
+      userId,
+      tenantId,
+      permissionKey: PERMISSION_KEYS.CAN_SWITCH_TENANT,
+      operationId: sessionId,
+    });
+
     await this.prisma.withTenantContext(
       {
         tenantId,

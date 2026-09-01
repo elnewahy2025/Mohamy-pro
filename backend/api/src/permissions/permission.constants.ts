@@ -1,4 +1,7 @@
-import { ROLE_KEY_TENANT_ADMIN, ROLE_KEY_PLATFORM_ADMIN } from './role.constants';
+import {
+  ROLE_KEY_TENANT_ADMIN,
+  ROLE_KEY_PLATFORM_ADMIN,
+} from './role.constants';
 
 export const PERMISSION_KEYS = {
   CAN_CREATE_TENANT: 'CanCreateTenant',
@@ -7,9 +10,11 @@ export const PERMISSION_KEYS = {
   CAN_INVITE_MEMBERS: 'CanInviteMembers',
   CAN_VIEW_TENANT: 'CanViewTenant',
   CAN_MANAGE_ROLES: 'CanManageRoles',
+  CAN_SWITCH_TENANT: 'CanSwitchTenant',
 } as const;
 
-export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
+export type PermissionKey =
+  (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 export interface PermissionDefinition {
   key: PermissionKey;
@@ -48,6 +53,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     key: PERMISSION_KEYS.CAN_MANAGE_ROLES,
     description: 'Manage roles and role assignments within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_SWITCH_TENANT,
+    description:
+      'Switch the active session tenant to a tenant the user has an ACTIVE membership in.',
+  },
 ];
 
 /**
@@ -61,6 +71,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_INVITE_MEMBERS,
     PERMISSION_KEYS.CAN_MANAGE_ROLES,
     PERMISSION_KEYS.CAN_VIEW_TENANT,
+    PERMISSION_KEYS.CAN_SWITCH_TENANT,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,

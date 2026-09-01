@@ -3,6 +3,9 @@ import { AbuseControlService } from '../../abuse/abuse-control.service';
 import { AuditEventService } from '../../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { PERMISSION_KEYS } from '../../permissions/permission.constants';
+import { PermissionDeniedError } from '../../permissions/permission.errors';
+import { PermissionsService } from '../../permissions/permissions.service';
 import { TenantSwitchDeniedError } from './tenant-switch.errors';
 import { TenantSwitchService } from './tenant-switch.service';
 
@@ -46,6 +49,9 @@ function makeService(input: {
   loadMembership: unknown;
   auditWrite?: jest.Mock;
   abuse?: AbuseControlService;
+  permissions?: {
+    assertTenantPermission?: jest.Mock;
+  };
 }) {
   const auditWrite =
     input.auditWrite ?? jest.fn().mockResolvedValue({ id: 'audit-1' });
@@ -88,13 +94,21 @@ function makeService(input: {
     withTenantContext: tenantContext,
   } as unknown as PrismaService;
 
-  const service = new TenantSwitchService(prisma, audit, abuse);
+  const assertTenantPermission =
+    input.permissions?.assertTenantPermission ??
+    jest.fn().mockResolvedValue({ membershipId: MEMBERSHIP_ID });
+  const permissions = {
+    assertTenantPermission,
+  } as unknown as PermissionsService;
+
+  const service = new TenantSwitchService(prisma, audit, abuse, permissions);
   return {
     service,
     auditWrite,
     membershipSelection,
     tenantContext,
     tenantTx,
+    assertTenantPermission,
   };
 }
 
@@ -210,6 +224,42 @@ describe('TenantSwitchService', () => {
       'TENANT_SWITCH_RATE_LIMITED',
       { actorUserId: USER_ID, tenantId: TENANT_ID },
     );
+    expect(auditWrite).toHaveBeenCalledTimes(0);
+  });
+
+  it('asserts the CanSwitchTenant named policy before switching (W3)', async () => {
+    const { service, assertTenantPermission, tenantTx, auditWrite } =
+      makeService({ loadMembership: activeMembership() });
+
+    await service.switchTenant(request(), TENANT_ID);
+
+    expect(assertTenantPermission).toHaveBeenCalledTimes(1);
+    const policyInput = assertTenantPermission.mock.calls[0][0];
+    expect(policyInput.permissionKey).toBe(PERMISSION_KEYS.CAN_SWITCH_TENANT);
+    expect(policyInput.userId).toBe(USER_ID);
+    expect(policyInput.tenantId).toBe(TENANT_ID);
+    expect(policyInput.operationId).toBe(SESSION_ID);
+    expect(tenantTx.appSession.update).toHaveBeenCalledTimes(1);
+    expect(auditWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it('denies the switch when the CanSwitchTenant policy is denied and does not commit (W3)', async () => {
+    const assertTenantPermission = jest
+      .fn()
+      .mockRejectedValue(
+        new PermissionDeniedError(PERMISSION_KEYS.CAN_SWITCH_TENANT, 'DENIED'),
+      );
+    const { service, tenantTx, auditWrite } = makeService({
+      loadMembership: activeMembership(),
+      permissions: { assertTenantPermission },
+    });
+
+    await expect(
+      service.switchTenant(request(), TENANT_ID),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+
+    expect(assertTenantPermission).toHaveBeenCalledTimes(1);
+    expect(tenantTx.appSession.update).toHaveBeenCalledTimes(0);
     expect(auditWrite).toHaveBeenCalledTimes(0);
   });
 });

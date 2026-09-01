@@ -9,11 +9,15 @@ import { PrismaService } from '../infrastructure/database/prisma.service';
 import { hashToken } from '../auth/session/session-crypto';
 import {
   PERMISSION_CATALOG,
+  PERMISSION_KEYS,
   ROLE_PERMISSIONS,
   type PermissionKey,
 } from './permission.constants';
 import { PermissionDeniedError } from './permission.errors';
-import { ROLE_KEY_PLATFORM_ADMIN, ROLE_KEY_TENANT_ADMIN } from './role.constants';
+import {
+  ROLE_KEY_PLATFORM_ADMIN,
+  ROLE_KEY_TENANT_ADMIN,
+} from './role.constants';
 
 export interface TenantPermissionInput {
   request: Request;
@@ -30,8 +34,7 @@ export interface GlobalPermissionInput {
 }
 
 type EvaluationResult =
-  | { allowed: true; membershipId: string }
-  | { allowed: false; reason: string };
+  { allowed: true; membershipId: string } | { allowed: false; reason: string };
 
 const ACTIVE = 'ACTIVE';
 
@@ -244,7 +247,16 @@ export class PermissionsService {
             entry.role.permissions.map((rp) => rp.permission.key),
           ),
         );
-        if (keys.has(input.permissionKey)) return { allowed: true, membershipId };
+        if (keys.has(input.permissionKey))
+          return { allowed: true, membershipId };
+        // CanSwitchTenant is a membership-default capability: any ACTIVE
+        // membership in the target tenant may switch to it (see
+        // TENANT_MEMBERSHIP_SWITCHING_DECISION / W3). The surrounding
+        // resolveMembership step already guarantees the membership is ACTIVE,
+        // so reaching here with an ACTIVE membership confers the policy.
+        if (input.permissionKey === PERMISSION_KEYS.CAN_SWITCH_TENANT) {
+          return { allowed: true, membershipId };
+        }
         return { allowed: false, reason: 'MISSING_PERMISSION' };
       },
     );

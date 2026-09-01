@@ -16,7 +16,11 @@ function request(): Request {
   return { header: jest.fn(() => 'corr'), headers: {} } as unknown as Request;
 }
 
-function input(overrides: Partial<Parameters<PermissionsService['assertTenantPermission']>[0]> = {}) {
+function input(
+  overrides: Partial<
+    Parameters<PermissionsService['assertTenantPermission']>[0]
+  > = {},
+) {
   return {
     request: request(),
     userId: USER_ID,
@@ -42,8 +46,7 @@ function makeService(input: {
     auditEvent: { create: jest.fn().mockResolvedValue({ id: 'a' }) },
   };
   const membershipSelection = jest.fn(
-    (ctx: unknown, cb: (tx: unknown) => Promise<unknown>) =>
-      cb(selectionTx),
+    (ctx: unknown, cb: (tx: unknown) => Promise<unknown>) => cb(selectionTx),
   );
 
   const tenantTx = {
@@ -62,7 +65,9 @@ function makeService(input: {
   const prisma = {
     withMembershipSelectionContext: membershipSelection,
     withTenantContext: tenantContext,
-    $transaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) => cb(tenantTx)),
+    $transaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) =>
+      cb(tenantTx),
+    ),
     tenant: { findMany: jest.fn().mockResolvedValue([]) },
     role: { findFirst: jest.fn().mockResolvedValue(null) },
     permission: { findUnique: jest.fn().mockResolvedValue({ id: 'perm-1' }) },
@@ -95,7 +100,9 @@ describe('PermissionsService', () => {
       service.assertTenantPermission(input()),
     ).rejects.toBeInstanceOf(PermissionDeniedError);
     const deniedCall = auditWrite.mock.calls.find(
-      (call: unknown[]) => (call[0] as { eventType: string }).eventType === AUDIT_EVENT_TYPES.PERMISSION_DENIED,
+      (call: unknown[]) =>
+        (call[0] as { eventType: string }).eventType ===
+        AUDIT_EVENT_TYPES.PERMISSION_DENIED,
     );
     expect(deniedCall).toBeDefined();
     expect((deniedCall[0] as { outcome: string }).outcome).toBe('DENIED');
@@ -125,5 +132,31 @@ describe('PermissionsService', () => {
       expect(denied.getStatus()).toBe(403);
       expect(denied.code).toBe('FORBIDDEN');
     }
+  });
+
+  it('grants CanSwitchTenant to an ACTIVE membership as a default, even without a role grant (W3)', async () => {
+    const { service } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [],
+    });
+
+    await expect(
+      service.assertTenantPermission(
+        input({ permissionKey: PERMISSION_KEYS.CAN_SWITCH_TENANT }),
+      ),
+    ).resolves.toEqual({ membershipId: MEMBERSHIP_ID });
+  });
+
+  it('denies CanSwitchTenant for a membership that is not ACTIVE (W3)', async () => {
+    const { service } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'SUSPENDED' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_SWITCH_TENANT],
+    });
+
+    await expect(
+      service.assertTenantPermission(
+        input({ permissionKey: PERMISSION_KEYS.CAN_SWITCH_TENANT }),
+      ),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
   });
 });

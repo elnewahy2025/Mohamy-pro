@@ -28,7 +28,24 @@ Define the authoritative mapping between roles, permissions, resources, actions,
 | **Client** | Invoice | Read, Pay | Client's Own Cases | |
 | **Client** | Document | Read | Shared Documents | Can only view documents explicitly marked as "Shared with Client" |
 
-## 4. Explicit Denials
+## 4. Named-policy enforcement (Phase 2 closure, W3)
+
+The application policy engine (`PermissionsService.assertTenantPermission`) evaluates
+named policies resolved from an ACTIVE membership's role→permission graph. The status
+of each frozen named policy against the implemented Phase 2 routes is recorded below so
+no policy is silently omitted from enforcement or documentation.
+
+| Named policy | Source | Route(s) that enforce it | Status |
+| :--- | :--- | :--- | :--- |
+| `CanManageMembership` | `permission.constants.ts`, seeded migration | `POST /membership/invitations`, `POST /membership/invitations/accept`, `PATCH /membership/members/{suspend,expire,remove,reinstate}` | **ENFORCED + tested** |
+| `CanSwitchTenant` | `permission.constants.ts`, `migration 20260901120000` | `POST /session/tenant-switch` | **ENFORCED + tested** (membership-default: any ACTIVE membership may switch to a tenant it belongs to) |
+| `CanViewTenant` | catalog + seeded | none (no dedicated route); underlying read capability | **No dedicated route yet** (decision recorded) |
+| `CanInviteMembers` | catalog + seeded | none; invitation gates on the stronger `CanManageMembership` | **No dedicated route yet** (decision recorded) |
+| `CanManageRoles` | catalog + seeded | none (no role-management route exists) | **No dedicated route yet** (decision recorded) |
+| `CanCreateTenant`, `CanGrantPlatformAdmin` | catalog + seeded, global | none (tenant creation is via the global `POST /bootstrap` flow) | **No dedicated route yet** (decision recorded) |
+| `CanReadOrganizationSettings` | docs-only (Phase 2 plan), **never catalogued/seeded** | none (no Organization Settings surface exists) | **DEFERRED**: no route exists; documented deferral, not a silent omission. To be added to the catalog when a real Organization Settings surface is introduced. |
+
+## 5. Explicit Denials
 - **Tenant Escape**: No user (except Platform Admin) can ever access resources belonging to a `tenant_id` different from their currently active session's `tenant_id`.
 - **Permanent Deletion**: Legal records (Cases, Documents, Invoices) cannot be permanently deleted by standard users; they must be archived or marked void, preserving the audit trail.
 - **Unassigned Access**: Lawyers and Paralegals are explicitly denied access to Cases they are not assigned to, unless a "Break Glass" override is approved and audited.
