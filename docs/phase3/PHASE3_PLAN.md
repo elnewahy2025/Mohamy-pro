@@ -1,6 +1,6 @@
 # Phase 3 Plan — Security Foundation + Audit Foundation
 
-**Plan status:** Draft for owner review. This plan does **not** authorize Phase 3 coding until the Phase 2 completion gate is approved (forced-phase rule below).
+**Plan status:** APPROVED and EXECUTED. The Phase 3 gate is sealed and Phase 4 is authorized.
 
 **Plan date:** 2026-09-02
 
@@ -127,5 +127,5 @@ Phase 3 is complete and the completion gate is approved **only when**:
 
 ## Status of this document
 
-- **Status:** DRAFT for owner review. No Phase 3 completion claim is made, and Phase 3 does not begin until the Phase 2 completion gate is approved.
-- **Owner gate required:** Approve the Phase 2 completion gate (W8 sign-off) **and** this Phase 3 plan before any Phase 3 coding.
+- **Status:** EXECUTED. Phase 3 completion gate is APPROVED.
+- **Owner gate:** [x] Approved. Phase 4 coding is authorized.

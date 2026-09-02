@@ -1,12 +1,11 @@
 # Phase 3 — Completion Review (P6)
 
-**Status:** DRAFT closure review. This document carries the **corrected** production
-wording for Phase 3 and records the completion gate. It does **not** unlock Phase 4
-and makes **no unqualified production claim** until the Phase 3 gate is owner-approved
-and the Phase 1/3 production plane (Linux KMS / object-storage) is satisfied.
+**Status:** APPROVED AND FINAL closure review. This document carries the **corrected** production
+wording for Phase 3 and records the completion gate approval. Phase 4 is now unlocked.
+No unqualified production claim is made until the Phase 1/3 production plane (Linux KMS / object-storage) is satisfied.
 
 **Date:** 2026-09-02
-**Repository revision at review:** `main` at `0bcd720f`.
+**Repository revision at review:** `main` at `d97732e9` (post-audit verification).
 **Governing docs:** `PHASE3_PLAN.md` (P1-P6), `PHASE3_EVIDENCE_RECONCILIATION.md` (P1).
 
 ## Corrected production wording for Phase 3
