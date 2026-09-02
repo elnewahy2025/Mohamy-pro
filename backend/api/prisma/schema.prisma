@@ -71,6 +71,15 @@ enum AuditOutcome {
   REVOKED
 }
 
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  HIGHLY_CONFIDENTIAL
+  PRIVILEGED
+  RESTRICTED
+}
+
 // Phase 1: Health check table to prove migrations work
 model Health {
   id        String   @id @default(uuid())
@@ -94,9 +103,10 @@ model StorageObject {
   malwareStatus    String    @default("PENDING_SCAN")
   malwareScannedAt DateTime?
   retentionUntil   DateTime?
-  legalHold        Boolean   @default(false)
+  legalHold        Boolean            @default(false)
+  classification   DataClassification @default(CONFIDENTIAL)
   metadata         Json?
-  createdAt        DateTime  @default(now())
+  createdAt        DateTime           @default(now())
   deletedAt        DateTime?
   tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 

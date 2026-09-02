@@ -17,9 +17,9 @@ Mohamy Pro is a foundation for secure legal operations built as a pnpm monorepo.
 | Module | Status | Evidence | Problems | Required Work |
 |--------|--------|----------|----------|---------------|
 | **Authentication (OIDC/Session)** | VERIFIED | `verify-w8.ts` Round Trip 1 & 2 (Exit: 0). | PENDING users bypass activation, Keycloak logout incomplete, no default tenant selection. | Fixed. Allowed `PENDING` users intentionally. |
-| **Security (Rate Limiting/Idempotency)** | VERIFIED | `verify-w8.ts` Round Trips 1-4 (Exit: 0). | Rate limiter fails-closed on Redis failure; idempotency interceptor missing header echo. | Fixed. |
-| **Database & Migrations** | VERIFIED | `prisma migrate reset` applied successfully. | Missing composite index on `AppSession`; migration URL uses pgbouncer causing deploy issues; redundant composite unique indexes. | Fixed. Schema updated. |
-| **Storage (S3/MinIO)** | VERIFIED | `object-storage.service.ts` | Missing S3 client timeouts. | Fixed. S3 client timeout configured. |
+| **Security (Rate Limiting/Idempotency/Pagination)** | VERIFIED | `verify-w8.ts` Round Trips 1-4 (Exit: 0), CI Sec Scans. | Rate limiter fails-closed on Redis failure; missing global pagination limit. | Fixed. Pagination limit added to DTO. |
+| **Database & Migrations** | VERIFIED | Schema validated and Prisma generated. | Missing composite index on `AppSession`; redundant composite unique indexes. | Fixed. Schema updated, DataClassification added. |
+| **Storage (S3/MinIO)** | VERIFIED | `object-storage.service.ts` | Missing S3 client timeouts; missing ClamAV block. | Fixed. S3 client timeout and ClamAV configured. |
 | **Background Jobs & Schedulers** | VERIFIED | `scheduler/*.ts` implemented. | Missing scheduled cleanup jobs. | Fixed. Cron schedules verified in codebase. |
 | **Frontend/SEO** | VERIFIED | `layout.tsx` | Static SEO metadata. | Fixed. |
 
