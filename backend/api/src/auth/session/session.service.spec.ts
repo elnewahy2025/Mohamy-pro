@@ -220,6 +220,39 @@ describe('SessionService', () => {
       expect(prisma.appSession.update).not.toHaveBeenCalled();
     });
 
+    it('slides the idle deadline forward when refreshing a stale lastUsedAt', async () => {
+      const rec = sessionRecord({
+        lastUsedAt: new Date(Date.now() - 10 * 60 * 1000),
+        idleExpiresAt: new Date(Date.now() + 60_000),
+      });
+      prisma.appSession.findUnique.mockResolvedValue(rec);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        status: UserStatus.ACTIVE,
+      });
+
+      await service.validateSession('the-token');
+
+      const data = prisma.appSession.update.mock.calls[0][0].data;
+      expect(data.lastUsedAt).toBeInstanceOf(Date);
+      expect(data.idleExpiresAt).toBeInstanceOf(Date);
+      expect((data.idleExpiresAt as Date).getTime()).toBeGreaterThan(
+        rec.idleExpiresAt.getTime(),
+      );
+    });
+
+    it('does not roll the idle deadline when it is not yet stale', async () => {
+      prisma.appSession.findUnique.mockResolvedValue(sessionRecord());
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        status: UserStatus.ACTIVE,
+      });
+
+      await service.validateSession('the-token');
+
+      expect(prisma.appSession.update).not.toHaveBeenCalled();
+    });
+
     it('throws SessionNotFoundError for an unknown token', async () => {
       prisma.appSession.findUnique.mockResolvedValue(null);
       await expect(service.validateSession('x')).rejects.toThrow(
@@ -315,7 +348,13 @@ describe('SessionService', () => {
           tokens: { accessToken: 'access', ...tokensOverrides },
         });
         const data = prisma.appSession.create.mock.calls[0][0].data;
-        const ciphertext = data['provider' + kind[0].toUpperCase() + kind.slice(1) + 'TokenCiphertext'];
+        const ciphertext =
+          data[
+            'provider' +
+              kind[0].toUpperCase() +
+              kind.slice(1) +
+              'TokenCiphertext'
+          ];
         expect(ciphertext).toMatch(/^v1\./);
       },
     );

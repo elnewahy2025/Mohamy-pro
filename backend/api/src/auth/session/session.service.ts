@@ -145,9 +145,16 @@ export class SessionService {
     }
 
     if (now.getTime() - session.lastUsedAt.getTime() >= LAST_USED_THROTTLE_MS) {
+      // Sliding idle window: push the idle deadline forward (while keeping the
+      // fixed absolute ceiling) together with the throttled lastUsedAt refresh,
+      // so an actively-used session does not expire on its creation-time idle TTL.
+      const idleTtl = this.idleTtlSeconds();
       await this.prisma.appSession.update({
         where: { id: session.id },
-        data: { lastUsedAt: now },
+        data: {
+          lastUsedAt: now,
+          idleExpiresAt: new Date(now.getTime() + idleTtl * 1000),
+        },
       });
     }
 

@@ -226,7 +226,7 @@ export function validateEnvironment(
   const sessionCsrfName = readString(raw.SESSION_CSRF_NAME) ?? 'mohamy_csrf';
   const sessionIdleTtlSeconds = readPositiveInteger(
     raw.SESSION_IDLE_TTL_SECONDS,
-    3_600,
+    28_800,
     'SESSION_IDLE_TTL_SECONDS',
     86_400,
   );
