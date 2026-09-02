@@ -279,6 +279,7 @@ model Tenant {
   auditEvents        AuditEvent[]
   platformBootstraps PlatformBootstrap[]
   idempotencyKeys    IdempotencyKey[]
+  organizationSettings OrganizationSetting[]
 
   @@index([status, createdAt])
 }
@@ -393,6 +394,27 @@ model TeamMember {
 
   @@unique([teamId, membershipId])
   @@index([tenantId, membershipId])
+}
+
+// Phase 4: Tenant-owned settings engine. Structured key/value configuration
+// that can be extended without code changes (deferred catalog domains such as
+// practice areas, case types, statuses, numbering rules, branding and locale
+// tokens are stored here as versioned JSON until a later phase promotes them
+// to first-class models). `key` is namespaced (`catalog.case-type`, etc.).
+model OrganizationSetting {
+  id          String   @id @default(uuid())
+  tenantId    String
+  key         String
+  value       Json
+  status      String   @default("ACTIVE")
+  version     Int      @default(1)
+  updatedByMembershipId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, key])
+  @@index([tenantId, status])
 }
 
 model Invitation {

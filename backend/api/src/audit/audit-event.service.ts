@@ -57,6 +57,19 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'mfa.rate.limited': ['reason'],
   'tenant.switch.rate.limited': ['reason', 'sourceTenantId', 'targetTenantId'],
   'invitation.rate.limited': ['reason'],
+  'organization.setting.set': ['key', 'version'],
+  'organization.created': ['slug'],
+  'organization.updated': [],
+  'organization.archived': ['reason'],
+  'branch.created': ['slug'],
+  'branch.updated': [],
+  'branch.archived': ['reason'],
+  'department.created': ['slug'],
+  'department.updated': [],
+  'department.archived': ['reason'],
+  'team.created': ['slug'],
+  'team.updated': [],
+  'team.archived': ['reason'],
 };
 
 @Injectable()

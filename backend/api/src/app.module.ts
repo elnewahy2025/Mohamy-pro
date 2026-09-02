@@ -19,6 +19,7 @@ import { AuditModule } from './audit/audit.module';
 import { BootstrapModule } from './bootstrap/bootstrap.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { MembershipModule } from './membership/membership.module';
+import { OrganizationConfigModule } from './organization-config/organization-config.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { RateLimitMiddleware } from './security/rate-limit.middleware';
 
@@ -40,6 +41,7 @@ import { RateLimitMiddleware } from './security/rate-limit.middleware';
     BootstrapModule,
     PermissionsModule,
     MembershipModule,
+    OrganizationConfigModule,
     SchedulerModule,
   ],
   controllers: [AppController],
