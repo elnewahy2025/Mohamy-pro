@@ -117,6 +117,12 @@ jobs:
       - name: Build frontend
         run: pnpm --filter @mohamy/web run build
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Test frontend end to end
+        run: pnpm --filter @mohamy/web run test:e2e
+
       - name: Stop pinned MinIO
         if: always()
         run: docker rm --force mohamy-ci-minio || true

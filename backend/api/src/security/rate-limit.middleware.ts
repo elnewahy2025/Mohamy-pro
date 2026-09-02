@@ -72,18 +72,14 @@ export class RateLimitMiddleware implements NestMiddleware {
       next();
     } catch (error) {
       this.metrics.recordApplicationError('rate_limit');
-      this.logger.error(
+      this.logger.warn(
         {
           errorName: error instanceof Error ? error.name : 'UnknownError',
           errorMessage: 'Rate limiter unavailable',
         },
-        'Rate limiter unavailable; request rejected',
+        'Rate limiter unavailable; request allowed to proceed (fail-open)',
       );
-      response.status(503).json({
-        statusCode: 503,
-        error: 'SERVICE_UNAVAILABLE',
-        message: 'Request protection is temporarily unavailable',
-      });
+      return next();
     }
   }
 

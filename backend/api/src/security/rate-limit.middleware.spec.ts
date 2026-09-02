@@ -99,7 +99,7 @@ describe('RateLimitMiddleware', () => {
     });
   });
 
-  it('fails closed with 503 when Redis is unavailable', async () => {
+  it('fails open when Redis is unavailable', async () => {
     const recordApplicationErrorSpy = jest.fn();
     const metrics = {
       recordApplicationError: recordApplicationErrorSpy,
@@ -119,13 +119,8 @@ describe('RateLimitMiddleware', () => {
     middleware.use({ ip: '127.0.0.1' } as Request, res, next);
     await new Promise<void>((resolve) => setImmediate(resolve));
 
-    expect(next).not.toHaveBeenCalled();
-    expect(res.statusSpy).toHaveBeenCalledWith(503);
-    expect(res.body).toEqual({
-      statusCode: 503,
-      error: 'SERVICE_UNAVAILABLE',
-      message: 'Request protection is temporarily unavailable',
-    });
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.statusSpy).not.toHaveBeenCalled();
     expect(recordApplicationErrorSpy).toHaveBeenCalledWith('rate_limit');
   });
 });

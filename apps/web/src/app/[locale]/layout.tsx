@@ -16,6 +16,8 @@ export function generateStaticParams(): Array<{ locale: string }> {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+import { getServerSession } from '@/lib/server-api';
+
 export async function generateMetadata({
   params,
 }: Readonly<{
@@ -23,8 +25,13 @@ export async function generateMetadata({
 }>): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: '' });
+  const session = await getServerSession();
+  
+  const brand = t('brand');
+  const tenantName = session?.activeTenantName;
+  
   return {
-    title: t('brand'),
+    title: tenantName ? `${tenantName} | ${brand}` : brand,
     description: t('productTagline'),
   };
 }

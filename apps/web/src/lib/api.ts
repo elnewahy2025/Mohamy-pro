@@ -6,6 +6,8 @@ export interface AuthUser {
   userId: string;
   username: string | null;
   activeTenantId: string | null;
+  activeTenantName?: string;
+  activeTenantSlug?: string;
 }
 
 export interface CsrfToken {
@@ -109,7 +111,7 @@ export class ApiError extends Error {
 }
 
 export const API_BASE_URL: string =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? (typeof window === 'undefined' ? 'http://127.0.0.1:3000' : '');
 
 export const API_V1_URL = `${API_BASE_URL}/api/v1`;
 

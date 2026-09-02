@@ -43,6 +43,14 @@ export class IdentityService {
     return fullName || user.displayName || user.emailNormalized || null;
   }
 
+  async getTenantDetails(tenantId: string): Promise<{ name: string; slug: string } | null> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true, slug: true },
+    });
+    return tenant ? { name: tenant.name, slug: tenant.slug } : null;
+  }
+
   private async createUser(
     profile: OidcProfile,
   ): Promise<{ id: string; status: UserStatus }> {

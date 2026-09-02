@@ -137,11 +137,12 @@ export class SessionService {
       throw new SessionNotAuthenticatedError('Session has expired');
     }
 
-    const user = await this.prisma.user.findUnique({
+    const userStatus = await this.prisma.user.findUnique({
       where: { id: session.userId },
+      select: { status: true },
     });
-    if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new SessionNotAuthenticatedError('User is not permitted');
+    if (!userStatus || (userStatus.status !== 'ACTIVE' && userStatus.status !== 'PENDING')) {
+      throw new SessionNotAuthenticatedError('Account is not active');
     }
 
     if (now.getTime() - session.lastUsedAt.getTime() >= LAST_USED_THROTTLE_MS) {

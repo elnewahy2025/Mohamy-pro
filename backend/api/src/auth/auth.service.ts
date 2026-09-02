@@ -205,10 +205,9 @@ export class AuthService {
     this.cookies.setSession(res, created.token, created.maxAgeSeconds);
     this.cookies.clearOidc(res);
 
-    const postLogout = this.configService.get<string>(
-      'OIDC_POST_LOGOUT_REDIRECT_URI',
-    );
-    return { redirectUrl: postLogout ?? '/' };
+    const corsOrigins = this.configService.get<string>('CORS_ORIGINS')?.split(',') ?? [];
+    const frontendUrl = corsOrigins[0] ?? 'http://localhost:5173';
+    return { redirectUrl: frontendUrl };
   }
 
   async logout(req: Request, res: Response): Promise<{ redirectUrl: string }> {
@@ -274,12 +273,27 @@ export class AuthService {
     userId: string;
     username: string | null;
     activeTenantId: string | null;
+    activeTenantName?: string;
+    activeTenantSlug?: string;
   }> {
     const username = await this.identity.getDisplayName(auth.userId);
+    let activeTenantName: string | undefined;
+    let activeTenantSlug: string | undefined;
+
+    if (auth.activeTenantId) {
+      const tenant = await this.identity.getTenantDetails(auth.activeTenantId);
+      if (tenant) {
+        activeTenantName = tenant.name;
+        activeTenantSlug = tenant.slug;
+      }
+    }
+
     return {
       userId: auth.userId,
       username,
       activeTenantId: auth.activeTenantId,
+      ...(activeTenantName ? { activeTenantName } : {}),
+      ...(activeTenantSlug ? { activeTenantSlug } : {}),
     };
   }
 

@@ -47,7 +47,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const requestId = getCorrelationId(request);
     const timestamp = new Date().toISOString();
 
-    const status =
+    let status =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
@@ -55,6 +55,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let code: ErrorCode;
     let message: string | string[];
     let details: unknown[] = [];
+
+    if (exception instanceof Error && exception.name === 'SessionNotAuthenticatedError') {
+      status = HttpStatus.UNAUTHORIZED;
+    }
 
     if (exception instanceof ApiError) {
       code = exception.code;
@@ -71,6 +75,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message = 'The request is malformed.';
         details = [];
       }
+    } else if (exception instanceof Error && exception.name === 'SessionNotAuthenticatedError') {
+      code = ERROR_CODES.UNAUTHORIZED;
+      message = exception.message;
+      details = [];
     } else if (exception instanceof HttpException) {
       code =
         exception.getStatus() === 409
