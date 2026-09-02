@@ -1,5 +1,22 @@
 # Phase 3: Security Foundation + Audit Foundation
 
+> **SUPERSEDED (2026-09-02).** This document is retained for history under the
+> "never forget any document" rule, but its original completion claims are **not**
+> authoritative. It asserts "fully closed," "CI runs on every PR/push with
+> SAST/DAST/Trivy/secret scanning," "ThrottlerModule," and "architecture:check" —
+> several of which do not match the real code. Authentic, evidence-based status is
+> now carried by:
+> - [`PHASE3_PLAN.md`](PHASE3_PLAN.md) — the governing Phase 3 plan (P1-P6).
+> - [`PHASE3_EVIDENCE_RECONCILIATION.md`](PHASE3_EVIDENCE_RECONCILIATION.md) — the
+>   re-derived claim table (P1 output).
+> - [`PHASE3_COMPLETION_REVIEW.md`](PHASE3_COMPLETION_REVIEW.md) — the closure
+>   review carrying corrected production wording and the completion gate.
+>
+> Do not rely on the unqualified "VERIFIED/fully closed" wording below; treat each
+> claim as unverified until confirmed by the reconciliation document.
+
+# Phase 3: Security Foundation + Audit Foundation (original assertion — superseded)
+
 This document outlines the completion of Phase 3, which establishes the fundamental security boundaries, mitigates the threat model vectors, and provides a robust audit trail for all sensitive operations.
 
 ## IMPLEMENTATION STATUS
