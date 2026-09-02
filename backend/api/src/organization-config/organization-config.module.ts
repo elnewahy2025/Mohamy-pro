@@ -11,7 +11,10 @@ import { DepartmentService } from './hierarchy/department.service';
 import { TeamController } from './hierarchy/team.controller';
 import { TeamService } from './hierarchy/team.service';
 
+import { AuthModule } from '../auth/auth.module';
+
 @Module({
+  imports: [AuthModule],
   controllers: [
     OrganizationSettingsController,
     OrganizationController,
