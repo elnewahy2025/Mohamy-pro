@@ -87,5 +87,97 @@
     "arabic": "العربية",
     "ltr": "LTR",
     "rtl": "RTL"
+  },
+  "form": {
+    "required": "Required",
+    "errors": {
+      "invalid": "Please check this field.",
+      "invalidEmail": "Enter a valid email address.",
+      "invalidUuid": "Enter a valid identifier.",
+      "invalidToken": "Enter the invitation token.",
+      "invalidSecret": "Enter the bootstrap secret.",
+      "atLeastOneRole": "Select at least one role.",
+      "tooLong": "This value is too long.",
+      "invalidDate": "Enter a valid date-time value."
+    }
+  },
+  "identity": {
+    "eyebrow": "Identity & memberships",
+    "title": "Memberships and tenants.",
+    "description": "Bootstrap the first tenant, invite and manage memberships, and switch the active workspace.",
+    "bootstrap": {
+      "navLabel": "Bootstrap tenant",
+      "title": "Bootstrap the first tenant",
+      "description": "Authorized operators can create the platform's first tenant with a server-issued secret.",
+      "secretLabel": "Bootstrap secret",
+      "secretPlaceholder": "Server-issued bootstrap secret",
+      "submit": "Bootstrap tenant",
+      "submitting": "Bootstrapping…",
+      "successTitle": "Tenant bootstrapped",
+      "successIntro": "Your tenant is ready:",
+      "tenant": "Tenant",
+      "slug": "Slug",
+      "organization": "Organization"
+    },
+    "tenantSwitch": {
+      "navLabel": "Switch tenant",
+      "title": "Switch active workspace",
+      "description": "Move the current session to another tenant you are a member of.",
+      "tenantIdLabel": "Target tenant ID",
+      "tenantIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "submit": "Switch workspace",
+      "submitting": "Switching…",
+      "successTitle": "Workspace switched",
+      "activeTenant": "Now active"
+    },
+    "invitation": {
+      "createNavLabel": "Invite member",
+      "acceptNavLabel": "Accept invitation",
+      "createTitle": "Invite a member",
+      "createDescription": "Invite a person by provider subject (recommended) or email, and grant one or more roles.",
+      "acceptTitle": "Accept an invitation",
+      "acceptDescription": "Paste the shareable token to join a tenant.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@example.com",
+      "providerSubjectLabel": "Provider subject",
+      "providerSubjectPlaceholder": "Subject from the identity provider",
+      "roleKeysLabel": "Role keys",
+      "roleKeysPlaceholder": "tenant.admin",
+      "submitCreate": "Create invitation",
+      "submittingCreate": "Creating…",
+      "submitAccept": "Accept invitation",
+      "submittingAccept": "Accepting…",
+      "createSuccessTitle": "Invitation created",
+      "createSuccessBody": "Share the token privately with the invitee. It expires automatically.",
+      "invitationToken": "Invitation token",
+      "acceptSuccessTitle": "Invitation accepted",
+      "acceptSuccessBody": "The invitee is now an active member.",
+      "bindingHint": "Provide a provider subject or an email to bind the invitation."
+    },
+    "membershipAdmin": {
+      "navLabel": "Manage memberships",
+      "title": "Manage tenant memberships",
+      "description": "Suspend, expire, remove, or reinstate a membership in the active tenant.",
+      "membershipIdLabel": "Membership ID",
+      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Optional administrative reason",
+      "activeUntilLabel": "Active until",
+      "activeUntilPlaceholder": "Optional expiry date-time",
+      "activeFromLabel": "Active from",
+      "activeFromPlaceholder": "Optional start date-time",
+      "suspend": "Suspend",
+      "expire": "Expire",
+      "remove": "Remove",
+      "reinstate": "Reinstate",
+      "submitting": "Updating…",
+      "resultTitle": "Membership updated",
+      "resultStatus": "Status"
+    },
+    "result": {
+      "errorTitle": "Something went wrong",
+      "successAriaLive": "Operation result",
+      "requestId": "Request ID"
+    }
   }
 }

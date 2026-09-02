@@ -87,5 +87,97 @@
     "arabic": "العربية",
     "ltr": "LTR",
     "rtl": "RTL"
+  },
+  "form": {
+    "required": "مطلوب",
+    "errors": {
+      "invalid": "يرجى مراجعة هذا الحقل.",
+      "invalidEmail": "أدخل عنوان بريد إلكتروني صالحاً.",
+      "invalidUuid": "أدخل معرّفاً صالحاً.",
+      "invalidToken": "أدخل رمز الدعوة.",
+      "invalidSecret": "أدخل سر التهيئة.",
+      "atLeastOneRole": "اختر دوراً واحداً على الأقل.",
+      "tooLong": "هذه القيمة طويلة جداً.",
+      "invalidDate": "أدخل قيمة تاريخ ووقت صالحة."
+    }
+  },
+  "identity": {
+    "eyebrow": "الهوية والعضويات",
+    "title": "العضويات والمؤسسات.",
+    "description": "أنشئ المؤسسة الأولى، وادعُ الأعضاء وأدر عضوياتهم، وبدّل مساحة العمل النشطة.",
+    "bootstrap": {
+      "navLabel": "تهيئة المؤسسة",
+      "title": "تهيئة المؤسسة الأولى",
+      "description": "يمكن للمشغلين المخوّلين إنشاء مؤسسة المنصة الأولى باستخدام سر يصدره الخادم.",
+      "secretLabel": "سر التهيئة",
+      "secretPlaceholder": "سر التهيئة الصادر من الخادم",
+      "submit": "تهيئة المؤسسة",
+      "submitting": "جارٍ التهيئة…",
+      "successTitle": "تمت تهيئة المؤسسة",
+      "successIntro": "مؤسستك جاهزة:",
+      "tenant": "المؤسسة",
+      "slug": "المعرف المختصر",
+      "organization": "المؤسسة"
+    },
+    "tenantSwitch": {
+      "navLabel": "تبديل المؤسسة",
+      "title": "تبديل مساحة العمل النشطة",
+      "description": "انقل الجلسة الحالية إلى مؤسسة أخرى أنت عضو فيها.",
+      "tenantIdLabel": "معرّف المؤسسة المستهدفة",
+      "tenantIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "submit": "تبديل مساحة العمل",
+      "submitting": "جارٍ التبديل…",
+      "successTitle": "تم تبديل مساحة العمل",
+      "activeTenant": "النشطة الآن"
+    },
+    "invitation": {
+      "createNavLabel": "دعوة عضو",
+      "acceptNavLabel": "قبول دعوة",
+      "createTitle": "دعوة عضو",
+      "createDescription": "ادعُ شخصاً عبر معرّف الموفر (موصى به) أو البريد الإلكتروني، وامنحه دوراً أو أكثر.",
+      "acceptTitle": "قبول دعوة",
+      "acceptDescription": "الصق الرمز القابل للمشاركة للانضمام إلى مؤسسة.",
+      "emailLabel": "البريد الإلكتروني",
+      "emailPlaceholder": "name@example.com",
+      "providerSubjectLabel": "معرّف الموفر",
+      "providerSubjectPlaceholder": "المعرّف من مزوّد الهوية",
+      "roleKeysLabel": "مفاتيح الأدوار",
+      "roleKeysPlaceholder": "tenant.admin",
+      "submitCreate": "إنشاء الدعوة",
+      "submittingCreate": "جارٍ الإنشاء…",
+      "submitAccept": "قبول الدعوة",
+      "submittingAccept": "جارٍ القبول…",
+      "createSuccessTitle": "تم إنشاء الدعوة",
+      "createSuccessBody": "شارك الرمز بشكل خاص مع المدعو. تنتهي صلاحيته تلقائياً.",
+      "invitationToken": "رمز الدعوة",
+      "acceptSuccessTitle": "تم قبول الدعوة",
+      "acceptSuccessBody": "أصبح المدعو عضواً نشطاً.",
+      "bindingHint": "قدّم معرّف الموفر أو البريد الإلكتروني لربط الدعوة."
+    },
+    "membershipAdmin": {
+      "navLabel": "إدارة العضويات",
+      "title": "إدارة عضويات المؤسسة",
+      "description": "علّق أو أنهِ أو أزل أو أعد تنشيط عضوية في المؤسسة النشطة.",
+      "membershipIdLabel": "معرّف العضوية",
+      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "reasonLabel": "السبب",
+      "reasonPlaceholder": "سبب إداري اختياري",
+      "activeUntilLabel": "نشطة حتى",
+      "activeUntilPlaceholder": "تاريخ انتهاء اختياري",
+      "activeFromLabel": "نشطة من",
+      "activeFromPlaceholder": "تاريخ بدء اختياري",
+      "suspend": "تعليق",
+      "expire": "إنهاء",
+      "remove": "إزالة",
+      "reinstate": "إعادة تنشيط",
+      "submitting": "جارٍ التحديث…",
+      "resultTitle": "تم تحديث العضوية",
+      "resultStatus": "الحالة"
+    },
+    "result": {
+      "errorTitle": "حدث خطأ ما",
+      "successAriaLive": "نتيجة العملية",
+      "requestId": "معرّف الطلب"
+    }
   }
 }

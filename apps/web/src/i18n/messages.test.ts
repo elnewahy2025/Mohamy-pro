@@ -32,4 +32,28 @@ describe('localized frontend messages', () => {
     expect(en.settings.ltr).toBe('LTR');
     expect(ar.settings.rtl).toBe('RTL');
   });
+
+  it('localizes the identity/membership flows and accessible form errors in both languages', () => {
+    const surfaces = [
+      'identity.bootstrap',
+      'identity.tenantSwitch',
+      'identity.invitation',
+      'identity.membershipAdmin',
+      'form.errors',
+    ] as const;
+    for (const surface of surfaces) {
+      expect(en).toHaveProperty(surface);
+      expect(ar).toHaveProperty(surface);
+    }
+    expect(typeof en.identity.bootstrap.title).toBe('string');
+    expect(typeof ar.identity.bootstrap.title).toBe('string');
+    expect(typeof en.identity.tenantSwitch.title).toBe('string');
+    expect(typeof ar.identity.tenantSwitch.title).toBe('string');
+    expect(typeof en.identity.invitation.createTitle).toBe('string');
+    expect(typeof ar.identity.invitation.createTitle).toBe('string');
+    expect(typeof en.identity.membershipAdmin.suspend).toBe('string');
+    expect(typeof ar.identity.membershipAdmin.suspend).toBe('string');
+    expect(typeof en.form.errors.invalidUuid).toBe('string');
+    expect(typeof ar.form.errors.invalidUuid).toBe('string');
+  });
 });
