@@ -12,6 +12,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_ROLES: 'CanManageRoles',
   CAN_SWITCH_TENANT: 'CanSwitchTenant',
   CAN_MANAGE_ORGANIZATION_CONFIG: 'CanManageOrganizationConfig',
+  CAN_MANAGE_CLIENTS: 'CanManageClients',
 } as const;
 
 export type PermissionKey =
@@ -64,6 +65,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Administer organization configuration and hierarchy within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_CLIENTS,
+    description:
+      'Create, update, archive, and list clients within the active tenant.',
+  },
 ];
 
 /**
@@ -79,6 +85,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_VIEW_TENANT,
     PERMISSION_KEYS.CAN_SWITCH_TENANT,
     PERMISSION_KEYS.CAN_MANAGE_ORGANIZATION_CONFIG,
+    PERMISSION_KEYS.CAN_MANAGE_CLIENTS,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,

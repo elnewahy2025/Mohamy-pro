@@ -26,6 +26,16 @@ enum HierarchyStatus {
   ARCHIVED
 }
 
+// Phase 5: discriminator for the Client entity — an individual person or an
+// organization (plan/legal counterparty). Deliberately not an organization-hierarchy
+// entity; a Client organization is a counterparty, while Organization/Branch/
+// Department/Team are the practice's own structure (Phase 4). See Phase 7 for
+// separating legal parties from clients.
+enum ClientType {
+  INDIVIDUAL
+  ORGANIZATION
+}
+
 enum MembershipStatus {
   INVITED
   ACTIVE
@@ -266,6 +276,7 @@ model Tenant {
   archivedAt         DateTime?
   organizations      Organization[]
   branches           Branch[]
+  clients            Client[]
   departments        Department[]
   teams              Team[]
   memberships        Membership[]
@@ -587,4 +598,30 @@ model PlatformBootstrap {
   @@unique([singleton])
   @@index([operatorUserId])
   @@index([tenantId])
+}
+
+// Phase 5: tenant-scoped Client — an individual or organization counterparty.
+// `displayName` is denormalized for case-insensitive search/filter over the list
+// endpoint (W4). `status` uses the soft-archive HierarchyStatus (ACTIVE/ARCHIVED);
+// a client is never hard-deleted. `source` and `status` remain free-form TEXT,
+// deferring catalog promotion to the OrganizationSetting engine. Contacts /
+// addresses / identifiers / tags / notes / documents / communications are
+// deferred to sequenced Phase 5 follow-ups.
+model Client {
+  id          String         @id @default(uuid())
+  tenantId    String
+  clientType  ClientType
+  name        String
+  legalName   String?
+  displayName String
+  status      HierarchyStatus @default(ACTIVE)
+  source      String?
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, clientType])
 }

@@ -12,6 +12,7 @@ import {
 } from '../../permissions/permission.constants';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { OrganizationConfigDeniedError } from '../organization-config.errors';
+import type { Paginated } from '../../common/api/envelope';
 
 export interface SetOrganizationSettingInput {
   key: string;
@@ -25,6 +26,20 @@ export interface SetOrganizationSettingResult {
   version: number;
   created: boolean;
 }
+
+export interface GetOrganizationSettingResult {
+  tenantId: string;
+  key: string;
+  value: unknown;
+  version: number;
+}
+
+export interface ListOrganizationSettingQuery {
+  page: number;
+  limit: number;
+}
+
+export interface ListOrganizationSettingResult extends Paginated<GetOrganizationSettingResult> {}
 
 const TENANT_PERMISSION: PermissionKey =
   PERMISSION_KEYS.CAN_MANAGE_ORGANIZATION_CONFIG;
@@ -140,6 +155,94 @@ export class OrganizationSettingsService {
       throw error;
     }
     return result;
+  }
+
+  async get(
+    request: Request,
+    key: string,
+  ): Promise<GetOrganizationSettingResult | null> {
+    return this.authorizeAndRead(request, (transaction, tenantId) =>
+      transaction.organizationSetting.findUnique({
+        where: { tenantId_key: { tenantId, key } },
+        select: {
+          tenantId: true,
+          key: true,
+          value: true,
+          version: true,
+        },
+      }),
+    );
+  }
+
+  async list(
+    request: Request,
+    query: ListOrganizationSettingQuery,
+  ): Promise<ListOrganizationSettingResult> {
+    return this.authorizeAndRead(request, async (transaction, tenantId) => {
+      const where = { tenantId };
+      const [total, rows] = await Promise.all([
+        transaction.organizationSetting.count({ where }),
+        transaction.organizationSetting.findMany({
+          where,
+          orderBy: { key: 'asc' },
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+          select: {
+            tenantId: true,
+            key: true,
+            value: true,
+            version: true,
+          },
+        }),
+      ]);
+      return {
+        data: rows,
+        pagination: { page: query.page, limit: query.limit, total },
+      };
+    });
+  }
+
+  private async authorizeAndRead<T>(
+    request: Request,
+    operation: (
+      transaction: Prisma.TransactionClient,
+      tenantId: string,
+    ) => Promise<T>,
+  ): Promise<T> {
+    const auth = request.auth;
+    if (!auth) throw new OrganizationConfigDeniedError('UNAUTHENTICATED');
+    const { userId, activeTenantId, sessionId } = auth;
+    if (!activeTenantId)
+      throw new OrganizationConfigDeniedError('TENANT_CONTEXT_REQUIRED');
+    const tenantId = activeTenantId;
+
+    const { membershipId: actorMembershipId } =
+      await this.permissions.assertTenantPermission({
+        request,
+        userId,
+        tenantId,
+        permissionKey: TENANT_PERMISSION,
+        operationId: sessionId,
+      });
+
+    try {
+      return await this.prisma.withTenantContext(
+        {
+          tenantId,
+          userId,
+          membershipId: actorMembershipId,
+          operationId: sessionId,
+        },
+        (transaction) => operation(transaction, tenantId),
+      );
+    } catch (error) {
+      if (error instanceof OrganizationConfigDeniedError) throw error;
+      this.logger.warn({
+        message: 'Organization setting read failed',
+        reason: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   private optionalHash(value: string | string[] | undefined): string | null {
