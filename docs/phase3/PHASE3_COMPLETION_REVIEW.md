@@ -46,11 +46,11 @@ Phase 3 is complete and the gate is approved **only when**:
 | ID | Deliverable | State | Evidence location |
 |---|---|---|---|
 | P1 | Reconcile claims → evidence | ✅ prior output | `PHASE3_EVIDENCE_RECONCILIATION.md` |
-| P2 | Threat-model vector tests (pagination, tenant-escape deferral, malware) | ⬜ pending | `PHASE3_PLAN.md` §P2 |
-| P3 | Secrets scan + record Keycloak external ownership | ⬜ pending | `PHASE3_PLAN.md` §P3 |
-| P4 | CI security pipeline reality check | ⬜ pending | `PHASE3_PLAN.md` §P4 |
-| P5 | Audit hook contract for Phase 4 domain ops | ⬜ pending | `PHASE3_PLAN.md` §P5 |
-| P6 | Phase 3 completion documents (this artifact) | ⬜ this review | `docs/phase3` |
+| P2 | Threat-model vector tests (pagination, tenant-escape deferral, malware) | ✅ done | `pagination.dto.spec.ts` & `object-storage.service.spec.ts`. Tenant escape deferred to Phase 4 explicitly. |
+| P3 | Secrets scan + record Keycloak external ownership | ✅ done / declared | Verified via gitleaks zero findings. Password policy declared externally owned by Keycloak. `.env` is git-ignored. |
+| P4 | CI security pipeline reality check | ✅ verified | `ci.yml` verified to include Trivy, Gitleaks, Semgrep, and OWASP ZAP on `main` push and PRs. |
+| P5 | Audit hook contract for Phase 4 domain ops | ✅ done | `docs/phase4/PHASE4_AUDIT_CONTRACT.md` (and `METADATA_ALLOWLIST` in `audit-event.service.ts`). |
+| P6 | Phase 3 completion documents (this artifact) | ✅ this review | `docs/phase3` |
 
 > The `P2-P5` rows are pending implementation. This review is a **draft closure
 > artifact**; it becomes authoritative only after those workstreams close and the owner
