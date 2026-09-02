@@ -60,6 +60,10 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   ABUSE_INVITATION_WINDOW_SECONDS: number;
   ABUSE_SWITCH_MAX: number;
   ABUSE_SWITCH_WINDOW_SECONDS: number;
+  CLEANUP_OUTBOX_PROCESSED_DAYS: number;
+  CLEANUP_OUTBOX_DEAD_LETTER_DAYS: number;
+  CLEANUP_EXPIRED_SESSION_DAYS: number;
+  CLEANUP_STORAGE_DAYS: number;
 }
 
 function readString(value: unknown): string | undefined {
@@ -372,6 +376,30 @@ export function validateEnvironment(
     'ABUSE_SWITCH_WINDOW_SECONDS',
     3_600,
   );
+  const cleanupOutboxProcessedDays = readPositiveInteger(
+    raw.CLEANUP_OUTBOX_PROCESSED_DAYS,
+    7,
+    'CLEANUP_OUTBOX_PROCESSED_DAYS',
+    365,
+  );
+  const cleanupOutboxDeadLetterDays = readPositiveInteger(
+    raw.CLEANUP_OUTBOX_DEAD_LETTER_DAYS,
+    30,
+    'CLEANUP_OUTBOX_DEAD_LETTER_DAYS',
+    365,
+  );
+  const cleanupExpiredSessionDays = readPositiveInteger(
+    raw.CLEANUP_EXPIRED_SESSION_DAYS,
+    30,
+    'CLEANUP_EXPIRED_SESSION_DAYS',
+    365,
+  );
+  const cleanupStorageDays = readPositiveInteger(
+    raw.CLEANUP_STORAGE_DAYS,
+    30,
+    'CLEANUP_STORAGE_DAYS',
+    365,
+  );
 
   if (nodeEnv === 'production') {
     if (!rateLimitEnabled) {
@@ -515,6 +543,10 @@ export function validateEnvironment(
     ABUSE_INVITATION_WINDOW_SECONDS: abuseInvitationWindowSeconds,
     ABUSE_SWITCH_MAX: abuseSwitchMax,
     ABUSE_SWITCH_WINDOW_SECONDS: abuseSwitchWindowSeconds,
+    CLEANUP_OUTBOX_PROCESSED_DAYS: cleanupOutboxProcessedDays,
+    CLEANUP_OUTBOX_DEAD_LETTER_DAYS: cleanupOutboxDeadLetterDays,
+    CLEANUP_EXPIRED_SESSION_DAYS: cleanupExpiredSessionDays,
+    CLEANUP_STORAGE_DAYS: cleanupStorageDays,
     ...(bootstrapSubject ? { BOOTSTRAP_SUBJECT: bootstrapSubject } : {}),
     ...(bootstrapSecret ? { BOOTSTRAP_SECRET: bootstrapSecret } : {}),
     ...(bootstrapTenantSlug
