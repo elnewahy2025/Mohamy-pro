@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
-import { prepareBodyForIntegrity } from './object-storage.service';
+import { prepareBodyForIntegrity, S3ObjectStorageService } from './object-storage.service';
 
 describe('storage object integrity preparation', () => {
   it('calculates SHA-256 and byte count for a buffer', () => {
@@ -39,25 +39,55 @@ describe('storage object integrity preparation', () => {
 });
 
 describe('S3ObjectStorageService - Malware Prevention', () => {
-  it('throws an error (fails-closed) if the malware scanner returns INFECTED', async () => {
-    // This is a test proxy to prove the conceptual wiring inside putObject fails-closed.
-    // The actual putObject method calls malwareScanner.scanFile() which throws MalwareDetectedError.
-    const mockScanner = {
-      scanFile: jest.fn().mockResolvedValue('INFECTED'),
+  let service: S3ObjectStorageService;
+  let mockScanner: any;
+
+  beforeEach(() => {
+    mockScanner = {
+      enabled: true,
+      scanFile: jest.fn(),
     };
-    
-    // Simulate the check that would happen in the real putObject flow:
-    const result = await mockScanner.scanFile(Buffer.from('infected'));
-    if (result === 'INFECTED') {
-      expect(result).toBe('INFECTED');
-    }
+
+    const mockConfig = {
+      getOrThrow: jest.fn((key) => {
+        if (key === 'S3_VERSIONING_ENABLED' || key === 'S3_OBJECT_LOCK_ENABLED') return false;
+        return 'mock-val';
+      }),
+      get: jest.fn(),
+    } as any;
+
+    const mockPrisma = {} as any;
+
+    service = new S3ObjectStorageService(mockConfig, mockPrisma, mockScanner);
+    // Suppress actual S3 calls
+    (service as any).client = { send: jest.fn() };
+  });
+
+  it('throws an error (fails-closed) if the malware scanner returns INFECTED', async () => {
+    mockScanner.scanFile.mockResolvedValue('INFECTED');
+
+    await expect(
+      service.putObject({
+        tenantId: 'tenant-1',
+        key: 'test.txt',
+        body: Buffer.from('infected'),
+        contentType: 'text/plain',
+        sourcePath: '/tmp/infected',
+      }),
+    ).rejects.toThrow('Object rejected by malware scanning');
   });
 
   it('fails-closed if the malware scanner throws an unexpected error', async () => {
-    const mockScanner = {
-      scanFile: jest.fn().mockRejectedValue(new Error('Scanner down')),
-    };
+    mockScanner.scanFile.mockRejectedValue(new Error('Scanner down'));
 
-    await expect(mockScanner.scanFile(Buffer.from('file'))).rejects.toThrow('Scanner down');
+    await expect(
+      service.putObject({
+        tenantId: 'tenant-1',
+        key: 'test.txt',
+        body: Buffer.from('file'),
+        contentType: 'text/plain',
+        sourcePath: '/tmp/file',
+      }),
+    ).rejects.toThrow('Scanner down');
   });
 });
