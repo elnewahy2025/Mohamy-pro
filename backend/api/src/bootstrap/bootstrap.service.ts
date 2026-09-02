@@ -243,6 +243,7 @@ export class BootstrapService {
             membershipId,
           };
         },
+        { timeout: 30000 },
       );
     } catch (error) {
       if (this.isUniqueViolation(error)) {

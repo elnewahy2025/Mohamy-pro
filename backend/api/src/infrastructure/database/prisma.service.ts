@@ -61,12 +61,13 @@ export class PrismaService
   async withTenantContext<TResult>(
     context: TenantTransactionContext,
     callback: (transaction: Prisma.TransactionClient) => Promise<TResult>,
+    options?: { maxWait?: number; timeout?: number },
   ): Promise<TResult> {
     const validatedContext = assertTenantTransactionContext(context);
     return this.$transaction(async (transaction) => {
       await setTransactionContext(transaction, validatedContext);
       return callback(transaction);
-    });
+    }, options);
   }
 
   async withMembershipSelectionContext<TResult>(
