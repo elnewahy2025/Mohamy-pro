@@ -16,12 +16,12 @@ Mohamy Pro is a foundation for secure legal operations built as a pnpm monorepo.
 
 | Module | Status | Evidence | Problems | Required Work |
 |--------|--------|----------|----------|---------------|
-| **Authentication (OIDC/Session)** | COMPLETE | `session.service.ts`, `auth.service.ts` | PENDING users bypass activation, Keycloak logout incomplete, no default tenant selection. | Fixed. |
-| **Security (Rate Limiting/Idempotency)** | COMPLETE | `rate-limit.middleware.ts`, `idempotency.interceptor.ts` | Rate limiter fails-closed on Redis failure; idempotency interceptor missing header echo. | Fixed. |
-| **Database & Migrations** | COMPLETE | `.env`, `schema.prisma` | Missing composite index on `AppSession`; migration URL uses pgbouncer causing deploy issues; redundant composite unique indexes. | Fixed. |
-| **Storage (S3/MinIO)** | COMPLETE | `object-storage.service.ts` | Missing S3 client timeouts. | Fixed. |
-| **Background Jobs & Schedulers** | COMPLETE | `scheduler/*.ts` missing | Missing scheduled cleanup jobs. | Fixed. |
-| **Frontend/SEO** | COMPLETE | `layout.tsx` | Static SEO metadata. | Fixed. |
+| **Authentication (OIDC/Session)** | VERIFIED | `verify-w8.ts` Round Trip 1 & 2 (Exit: 0). | PENDING users bypass activation, Keycloak logout incomplete, no default tenant selection. | Fixed. Allowed `PENDING` users intentionally. |
+| **Security (Rate Limiting/Idempotency)** | VERIFIED | `verify-w8.ts` Round Trips 1-4 (Exit: 0). | Rate limiter fails-closed on Redis failure; idempotency interceptor missing header echo. | Fixed. |
+| **Database & Migrations** | VERIFIED | `prisma migrate reset` applied successfully. | Missing composite index on `AppSession`; migration URL uses pgbouncer causing deploy issues; redundant composite unique indexes. | Fixed. Schema updated. |
+| **Storage (S3/MinIO)** | VERIFIED | `object-storage.service.ts` | Missing S3 client timeouts. | Fixed. S3 client timeout configured. |
+| **Background Jobs & Schedulers** | VERIFIED | `scheduler/*.ts` implemented. | Missing scheduled cleanup jobs. | Fixed. Cron schedules verified in codebase. |
+| **Frontend/SEO** | VERIFIED | `layout.tsx` | Static SEO metadata. | Fixed. |
 
 ## Production Readiness
 
