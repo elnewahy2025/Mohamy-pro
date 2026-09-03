@@ -40,3 +40,25 @@ they may not have been registered for the current session — read their `SKILL.
 Preserve the user's work unconditionally. Never delete or overwrite repository content
 without confirmation. When in doubt about whether data will be lost, create an offline
 tarball backup first under `/root/safety-backups/`.
+
+## Prettier Setup (shared with other agents)
+
+Prettier is the code formatter for **backend TypeScript modules only**. Markdown docs are
+NOT prettier-formatted (repo convention across Phases 4-8) — their wrap/reflow is authored by
+hand and must not be rewritten with prettier.
+
+- **Config**: `backend/api/.prettierrc` (tracked in git):
+  `{ "singleQuote": true, "trailingComma": "all" }`
+- **Workdir**: every command runs from `backend/api`.
+- **Check**: `./node_modules/.bin/prettier --check "src/**/*.ts" "test/**/*.ts"`
+- **Format**: `./node_modules/.bin/prettier --write "src/**/*.ts" "test/**/*.ts"`
+  (equivalent to the `format` npm script; use the direct binary path to avoid pnpm/npm
+  EBADDEVENGINES issues — see below).
+- **Gate**: any touched backend `.ts` file must be prettier-clean before commit. The full
+  `prettier --check` on `src/**/*.ts` `test/**/*.ts` must pass.
+
+### Invocation note for agents
+
+Do NOT run `npm run format` or `npx prettier` — npm errors with `EBADDEVENGINES`. Use the
+direct binary: `./node_modules/.bin/prettier ...` from `backend/api`. Run `--check` first,
+then `--write` only the files you changed (do not reformat unrelated/untouched files).
