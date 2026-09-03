@@ -54,6 +54,33 @@ enum ClientAddressType {
   BRANCH
 }
 
+// Phase 6: Conflict Check workflow lifecycle status. A check starts PENDING,
+// moves to IN_REVIEW when a reviewer begins evaluation, and reaches the
+// terminal COMPLETED state once a final decision (ALLOW/BLOCK) is recorded.
+enum ConflictCheckStatus {
+  PENDING
+  IN_REVIEW
+  COMPLETED
+}
+
+// Phase 6: the final decision recorded on a ConflictCheck. A PENDING decision
+// means no reviewer has finalized yet; ALLOW means no conflict was found (or
+// the conflict was deemed manageable); BLOCK means the conflict is prohibitive
+// and a future matter/case acceptance must not proceed.
+enum ConflictDecision {
+  PENDING
+  ALLOW
+  BLOCK
+}
+
+// Phase 6: kind of prospective party on a ConflictCheck — either a direct
+// party (plaintiff, defendant, etc.) or a related entity (parent company,
+// subsidiary, affiliated org, etc.).
+enum ConflictPartyType {
+  PARTY
+  RELATED_ENTITY
+}
+
 enum MembershipStatus {
   INVITED
   ACTIVE
@@ -311,6 +338,8 @@ model Tenant {
   platformBootstraps PlatformBootstrap[]
   idempotencyKeys    IdempotencyKey[]
   organizationSettings OrganizationSetting[]
+  conflictChecks      ConflictCheck[]
+  conflictParties     ConflictParty[]
 
   @@index([status, createdAt])
 }
@@ -642,6 +671,7 @@ model Client {
   tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   contacts    ClientContact[]
   addresses   ClientAddress[]
+  conflictChecks ConflictCheck[]
 
   @@unique([id, tenantId])
   @@index([tenantId, status])
@@ -691,4 +721,52 @@ model ClientAddress {
 
   @@unique([id, tenantId])
   @@index([tenantId, clientId])
+}
+
+// Phase 6: Conflict Check Foundation — a request-to-decision workflow for
+// screening prospective parties before a matter/case is accepted. Each check
+// captures the requester, an optional client being checked for, normalized
+// party inputs (ConflictParty), and a final reviewer decision (ALLOW/BLOCK)
+// with reason. The acceptance-gate contract (`assertClearForCase`) will be
+// invoked by the Matter/Case acceptance flow in Phase 7/8.
+model ConflictCheck {
+  id                String              @id @default(uuid())
+  tenantId          String
+  status            ConflictCheckStatus @default(PENDING)
+  requesterUserId   String
+  clientId          String?
+  decision          ConflictDecision    @default(PENDING)
+  reason            String?
+  reviewerUserId    String?
+  reviewedAt        DateTime?
+  matchSummary      String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  client            Client?             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  parties           ConflictParty[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+// Phase 6: normalized party inputs for a ConflictCheck. Each party has a
+// kind (PARTY or RELATED_ENTITY), a display name, a normalized name (lowercased,
+// trimmed), and an optional email. The deterministic match service scans these
+// against Client.displayName and ClientContact.value to surface collisions.
+model ConflictParty {
+  id              String           @id @default(uuid())
+  tenantId        String
+  conflictCheckId String
+  kind            ConflictPartyType
+  name            String
+  normalizedName  String
+  email           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  conflictCheck   ConflictCheck    @relation(fields: [conflictCheckId], references: [id], onDelete: Cascade)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, conflictCheckId])
 }
