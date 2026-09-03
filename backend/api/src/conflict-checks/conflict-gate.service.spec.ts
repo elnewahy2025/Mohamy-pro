@@ -26,6 +26,13 @@ describe('ConflictGateService', () => {
     expect(verdict.blocks).toEqual([]);
   });
 
+  it('returns cleared=true when no prospective parties are provided', async () => {
+    const t = tx([], []) as never;
+    const verdict = await g().assertClearForCase(t, 'tenant-1', []);
+    expect(verdict.cleared).toBe(true);
+    expect(verdict.blocks).toEqual([]);
+  });
+
   it('returns cleared=false when a BLOCKed check matches a prospective party', async () => {
     const t = tx(
       [{ id: 'cc1', reason: 'competitor representation' }],

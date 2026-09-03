@@ -49,6 +49,14 @@ export class ConflictGateService {
       normalized: this.normalize(p.name),
     }));
 
+    if (terms.length === 0) {
+      return {
+        cleared: true,
+        blocks: [],
+        reasons: ['No prospective parties provided.'],
+      };
+    }
+
     // Find completed checks with a BLOCK decision in this tenant that reference
     // at least one prospective party by normalized name.
     const blockedChecks = await transaction.conflictCheck.findMany({
