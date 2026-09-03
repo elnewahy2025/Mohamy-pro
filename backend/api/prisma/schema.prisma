@@ -485,6 +485,10 @@ model Membership {
   deadlines       Deadline[]
   tasksAssigned   Task[]           @relation("TaskAssignee")
   tasksReported   Task[]           @relation("TaskReporter")
+  documentsUploaded Document[]       @relation("DocumentUploader")
+  documentVersions  DocumentVersion[] @relation("DocumentVersionCreator")
+  documentShares    DocumentShare[]  @relation("DocumentSharer")
+  documentAccesses  DocumentAccess[] @relation("DocumentAccessor")
 
   @@unique([userId, tenantId])
   @@unique([id, tenantId])
@@ -558,6 +562,7 @@ model Case {
   hearings        Hearing[]
   deadlines       Deadline[]
   tasks           Task[]
+  documents       Document[]
 
   @@unique([tenantId, caseNumber])
   @@index([tenantId, status])
@@ -799,10 +804,12 @@ model Client {
   contacts       ClientContact[]
   addresses      ClientAddress[]
   conflictChecks ConflictCheck[]
+  documents      Document[]
   parties        Party[]
   cases          Case[]
 
   @@unique([id, tenantId])
+  @@unique([tenantId, name])
   @@index([tenantId, status])
   @@index([tenantId, clientType])
 }
@@ -1296,3 +1303,100 @@ model TaskDependency {
 
   @@unique([dependentTaskId, prerequisiteTaskId])
 }
+
+enum DocumentStatus {
+  DRAFT
+  FINAL
+  ARCHIVED
+}
+
+model Document {
+  id              String         @id @default(uuid())
+  tenantId        String
+  caseId          String?        
+  clientId        String?
+  title           String
+  description     String?
+  documentType    String?        // e.g., 'CONTRACT', 'PLEADING', 'EVIDENCE'
+  status          DocumentStatus @default(DRAFT)
+  uploadedById    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case            Case?          @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client          Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  uploadedBy      Membership?    @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  
+  versions        DocumentVersion[]
+  tags            DocumentTag[]
+  metadata        DocumentMetadata[]
+  shares          DocumentShare[]
+  accessRecords   DocumentAccess[]
+
+  @@index([tenantId, caseId])
+  @@index([tenantId, clientId])
+}
+
+model DocumentVersion {
+  id              String         @id @default(uuid())
+  documentId      String
+  versionNumber   Int
+  storageObjectId String         // Reference to cloud storage / ObjectStorage UUID
+  mimeType        String
+  fileSize        BigInt
+  checksum        String?
+  createdAt       DateTime       @default(now())
+  createdById     String?
+
+  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy       Membership?    @relation("DocumentVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, versionNumber])
+}
+
+model DocumentTag {
+  id              String         @id @default(uuid())
+  documentId      String
+  tag             String
+
+  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, tag])
+}
+
+model DocumentMetadata {
+  id              String         @id @default(uuid())
+  documentId      String
+  key             String
+  value           String
+
+  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, key])
+}
+
+model DocumentShare {
+  id              String         @id @default(uuid())
+  documentId      String
+  sharedWithEmail String
+  expiresAt       DateTime?
+  createdAt       DateTime       @default(now())
+  createdById     String?
+
+  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy       Membership?    @relation("DocumentSharer", fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+model DocumentAccess {
+  id              String         @id @default(uuid())
+  documentId      String
+  accessedById    String?
+  accessedAt      DateTime       @default(now())
+  action          String         // e.g., 'VIEW', 'DOWNLOAD', 'PRINT'
+  ipAddress       String?
+
+  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  accessedBy      Membership?    @relation("DocumentAccessor", fields: [accessedById], references: [id], onDelete: SetNull)
+}
+

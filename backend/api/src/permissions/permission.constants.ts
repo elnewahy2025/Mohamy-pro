@@ -23,6 +23,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_HEARINGS: 'CanManageHearings',
   CAN_MANAGE_DEADLINES: 'CanManageDeadlines',
   CAN_MANAGE_TASKS: 'CanManageTasks',
+  CAN_MANAGE_DOCUMENTS: 'CanManageDocuments',
 } as const;
 
 export type PermissionKey =
@@ -127,6 +128,10 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     key: PERMISSION_KEYS.CAN_MANAGE_TASKS,
     description: 'Manage workflows and individual assignments for tasks.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_DOCUMENTS,
+    description: 'Upload, version, share, and archive documents.',
+  },
 ];
 
 /**
@@ -152,6 +157,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_HEARINGS,
     PERMISSION_KEYS.CAN_MANAGE_DEADLINES,
     PERMISSION_KEYS.CAN_MANAGE_TASKS,
+    PERMISSION_KEYS.CAN_MANAGE_DOCUMENTS,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,

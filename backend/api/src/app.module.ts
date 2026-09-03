@@ -32,6 +32,7 @@ import { WorkflowModule } from './workflows/workflow.module';
 import { HearingModule } from './hearings/hearing.module';
 import { DeadlineModule } from './deadlines/deadline.module';
 import { TaskModule } from './tasks/task.module';
+import { DocumentModule } from './documents/document.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { TaskModule } from './tasks/task.module';
     HearingModule,
     DeadlineModule,
     TaskModule,
+    DocumentModule,
     SchedulerModule,
   ],
   controllers: [AppController],

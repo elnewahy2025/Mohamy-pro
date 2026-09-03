@@ -118,6 +118,10 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'task.updated': ['status'],
   'task.completed': [],
   'task.assigned': ['assignedUserId'],
+  'document.uploaded': ['documentId', 'caseId', 'clientId', 'documentType', 'versionNumber', 'storageObjectId'],
+  'document.versioned': ['documentId', 'versionNumber', 'storageObjectId'],
+  'document.shared': ['documentId', 'sharedWithEmail'],
+  'document.archived': ['documentId'],
 };
 
 @Injectable()
