@@ -22,6 +22,7 @@ import { MembershipModule } from './membership/membership.module';
 import { OrganizationConfigModule } from './organization-config/organization-config.module';
 import { ClientsModule } from './clients/clients.module';
 import { ConflictChecksModule } from './conflict-checks/conflict-checks.module';
+import { PartiesModule } from './parties/parties.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { RateLimitMiddleware } from './security/rate-limit.middleware';
 
@@ -46,6 +47,7 @@ import { RateLimitMiddleware } from './security/rate-limit.middleware';
     OrganizationConfigModule,
     ClientsModule,
     ConflictChecksModule,
+    PartiesModule,
     SchedulerModule,
   ],
   controllers: [AppController],
