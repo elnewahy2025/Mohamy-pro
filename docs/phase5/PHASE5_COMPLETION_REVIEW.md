@@ -77,7 +77,7 @@ Phase 5 (core) is complete and the gate is eligible for approval **when**:
 
 ## Owner approval
 
-- [ ] **Approved** — Phase 5 (core Client Management) completion gate accepted; remaining
+- [x] **Approved** — Phase 5 (core Client Management) completion gate accepted; remaining
   Phase 5 follow-ups and Phase 6 are not treated as authorized until this box is ticked.
 
 ## References
