@@ -58,7 +58,10 @@ export const ABUSE_LIMITS = {
   /** MFA step-up: 5 failed challenges per session/user/IP in 15 minutes. */
   mfaPerActor: { max: 5, windowSeconds: 900 } satisfies AbuseRateLimit,
   /** Invitation acceptance: 10 attempts per invitation fingerprint + IP in one hour. */
-  invitationPerFingerprint: { max: 10, windowSeconds: 3_600 } satisfies AbuseRateLimit,
+  invitationPerFingerprint: {
+    max: 10,
+    windowSeconds: 3_600,
+  } satisfies AbuseRateLimit,
   /** Tenant switching: 20 switches per user/session in 10 minutes. */
   switchPerActor: { max: 20, windowSeconds: 600 } satisfies AbuseRateLimit,
 } as const;

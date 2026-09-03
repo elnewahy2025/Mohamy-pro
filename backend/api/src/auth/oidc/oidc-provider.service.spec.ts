@@ -43,14 +43,12 @@ function makeConfiguration(
   );
 }
 
-function tokenResponse(
-  overrides: {
-    accessToken?: string;
-    idToken?: string;
-    refreshToken?: string;
-    expiresIn?: number;
-  },
-): client.TokenEndpointResponse & client.TokenEndpointResponseHelpers {
+function tokenResponse(overrides: {
+  accessToken?: string;
+  idToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+}): client.TokenEndpointResponse & client.TokenEndpointResponseHelpers {
   const base: client.TokenEndpointResponse = {
     access_token: overrides.accessToken ?? 'access',
     id_token: overrides.idToken,
@@ -123,8 +121,8 @@ describe('OidcProviderService', () => {
     jest.spyOn(client, 'randomNonce').mockReturnValue('nonce-1');
     const buildAuthorizationUrl = jest
       .spyOn(client, 'buildAuthorizationUrl')
-      .mockImplementation(() =>
-        new URL('https://issuer/auth?state=state-1&scope=openid'),
+      .mockImplementation(
+        () => new URL('https://issuer/auth?state=state-1&scope=openid'),
       );
 
     const result = await service.buildAuthorizationUrl();
@@ -152,9 +150,11 @@ describe('OidcProviderService', () => {
       b64url({ sub: 'sub-1', email: 'a@b.c' }),
       'signature',
     ].join('.');
-    jest.spyOn(client, 'authorizationCodeGrant').mockResolvedValue(
-      tokenResponse({ idToken, refreshToken: 'refresh', expiresIn: 3600 }),
-    );
+    jest
+      .spyOn(client, 'authorizationCodeGrant')
+      .mockResolvedValue(
+        tokenResponse({ idToken, refreshToken: 'refresh', expiresIn: 3600 }),
+      );
 
     const { tokens, profile } = await service.exchangeCode(
       new URL('http://localhost/callback?code=c&state=s'),
@@ -218,9 +218,9 @@ describe('OidcProviderService', () => {
   it('skips revocation when no endpoint is advertised', async () => {
     configService = makeConfigService();
     service = new OidcProviderService(configService);
-    jest.spyOn(client, 'discovery').mockResolvedValue(
-      makeConfiguration({ revocation_endpoint: undefined }),
-    );
+    jest
+      .spyOn(client, 'discovery')
+      .mockResolvedValue(makeConfiguration({ revocation_endpoint: undefined }));
     await service.onModuleInit();
     const tokenRevocation = jest.spyOn(client, 'tokenRevocation');
     await expect(service.revoke('refresh-old')).resolves.toBeUndefined();

@@ -30,9 +30,8 @@ const scopePrisma = {
     _tenant: string,
     _operation: string,
     cb: (tx: unknown) => Promise<void>,
-  ) => cb({} as never),
-  withDeliveryScope: async (cb: (tx: unknown) => Promise<void>) =>
-    cb({} as never),
+  ) => cb({}),
+  withDeliveryScope: async (cb: (tx: unknown) => Promise<void>) => cb({}),
 } as never;
 
 describe('outbox delivery semantics', () => {
@@ -44,8 +43,7 @@ describe('outbox delivery semantics', () => {
     const enqueue = jest.fn().mockResolvedValue({ id: 'outbox:message-1' });
     const prisma = {
       $transaction: jest.fn(),
-      withDeliveryScope: async (cb: (tx: unknown) => Promise<void>) =>
-        cb({} as never),
+      withDeliveryScope: async (cb: (tx: unknown) => Promise<void>) => cb({}),
       outboxMessage: {
         updateMany: jest.fn(),
         update: jest.fn(),

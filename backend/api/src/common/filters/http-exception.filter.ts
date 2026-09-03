@@ -56,7 +56,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message: string | string[];
     let details: unknown[] = [];
 
-    if (exception instanceof Error && exception.name === 'SessionNotAuthenticatedError') {
+    if (
+      exception instanceof Error &&
+      exception.name === 'SessionNotAuthenticatedError'
+    ) {
       status = HttpStatus.UNAUTHORIZED;
     }
 
@@ -75,7 +78,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message = 'The request is malformed.';
         details = [];
       }
-    } else if (exception instanceof Error && exception.name === 'SessionNotAuthenticatedError') {
+    } else if (
+      exception instanceof Error &&
+      exception.name === 'SessionNotAuthenticatedError'
+    ) {
       code = ERROR_CODES.UNAUTHORIZED;
       message = exception.message;
       details = [];

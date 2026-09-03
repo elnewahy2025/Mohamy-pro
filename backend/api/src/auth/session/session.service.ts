@@ -141,7 +141,10 @@ export class SessionService {
       where: { id: session.userId },
       select: { status: true },
     });
-    if (!userStatus || (userStatus.status !== 'ACTIVE' && userStatus.status !== 'PENDING')) {
+    if (
+      !userStatus ||
+      (userStatus.status !== 'ACTIVE' && userStatus.status !== 'PENDING')
+    ) {
       throw new SessionNotAuthenticatedError('Account is not active');
     }
 

@@ -16,7 +16,9 @@ function makeService(input: {
     appSession: { findUnique },
   } as unknown as PrismaService;
   const configService = {
-    getOrThrow: jest.fn().mockReturnValue(input.maxAgeSeconds ?? MAX_AGE_SECONDS),
+    getOrThrow: jest
+      .fn()
+      .mockReturnValue(input.maxAgeSeconds ?? MAX_AGE_SECONDS),
   } as unknown as ConfigService<ValidatedEnvironment, true>;
   const service = new MfaAssuranceService(prisma, configService);
   return { service, findUnique };

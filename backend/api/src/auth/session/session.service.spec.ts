@@ -297,19 +297,19 @@ describe('SessionService', () => {
       );
     });
 
-    it.each([
-      [UserStatus.SUSPENDED],
-      [UserStatus.DELETED],
-    ])('rejects a non-active user with status %s', async (status) => {
-      prisma.appSession.findUnique.mockResolvedValue(sessionRecord());
-      prisma.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        status,
-      });
-      await expect(service.validateSession('x')).rejects.toThrow(
-        SessionNotAuthenticatedError,
-      );
-    });
+    it.each([[UserStatus.SUSPENDED], [UserStatus.DELETED]])(
+      'rejects a non-active user with status %s',
+      async (status) => {
+        prisma.appSession.findUnique.mockResolvedValue(sessionRecord());
+        prisma.user.findUnique.mockResolvedValue({
+          id: 'user-1',
+          status,
+        });
+        await expect(service.validateSession('x')).rejects.toThrow(
+          SessionNotAuthenticatedError,
+        );
+      },
+    );
 
     it('permits a PENDING user (identity-only auth)', async () => {
       const session = sessionRecord();

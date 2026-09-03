@@ -205,7 +205,8 @@ export class AuthService {
     this.cookies.setSession(res, created.token, created.maxAgeSeconds);
     this.cookies.clearOidc(res);
 
-    const corsOrigins = this.configService.get<string>('CORS_ORIGINS')?.split(',') ?? [];
+    const corsOrigins =
+      this.configService.get<string>('CORS_ORIGINS')?.split(',') ?? [];
     const frontendUrl = corsOrigins[0] ?? 'http://localhost:5173';
     return { redirectUrl: frontendUrl };
   }

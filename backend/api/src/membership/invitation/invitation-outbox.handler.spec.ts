@@ -35,7 +35,11 @@ describe('InvitationOutboxHandler', () => {
     const handler = new InvitationOutboxHandler({} as never);
     await expect(
       handler.handle(
-        message({ invitationId: 'inv-1', tenantId: 'tenant-1', correlationId: 'c' }),
+        message({
+          invitationId: 'inv-1',
+          tenantId: 'tenant-1',
+          correlationId: 'c',
+        }),
         transaction(findUnique),
       ),
     ).resolves.toBeUndefined();
@@ -50,7 +54,11 @@ describe('InvitationOutboxHandler', () => {
     const handler = new InvitationOutboxHandler({} as never);
     await expect(
       handler.handle(
-        message({ invitationId: 'missing', tenantId: 'tenant-1', correlationId: 'c' }),
+        message({
+          invitationId: 'missing',
+          tenantId: 'tenant-1',
+          correlationId: 'c',
+        }),
         transaction(findUnique),
       ),
     ).rejects.toThrow(/missing invitation/);
@@ -59,10 +67,7 @@ describe('InvitationOutboxHandler', () => {
   it('rejects an invalid payload', async () => {
     const handler = new InvitationOutboxHandler({} as never);
     await expect(
-      handler.handle(
-        message({ invitationId: 5 }),
-        transaction(jest.fn()),
-      ),
+      handler.handle(message({ invitationId: 5 }), transaction(jest.fn())),
     ).rejects.toThrow(/payload is invalid/);
   });
 });

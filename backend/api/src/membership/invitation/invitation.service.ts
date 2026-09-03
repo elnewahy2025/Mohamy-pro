@@ -135,7 +135,7 @@ export class InvitationService {
               tokenHash: hashToken(token),
               intendedEmailNormalized,
               intendedProviderSubject: dto.intendedProviderSubject ?? null,
-              requestedRoleKeys: dto.requestedRoleKeys as Prisma.InputJsonValue,
+              requestedRoleKeys: dto.requestedRoleKeys,
               requestedScope: (dto.requestedScope ??
                 null) as Prisma.InputJsonValue,
               status: InvitationStatus.PENDING,

@@ -154,6 +154,6 @@ export class ClientContactService {
       select: SELECT,
     });
     if (!found) throw new ClientAccessDeniedError('NO_CONTACT');
-    return found as ClientContactResult;
+    return found;
   }
 }

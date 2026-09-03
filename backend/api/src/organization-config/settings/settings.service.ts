@@ -39,7 +39,8 @@ export interface ListOrganizationSettingQuery {
   limit: number;
 }
 
-export interface ListOrganizationSettingResult extends Paginated<GetOrganizationSettingResult> {}
+export type ListOrganizationSettingResult =
+  Paginated<GetOrganizationSettingResult>;
 
 const TENANT_PERMISSION: PermissionKey =
   PERMISSION_KEYS.CAN_MANAGE_ORGANIZATION_CONFIG;

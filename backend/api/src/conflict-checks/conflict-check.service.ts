@@ -318,7 +318,7 @@ export class ConflictCheckService {
       select: CHECK_SELECT,
     });
     if (!found) throw new ConflictCheckAccessDeniedError('NO_CHECK');
-    return found as ConflictCheckRow;
+    return found;
   }
 
   private toResult(

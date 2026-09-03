@@ -195,7 +195,7 @@ export class ClientService {
           }),
         ]);
         return {
-          data: rows as ClientResult[],
+          data: rows,
           pagination: { page: query.page, limit: query.limit, total },
         };
       },
@@ -223,6 +223,6 @@ export class ClientService {
       select: CLIENT_SELECT,
     });
     if (!found) throw new ClientAccessDeniedError('NO_CLIENT');
-    return found as ClientResult;
+    return found;
   }
 }

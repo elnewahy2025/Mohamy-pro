@@ -181,6 +181,6 @@ export class ClientAddressService {
       select: SELECT,
     });
     if (!found) throw new ClientAccessDeniedError('NO_ADDRESS');
-    return found as ClientAddressResult;
+    return found;
   }
 }

@@ -15,7 +15,8 @@ export class PaginationDto {
   page?: number = 1;
 
   @ApiPropertyOptional({
-    description: 'Number of items per page. Capped at 100 to mitigate data exfiltration risks.',
+    description:
+      'Number of items per page. Capped at 100 to mitigate data exfiltration risks.',
     default: 20,
     minimum: 1,
     maximum: 100,

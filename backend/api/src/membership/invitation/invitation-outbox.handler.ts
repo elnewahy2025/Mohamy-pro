@@ -54,13 +54,17 @@ export class InvitationOutboxHandler {
   }
 }
 
-function parsePayload(payload: OutboxMessage['payload']): InvitationCreatedPayload {
+function parsePayload(
+  payload: OutboxMessage['payload'],
+): InvitationCreatedPayload {
   if (
     typeof payload !== 'object' ||
     payload === null ||
     Array.isArray(payload)
   ) {
-    throw new Error(`${INVITATION_CREATED_OUTBOX_EVENT} payload must be an object`);
+    throw new Error(
+      `${INVITATION_CREATED_OUTBOX_EVENT} payload must be an object`,
+    );
   }
   const candidate = payload as Record<string, unknown>;
   if (

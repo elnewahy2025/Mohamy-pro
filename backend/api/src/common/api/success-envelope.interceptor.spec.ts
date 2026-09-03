@@ -65,10 +65,7 @@ describe('SuccessEnvelopeInterceptor', () => {
   it('passes operational endpoints through without wrapping', async () => {
     const next: CallHandler = { handle: () => of({ status: 'ok' }) };
     const result = await lastValueFrom(
-      interceptor.intercept(
-        executionContext('/api/v1/health/live'),
-        next,
-      ),
+      interceptor.intercept(executionContext('/api/v1/health/live'), next),
     );
     expect(result).toEqual({ status: 'ok' });
   });

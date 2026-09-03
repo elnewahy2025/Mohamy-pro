@@ -118,8 +118,8 @@ describe('MembershipAdminService', () => {
     expect(
       (auditWrite.mock.calls[0][0] as { eventType: string }).eventType,
     ).toBe(AUDIT_EVENT_TYPES.MEMBERSHIP_SUSPENDED);
-    const updateData = (tenantTx.membership.update as jest.Mock).mock
-      .calls[0][0].data as Record<string, unknown>;
+    const updateData = tenantTx.membership.update.mock.calls[0][0]
+      .data as Record<string, unknown>;
     expect(updateData.reason).toBeUndefined();
     expect(updateData.status).toBe('SUSPENDED');
     expect(updateData.suspendedAt).toBeInstanceOf(Date);

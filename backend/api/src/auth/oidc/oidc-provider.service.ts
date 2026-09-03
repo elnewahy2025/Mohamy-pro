@@ -181,10 +181,12 @@ export class OidcProviderService implements OnModuleInit {
     }
   }
 
-  buildLogoutUrl(params: {
-    idTokenHint?: string;
-    postLogoutRedirectUri?: string;
-  } = {}): string {
+  buildLogoutUrl(
+    params: {
+      idTokenHint?: string;
+      postLogoutRedirectUri?: string;
+    } = {},
+  ): string {
     const config = this.getConfiguration();
     const endSession = config.serverMetadata().end_session_endpoint;
     if (!endSession) {

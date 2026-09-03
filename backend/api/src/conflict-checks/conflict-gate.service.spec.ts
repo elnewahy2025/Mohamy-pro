@@ -18,7 +18,7 @@ function tx(
 
 describe('ConflictGateService', () => {
   it('returns cleared=true when no completed BLOCK check matches', async () => {
-    const t = tx([], []) as never;
+    const t = tx([], []);
     const verdict = await g().assertClearForCase(t, 'tenant-1', [
       { name: 'Acme Corp' },
     ]);
@@ -27,7 +27,7 @@ describe('ConflictGateService', () => {
   });
 
   it('returns cleared=true when no prospective parties are provided', async () => {
-    const t = tx([], []) as never;
+    const t = tx([], []);
     const verdict = await g().assertClearForCase(t, 'tenant-1', []);
     expect(verdict.cleared).toBe(true);
     expect(verdict.blocks).toEqual([]);

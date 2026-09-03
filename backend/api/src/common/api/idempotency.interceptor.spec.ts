@@ -219,9 +219,7 @@ describe('IdempotencyInterceptor', () => {
         }),
       }),
     } as unknown as ExecutionContext;
-    await lastValueFrom(
-      interceptor.intercept(context, next) as any,
-    );
+    await lastValueFrom(interceptor.intercept(context, next) as any);
     expect(
       (service as unknown as { reserve: jest.Mock }).reserve,
     ).toHaveBeenCalledWith(

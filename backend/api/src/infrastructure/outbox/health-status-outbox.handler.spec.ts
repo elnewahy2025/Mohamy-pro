@@ -22,8 +22,7 @@ function message(payload: unknown): OutboxMessage {
 }
 
 describe('HealthStatusOutboxHandler', () => {
-  const transaction = (update: jest.Mock) =>
-    ({ health: { update } }) as never;
+  const transaction = (update: jest.Mock) => ({ health: { update } }) as never;
 
   it('persists a valid health status event', async () => {
     const update = jest.fn().mockResolvedValue({ id: 'health-1' });
@@ -45,10 +44,7 @@ describe('HealthStatusOutboxHandler', () => {
     const handler = new HealthStatusOutboxHandler({} as never);
 
     await expect(
-      handler.handle(
-        message({ status: 'DEGRADED' }),
-        transaction(update),
-      ),
+      handler.handle(message({ status: 'DEGRADED' }), transaction(update)),
     ).rejects.toThrow('health.status.updated payload is invalid');
     expect(update).not.toHaveBeenCalled();
   });

@@ -10,7 +10,10 @@ export class AbuseLimitReachedError extends HttpException {
     readonly reason: string,
     readonly retryAfterSeconds: number,
   ) {
-    super('Request is blocked temporarily. Please try again later.', HttpStatus.TOO_MANY_REQUESTS);
+    super(
+      'Request is blocked temporarily. Please try again later.',
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   }
 }
 

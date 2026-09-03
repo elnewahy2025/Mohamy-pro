@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
-import { prepareBodyForIntegrity, S3ObjectStorageService } from './object-storage.service';
+import {
+  prepareBodyForIntegrity,
+  S3ObjectStorageService,
+} from './object-storage.service';
 
 describe('storage object integrity preparation', () => {
   it('calculates SHA-256 and byte count for a buffer', () => {
@@ -50,7 +53,8 @@ describe('S3ObjectStorageService - Malware Prevention', () => {
 
     const mockConfig = {
       getOrThrow: jest.fn((key) => {
-        if (key === 'S3_VERSIONING_ENABLED' || key === 'S3_OBJECT_LOCK_ENABLED') return false;
+        if (key === 'S3_VERSIONING_ENABLED' || key === 'S3_OBJECT_LOCK_ENABLED')
+          return false;
         return 'mock-val';
       }),
       get: jest.fn(),

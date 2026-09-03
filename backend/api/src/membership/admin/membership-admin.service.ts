@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Request } from 'express';
-import { MembershipStatus, Prisma, type Membership } from '@prisma/client';
+import { MembershipStatus, type Membership } from '@prisma/client';
 import { AbuseControlService } from '../../abuse/abuse-control.service';
 import { MFA_RATE_LIMITED } from '../../abuse/abuse-control.constants';
 import { AbuseLimitReachedError } from '../../abuse/abuse-control.errors';

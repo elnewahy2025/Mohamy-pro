@@ -7,6 +7,7 @@ import {
 class MockCasePartyLinker implements CasePartyLinker {
   private links: CasePartyLink[] = [];
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async linkPartyToCase(
     transaction: Prisma.TransactionClient,
     caseId: string,
@@ -30,6 +31,7 @@ class MockCasePartyLinker implements CasePartyLinker {
     return link;
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async unlinkPartyFromCase(
     transaction: Prisma.TransactionClient,
     caseId: string,
@@ -45,6 +47,7 @@ class MockCasePartyLinker implements CasePartyLinker {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async listPartyRolesForCase(
     transaction: Prisma.TransactionClient,
     caseId: string,
