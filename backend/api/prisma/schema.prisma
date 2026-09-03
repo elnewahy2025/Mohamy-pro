@@ -387,6 +387,7 @@ model Tenant {
   deadlineRules        DeadlineRule[]
   deadlines            Deadline[]
   tasks                Task[]
+  documents            Document[]
 
   @@index([status, createdAt])
 }
