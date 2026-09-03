@@ -16,6 +16,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_CONFLICT_CHECKS: 'CanManageConflictChecks',
   CAN_MANAGE_PARTIES: 'CanManageParties',
   CAN_MANAGE_CASES: 'CanManageCases',
+  CAN_MANAGE_LEGAL_CONFIG: 'CanManageLegalConfig',
 } as const;
 
 export type PermissionKey =
@@ -88,6 +89,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Create, update, and list cases (matters) and link parties within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
+    description:
+      'Manage tenant-specific legal configurations (e.g. courts, jurisdictions).',
+  },
 ];
 
 /**
@@ -107,6 +113,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_CONFLICT_CHECKS,
     PERMISSION_KEYS.CAN_MANAGE_PARTIES,
     PERMISSION_KEYS.CAN_MANAGE_CASES,
+    PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,

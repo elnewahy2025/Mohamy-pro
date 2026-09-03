@@ -359,6 +359,9 @@ model Tenant {
   partyRelationships   PartyRelationship[]
   cases                Case[]
   caseParties          CaseParty[]
+  jurisdictions        Jurisdiction[]
+  courts               Court[]
+  courtLocations       CourtLocation[]
 
   @@index([status, createdAt])
 }
@@ -900,4 +903,73 @@ model PartyRelationship {
 
   @@unique([id, tenantId])
   @@index([tenantId, fromPartyId])
+}
+
+// Phase 9: Legal Configuration - Country
+model Country {
+  id        String          @id @default(uuid())
+  code      String          @unique
+  name      String
+  status    HierarchyStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  jurisdictions Jurisdiction[]
+}
+
+// Phase 9: Legal Configuration - Jurisdiction (Hybrid Tenancy)
+model Jurisdiction {
+  id        String          @id @default(uuid())
+  tenantId  String?
+  countryId String
+  name      String
+  status    HierarchyStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  country Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  tenant  Tenant? @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  courts  Court[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+// Phase 9: Legal Configuration - Court (Hybrid Tenancy)
+model Court {
+  id             String          @id @default(uuid())
+  tenantId       String?
+  jurisdictionId String
+  name           String
+  courtType      String?
+  department     String?
+  status         HierarchyStatus @default(ACTIVE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  jurisdiction Jurisdiction    @relation(fields: [jurisdictionId], references: [id], onDelete: Restrict)
+  tenant       Tenant?         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  locations    CourtLocation[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+// Phase 9: Legal Configuration - Court Location (Hybrid Tenancy)
+model CourtLocation {
+  id        String          @id @default(uuid())
+  tenantId  String?
+  courtId   String
+  name      String
+  city      String?
+  address   String?
+  status    HierarchyStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  court  Court   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
 }
