@@ -28,11 +28,12 @@ Phase 5 (core) is complete and the gate is eligible for approval **when**:
 1. The core delivery (`54882601`) is committed and pushed.
 2. The additive migration is applied to the live database and drift-checked.
 3. Backend `tsc --noEmit` = 0 errors; `prisma validate` clean; full jest passes
-   (223/223; the pre-existing `openid-client` ESM suite blocker excluded).
-4. The owner approves this completion gate **before** the remaining Phase 5 follow-ups (contacts,
-   addresses, identifiers, tags, notes, documents, communications, consent, retention, portal
-   flags, profile, timeline) or the frontend UI are treated as gate-closing work, and **before**
-   any Phase 6 (Conflict Check Foundation) work is authorized.
+   (231/231; the pre-existing `openid-client` ESM suite blocker excluded).
+4. The owner approves this completion gate **before** the remaining Phase 5 follow-ups
+   (identifiers, tags, notes, documents, communications, consent, retention, portal flags, profile,
+   timeline) or the frontend UI are treated as gate-closing work, and **before** any Phase 6
+   (Conflict Check Foundation) work is authorized. Backend contacts and addresses (part of the
+   core Client profile) are included in this delivery — see checklist items 5a/5b.
 
 ## Delivery checklist
 
@@ -45,15 +46,19 @@ Phase 5 (core) is complete and the gate is eligible for approval **when**:
 | 5 | `clients/` module (CRUD + list/search, non-enumerating denial) | ✅ done | `src/clients/` |
 | 6 | First paginated list endpoint with filters | ✅ done | `client.service.ts` `list`, `client.controller.ts` |
 | 7 | `OrganizationSetting` read path | ✅ done | `settings.service.(get|list)`, `settings.controller` |
-| 8 | Delivery review + specs + gates | ✅ done | `PHASE5_CORE_DELIVERY_REVIEW.md`; pass 223/223 |
+| 8 | Delivery review + specs + gates | ✅ done | `PHASE5_CORE_DELIVERY_REVIEW.md`; pass 231/231 |
 | 9 | Completion review (this artifact) | ✅ this review | `docs/phase5` |
+| 5a | `ClientContact` model + service/controller (`/clients/:clientId/contacts`) | ✅ done | `contact.service.ts`, `contact.controller.ts`, `migrations/20260902190000_client_contacts_addresses` |
+| 5b | `ClientAddress` model + service/controller (`/clients/:clientId/addresses`) | ✅ done | `address.service.ts`, `address.controller.ts`, `migrations/20260902190000_client_contacts_addresses` |
+| 5c | `client.contact.*` / `client.address.*` audit events + guard | ✅ done | `audit-constants.ts`, `audit-event.service.ts` |
 
 ## Explicit deferrals (recorded, not silent)
 
-- **Remaining Phase 5 scope** — contacts, addresses, identifiers/ID documents, relationships,
-  tags, notes, custom fields, consent records, data retention status, portal access flags, client
-  documents (`StorageObject` join), client communications, client profile page, client timeline.
-  These are `Plan.txt` Phase 5 scope but **not** part of this core delivery.
+- **Remaining Phase 5 scope** — identifiers/ID documents, relationships, tags, notes, custom
+  fields, consent records, data retention status, portal access flags, client documents
+  (`StorageObject` join), client communications, client profile page, client timeline.
+  These are `Plan.txt` Phase 5 scope but **not** part of this core delivery. (Backend contacts and
+  addresses are delivered here as part of the core Client profile.)
 - **Frontend client UI** — backend-first; the list page and client forms are sequenced follow-ups
   (mirrors Phase 4, which shipped backend before UI).
 - **Organization Configuration redefinition** (the 18-domain configuribility plan) — **rejected /
@@ -65,9 +70,10 @@ Phase 5 (core) is complete and the gate is eligible for approval **when**:
 
 ## Blocking issues
 
-- **Migration not DB-applied.** The `Client` migration is committed but not applied to Neon from
-  this sandbox (DB unreachable). Apply + drift-check (`prisma migrate deploy` / `migrate diff`) on
-  a DB-reachable machine before claiming the gate closed. This is the sole remediation required.
+- **Migration not DB-applied.** The `Client` migration (`20260902180000`) and the contacts/
+  addresses migration (`20260902190000`) are committed but not applied to Neon from this sandbox
+  (DB unreachable). Apply + drift-check (`prisma migrate deploy` / `migrate diff`) on a DB-reachable
+  machine before claiming the gate closed. This is the sole remediation required.
 
 ## Owner approval
 
