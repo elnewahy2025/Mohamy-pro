@@ -135,6 +135,20 @@ enum DataClassification {
   RESTRICTED
 }
 
+// Phase 8: Matter / Case Management
+enum CaseStatus {
+  OPEN
+  CLOSED
+  ON_HOLD
+}
+
+enum CasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 // Phase 1: Health check table to prove migrations work
 model Health {
   id        String   @id @default(uuid())
@@ -343,6 +357,8 @@ model Tenant {
   parties              Party[]
   partyRoles           PartyRole[]
   partyRelationships   PartyRelationship[]
+  cases                Case[]
+  caseParties          CaseParty[]
 
   @@index([status, createdAt])
 }
@@ -478,6 +494,51 @@ model OrganizationSetting {
 
   @@unique([tenantId, key])
   @@index([tenantId, status])
+}
+
+// Phase 8: Canonical Case/Matter Record
+model Case {
+  id             String       @id @default(uuid())
+  tenantId       String
+  caseNumber     String
+  internalNumber String?
+  clientId       String
+  practiceArea   String?
+  caseType       String?
+  status         CaseStatus   @default(OPEN)
+  priority       CasePriority @default(NORMAL)
+  openDate       DateTime?
+  closeDate      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  client  Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  parties CaseParty[]
+
+  @@unique([tenantId, caseNumber])
+  @@index([tenantId, status])
+}
+
+// Phase 8: Physical implementation of Phase 7 CasePartyContract
+model CaseParty {
+  id        String          @id @default(uuid())
+  tenantId  String
+  caseId    String
+  partyId   String
+  roleId    String
+  status    HierarchyStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case   Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  party  Party     @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  role   PartyRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, caseId, partyId, roleId])
+  @@index([tenantId, caseId])
+  @@index([tenantId, partyId])
 }
 
 model Invitation {
@@ -676,6 +737,7 @@ model Client {
   addresses      ClientAddress[]
   conflictChecks ConflictCheck[]
   parties        Party[]
+  cases          Case[]
 
   @@unique([id, tenantId])
   @@index([tenantId, status])
@@ -799,6 +861,7 @@ model Party {
   client            Client?             @relation(fields: [clientId], references: [id], onDelete: Restrict)
   relationshipsFrom PartyRelationship[] @relation("PartyRelationshipsFrom")
   relationshipsTo   PartyRelationship[] @relation("PartyRelationshipsTo")
+  caseParties       CaseParty[]
 
   @@unique([id, tenantId])
   @@index([tenantId, status])
@@ -814,7 +877,8 @@ model PartyRole {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  caseParties CaseParty[]
 
   @@unique([tenantId, key])
 }

@@ -25,6 +25,7 @@ import { ConflictChecksModule } from './conflict-checks/conflict-checks.module';
 import { PartiesModule } from './parties/parties.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { RateLimitMiddleware } from './security/rate-limit.middleware';
+import { CaseModule } from './cases/case.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { RateLimitMiddleware } from './security/rate-limit.middleware';
     ClientsModule,
     ConflictChecksModule,
     PartiesModule,
+    CaseModule,
     SchedulerModule,
   ],
   controllers: [AppController],

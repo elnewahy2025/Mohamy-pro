@@ -15,6 +15,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_CLIENTS: 'CanManageClients',
   CAN_MANAGE_CONFLICT_CHECKS: 'CanManageConflictChecks',
   CAN_MANAGE_PARTIES: 'CanManageParties',
+  CAN_MANAGE_CASES: 'CanManageCases',
 } as const;
 
 export type PermissionKey =
@@ -82,6 +83,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Create, update, archive, and list parties and party relationships within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_CASES,
+    description:
+      'Create, update, and list cases (matters) and link parties within the active tenant.',
+  },
 ];
 
 /**
@@ -100,6 +106,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_CLIENTS,
     PERMISSION_KEYS.CAN_MANAGE_CONFLICT_CHECKS,
     PERMISSION_KEYS.CAN_MANAGE_PARTIES,
+    PERMISSION_KEYS.CAN_MANAGE_CASES,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,
