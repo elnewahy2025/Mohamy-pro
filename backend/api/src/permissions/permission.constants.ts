@@ -14,6 +14,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_ORGANIZATION_CONFIG: 'CanManageOrganizationConfig',
   CAN_MANAGE_CLIENTS: 'CanManageClients',
   CAN_MANAGE_CONFLICT_CHECKS: 'CanManageConflictChecks',
+  CAN_MANAGE_PARTIES: 'CanManageParties',
 } as const;
 
 export type PermissionKey =
@@ -76,6 +77,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Request, review, and decide conflict checks within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_PARTIES,
+    description:
+      'Create, update, archive, and list parties and party relationships within the active tenant.',
+  },
 ];
 
 /**
@@ -93,6 +99,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_ORGANIZATION_CONFIG,
     PERMISSION_KEYS.CAN_MANAGE_CLIENTS,
     PERMISSION_KEYS.CAN_MANAGE_CONFLICT_CHECKS,
+    PERMISSION_KEYS.CAN_MANAGE_PARTIES,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,

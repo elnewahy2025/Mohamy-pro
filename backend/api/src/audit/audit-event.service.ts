@@ -82,6 +82,10 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'conflict.check.created': ['partyCount'],
   'conflict.check.in_review': [],
   'conflict.check.decided': ['decision'],
+  'party.created': ['partyType', 'hasClientId'],
+  'party.updated': [],
+  'party.archived': ['reason'],
+  'party.relationship.created': ['relationshipType'],
 };
 
 @Injectable()
