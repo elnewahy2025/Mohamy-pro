@@ -47,6 +47,7 @@ gate-approvable core delivery:
 - Wired enforcement on Matter/Case acceptance (no `Case`/`Matter` entity exists until Phase 8;
   no acceptance flow until Phase 8/29). This delivery ships the **reusable gate contract**, not
   the case wiring.
+- Historical Matters evaluation (no `Matter` entity exists until Phase 8).
 - Search-backed conflict analysis (requires the Phase 19 search engine).
 - Party Management linkage (Parties are modeled as normalized inputs now; the `Party`/`CaseParty`
   entity arrives in Phase 7).
@@ -84,7 +85,7 @@ gate-approvable core delivery:
 ## Delivery workstreams
 
 ### W1 — Schema: `ConflictCheck` + `ConflictParty` models + additive migration
-- New `ConflictCheckStatus` enum (`PENDING`, `IN_REVIEW`, `CLEARED`, `BLOCKED`) and
+- New `ConflictCheckStatus` enum (`PENDING`, `IN_REVIEW`, `COMPLETED`) and
   `ConflictDecision` enum (`PENDING`, `ALLOW`, `BLOCK`).
 - `model ConflictCheck`: `id`, `tenantId`, `status`, `requesterUserId`, optional `clientId`
   (the client the check is run for), `prospectiveParties` (denormalized snapshot for audit),
@@ -156,6 +157,7 @@ gate-approvable core delivery:
 - **Matter/Case acceptance wiring** — the `assertClearForCase` contract ships now; calling it from
   a Matter/Case acceptance flow is impossible until Phase 7/8 create the Case/Matter entity and
   intake. Wired in Phase 7/8.
+- **Historical Matters evaluation** — impossible to evaluate historical matters until the `Matter` entity exists (Phase 8).
 - **Search-backed conflict analysis** — requires the Phase 19 search engine; deterministic
   normalization matching serves the foundation now.
 - **Party/Role linkage** — `ConflictParty` is a normalized snapshot; the `Party`/`CaseParty`/
