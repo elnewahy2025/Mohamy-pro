@@ -30,7 +30,7 @@ gate-approvable core delivery:
    `Client` and a soft-archive (`HierarchyStatus`).
 2. **`PartyRole`** — a **configurable** role catalog (tenant-scoped, seeded with the default
    roles plaintiff / defendant / claimant / respondent / witness / expert / company / government /
-   other) plus **`PartyRoleAssignment`** (party ↔ role links).
+   other). Role assignment is case-specific and belongs to the deferred `CaseParty` model.
 3. **`PartyRelationship`** — tenant-scoped party-to-party links (spouse, subsidiary, related
    entity, etc.).
 4. A **`CaseParty` linking contract** — a typed, documented, unit-tested reusable contract that
@@ -66,7 +66,7 @@ gate-approvable core delivery:
 
 | Item | Gap |
 |---|---|
-| `Party` + `PartyRole` + `PartyRoleAssignment` + `PartyRelationship` models + additive RLS migration | new models |
+| `Party` + `PartyRole` + `PartyRelationship` models + additive RLS migration | new models |
 | `CanManageParties` permission (constant/catalog/role/seed) | new key + migration seed |
 | `party.*` and `party_role.*`/`party_relationship.*` audit events (4 maps + allowlist) | new event types |
 | `parties/` module (ops/service/controller/dto/errors/spec) mirroring `conflict-checks/` | new module |
@@ -80,15 +80,13 @@ gate-approvable core delivery:
   (denormalized, searchable), `status HierarchyStatus @default(ACTIVE)`, optional `clientId`
   (link to a `Client`, FK onDelete Restrict + tenant guard), `notes`, timestamps;
   `@@unique([id, tenantId])`, `@@index([tenantId, status])`.
-- `model PartyRole`: `id`, `tenantId`, `key` (stable, tenant-unique), `label`, `kind`
-  (`PARTY`/`RELATED_ENTITY`), `status HierarchyStatus @default(ACTIVE)`, timestamps;
+- `model PartyRole`: `id`, `tenantId`, `key` (stable, tenant-unique), `label`,
+  `status HierarchyStatus @default(ACTIVE)`, timestamps;
   `@@unique([tenantId, key])`.
-- `model PartyRoleAssignment`: `id`, `tenantId`, `partyId`, `roleId`; FK Party/PartyRole/Party
-  `onDelete: Cascade`; `@@unique([id, tenantId])`, `@@index([tenantId, partyId])`.
 - `model PartyRelationship`: `id`, `tenantId`, `fromPartyId`, `toPartyId`, `relationshipType`
   (free-form TEXT), `status`, timestamps; FKs onDelete Restrict + tenant guard;
   `@@unique([id, tenantId])`, `@@index([tenantId, fromPartyId])`.
-- Additive migration: CREATE the four tables, `FORCE RLS` + `_tenant_isolation` on each, seed
+- Additive migration: CREATE the three tables, `FORCE RLS` + `_tenant_isolation` on each, seed
   idempotently the default `PartyRole` rows (plaintiff, defendant, claimant, respondent, witness,
   expert, company, government, other) per tenant marker, and the `CanManageParties` permission.
 
@@ -96,16 +94,16 @@ gate-approvable core delivery:
 - `PERMISSION_KEYS.CAN_MANAGE_PARTIES = 'CanManageParties'`; add to `PERMISSION_CATALOG` and
   `ROLE_PERMISSIONS[ROLE_KEY_TENANT_ADMIN]`.
 - New audit events `party.created`, `party.updated`, `party.archived`, and for the linking surface
-  `party.role.assigned`, `party.relationship.created` across all four maps; `METADATA_ALLOWLIST`
+  `party.relationship.created` across all four maps; `METADATA_ALLOWLIST`
   entries so the guard test passes. Never audit sensitive party identifiers on the allowlist.
 
 ### W3 — `parties/` module (mirror `conflict-checks/`)
 - `parties.module.ts` imports `AuthModule`; `party.errors.ts` non-enumerating
   `PartyAccessDeniedError`.
 - `party.operations.ts` shared `authorize` + `run` + `read` + `requirePartyInTenant`.
-- `party.service.ts`: `create` (with optional `clientId` + role), `update`, `archive`, `get`,
-  `list` (search/status/partyType filters, paginated); `party-role.service.ts`: list roles /
-  assign role to party; `party-relationship.service.ts`: create/list relationships.
+- `party.service.ts`: `create` (with optional `clientId`), `update`, `archive`, `get`,
+  `list` (search/status/partyType filters, paginated); `party-role.service.ts`: list roles;
+  `party-relationship.service.ts`: create/list relationships.
 - `party.controller.ts` routes `POST/GET /parties`, `GET/PATCH/DELETE /parties/:id`,
   plus role/relationship sub-resources — all `@UseGuards(SessionGuard, CsrfGuard)`; DTOs extend
   `PaginationDto`.
