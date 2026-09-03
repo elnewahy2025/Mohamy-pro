@@ -49,6 +49,11 @@ Current task is a backend legal app — frontend/design skills apply only to fut
 | `vercel-react-best-practices` | `~/.agents/skills/vercel-react-best-practices/` | React/Next.js performance (future frontend) |
 | `web-design-guidelines` | `~/.agents/skills/web-design-guidelines/SKILL.md` | UI accessibility/design review (future frontend) |
 
+> **Prettier is a tool, not a `skill`** — see the **Prettier Setup** section below for config,
+> the exact `--check`/`--write` commands, the `EBADDEVENGINES` workaround (use
+> `./node_modules/.bin/prettier` directly, never `npm run format`), and the gate that every
+> touched backend `.ts` file must be prettier-clean before commit.
+
 Other globally-installed skills (see `~/.claude/skills/shared_skills/` and
 `~/.opencode/skills/shared_skills/`): `android`, `anyclaw-publish`, `composio-cli`,
 `flightclaw`, `search-codex-chats`, `telegram-bridge-send`, `twitter-auto-post-shizuku` —
