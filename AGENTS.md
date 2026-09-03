@@ -35,6 +35,27 @@ Use the `skill` tool with these names. If they are not visible in `<available_sk
 they may not have been registered for the current session — read their `SKILL.md` from
 `~/.agents/skills/<name>/SKILL.md` directly and apply them.
 
+## Relevant Global Skills (available on this host)
+
+Additional skills are installed globally and are relevant to this project as the workstream
+covers them. Load via the `skill` tool (or read the `SKILL.md` directly if not registered).
+Current task is a backend legal app — frontend/design skills apply only to future UI work.
+
+| Skill | Path | Applies when |
+|---|---|---|
+| `engineering-governance` | `~/.agents/skills/engineering-governance/SKILL.md` | **Mandatory** — implementation/debug/test/review (backend) |
+| `single-responsibility-file-architecture` | `~/.agents/skills/single-responsibility-file-architecture/SKILL.md` | **Mandatory** — creating/refactoring code |
+| `vercel-composition-patterns` | `~/.agents/skills/vercel-composition-patterns/` | React component composition (future frontend) |
+| `vercel-react-best-practices` | `~/.agents/skills/vercel-react-best-practices/` | React/Next.js performance (future frontend) |
+| `web-design-guidelines` | `~/.agents/skills/web-design-guidelines/SKILL.md` | UI accessibility/design review (future frontend) |
+
+Other globally-installed skills (see `~/.claude/skills/shared_skills/` and
+`~/.opencode/skills/shared_skills/`): `android`, `anyclaw-publish`, `composio-cli`,
+`flightclaw`, `search-codex-chats`, `telegram-bridge-send`, `twitter-auto-post-shizuku` —
+unrelated to this legal backend; ignore unless the task explicitly involves them.
+`~/.claude/skills/installed-skills.json` lists ~35 enabled skills (data-viz, github,
+stripe/supabase, sentry, etc.); load only if a task matches them.
+
 ## Data Safety
 
 Preserve the user's work unconditionally. Never delete or overwrite repository content
