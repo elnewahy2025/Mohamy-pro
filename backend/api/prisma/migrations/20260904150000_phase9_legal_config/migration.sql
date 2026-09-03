@@ -91,3 +91,53 @@ ALTER TABLE "CourtLocation" ADD CONSTRAINT "CourtLocation_courtId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "CourtLocation" ADD CONSTRAINT "CourtLocation_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Tenant isolation (hybrid tenancy): each tenant-scoped table exposes only the
+-- active tenant's rows plus global reference rows (tenantId IS NULL). This is
+-- additive enforcement on top of the Prisma-generated DDL and mirrors the
+-- convention applied to every preceding migration.
+
+-- Country is a global, tenant-independent dictionary. Access requires a valid
+-- tenant context (reads for all authenticated tenant actors). Writes to global
+-- reference data are additionally governed at the application layer by the
+-- CAN_MANAGE_GLOBAL_LEGAL_CONFIG permission (Platform Admin).
+ALTER TABLE "Country" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Country" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "Country_tenant_context" ON "Country"
+USING (public.app_tenant_context_is_valid())
+WITH CHECK (public.app_tenant_context_is_valid());
+
+ALTER TABLE "Jurisdiction" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Jurisdiction" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "Jurisdiction_hybrid_tenancy" ON "Jurisdiction"
+USING (public.app_tenant_context_is_valid() AND ("tenantId" IS NULL OR "tenantId" = current_setting('app.tenant_id', true)))
+WITH CHECK (public.app_tenant_context_is_valid() AND ("tenantId" IS NULL OR "tenantId" = current_setting('app.tenant_id', true)));
+
+ALTER TABLE "Court" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Court" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "Court_hybrid_tenancy" ON "Court"
+USING (public.app_tenant_context_is_valid() AND ("tenantId" IS NULL OR "tenantId" = current_setting('app.tenant_id', true)))
+WITH CHECK (public.app_tenant_context_is_valid() AND ("tenantId" IS NULL OR "tenantId" = current_setting('app.tenant_id', true)));
+
+ALTER TABLE "CourtLocation" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "CourtLocation" FORCE ROW LEVEL SECURITY;
+CREATE POLICY "CourtLocation_hybrid_tenancy" ON "CourtLocation"
+USING (public.app_tenant_context_is_valid() AND ("tenantId" IS NULL OR "tenantId" = current_setting('app.tenant_id', true)))
+WITH CHECK (public.app_tenant_context_is_valid() AND ("tenantId" IS NULL OR "tenantId" = current_setting('app.tenant_id', true)));
+
+-- Seed Permissions
+INSERT INTO "Permission" (id, key, description, "createdAt")
+SELECT
+  gen_random_uuid()::text,
+  'CanManageLegalConfig',
+  'Manage tenant-specific legal configurations (e.g. courts, jurisdictions).',
+  now()
+WHERE NOT EXISTS (SELECT 1 FROM "Permission" WHERE "key" = 'CanManageLegalConfig');
+
+INSERT INTO "Permission" (id, key, description, "createdAt")
+SELECT
+  gen_random_uuid()::text,
+  'CanManageGlobalLegalConfig',
+  'Manage global legal reference data such as countries (Platform Admin).',
+  now()
+WHERE NOT EXISTS (SELECT 1 FROM "Permission" WHERE "key" = 'CanManageGlobalLegalConfig');

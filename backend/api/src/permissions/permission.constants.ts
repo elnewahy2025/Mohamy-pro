@@ -17,6 +17,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_PARTIES: 'CanManageParties',
   CAN_MANAGE_CASES: 'CanManageCases',
   CAN_MANAGE_LEGAL_CONFIG: 'CanManageLegalConfig',
+  CAN_MANAGE_GLOBAL_LEGAL_CONFIG: 'CanManageGlobalLegalConfig',
 } as const;
 
 export type PermissionKey =
@@ -94,6 +95,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Manage tenant-specific legal configurations (e.g. courts, jurisdictions).',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_GLOBAL_LEGAL_CONFIG,
+    description:
+      'Manage global legal reference data such as countries (Platform Admin).',
+  },
 ];
 
 /**
@@ -119,5 +125,6 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_CREATE_TENANT,
     PERMISSION_KEYS.CAN_GRANT_PLATFORM_ADMIN,
     PERMISSION_KEYS.CAN_VIEW_TENANT,
+    PERMISSION_KEYS.CAN_MANAGE_GLOBAL_LEGAL_CONFIG,
   ],
 };

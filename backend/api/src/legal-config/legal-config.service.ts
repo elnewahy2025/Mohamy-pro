@@ -27,7 +27,7 @@ export class LegalConfigService {
 
   async createCountry(dto: CreateCountryDto) {
     const ctx = await this.ops.assertPermission(
-      PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
+      PERMISSION_KEYS.CAN_MANAGE_GLOBAL_LEGAL_CONFIG,
     );
     return this.ops.run(ctx, 'createCountry', async (tx) => {
       const country = await tx.country.create({
@@ -67,6 +67,13 @@ export class LegalConfigService {
       PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
     );
     return this.ops.run(ctx, 'createJurisdiction', async (tx) => {
+      await this.ops.requireParentVisible(
+        tx,
+        ctx,
+        'country',
+        dto.countryId,
+        'Country',
+      );
       const jurisdiction = await tx.jurisdiction.create({
         data: {
           tenantId: ctx.tenantId,
@@ -105,6 +112,13 @@ export class LegalConfigService {
       PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
     );
     return this.ops.run(ctx, 'createCourt', async (tx) => {
+      await this.ops.requireParentVisible(
+        tx,
+        ctx,
+        'jurisdiction',
+        dto.jurisdictionId,
+        'Jurisdiction',
+      );
       const court = await tx.court.create({
         data: {
           tenantId: ctx.tenantId,
@@ -145,6 +159,13 @@ export class LegalConfigService {
       PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
     );
     return this.ops.run(ctx, 'createCourtLocation', async (tx) => {
+      await this.ops.requireParentVisible(
+        tx,
+        ctx,
+        'court',
+        dto.courtId,
+        'Court',
+      );
       const location = await tx.courtLocation.create({
         data: {
           tenantId: ctx.tenantId,

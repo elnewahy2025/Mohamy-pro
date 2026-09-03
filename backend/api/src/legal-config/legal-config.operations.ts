@@ -1,6 +1,7 @@
-import { Injectable, Scope, Inject } from '@nestjs/common';
+import { Injectable, Scope, Inject, NotFoundException } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import type { Request } from 'express';
+import { type Prisma } from '@prisma/client';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import { AuditEventService } from '../audit/audit-event.service';
 import { AUDIT_EVENT_TYPES, AuditEventType } from '../audit/audit-constants';
@@ -84,6 +85,41 @@ export class LegalConfigOperations {
     return {
       OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
     };
+  }
+
+  /**
+   * Asserts that a parent category exists and is within the caller's visible
+   * scope (a global row with `tenantId IS NULL` or a row owned by the active
+   * tenant). Prevents attaching a tenant-scoped child (jurisdiction / court /
+   * court location) to a parent that belongs to another tenant.
+   */
+  async requireParentVisible(
+    transaction: Prisma.TransactionClient,
+    ctx: LegalConfigContext,
+    model: 'country' | 'jurisdiction' | 'court',
+    id: string,
+    label: string,
+  ): Promise<void> {
+    let found: { id: string } | null = null;
+    if (model === 'country') {
+      found = await transaction.country.findFirst({
+        where: { id },
+        select: { id: true },
+      });
+    } else if (model === 'jurisdiction') {
+      found = await transaction.jurisdiction.findFirst({
+        where: { id, ...this.hybridReadWhere(ctx) },
+        select: { id: true },
+      });
+    } else {
+      found = await transaction.court.findFirst({
+        where: { id, ...this.hybridReadWhere(ctx) },
+        select: { id: true },
+      });
+    }
+    if (!found) {
+      throw new NotFoundException(`${label} not found in tenant scope`);
+    }
   }
 
   /**

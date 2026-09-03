@@ -90,6 +90,18 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'case.updated': [],
   'case.party.added': ['partyId', 'roleId'],
   'case.party.removed': ['partyId'],
+  'country.created': ['code'],
+  'country.updated': [],
+  'country.archived': ['reason'],
+  'jurisdiction.created': ['countryId'],
+  'jurisdiction.updated': [],
+  'jurisdiction.archived': ['reason'],
+  'court.created': ['jurisdictionId'],
+  'court.updated': [],
+  'court.archived': ['reason'],
+  'court.location.created': ['courtId'],
+  'court.location.updated': [],
+  'court.location.archived': ['reason'],
 };
 
 @Injectable()
