@@ -1,6 +1,6 @@
 # Phase 8 Plan — Matter / Case Management (Core Delivery)
 
-**Plan status:** DRAFT for owner review. Execution authorized only after owner sign-off on this plan.
+**Plan status:** DRAFT for owner review (audit-reviewed 2026-09-03; see Audit Notes). Execution authorized only after owner sign-off on this plan.
 
 **Plan date:** 2026-09-03
 
@@ -47,8 +47,20 @@ Implement the **Matter / Case Management** foundation from `Plan.txt` as a bound
 - `case.controller.ts`: REST endpoints (`POST /cases`, `GET /cases`, `GET /cases/:id`, `PATCH /cases/:id`, `POST /cases/:id/parties`, `DELETE /cases/:id/parties/:partyId`).
 
 ### W4 — Acceptance Gate & Contract Enforcement
-- Connect Phase 7's `PartyService` or `CasePartyService` to the Case logic.
-- Unit-test `case.service.ts` to explicitly prove that `ConflictGateService.assertClearForCase` block decisions result in an explicit API rejection (`ConflictGateRejectionError`) and prevent the case from being created.
+- Connect Phase 7's `PartyService` / `CasePartyService` to the Case logic.
+- **Gate call semantics (verified against `conflict-gate.service.ts`):**
+  `ConflictGateService.assertClearForCase(tx, tenantId, prospectiveParties)` **returns
+  `GateVerdict { cleared, blocks, reasons }` and does NOT throw** (read-only, non-enumerating).
+  `CaseService` creation MUST:
+  1. fetch tenant-scoped party names from the provided `partyIds` (see Open Question #2),
+  2. call `await gate.assertClearForCase(tx, ctx.tenantId, prospectiveParties)`,
+  3. if `verdict.cleared === false`, throw a new **Phase 8 module error** (e.g.
+     `CaseConflictGateRejectedError`) carrying `verdict.blocks`, and return an explicit
+     API rejection that prevents case creation.
+  - Note: there is NO shared `ConflictGateRejectionError` in the codebase; the rejection error
+    is a net-new Phase 8 class, mirroring `PartyAccessDeniedError`.
+- Unit-test `case.service.ts` to explicitly prove that a `cleared: false` verdict raises the
+  gate-rejection error and prevents the case from being created.
 
 ### W5 — QA Gates
 - `tsc --noEmit` = 0; `prisma validate` clean; prettier clean; full jest pass.
@@ -63,5 +75,34 @@ Implement the **Matter / Case Management** foundation from `Plan.txt` as a bound
 4. Full tenant isolation via RLS.
 
 ## Open Questions for Owner
-1. **Case Number generation**: For this initial phase, should `caseNumber` be provided by the client (user input), or should we build an auto-incrementing sequence generator within the tenant boundary? (Recommendation: user-provided for now, with auto-generation deferred to a configuration phase).
-2. **Conflict Check Gate**: Currently, `assertClearForCase` expects `prospectiveParties: { name: string }[]`. When creating a case, the user might provide just `clientId` and `partyIds`. Should `CaseService` fetch the names of these parties to pass to the conflict gate before creating the case? (Recommendation: Yes, fetch names from `partyId`s to feed the gate).
+
+> Audit record (2026-09-03): recommended resolutions recorded below. Build proceeds on these
+> unless the owner overrides.
+
+1. **Case Number generation** (recommended: **user-provided for now**): the client supplies
+   `caseNumber` on create; auto-incrementing per-tenant sequence generation is deferred to the
+   configuration phase. Uniqueness enforced via `@@unique([tenantId, caseNumber])`.
+2. **Conflict Check Gate** (recommended: **fetch names, feed the gate**): `CaseService` MUST
+   resolve the tenant-scoped `Party` rows from the provided `partyIds`, pass
+   `prospectiveParties: { name: party.displayName }[]` to `assertClearForCase`, and reject
+   creation on `cleared: false`. Not doing so would make the acceptance gate a no-op.
+
+## Audit Notes (2026-09-03)
+
+- **`assertClearForCase` contract verified** — returns `GateVerdict`, does not throw; corrected
+  W4's reference to a non-existent shared `ConflictGateRejectionError`.
+- **Gate-error class is net-new** — Phase 8 must define `CaseConflictGateRejectedError` (mirrors
+  `PartyAccessDeniedError`).
+- **Permission/event collisions checked** — `CanManageCases` and all `case.*` audit events are
+  absent today (safe to add); `case.party.linked`/`unlinked` are distinct from Phase 7's
+  `party.relationship.created`.
+- **Suggested W1 refinement (CaseParty constraints)** — mirror prior tables: add
+  `@@unique([id, tenantId])` composite PK guard, tenant-checked FKs (`caseId`/`partyId`/`roleId`
+  each guarded within the tenant), and `onDelete` semantics consistent with `PartyRelationship`
+  (Restrict) vs `PartyRoleAssignment`-style (n/a). Verify the `caseId` FK cannot cross tenants
+  (RLS covers reads; FKs keep referential integrity).
+- **Terminology** — the Phase 7 interface is `CasePartyLinker`/`CasePartyLink`, not
+  `CasePartyContract`; implementer should implement `CasePartyLinker` (W3 `case-party.service.ts`)
+  to satisfy Closing condition 3.
+- No schema, migration, or code landed in this audit — this is a documentation/decision record
+  only.
