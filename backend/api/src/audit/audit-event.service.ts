@@ -73,6 +73,12 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'client.created': ['clientType'],
   'client.updated': [],
   'client.archived': ['reason'],
+  'client.contact.created': ['type'],
+  'client.contact.updated': [],
+  'client.contact.removed': ['reason'],
+  'client.address.created': ['type'],
+  'client.address.updated': [],
+  'client.address.removed': ['reason'],
 };
 
 @Injectable()

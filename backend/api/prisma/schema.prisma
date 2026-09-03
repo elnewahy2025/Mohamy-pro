@@ -36,6 +36,24 @@ enum ClientType {
   ORGANIZATION
 }
 
+// Phase 5 follow-up: how a Client can be contacted. Strict enough to be an enum;
+// a client is not expected to carry arbitrary, open-ended contact kinds.
+enum ClientContactType {
+  PHONE
+  EMAIL
+  FAX
+  WEBSITE
+  MOBILE
+}
+
+// Phase 5 follow-up: the role/purpose of a Client's physical address.
+enum ClientAddressType {
+  MAILING
+  BILLING
+  REGISTERED
+  BRANCH
+}
+
 enum MembershipStatus {
   INVITED
   ACTIVE
@@ -277,6 +295,8 @@ model Tenant {
   organizations      Organization[]
   branches           Branch[]
   clients            Client[]
+  clientContacts     ClientContact[]
+  clientAddresses    ClientAddress[]
   departments        Department[]
   teams              Team[]
   memberships        Membership[]
@@ -620,8 +640,55 @@ model Client {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  contacts    ClientContact[]
+  addresses   ClientAddress[]
 
   @@unique([id, tenantId])
   @@index([tenantId, status])
   @@index([tenantId, clientType])
+}
+
+// Phase 5 follow-up: contact channels for a Client (phone, email, etc.). Always
+// scoped to the same tenant as the parent Client — a contact can never point at
+// a Client in another tenant. `isPrimary` is enforced at the service layer (a
+// client has at most one primary of a given type).
+model ClientContact {
+  id          String            @id @default(uuid())
+  tenantId    String
+  clientId    String
+  type        ClientContactType
+  value       String
+  label       String?
+  isPrimary   Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  client      Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, clientId])
+  @@index([clientId, type])
+}
+
+// Phase 5 follow-up: physical addresses for a Client. Same tenant isolation as
+// ClientContact; `isPrimary` enforced at the service layer.
+model ClientAddress {
+  id         String            @id @default(uuid())
+  tenantId   String
+  clientId   String
+  type       ClientAddressType
+  line1      String
+  line2      String?
+  city       String
+  region     String?
+  postalCode String?
+  country    String
+  isPrimary  Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  client     Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, clientId])
 }

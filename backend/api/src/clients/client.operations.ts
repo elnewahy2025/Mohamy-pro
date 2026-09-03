@@ -142,6 +142,24 @@ export class ClientOperations {
     }
   }
 
+  /**
+   * Confirms a parent Client exists in the given tenant context. Used by the
+   * contacts/addresses sub-resources so a contact or address can never be
+   * attached to a Client in another tenant. Throws a non-enumerating denial if
+   * the client is absent or out of tenant.
+   */
+  async requireClientInTenant(
+    transaction: Prisma.TransactionClient,
+    ctx: ClientContext,
+    clientId: string,
+  ): Promise<void> {
+    const found = await transaction.client.findFirst({
+      where: { id: clientId, tenantId: ctx.tenantId },
+      select: { id: true },
+    });
+    if (!found) throw new ClientAccessDeniedError('NO_CLIENT_IN_TENANT');
+  }
+
   private optionalHash(value: string | string[] | undefined): string | null {
     if (!value) return null;
     const raw = Array.isArray(value) ? value.join(',') : value;
