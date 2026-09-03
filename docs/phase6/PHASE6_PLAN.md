@@ -6,7 +6,8 @@ on this plan.
 
 **Plan date:** 2026-09-03
 
-**Repository revision at reconciliation:** `main` === `origin/main` === `b3f4e4a6` (clean tree).
+**Repository revision at reconciliation:** `main` === `origin/main` === `9c54e37d` (clean tree;
+plan refined by owner on top of sealed Phase 5 gate `b3f4e4a6`).
 
 **Governing phase rules (enforced):**
 - `Plan.txt` line 1260 — Phase 6 is `Conflict Check Foundation`. Forced-phase rule
@@ -36,9 +37,9 @@ gate-approvable core delivery:
    unavailable (the Search engine is `Phase 19`), so it is **deferred**, recorded not silent.
 3. A reusable **acceptance-gate decision contract** — a service method
    `assertClearForCase(prospectiveParties)` that a future Matter/Case acceptance flow
-   (Phase 7/8) will invoke. A single BLOCK vote among reviewer decisions conservatively
-   clears the check as **not** clear, per the conservative conflicts posture; the decision and
-   reason are audit-logged.
+   (Phase 7/8) will invoke. The check carries a single authoritative review decision
+   (`ALLOW`/`BLOCK`); any final `BLOCK` decision conservatively means the check is **not** clear,
+   per the conservative conflicts posture; the decision and reason are audit-logged.
 4. Guarded by a single **`CanManageConflictChecks`** permission key (owner-approved single-key
    model, mirroring `CanManageClients`), enforced in-app via `assertTenantPermission` and at rest
    via RLS.
@@ -53,7 +54,7 @@ gate-approvable core delivery:
   entity arrives in Phase 7).
 - Reviewer workflow UI and intake integration (Phase 7/8/29).
 
-## Reconciliation (evidence-based snapshot at `b3f4e4a6`)
+## Reconciliation (evidence-based snapshot at `9c54e37d`)
 
 ### Reused primitives (verified present)
 
@@ -80,7 +81,7 @@ gate-approvable core delivery:
 | `conflict.check.created/in_review/decided` audit events (4 maps + allowlist) | new event types |
 | `conflict-checks/` module (operations/service/controller/dto/errors/spec) mirroring `clients/` | new module |
 | Deterministic match service (scan `Client.displayName` + `ClientContact.value` vs normalized party inputs) | net-new matching logic |
-| Acceptance-gate decision contract (`assertClearForCase`, quorum/veto semantics + audit) | net-new; wired to Matter/Case in Phase 7/8 |
+| Acceptance-gate decision contract (`assertClearForCase`, single-final-decision semantics + audit) | net-new; wired to Matter/Case in Phase 7/8 |
 
 ## Delivery workstreams
 
@@ -124,9 +125,9 @@ gate-approvable core delivery:
   active tenant; return matched `Client` references with a reason. Explicitly **not**
   search-backed (deferred to Phase 19).
 - `conflict-gate.service.ts`: the acceptance-gate contract. `assertClearForCase(prospectiveParties)`
-  runs the match + existing decisions; returns `{ cleared: boolean, blocks: [...], reasons: [...] }`.
-  Conservative semantics: if any active BLOCK decision exists against a matched party, the check is
-  **not** clear. Emits `conflict.check.decided` audit. Phase 7/8 will invoke this before accepting a
+  runs the match + the check's final decision; returns `{ cleared: boolean, blocks: [...], reasons: [...] }`.
+  Conservative semantics: a final `BLOCK` decision against a matched party means the check is **not**
+  clear. Emits `conflict.check.decided` audit. Phase 7/8 will invoke this before accepting a
   new matter/case (wired later, recorded not silent).
 
 ### W5 — Gates
@@ -146,8 +147,8 @@ gate-approvable core delivery:
 2. The deterministic match surfaces existing tenant clients/contacts that collide with a
    prospective party (name/email), so a reviewer has evidence for the decision.
 3. The acceptance-gate contract `assertClearForCase` returns a non-enumerating
-   `{ cleared, blocks }` verdict the future Matter/Case acceptance flow will enforce — and any
-   active BLOCK yields `cleared: false`.
+   `{ cleared, blocks }` verdict the future Matter/Case acceptance flow will enforce — and a final
+   BLOCK decision yields `cleared: false`.
 4. Conflict checks are only reachable within the correct permissions: `403 FORBIDDEN` for
    unauthenticated / missing-tenant / no-permission; RLS `FORCE` prevents cross-tenant reads.
 5. Phase 6 gate is owner-approved before any Phase 7 (Party Management) work.
@@ -174,7 +175,7 @@ gate-approvable core delivery:
 - **Matching is deterministic, not semantic** — a matched name/email is a *flag*, not a definitive
   conflict; the reviewer's decision (with reason + audit) is authoritative. This stays true when
   search-backed analysis arrives in Phase 19.
-- **Conservative posture** — a single BLOCK among decisions makes the check not clear; this is the
+- **Conservative posture** — a final `BLOCK` decision makes the check not clear; this is the
   defensible default for a conflicts process and is documented in the gate contract.
 - DB reachability for the migration apply / drift check is the owner's responsibility (as in Phases
   4/5); the migration is hand-authored to codebase conventions and flagged for `prisma migrate diff`
