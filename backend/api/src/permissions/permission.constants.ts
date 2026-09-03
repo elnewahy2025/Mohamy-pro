@@ -16,8 +16,13 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_CONFLICT_CHECKS: 'CanManageConflictChecks',
   CAN_MANAGE_PARTIES: 'CanManageParties',
   CAN_MANAGE_CASES: 'CanManageCases',
+  CAN_VIEW_CASE_TIMELINE: 'CanViewCaseTimeline',
   CAN_MANAGE_LEGAL_CONFIG: 'CanManageLegalConfig',
   CAN_MANAGE_GLOBAL_LEGAL_CONFIG: 'CanManageGlobalLegalConfig',
+  CAN_MANAGE_WORKFLOWS: 'CanManageWorkflows',
+  CAN_MANAGE_HEARINGS: 'CanManageHearings',
+  CAN_MANAGE_DEADLINES: 'CanManageDeadlines',
+  CAN_MANAGE_TASKS: 'CanManageTasks',
 } as const;
 
 export type PermissionKey =
@@ -91,6 +96,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
       'Create, update, and list cases (matters) and link parties within the active tenant.',
   },
   {
+    key: PERMISSION_KEYS.CAN_VIEW_CASE_TIMELINE,
+    description:
+      'Read-only access to the append-only timeline projection of events for a case.',
+  },
+  {
     key: PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
     description:
       'Manage tenant-specific legal configurations (e.g. courts, jurisdictions).',
@@ -99,6 +109,23 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     key: PERMISSION_KEYS.CAN_MANAGE_GLOBAL_LEGAL_CONFIG,
     description:
       'Manage global legal reference data such as countries (Platform Admin).',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_WORKFLOWS,
+    description:
+      'Manage workflows, versions, and states within the active tenant.',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_HEARINGS,
+    description: 'Manage case hearings and internal calendar events.',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_DEADLINES,
+    description: 'Manage legal deadlines and reminder rules.',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_TASKS,
+    description: 'Manage workflows and individual assignments for tasks.',
   },
 ];
 
@@ -119,7 +146,12 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_CONFLICT_CHECKS,
     PERMISSION_KEYS.CAN_MANAGE_PARTIES,
     PERMISSION_KEYS.CAN_MANAGE_CASES,
+    PERMISSION_KEYS.CAN_VIEW_CASE_TIMELINE,
     PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
+    PERMISSION_KEYS.CAN_MANAGE_WORKFLOWS,
+    PERMISSION_KEYS.CAN_MANAGE_HEARINGS,
+    PERMISSION_KEYS.CAN_MANAGE_DEADLINES,
+    PERMISSION_KEYS.CAN_MANAGE_TASKS,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,

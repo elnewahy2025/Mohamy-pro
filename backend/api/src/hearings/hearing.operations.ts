@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Request } from 'express';
-import { type Prisma, type CaseStatus } from '@prisma/client';
+import { type Prisma } from '@prisma/client';
 import { AuditEventService } from '../audit/audit-event.service';
 import type { AuditEventType } from '../audit/audit-constants';
 import { hashToken } from '../auth/session/session-crypto';
@@ -11,11 +11,12 @@ import {
   PERMISSION_KEYS,
   type PermissionKey,
 } from '../permissions/permission.constants';
-import { CaseAccessDeniedError } from './case.errors';
+import { HearingAccessDeniedError } from './hearing.errors';
 
-export const CASE_PERMISSION: PermissionKey = PERMISSION_KEYS.CAN_MANAGE_CASES;
+export const HEARING_PERMISSION: PermissionKey =
+  PERMISSION_KEYS.CAN_MANAGE_HEARINGS;
 
-export interface CaseContext {
+export interface HearingContext {
   sessionId: string;
   userId: string;
   tenantId: string;
@@ -23,8 +24,8 @@ export interface CaseContext {
 }
 
 @Injectable()
-export class CaseOperations {
-  private readonly logger = new Logger(CaseOperations.name);
+export class HearingOperations {
+  private readonly logger = new Logger(HearingOperations.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -32,17 +33,17 @@ export class CaseOperations {
     private readonly permissions: PermissionsService,
   ) {}
 
-  async authorize(request: Request): Promise<CaseContext> {
+  async authorize(request: Request): Promise<HearingContext> {
     const auth = request.auth;
-    if (!auth) throw new CaseAccessDeniedError('UNAUTHENTICATED');
+    if (!auth) throw new HearingAccessDeniedError('UNAUTHENTICATED');
     if (!auth.activeTenantId)
-      throw new CaseAccessDeniedError('TENANT_CONTEXT_REQUIRED');
+      throw new HearingAccessDeniedError('TENANT_CONTEXT_REQUIRED');
     const { membershipId: actorMembershipId } =
       await this.permissions.assertTenantPermission({
         request,
         userId: auth.userId,
         tenantId: auth.activeTenantId,
-        permissionKey: CASE_PERMISSION,
+        permissionKey: HEARING_PERMISSION,
         operationId: auth.sessionId,
       });
     return {
@@ -55,7 +56,7 @@ export class CaseOperations {
 
   async run<T>(
     request: Request,
-    ctx: CaseContext,
+    ctx: HearingContext,
     eventType: AuditEventType,
     targetType: string,
     operation: (transaction: Prisma.TransactionClient) => Promise<T>,
@@ -81,7 +82,7 @@ export class CaseOperations {
               tenantId: ctx.tenantId,
               targetType,
               targetId: (entity as { id?: string }).id ?? null,
-              policy: CASE_PERMISSION,
+              policy: HEARING_PERMISSION,
               correlationId,
               ipHash: this.optionalHash(request.ip),
               userAgentHash: this.optionalHash(request.headers['user-agent']),
@@ -93,56 +94,56 @@ export class CaseOperations {
         },
       );
     } catch (error) {
-      if (error instanceof CaseAccessDeniedError) throw error;
+      if (error instanceof HearingAccessDeniedError) throw error;
       this.logger.warn({
-        message: 'Case operation failed',
+        message: 'Hearing operation failed',
         reason: error instanceof Error ? error.message : String(error),
       });
+
+      await this.audit.write(
+        {
+          eventType,
+          outcome: 'FAILED',
+          actorUserId: ctx.userId,
+          actorMembershipId: ctx.actorMembershipId,
+          tenantId: ctx.tenantId,
+          targetType,
+          targetId: null,
+          policy: HEARING_PERMISSION,
+          correlationId,
+          ipHash: this.optionalHash(request.ip),
+          userAgentHash: this.optionalHash(request.headers['user-agent']),
+          metadata: {
+            ...metadata,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        this.prisma,
+      );
       throw error;
     }
   }
 
   async read<T>(
     request: Request,
-    ctx: CaseContext,
+    ctx: HearingContext,
     operation: (transaction: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
-    try {
-      return await this.prisma.withTenantContext(
-        {
-          tenantId: ctx.tenantId,
-          userId: ctx.userId,
-          membershipId: ctx.actorMembershipId,
-          operationId: ctx.sessionId,
-        },
-        operation,
-      );
-    } catch (error) {
-      if (error instanceof CaseAccessDeniedError) throw error;
-      this.logger.warn({
-        message: 'Case read failed',
-        reason: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
+    return await this.prisma.withTenantContext(
+      {
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        membershipId: ctx.actorMembershipId,
+        operationId: ctx.sessionId,
+      },
+      async (transaction) => {
+        return operation(transaction);
+      },
+    );
   }
 
-  async requireCaseInTenant(
-    transaction: Prisma.TransactionClient,
-    ctx: CaseContext,
-    caseId: string,
-  ): Promise<{ id: string; status: CaseStatus }> {
-    const found = await transaction.case.findFirst({
-      where: { id: caseId, tenantId: ctx.tenantId },
-      select: { id: true, status: true },
-    });
-    if (!found) throw new CaseAccessDeniedError('NO_CASE_IN_TENANT');
-    return found;
-  }
-
-  private optionalHash(value: string | string[] | undefined): string | null {
+  private optionalHash(value: string | undefined): string | null {
     if (!value) return null;
-    const raw = Array.isArray(value) ? value.join(',') : value;
-    return raw.length === 0 ? null : hashToken(raw);
+    return hashToken(value);
   }
 }

@@ -26,7 +26,12 @@ import { PartiesModule } from './parties/parties.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { RateLimitMiddleware } from './security/rate-limit.middleware';
 import { CaseModule } from './cases/case.module';
+import { CaseTimelineModule } from './case-timeline/case-timeline.module';
 import { LegalConfigModule } from './legal-config/legal-config.module';
+import { WorkflowModule } from './workflows/workflow.module';
+import { HearingModule } from './hearings/hearing.module';
+import { DeadlineModule } from './deadlines/deadline.module';
+import { TaskModule } from './tasks/task.module';
 
 @Module({
   imports: [
@@ -51,7 +56,12 @@ import { LegalConfigModule } from './legal-config/legal-config.module';
     ConflictChecksModule,
     PartiesModule,
     CaseModule,
+    CaseTimelineModule,
     LegalConfigModule,
+    WorkflowModule,
+    HearingModule,
+    DeadlineModule,
+    TaskModule,
     SchedulerModule,
   ],
   controllers: [AppController],

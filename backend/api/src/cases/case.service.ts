@@ -60,7 +60,7 @@ export class CaseService {
 
         await this.assertPartiesClear(tx, ctx, partyIds);
 
-        return tx.case.create({
+        const newCase = await tx.case.create({
           data: {
             tenantId: ctx.tenantId,
             caseNumber: dto.caseNumber,
@@ -74,6 +74,22 @@ export class CaseService {
             closeDate: dto.closeDate ? new Date(dto.closeDate) : null,
           },
         });
+
+        await tx.caseTimelineEvent.create({
+          data: {
+            tenantId: ctx.tenantId,
+            caseId: newCase.id,
+            eventType: 'CASE_CREATED',
+            actorUserId: ctx.userId,
+            actorMembershipId: ctx.actorMembershipId,
+            payload: {
+              caseNumber: newCase.caseNumber,
+              status: newCase.status,
+            },
+          },
+        });
+
+        return newCase;
       },
       { caseNumber: dto.caseNumber, partyCount: partyIds.length },
     );
@@ -150,9 +166,9 @@ export class CaseService {
       AUDIT_EVENT_TYPES.CASE_UPDATED,
       'Case',
       async (tx) => {
-        await this.ops.requireCaseInTenant(tx, ctx, id);
-        return tx.case.update({
-          where: { id },
+        const existing = await this.ops.requireCaseInTenant(tx, ctx, id);
+        const updatedCase = await tx.case.update({
+          where: { id, tenantId: ctx.tenantId },
           data: {
             caseNumber: dto.caseNumber,
             internalNumber: dto.internalNumber,
@@ -164,6 +180,24 @@ export class CaseService {
             closeDate: dto.closeDate ? new Date(dto.closeDate) : undefined,
           },
         });
+
+        if (dto.status && dto.status !== existing.status) {
+          await tx.caseTimelineEvent.create({
+            data: {
+              tenantId: ctx.tenantId,
+              caseId: id,
+              eventType: 'STATUS_CHANGED',
+              actorUserId: ctx.userId,
+              actorMembershipId: ctx.actorMembershipId,
+              payload: {
+                oldStatus: existing.status,
+                newStatus: dto.status,
+              },
+            },
+          });
+        }
+
+        return updatedCase;
       },
     );
   }
@@ -208,7 +242,7 @@ export class CaseService {
           );
         }
 
-        return tx.caseParty.create({
+        const caseParty = await tx.caseParty.create({
           data: {
             tenantId: ctx.tenantId,
             caseId,
@@ -216,6 +250,22 @@ export class CaseService {
             roleId: dto.roleId,
           },
         });
+
+        await tx.caseTimelineEvent.create({
+          data: {
+            tenantId: ctx.tenantId,
+            caseId,
+            eventType: 'PARTY_ADDED',
+            actorUserId: ctx.userId,
+            actorMembershipId: ctx.actorMembershipId,
+            payload: {
+              partyId: dto.partyId,
+              roleId: dto.roleId,
+            },
+          },
+        });
+
+        return caseParty;
       },
       { partyId: dto.partyId, roleId: dto.roleId },
     );
