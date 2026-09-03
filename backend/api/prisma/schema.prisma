@@ -147,15 +147,15 @@ model Health {
 
 // Phase 1: Storage security metadata foundation.
 model StorageObject {
-  id               String    @id @default(uuid())
+  id               String             @id @default(uuid())
   tenantId         String
   key              String
   versionId        String?
-  sha256           String    @db.VarChar(64)
+  sha256           String             @db.VarChar(64)
   sizeBytes        BigInt
   contentType      String
   encryptionMode   String
-  malwareStatus    String    @default("PENDING_SCAN")
+  malwareStatus    String             @default("PENDING_SCAN")
   malwareScannedAt DateTime?
   retentionUntil   DateTime?
   legalHold        Boolean            @default(false)
@@ -163,7 +163,7 @@ model StorageObject {
   metadata         Json?
   createdAt        DateTime           @default(now())
   deletedAt        DateTime?
-  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([key, versionId])
   @@index([malwareStatus, createdAt])
@@ -206,7 +206,7 @@ enum IdempotencyState {
 model IdempotencyKey {
   // Phase 2: typed server-derived tenant boundary. tenantScope remains the
   // persisted string lookup scope; tenantId is the typed FK used by RLS.
-  id              String             @id @default(uuid())
+  id              String           @id @default(uuid())
   key             String
   actorScope      String?
   tenantScope     String?
@@ -214,17 +214,17 @@ model IdempotencyKey {
   method          String
   route           String
   fingerprint     String
-  state           IdempotencyState   @default(RESERVED)
+  state           IdempotencyState @default(RESERVED)
   responseStatus  Int?
   responseBody    Json?
   responseHeaders Json?
-  attemptVersion  Int                @default(0)
-  reservedAt      DateTime           @default(now())
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  attemptVersion  Int              @default(0)
+  reservedAt      DateTime         @default(now())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   expiresAt       DateTime
   requestId       String?
-  tenant          Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Restrict, map: "IdempotencyKey_tenantId_fkey")
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Restrict, map: "IdempotencyKey_tenantId_fkey")
 
   @@unique([key, actorScope, tenantScope, method, route])
   @@index([expiresAt])
@@ -311,35 +311,38 @@ model AppSession {
 
 // Phase 2: Primary ordinary data-security boundary.
 model Tenant {
-  id                 String           @id @default(uuid())
-  slug               String           @unique
-  name               String
-  externalIdentifier String?          @unique
-  status             TenantStatus     @default(PENDING)
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  archivedAt         DateTime?
-  organizations      Organization[]
-  branches           Branch[]
-  clients            Client[]
-  clientContacts     ClientContact[]
-  clientAddresses    ClientAddress[]
-  departments        Department[]
-  teams              Team[]
-  memberships        Membership[]
-  activeSessions     AppSession[]     @relation("SessionActiveTenant")
-  invitations        Invitation[]
-  roles              Role[]
-  denials            AccessDenial[]
-  teamMembers        TeamMember[]
-  storageObjects     StorageObject[]
-  outboxMessages     OutboxMessage[]
-  auditEvents        AuditEvent[]
-  platformBootstraps PlatformBootstrap[]
-  idempotencyKeys    IdempotencyKey[]
+  id                   String                @id @default(uuid())
+  slug                 String                @unique
+  name                 String
+  externalIdentifier   String?               @unique
+  status               TenantStatus          @default(PENDING)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  archivedAt           DateTime?
+  organizations        Organization[]
+  branches             Branch[]
+  clients              Client[]
+  clientContacts       ClientContact[]
+  clientAddresses      ClientAddress[]
+  departments          Department[]
+  teams                Team[]
+  memberships          Membership[]
+  activeSessions       AppSession[]          @relation("SessionActiveTenant")
+  invitations          Invitation[]
+  roles                Role[]
+  denials              AccessDenial[]
+  teamMembers          TeamMember[]
+  storageObjects       StorageObject[]
+  outboxMessages       OutboxMessage[]
+  auditEvents          AuditEvent[]
+  platformBootstraps   PlatformBootstrap[]
+  idempotencyKeys      IdempotencyKey[]
   organizationSettings OrganizationSetting[]
-  conflictChecks      ConflictCheck[]
-  conflictParties     ConflictParty[]
+  conflictChecks       ConflictCheck[]
+  conflictParties      ConflictParty[]
+  parties              Party[]
+  partyRoles           PartyRole[]
+  partyRelationships   PartyRelationship[]
 
   @@index([status, createdAt])
 }
@@ -462,16 +465,16 @@ model TeamMember {
 // tokens are stored here as versioned JSON until a later phase promotes them
 // to first-class models). `key` is namespaced (`catalog.case-type`, etc.).
 model OrganizationSetting {
-  id          String   @id @default(uuid())
-  tenantId    String
-  key         String
-  value       Json
-  status      String   @default("ACTIVE")
-  version     Int      @default(1)
+  id                    String   @id @default(uuid())
+  tenantId              String
+  key                   String
+  value                 Json
+  status                String   @default("ACTIVE")
+  version               Int      @default(1)
   updatedByMembershipId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, key])
   @@index([tenantId, status])
@@ -597,7 +600,7 @@ model AccessDenial {
 // reject-immutable-mutation trigger). `tenantId` is null only for
 // provider/global-boundary authentication events.
 model AuditEvent {
-  id                String         @id @default(uuid())
+  id                String        @id @default(uuid())
   eventType         String
   eventVersion      Int
   category          AuditCategory
@@ -613,13 +616,13 @@ model AuditEvent {
   traceId           String?
   ipHash            String?
   userAgentHash     String?
-  metadata          Json           @default("{}")
-  occurredAt        DateTime       @default(now())
-  createdAt         DateTime       @default(now())
+  metadata          Json          @default("{}")
+  occurredAt        DateTime      @default(now())
+  createdAt         DateTime      @default(now())
   retentionUntil    DateTime
-  actorUser         User?          @relation("AuditActorUser", fields: [actorUserId], references: [id], onDelete: Restrict)
-  actorMembership   Membership?    @relation("AuditActorMembership", fields: [actorMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
-  tenant            Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  actorUser         User?         @relation("AuditActorUser", fields: [actorUserId], references: [id], onDelete: Restrict)
+  actorMembership   Membership?   @relation("AuditActorMembership", fields: [actorMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  tenant            Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, eventType, occurredAt])
   @@index([actorUserId, occurredAt])
@@ -657,21 +660,22 @@ model PlatformBootstrap {
 // addresses / identifiers / tags / notes / documents / communications are
 // deferred to sequenced Phase 5 follow-ups.
 model Client {
-  id          String         @id @default(uuid())
-  tenantId    String
-  clientType  ClientType
-  name        String
-  legalName   String?
-  displayName String
-  status      HierarchyStatus @default(ACTIVE)
-  source      String?
-  notes       String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  contacts    ClientContact[]
-  addresses   ClientAddress[]
+  id             String          @id @default(uuid())
+  tenantId       String
+  clientType     ClientType
+  name           String
+  legalName      String?
+  displayName    String
+  status         HierarchyStatus @default(ACTIVE)
+  source         String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  contacts       ClientContact[]
+  addresses      ClientAddress[]
   conflictChecks ConflictCheck[]
+  parties        Party[]
 
   @@unique([id, tenantId])
   @@index([tenantId, status])
@@ -683,17 +687,17 @@ model Client {
 // a Client in another tenant. `isPrimary` is enforced at the service layer (a
 // client has at most one primary of a given type).
 model ClientContact {
-  id          String            @id @default(uuid())
-  tenantId    String
-  clientId    String
-  type        ClientContactType
-  value       String
-  label       String?
-  isPrimary   Boolean           @default(false)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  client      Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  id        String            @id @default(uuid())
+  tenantId  String
+  clientId  String
+  type      ClientContactType
+  value     String
+  label     String?
+  isPrimary Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  client    Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([id, tenantId])
   @@index([tenantId, clientId])
@@ -730,21 +734,21 @@ model ClientAddress {
 // with reason. The acceptance-gate contract (`assertClearForCase`) will be
 // invoked by the Matter/Case acceptance flow in Phase 7/8.
 model ConflictCheck {
-  id                String              @id @default(uuid())
-  tenantId          String
-  status            ConflictCheckStatus @default(PENDING)
-  requesterUserId   String
-  clientId          String?
-  decision          ConflictDecision    @default(PENDING)
-  reason            String?
-  reviewerUserId    String?
-  reviewedAt        DateTime?
-  matchSummary      String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  client            Client?             @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  parties           ConflictParty[]
+  id              String              @id @default(uuid())
+  tenantId        String
+  status          ConflictCheckStatus @default(PENDING)
+  requesterUserId String
+  clientId        String?
+  decision        ConflictDecision    @default(PENDING)
+  reason          String?
+  reviewerUserId  String?
+  reviewedAt      DateTime?
+  matchSummary    String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  client          Client?             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  parties         ConflictParty[]
 
   @@unique([id, tenantId])
   @@index([tenantId, status])
@@ -755,18 +759,81 @@ model ConflictCheck {
 // trimmed), and an optional email. The deterministic match service scans these
 // against Client.displayName and ClientContact.value to surface collisions.
 model ConflictParty {
-  id              String           @id @default(uuid())
+  id              String            @id @default(uuid())
   tenantId        String
   conflictCheckId String
   kind            ConflictPartyType
   name            String
   normalizedName  String
   email           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  conflictCheck   ConflictCheck    @relation(fields: [conflictCheckId], references: [id], onDelete: Cascade)
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  conflictCheck   ConflictCheck     @relation(fields: [conflictCheckId], references: [id], onDelete: Cascade)
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([id, tenantId])
   @@index([tenantId, conflictCheckId])
+}
+
+// Phase 7: Party Management
+enum PartyType {
+  PERSON
+  ORGANIZATION
+}
+
+// A generic Party separated from a Client, supporting legal structuring.
+model Party {
+  id          String          @id @default(uuid())
+  tenantId    String
+  partyType   PartyType
+  name        String?
+  legalName   String?
+  displayName String
+  status      HierarchyStatus @default(ACTIVE)
+  clientId    String?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  client            Client?             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  relationshipsFrom PartyRelationship[] @relation("PartyRelationshipsFrom")
+  relationshipsTo   PartyRelationship[] @relation("PartyRelationshipsTo")
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+// Configurable role catalog for Parties.
+model PartyRole {
+  id        String          @id @default(uuid())
+  tenantId  String
+  key       String
+  label     String
+  status    HierarchyStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, key])
+}
+
+// Tenant-scoped party-to-party relationships.
+model PartyRelationship {
+  id               String          @id @default(uuid())
+  tenantId         String
+  fromPartyId      String
+  toPartyId        String
+  relationshipType String
+  status           HierarchyStatus @default(ACTIVE)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  fromParty Party  @relation("PartyRelationshipsFrom", fields: [fromPartyId], references: [id], onDelete: Restrict)
+  toParty   Party  @relation("PartyRelationshipsTo", fields: [toPartyId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, fromPartyId])
 }
