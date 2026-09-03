@@ -96,14 +96,14 @@ RLS `FORCE ..._tenant_isolation` via `app_tenant_context_is_valid()`, service la
   `parties/` module, `20260904100000_...`). `CaseParty` linking contract lives in
   `src/parties/case-party.contract.ts` (`CasePartyLinker`/`CasePartyLink`). Sealed.
 - **Phase 8** — Case Management (`Case`/`CaseParty`, `CanManageCases`, `cases/` module,
-  `20260904120000_...`). **STATUS: in progress — see warning below.** `case.service.ts` correctly
-  calls `ConflictGateService.assertClearForCase` and throws `CaseGateRejectionError` on block.
-
-> **WARNING (2026-09-03):** `origin/main` HEAD (`9fe8ce37`, Phase 8) currently **fails `tsc --noEmit`**:
-> `src/cases/*` references three not-yet-existing modules (`../auth/app-session.guard`,
-> `../auth/app-session.context`, `../audit/audit-log.service`), uses `MEDIUM` (not in `CasePriority`
-> enum, which is `LOW|NORMAL|HIGH|URGENT`), and writes `caseParty.partyRoleId` while the schema
-> column is `roleId`. These must be resolved before Phase 8 can be considered passing.
+  `20260904120000_...`). Sealed. `case.service.ts` calls `ConflictGateService.assertClearForCase`
+  and throws `CaseGateRejectionError` on block.
+- **Phase 9** — Legal Configuration (`Country`/`Jurisdiction`/`Court`/`CourtLocation`,
+  `CanManageLegalConfig` + `CanManageGlobalLegalConfig`, `legal-config/` module,
+  `20260904150000_...`). **Hybrid tenancy**: `tenantId` is nullable — `NULL` = global dictionary,
+  concrete value = tenant-scoped. RLS `FORCE` policies allow global (`tenantId IS NULL`) +
+  own-tenant reads and tenant-scoped writes; `LegalConfigOperations.requireParentVisible`
+  prevents attaching a child to another tenant's parent. Delivered (create + list).
 
 ## Prettier Setup (shared with other agents)
 
