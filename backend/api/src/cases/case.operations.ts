@@ -1,58 +1,148 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { PrismaService } from '../infrastructure/database/prisma.service';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Request } from 'express';
-import { PERMISSION_KEYS } from '../permissions/permission.constants';
-import { AppSessionContext } from '../auth/app-session.context';
+import { type Prisma } from '@prisma/client';
+import { AuditEventService } from '../audit/audit-event.service';
+import type { AuditEventType } from '../audit/audit-constants';
+import { hashToken } from '../auth/session/session-crypto';
+import { getCorrelationId } from '../common/middleware/correlation-id.middleware';
+import { PrismaService } from '../infrastructure/database/prisma.service';
+import { PermissionsService } from '../permissions/permissions.service';
+import {
+  PERMISSION_KEYS,
+  type PermissionKey,
+} from '../permissions/permission.constants';
 import { CaseAccessDeniedError } from './case.errors';
+
+export const CASE_PERMISSION: PermissionKey = PERMISSION_KEYS.CAN_MANAGE_CASES;
+
+export interface CaseContext {
+  sessionId: string;
+  userId: string;
+  tenantId: string;
+  actorMembershipId: string;
+}
 
 @Injectable()
 export class CaseOperations {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CaseOperations.name);
 
-  public async authorize(req: Request) {
-    const ctx = AppSessionContext.fromRequest(req);
-    if (!ctx.activeTenantId) {
-      throw new UnauthorizedException('Missing active tenant context');
-    }
-    const hasPerm = await ctx.hasPermission(PERMISSION_KEYS.CAN_MANAGE_CASES);
-    if (!hasPerm) {
-      throw new UnauthorizedException('Missing CanManageCases permission');
-    }
-    return ctx;
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditEventService,
+    private readonly permissions: PermissionsService,
+  ) {}
+
+  async authorize(request: Request): Promise<CaseContext> {
+    const auth = request.auth;
+    if (!auth) throw new CaseAccessDeniedError('UNAUTHENTICATED');
+    if (!auth.activeTenantId)
+      throw new CaseAccessDeniedError('TENANT_CONTEXT_REQUIRED');
+    const { membershipId: actorMembershipId } =
+      await this.permissions.assertTenantPermission({
+        request,
+        userId: auth.userId,
+        tenantId: auth.activeTenantId,
+        permissionKey: CASE_PERMISSION,
+        operationId: auth.sessionId,
+      });
+    return {
+      sessionId: auth.sessionId,
+      userId: auth.userId,
+      tenantId: auth.activeTenantId,
+      actorMembershipId,
+    };
   }
 
-  public async run<T>(
-    req: Request,
-    fn: (tx: Prisma.TransactionClient, ctx: AppSessionContext) => Promise<T>,
+  async run<T>(
+    request: Request,
+    ctx: CaseContext,
+    eventType: AuditEventType,
+    targetType: string,
+    operation: (transaction: Prisma.TransactionClient) => Promise<T>,
+    metadata?: Record<string, unknown>,
   ): Promise<T> {
-    const ctx = await this.authorize(req);
-    return this.prisma.withTenantContext(ctx.activeTenantId!, async (tx) => {
-      return fn(tx, ctx);
-    });
+    const correlationId = getCorrelationId(request);
+    try {
+      return await this.prisma.withTenantContext(
+        {
+          tenantId: ctx.tenantId,
+          userId: ctx.userId,
+          membershipId: ctx.actorMembershipId,
+          operationId: ctx.sessionId,
+        },
+        async (transaction) => {
+          const entity = await operation(transaction);
+          await this.audit.write(
+            {
+              eventType,
+              outcome: 'SUCCEEDED',
+              actorUserId: ctx.userId,
+              actorMembershipId: ctx.actorMembershipId,
+              tenantId: ctx.tenantId,
+              targetType,
+              targetId: (entity as { id?: string }).id ?? null,
+              policy: CASE_PERMISSION,
+              correlationId,
+              ipHash: this.optionalHash(request.ip),
+              userAgentHash: this.optionalHash(request.headers['user-agent']),
+              metadata,
+            },
+            transaction,
+          );
+          return entity;
+        },
+      );
+    } catch (error) {
+      if (error instanceof CaseAccessDeniedError) throw error;
+      this.logger.warn({
+        message: 'Case operation failed',
+        reason: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
-  public async read<T>(
-    req: Request,
-    fn: (tx: Prisma.TransactionClient, ctx: AppSessionContext) => Promise<T>,
+  async read<T>(
+    request: Request,
+    ctx: CaseContext,
+    operation: (transaction: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
-    const ctx = await this.authorize(req);
-    return this.prisma.withTenantContext(ctx.activeTenantId!, async (tx) => {
-      return fn(tx, ctx);
-    });
+    try {
+      return await this.prisma.withTenantContext(
+        {
+          tenantId: ctx.tenantId,
+          userId: ctx.userId,
+          membershipId: ctx.actorMembershipId,
+          operationId: ctx.sessionId,
+        },
+        operation,
+      );
+    } catch (error) {
+      if (error instanceof CaseAccessDeniedError) throw error;
+      this.logger.warn({
+        message: 'Case read failed',
+        reason: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
-  public async requireCaseInTenant(
-    tx: Prisma.TransactionClient,
-    ctx: AppSessionContext,
+  async requireCaseInTenant(
+    transaction: Prisma.TransactionClient,
+    ctx: CaseContext,
     caseId: string,
-  ) {
-    const c = await tx.case.findUnique({
-      where: { id: caseId, tenantId: ctx.activeTenantId! },
+  ): Promise<{ id: string }> {
+    const found = await transaction.case.findFirst({
+      where: { id: caseId, tenantId: ctx.tenantId },
+      select: { id: true },
     });
-    if (!c) {
-      throw new CaseAccessDeniedError();
-    }
-    return c;
+    if (!found) throw new CaseAccessDeniedError('NO_CASE_IN_TENANT');
+    return found;
+  }
+
+  private optionalHash(value: string | string[] | undefined): string | null {
+    if (!value) return null;
+    const raw = Array.isArray(value) ? value.join(',') : value;
+    return raw.length === 0 ? null : hashToken(raw);
   }
 }

@@ -1,31 +1,112 @@
-import { IsString, IsOptional, IsIn, IsUUID } from 'class-validator';
-import type { CreateCaseParams, AddCasePartyParams } from './case.service';
+import {
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
+import { CasePriority, CaseStatus } from '@prisma/client';
+import { PaginationDto } from '../common/api/pagination.dto';
 
-export class CreateCaseDto implements CreateCaseParams {
+export class CreateCaseDto {
   @IsString()
-  title!: string;
+  @MaxLength(255)
+  caseNumber!: string;
 
-  @IsString()
-  referenceNumber!: string;
-
-  @IsUUID()
   @IsOptional()
-  clientId?: string;
-
   @IsString()
-  @IsOptional()
-  notes?: string;
+  @MaxLength(255)
+  internalNumber?: string;
 
-  @IsString()
+  @IsUUID(4)
+  clientId!: string;
+
   @IsOptional()
-  @IsIn(['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  @IsString()
+  @MaxLength(255)
+  practiceArea?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  caseType?: string;
+
+  @IsOptional()
+  @IsEnum(CaseStatus)
+  status?: CaseStatus;
+
+  @IsOptional()
+  @IsEnum(CasePriority)
+  priority?: CasePriority;
+
+  @IsOptional()
+  @IsDateString()
+  openDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  closeDate?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(4, { each: true })
+  partyIds?: string[];
 }
 
-export class AddCasePartyDto implements AddCasePartyParams {
-  @IsUUID()
+export class UpdateCaseDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  caseNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  internalNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  practiceArea?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  caseType?: string;
+
+  @IsOptional()
+  @IsEnum(CaseStatus)
+  status?: CaseStatus;
+
+  @IsOptional()
+  @IsEnum(CasePriority)
+  priority?: CasePriority;
+
+  @IsOptional()
+  @IsDateString()
+  openDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  closeDate?: string;
+}
+
+export class AddCasePartyDto {
+  @IsUUID(4)
   partyId!: string;
 
+  @IsUUID(4)
+  roleId!: string;
+}
+
+export class CaseQueryDto extends PaginationDto {
+  @IsOptional()
   @IsString()
-  partyRoleId!: string;
+  search?: string;
+
+  @IsOptional()
+  @IsEnum(CaseStatus)
+  status?: CaseStatus;
 }

@@ -4,6 +4,7 @@ import { ConflictCheckController } from './conflict-check.controller';
 import { ConflictCheckService } from './conflict-check.service';
 import { ConflictCheckOperations } from './conflict-check.operations';
 import { ConflictMatchService } from './conflict-match.service';
+import { ConflictGateService } from './conflict-gate.service';
 
 @Module({
   imports: [AuthModule],
@@ -12,6 +13,8 @@ import { ConflictMatchService } from './conflict-match.service';
     ConflictCheckService,
     ConflictCheckOperations,
     ConflictMatchService,
+    ConflictGateService,
   ],
+  exports: [ConflictGateService],
 })
 export class ConflictChecksModule {}
