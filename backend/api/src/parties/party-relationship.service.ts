@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Request } from 'express';
 import { type PartyRelationship, Prisma } from '@prisma/client';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
@@ -23,6 +23,12 @@ export class PartyRelationshipService {
       AUDIT_EVENT_TYPES.PARTY_RELATIONSHIP_CREATED,
       'PartyRelationship',
       async (tx) => {
+        if (fromPartyId === dto.toPartyId) {
+          throw new BadRequestException(
+            'A party cannot have a relationship with itself',
+          );
+        }
+
         await this.ops.requirePartyInTenant(tx, ctx, fromPartyId);
         await this.ops.requirePartyInTenant(tx, ctx, dto.toPartyId);
 

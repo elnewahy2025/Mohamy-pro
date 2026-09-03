@@ -45,3 +45,12 @@ As explicitly agreed upon in the Phase 7 plan, the following are bounded and def
 ## Next Steps
 
 Phase 7 is sealed and ready for owner review. Once approved, the project can proceed to **Phase 8 (Matter / Case Management)** where the Case entity will be built and physically linked to the `CasePartyContract`.
+
+## Owner Approval
+
+- [ ] **Approved** — Phase 7 (Party Management) core delivery is accepted. Phase 8 (Matter / Case Management) may begin after the forced-phase gate is satisfied.
+
+## Follow-up (Phase 8, recorded not silent)
+
+- [x] New-tenant default `PartyRole` seeding: established pattern waits until Phase 8 role provisioning; no standalone path added this phase.
+- [x] Self-link guard: added `fromPartyId !== toPartyId` `BadRequestException` in `party-relationship.service.ts` + spec.

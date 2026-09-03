@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { PartyRelationshipService } from './party-relationship.service';
 import { PartyOperations } from './party.operations';
 import type { Request } from 'express';
@@ -36,5 +37,14 @@ describe('PartyRelationshipService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('should reject a self-relationship where fromPartyId equals toPartyId', async () => {
+    await expect(
+      service.create(mockRequest, 'party-1', {
+        toPartyId: 'party-1',
+        relationshipType: 'spouse',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
