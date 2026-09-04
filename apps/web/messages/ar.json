@@ -626,7 +626,7 @@
     "placeholders": {
       "caseId": "00000000-0000-4000-8000-000000000000",
       "eventType": "CASE_CREATED أو CLIENT_ADDED أو PARTY_ADDED أو STATUS_CHANGED…",
-      "payload": "{\"status\": \"OPEN\"} أو اتركه فارغاً"
+      "payload": "'{'\"status\": \"OPEN\"'}' أو اتركه فارغاً"
     },
     "result": {
       "title": "اكتملت العملية",

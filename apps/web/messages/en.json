@@ -626,7 +626,7 @@
     "placeholders": {
       "caseId": "00000000-0000-4000-8000-000000000000",
       "eventType": "CASE_CREATED, CLIENT_ADDED, PARTY_ADDED, STATUS_CHANGED, …",
-      "payload": "{\"status\": \"OPEN\"} or omit"
+      "payload": "'{'\"status\": \"OPEN\"'}' or omit"
     },
     "result": {
       "title": "Operation completed",
