@@ -23,12 +23,14 @@ describe('localized frontend messages', () => {
       organization: 'Organization',
       clients: 'Clients',
       parties: 'Parties',
+      cases: 'Cases',
       conflictChecks: 'Conflict checks',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
         workspace: 'Workspace',
         clientsParties: 'Clients & Parties',
+        matters: 'Matters',
         configuration: 'Configuration',
       },
     });
@@ -38,12 +40,14 @@ describe('localized frontend messages', () => {
       organization: 'المؤسسة',
       clients: 'العملاء',
       parties: 'الأطراف',
+      cases: 'القضايا',
       conflictChecks: 'فحص تضارب المصالح',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {
         workspace: 'مساحة العمل',
         clientsParties: 'العملاء والأطراف',
+        matters: 'القضايا',
         configuration: 'الإعداد',
       },
     });

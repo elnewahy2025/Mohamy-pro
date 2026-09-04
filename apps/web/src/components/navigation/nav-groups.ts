@@ -1,6 +1,7 @@
 import {
   Activity,
   ArrowRightLeft,
+  Briefcase,
   Building2,
   LayoutDashboard,
   Settings2,
@@ -40,6 +41,14 @@ export const appNavGroups: AppNavGroup[] = [
       { href: '/clients', labelKey: 'navigation.clients', icon: Users },
       { href: '/parties', labelKey: 'navigation.parties', icon: Users },
       { href: '/conflict-checks', labelKey: 'navigation.conflictChecks', icon: ShieldAlert },
+    ],
+  },
+  {
+    id: 'matters',
+    titleKey: 'navigation.groups.matters',
+    icon: Briefcase,
+    items: [
+      { href: '/cases', labelKey: 'navigation.cases', icon: Briefcase },
     ],
   },
   {

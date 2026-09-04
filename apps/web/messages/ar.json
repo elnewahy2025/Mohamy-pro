@@ -18,12 +18,14 @@
     "organization": "المؤسسة",
     "clients": "العملاء",
     "parties": "الأطراف",
+    "cases": "القضايا",
     "conflictChecks": "فحص تضارب المصالح",
     "integrations": "التكاملات",
     "settings": "الإعدادات",
     "groups": {
       "workspace": "مساحة العمل",
       "clientsParties": "العملاء والأطراف",
+      "matters": "القضايا",
       "configuration": "الإعداد"
     }
   },
@@ -464,6 +466,88 @@
       "list": "قائمة الأطراف",
       "party": "إنشاء طرف",
       "relationship": "علاقات الأطراف"
+    }
+  },
+  "cases": {
+    "navLabel": "القضايا",
+    "eyebrow": "المرحلة 8 · إدارة القضايا",
+    "title": "إدارة القضايا القانونية التي تعمل عليها.",
+    "description": "أنشئ وأدرِ القضايا، وتابع حالتها وأولويتها، واربط الأطراف والأدوار المعنية بها.",
+    "entity": {
+      "case": {
+        "title": "القضية",
+        "description": "سجل قضية يتضمن الرقم والعميل والحالة والأولوية."
+      },
+      "list": {
+        "title": "قائمة القضايا",
+        "description": "ابحث وصفِّ القضايا في مساحة العمل النشطة."
+      },
+      "party": {
+        "title": "أطراف القضية",
+        "description": "اربط الأطراف وأدوارهم بقضية."
+      }
+    },
+    "create": "إنشاء",
+    "update": "تحديث",
+    "addParty": "إضافة طرف",
+    "removeParty": "إزالة طرف",
+    "getDetail": "عرض التفاصيل",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "id": "معرّف القضية",
+      "caseNumber": "رقم القضية",
+      "internalNumber": "الرقم الداخلي",
+      "clientId": "معرّف العميل",
+      "practiceArea": "مجال الممارسة",
+      "caseType": "نوع القضية",
+      "status": "الحالة",
+      "priority": "الأولوية",
+      "openDate": "تاريخ الفتح",
+      "closeDate": "تاريخ الإغلاق",
+      "partyIds": "معرّفات الأطراف",
+      "partyId": "معرّف الطرف",
+      "roleId": "معرّف الدور",
+      "clientName": "العميل",
+      "roleKey": "مفتاح الدور",
+      "roleLabel": "الدور"
+    },
+    "placeholders": {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "caseNumber": "مثال: C-2026-001",
+      "internalNumber": "الرقم الداخلي (اختياري)",
+      "clientId": "00000000-0000-4000-8000-000000000000",
+      "practiceArea": "مثال: تقاضٍ",
+      "caseType": "مثال: مدني",
+      "status": "OPEN أو ON_HOLD أو CLOSED",
+      "statusFilter": "OPEN أو ON_HOLD أو CLOSED",
+      "priority": "LOW أو NORMAL أو HIGH أو URGENT",
+      "openDate": "YYYY-MM-DD",
+      "closeDate": "YYYY-MM-DD",
+      "partyIds": "معرّفات الأطراف مفصولة بفواصل",
+      "partyId": "00000000-0000-4000-8000-000000000000",
+      "roleId": "00000000-0000-4000-8000-000000000000",
+      "search": "البحث برقم القضية"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرّف",
+      "caseNumber": "رقم القضية",
+      "status": "الحالة",
+      "priority": "الأولوية",
+      "client": "العميل",
+      "total": "الإجمالي",
+      "page": "الصفحة",
+      "list": "بحث",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي"
+    },
+    "sections": {
+      "list": "قائمة القضايا",
+      "case": "إنشاء قضية",
+      "party": "ربط أطراف القضية"
     }
   }
 }

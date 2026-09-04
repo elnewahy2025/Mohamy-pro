@@ -1044,3 +1044,200 @@ export class PartyClient {
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+// Matter / Case Management (Phase 8)
+// -----------------------------------------------------------------------------
+
+export type CaseStatus = 'OPEN' | 'CLOSED' | 'ON_HOLD';
+export type CasePriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+export interface CaseClientRef {
+  id: string;
+  displayName: string;
+}
+
+export interface CasePartyRef {
+  id: string;
+  partyId: string;
+  roleId: string;
+  status: HierarchyStatus;
+}
+
+export interface CasePartyResult {
+  id: string;
+  tenantId: string;
+  caseId: string;
+  partyId: string;
+  roleId: string;
+  status: HierarchyStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CaseListRow {
+  id: string;
+  tenantId: string;
+  caseNumber: string;
+  internalNumber: string | null;
+  clientId: string;
+  practiceArea: string | null;
+  caseType: string | null;
+  status: CaseStatus;
+  priority: CasePriority;
+  openDate: string | null;
+  closeDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+  client: CaseClientRef;
+  parties: CasePartyRef[];
+}
+
+export interface CaseResult {
+  id: string;
+  tenantId: string;
+  caseNumber: string;
+  internalNumber: string | null;
+  clientId: string;
+  practiceArea: string | null;
+  caseType: string | null;
+  status: CaseStatus;
+  priority: CasePriority;
+  openDate: string | null;
+  closeDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CaseDetailParty {
+  id: string;
+  caseId: string;
+  partyId: string;
+  roleId: string;
+  status: HierarchyStatus;
+  createdAt: string;
+  updatedAt: string;
+  party: {
+    id: string;
+    displayName: string;
+    partyType: PartyType;
+  };
+  role: {
+    id: string;
+    key: string;
+    label: string;
+  };
+}
+
+export interface CaseDetail extends CaseResult {
+  client: CaseClientRef;
+  parties: CaseDetailParty[];
+}
+
+export interface CaseListResult {
+  data: CaseListRow[];
+  pagination: PaginationMeta;
+}
+
+export interface CreateCaseRequest {
+  caseNumber: string;
+  internalNumber?: string | null;
+  clientId: string;
+  practiceArea?: string | null;
+  caseType?: string | null;
+  status?: CaseStatus;
+  priority?: CasePriority;
+  openDate?: string | null;
+  closeDate?: string | null;
+  partyIds?: string[];
+}
+
+export interface UpdateCaseRequest {
+  id: string;
+  caseNumber?: string;
+  internalNumber?: string | null;
+  practiceArea?: string | null;
+  caseType?: string | null;
+  status?: CaseStatus;
+  priority?: CasePriority;
+  openDate?: string | null;
+  closeDate?: string | null;
+}
+
+export interface AddCasePartyRequest {
+  caseId: string;
+  partyId: string;
+  roleId: string;
+}
+
+export interface RemoveCasePartyRequest {
+  caseId: string;
+  partyId: string;
+}
+
+export interface ListCasesQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: CaseStatus;
+}
+
+export interface CaseGateBlock {
+  partyName: string;
+  decision: string;
+  reason: string;
+  conflictCheckId: string;
+}
+
+const CASES_PREFIX = '/cases';
+
+export class CasesClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  create(req: CreateCaseRequest): Promise<CaseResult> {
+    return this.client.body<CaseResult>(CASES_PREFIX, 'POST', req);
+  }
+
+  list(query: ListCasesQuery = {}): Promise<CaseListResult> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.search) params.set('search', query.search);
+    if (query.status) params.set('status', query.status);
+    const qs = params.toString();
+    return this.client.body<CaseListResult>(
+      `${CASES_PREFIX}${qs ? `?${qs}` : ''}`,
+      'GET',
+    );
+  }
+
+  get(id: string): Promise<CaseDetail> {
+    return this.client.body<CaseDetail>(
+      `${CASES_PREFIX}/${encodeURIComponent(id)}`,
+      'GET',
+    );
+  }
+
+  update(req: UpdateCaseRequest): Promise<CaseResult> {
+    return this.client.body<CaseResult>(
+      `${CASES_PREFIX}/${encodeURIComponent(req.id)}`,
+      'PATCH',
+      req,
+    );
+  }
+
+  addParty(req: AddCasePartyRequest): Promise<CasePartyResult> {
+    return this.client.body<CasePartyResult>(
+      `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/parties`,
+      'POST',
+      { partyId: req.partyId, roleId: req.roleId },
+    );
+  }
+
+  removeParty(req: RemoveCasePartyRequest): Promise<void> {
+    return this.client.body<void>(
+      `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/parties/${encodeURIComponent(req.partyId)}`,
+      'DELETE',
+    );
+  }
+}

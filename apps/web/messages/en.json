@@ -18,12 +18,14 @@
     "organization": "Organization",
     "clients": "Clients",
     "parties": "Parties",
+    "cases": "Cases",
     "conflictChecks": "Conflict checks",
     "integrations": "Integrations",
     "settings": "Settings",
     "groups": {
       "workspace": "Workspace",
       "clientsParties": "Clients & Parties",
+      "matters": "Matters",
       "configuration": "Configuration"
     }
   },
@@ -464,6 +466,88 @@
       "list": "Party list",
       "party": "Create party",
       "relationship": "Party relationships"
+    }
+  },
+  "cases": {
+    "navLabel": "Cases",
+    "eyebrow": "Phase 8 · Matter / Case management",
+    "title": "Manage the legal matters you work on.",
+    "description": "Create and manage cases (matters), track their status and priority, and link the parties and roles involved.",
+    "entity": {
+      "case": {
+        "title": "Case",
+        "description": "A matter record with number, client, status, and priority."
+      },
+      "list": {
+        "title": "Case list",
+        "description": "Search and filter the cases in the active workspace."
+      },
+      "party": {
+        "title": "Case parties",
+        "description": "Link parties and their roles to a case."
+      }
+    },
+    "create": "Create",
+    "update": "Update",
+    "addParty": "Add party",
+    "removeParty": "Remove party",
+    "getDetail": "Get details",
+    "submitting": "Working…",
+    "labels": {
+      "id": "Case ID",
+      "caseNumber": "Case number",
+      "internalNumber": "Internal number",
+      "clientId": "Client ID",
+      "practiceArea": "Practice area",
+      "caseType": "Case type",
+      "status": "Status",
+      "priority": "Priority",
+      "openDate": "Open date",
+      "closeDate": "Close date",
+      "partyIds": "Party IDs",
+      "partyId": "Party ID",
+      "roleId": "Role ID",
+      "clientName": "Client",
+      "roleKey": "Role key",
+      "roleLabel": "Role"
+    },
+    "placeholders": {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "caseNumber": "e.g. C-2026-001",
+      "internalNumber": "Optional internal number",
+      "clientId": "00000000-0000-4000-8000-000000000000",
+      "practiceArea": "e.g. Litigation",
+      "caseType": "e.g. Civil",
+      "status": "OPEN, ON_HOLD or CLOSED",
+      "statusFilter": "OPEN, ON_HOLD or CLOSED",
+      "priority": "LOW, NORMAL, HIGH or URGENT",
+      "openDate": "YYYY-MM-DD",
+      "closeDate": "YYYY-MM-DD",
+      "partyIds": "Comma-separated party IDs",
+      "partyId": "00000000-0000-4000-8000-000000000000",
+      "roleId": "00000000-0000-4000-8000-000000000000",
+      "search": "Search by case number"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "caseNumber": "Case number",
+      "status": "Status",
+      "priority": "Priority",
+      "client": "Client",
+      "total": "Total",
+      "page": "Page",
+      "list": "Search",
+      "errorTitle": "Something went wrong"
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "sections": {
+      "list": "Case list",
+      "case": "Create case",
+      "party": "Link case parties"
     }
   }
 }
