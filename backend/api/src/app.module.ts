@@ -34,6 +34,7 @@ import { DeadlineModule } from './deadlines/deadline.module';
 import { TaskModule } from './tasks/task.module';
 import { DocumentModule } from './documents/document.module';
 import { SearchModule } from './search/search.module';
+import { TemplatesModule } from './templates/templates.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { SearchModule } from './search/search.module';
     TaskModule,
     DocumentModule,
     SearchModule,
+    TemplatesModule,
     SchedulerModule,
   ],
   controllers: [AppController],
