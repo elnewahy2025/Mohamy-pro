@@ -17,6 +17,7 @@
     "operations": "Operations",
     "organization": "Organization",
     "clients": "Clients",
+    "parties": "Parties",
     "conflictChecks": "Conflict checks",
     "integrations": "Integrations",
     "settings": "Settings",
@@ -384,6 +385,85 @@
     "sections": {
       "list": "Conflict check list",
       "check": "Request a conflict check"
+    }
+  },
+  "parties": {
+    "navLabel": "Parties",
+    "eyebrow": "Phase 7 · Party management",
+    "title": "Manage the legal counterparts you work with.",
+    "description": "Create and manage parties — people or organizations — that may be linked to a client, assign configurable roles, and record party-to-party relationships.",
+    "entity": {
+      "party": {
+        "title": "Party",
+        "description": "A person or organization legal counterparty."
+      },
+      "list": {
+        "title": "Party list",
+        "description": "Search and filter the parties in the active workspace."
+      },
+      "relationship": {
+        "title": "Relationships",
+        "description": "Party-to-party links (spouse, subsidiary, related entity, etc.)."
+      }
+    },
+    "create": "Create",
+    "update": "Update",
+    "archive": "Archive",
+    "remove": "Remove",
+    "submitting": "Working…",
+    "labels": {
+      "id": "Party ID",
+      "partyType": "Party type",
+      "name": "Name",
+      "legalName": "Legal name",
+      "displayName": "Display name",
+      "clientId": "Client ID",
+      "notes": "Notes",
+      "reason": "Reason",
+      "search": "Search",
+      "status": "Status",
+      "fromPartyId": "From party ID",
+      "toPartyId": "To party ID",
+      "relationshipType": "Relationship type",
+      "roleKey": "Role key",
+      "roleLabel": "Role label"
+    },
+    "placeholders": {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "partyType": "PERSON or ORGANIZATION",
+      "name": "e.g. Ahmed Hassan",
+      "legalName": "Optional legal name",
+      "displayName": "e.g. Ahmed Hassan",
+      "clientId": "Optional client ID",
+      "notes": "Optional internal notes",
+      "reason": "Optional reason",
+      "search": "Search by display name",
+      "status": "ACTIVE or ARCHIVED",
+      "partyTypeFilter": "PERSON or ORGANIZATION",
+      "fromPartyId": "00000000-0000-4000-8000-000000000000",
+      "toPartyId": "00000000-0000-4000-8000-000000000000",
+      "relationshipType": "e.g. spouse, subsidiary",
+      "roleKey": "plaintiff, defendant, witness…"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "name": "Display name",
+      "status": "Status",
+      "type": "Type",
+      "total": "Total",
+      "page": "Page",
+      "list": "Search",
+      "errorTitle": "Something went wrong"
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "sections": {
+      "list": "Party list",
+      "party": "Create party",
+      "relationship": "Party relationships"
     }
   }
 }

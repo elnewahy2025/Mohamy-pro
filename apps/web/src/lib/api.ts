@@ -880,3 +880,167 @@ export class ConflictChecksClient {
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+// Party Management (Phase 7)
+// -----------------------------------------------------------------------------
+
+export type PartyType = 'PERSON' | 'ORGANIZATION';
+
+export interface PartyResult {
+  id: string;
+  tenantId: string;
+  partyType: PartyType;
+  name: string | null;
+  legalName: string | null;
+  displayName: string;
+  status: HierarchyStatus;
+  clientId: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartyRoleResult {
+  id: string;
+  tenantId: string;
+  key: string;
+  label: string;
+  status: HierarchyStatus;
+}
+
+export interface PartyRelationshipPartyRef {
+  id: string;
+  displayName: string;
+  partyType: PartyType;
+}
+
+export interface PartyRelationshipResult {
+  id: string;
+  tenantId: string;
+  fromPartyId: string;
+  toPartyId: string;
+  relationshipType: string;
+  status: HierarchyStatus;
+  fromParty?: PartyRelationshipPartyRef;
+  toParty?: PartyRelationshipPartyRef;
+}
+
+export interface PartyListResult {
+  data: PartyResult[];
+  pagination: PaginationMeta;
+}
+
+export interface PartyRelationshipListResult {
+  data: PartyRelationshipResult[];
+  pagination: PaginationMeta;
+}
+
+export interface CreatePartyRequest {
+  partyType: PartyType;
+  name?: string | null;
+  legalName?: string | null;
+  displayName: string;
+  clientId?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdatePartyRequest {
+  id: string;
+  name?: string | null;
+  legalName?: string | null;
+  displayName?: string;
+  notes?: string | null;
+}
+
+export interface ArchivePartyRequest {
+  id: string;
+  reason?: string;
+}
+
+export interface ListPartiesQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: HierarchyStatus;
+  partyType?: PartyType;
+}
+
+export interface CreatePartyRelationshipRequest {
+  fromPartyId: string;
+  toPartyId: string;
+  relationshipType: string;
+}
+
+const PARTIES_PREFIX = '/parties';
+
+export class PartyClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  create(req: CreatePartyRequest): Promise<PartyResult> {
+    return this.client.body<PartyResult>(PARTIES_PREFIX, 'POST', req);
+  }
+
+  list(query: ListPartiesQuery = {}): Promise<PartyListResult> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.search) params.set('search', query.search);
+    if (query.status) params.set('status', query.status);
+    if (query.partyType) params.set('partyType', query.partyType);
+    const qs = params.toString();
+    return this.client.body<PartyListResult>(
+      `${PARTIES_PREFIX}${qs ? `?${qs}` : ''}`,
+      'GET',
+    );
+  }
+
+  get(id: string): Promise<PartyResult> {
+    return this.client.body<PartyResult>(
+      `${PARTIES_PREFIX}/${encodeURIComponent(id)}`,
+      'GET',
+    );
+  }
+
+  update(req: UpdatePartyRequest): Promise<PartyResult> {
+    return this.client.body<PartyResult>(
+      `${PARTIES_PREFIX}/${encodeURIComponent(req.id)}`,
+      'PATCH',
+      req,
+    );
+  }
+
+  archive(req: ArchivePartyRequest): Promise<PartyResult> {
+    return this.client.body<PartyResult>(
+      `${PARTIES_PREFIX}/${encodeURIComponent(req.id)}`,
+      'DELETE',
+      { reason: req.reason ?? undefined },
+    );
+  }
+
+  listRoles(): Promise<PartyRoleResult[]> {
+    return this.client.body<PartyRoleResult[]>(`${PARTIES_PREFIX}/roles`, 'GET');
+  }
+
+  createRelationship(req: CreatePartyRelationshipRequest): Promise<PartyRelationshipResult> {
+    return this.client.body<PartyRelationshipResult>(
+      `${PARTIES_PREFIX}/${encodeURIComponent(req.fromPartyId)}/relationships`,
+      'POST',
+      { toPartyId: req.toPartyId, relationshipType: req.relationshipType },
+    );
+  }
+
+  listRelationships(
+    partyId: string,
+    query: { page?: number; limit?: number } = {},
+  ): Promise<PartyRelationshipListResult> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    const qs = params.toString();
+    return this.client.body<PartyRelationshipListResult>(
+      `${PARTIES_PREFIX}/${encodeURIComponent(partyId)}/relationships${qs ? `?${qs}` : ''}`,
+      'GET',
+    );
+  }
+}

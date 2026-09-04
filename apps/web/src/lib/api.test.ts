@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, ClientsClient, ConflictChecksClient } from './api';
+import { ApiClient, ClientsClient, ConflictChecksClient, PartyClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -495,5 +495,194 @@ describe('ConflictChecksClient (Phase 6)', () => {
     expect(call?.init?.method).toBe('POST');
     expect(JSON.parse(String(call?.init?.body))).toEqual({ decision: 'ALLOW', reason: 'no overlap' });
     expect(result.decision).toBe('ALLOW');
+  });
+});
+
+describe('PartyClient (Phase 7)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-party' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const baseParty = {
+    id: 'p1',
+    tenantId: 't1',
+    partyType: 'PERSON',
+    name: 'Ahmed Hassan',
+    legalName: null,
+    displayName: 'Ahmed Hassan',
+    status: 'ACTIVE',
+    clientId: null,
+    notes: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  } as const;
+
+  it('creates a party via POST /parties', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/parties': () => enveloped(baseParty, 201),
+    });
+    const client = new PartyClient(new ApiClient(base, fetchMock));
+
+    const result = await client.create({ partyType: 'PERSON', name: 'Ahmed Hassan', displayName: 'Ahmed Hassan' });
+
+    const call = calls.find((c) => c.url.endsWith('/parties'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      partyType: 'PERSON',
+      name: 'Ahmed Hassan',
+      displayName: 'Ahmed Hassan',
+    });
+    expect(result.displayName).toBe('Ahmed Hassan');
+  });
+
+  it('lists parties with query params on GET /parties', async () => {
+    const { fetchMock, calls } = clientWith({
+      'partyType=PERSON': () =>
+        enveloped({ data: [baseParty], pagination: { page: 1, limit: 20, total: 1 } }),
+    });
+    const client = new PartyClient(new ApiClient(base, fetchMock));
+
+    const result = await client.list({ page: 1, limit: 20, search: 'Ahmed', status: 'ACTIVE', partyType: 'PERSON' });
+
+    const call = calls.find((c) => c.url.includes('/parties?'));
+    expect(String(call?.url)).toContain('page=1');
+    expect(String(call?.url)).toContain('search=Ahmed');
+    expect(String(call?.url)).toContain('status=ACTIVE');
+    expect(String(call?.url)).toContain('partyType=PERSON');
+    expect(result.pagination.total).toBe(1);
+  });
+
+  it('gets a single party via GET /parties/:id', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/parties/p1': () => enveloped(baseParty),
+    });
+    const client = new PartyClient(new ApiClient(base, fetchMock));
+
+    const result = await client.get('p1');
+
+    const call = calls.find((c) => c.url.endsWith('/parties/p1'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result.id).toBe('p1');
+  });
+
+  it('updates a party via PATCH /parties/:id', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/parties/p1': () => enveloped({ ...baseParty, displayName: 'Updated' }),
+    });
+    const client = new PartyClient(new ApiClient(base, fetchMock));
+
+    const result = await client.update({ id: 'p1', displayName: 'Updated' });
+
+    const call = calls.find((c) => c.url.endsWith('/parties/p1'));
+    expect(call?.init?.method).toBe('PATCH');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ id: 'p1', displayName: 'Updated' });
+    expect(result.displayName).toBe('Updated');
+  });
+
+  it('archives a party via DELETE /parties/:id with a reason', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/parties/p1': () => enveloped({ ...baseParty, status: 'ARCHIVED' }),
+    });
+    const client = new PartyClient(new ApiClient(base, fetchMock));
+
+    await client.archive({ id: 'p1', reason: 'duplicate' });
+
+    const call = calls.find((c) => c.url.endsWith('/parties/p1'));
+    expect(call?.init?.method).toBe('DELETE');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ reason: 'duplicate' });
+  });
+
+  it('lists the party role catalog via GET /parties/roles', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/parties/roles': () =>
+        enveloped([
+          { id: 'r1', tenantId: 't1', key: 'plaintiff', label: 'Plaintiff', status: 'ACTIVE' },
+        ]),
+    });
+    const client = new PartyClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listRoles();
+
+    const call = calls.find((c) => c.url.endsWith('/parties/roles'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result[0].key).toBe('plaintiff');
+  });
+
+  it('creates a relationship via POST /parties/:id/relationships', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/parties/p1/relationships': () =>
+        enveloped({ id: 'rel1', tenantId: 't1', fromPartyId: 'p1', toPartyId: 'p2', relationshipType: 'spouse', status: 'ACTIVE' }, 201),
+    });
+    const client = new PartyClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createRelationship({ fromPartyId: 'p1', toPartyId: 'p2', relationshipType: 'spouse' });
+
+    const call = calls.find((c) => c.url.endsWith('/parties/p1/relationships'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ toPartyId: 'p2', relationshipType: 'spouse' });
+    expect(result.relationshipType).toBe('spouse');
+  });
+
+  it('lists relationships via GET /parties/:id/relationships', async () => {
+    const { fetchMock, calls } = clientWith({
+      'relationships?page=1&limit=20': () =>
+        enveloped({
+          data: [
+            {
+              id: 'rel1',
+              tenantId: 't1',
+              fromPartyId: 'p1',
+              toPartyId: 'p2',
+              relationshipType: 'spouse',
+              status: 'ACTIVE',
+              toParty: { id: 'p2', displayName: 'Fatima', partyType: 'PERSON' },
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 1 },
+        }),
+    });
+    const client = new PartyClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listRelationships('p1', { page: 1, limit: 20 });
+
+    const call = calls.find((c) => c.url.includes('/parties/p1/relationships?'));
+    expect(String(call?.url)).toContain('page=1');
+    expect(String(call?.url)).toContain('limit=20');
+    expect(result.data[0].toParty?.displayName).toBe('Fatima');
   });
 });

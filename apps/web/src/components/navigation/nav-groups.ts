@@ -38,6 +38,7 @@ export const appNavGroups: AppNavGroup[] = [
     icon: Users,
     items: [
       { href: '/clients', labelKey: 'navigation.clients', icon: Users },
+      { href: '/parties', labelKey: 'navigation.parties', icon: Users },
       { href: '/conflict-checks', labelKey: 'navigation.conflictChecks', icon: ShieldAlert },
     ],
   },
