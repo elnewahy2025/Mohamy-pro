@@ -1789,5 +1789,17 @@ export class DocumentsClient {
   shareDocument(id: string, req: ShareDocumentRequest): Promise<any> {
     return this.client.body<any>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/shares`, 'POST', req);
   }
+
+  deleteDocument(id: string): Promise<{ success: boolean }> {
+    return this.client.body<{ success: boolean }>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}`, 'DELETE');
+  }
+
+  generateAccessGrant(id: string, req: { documentVersionId: string, purpose: string }): Promise<{ data: any }> {
+    return this.client.body<{ data: any }>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/security/access`, 'POST', req);
+  }
+
+  revokeAccessGrant(id: string, grantId: string): Promise<{ success: boolean }> {
+    return this.client.body<{ success: boolean }>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/security/access/${encodeURIComponent(grantId)}/revoke`, 'POST');
+  }
 }
 

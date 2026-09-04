@@ -35,6 +35,7 @@ import { TaskModule } from './tasks/task.module';
 import { DocumentModule } from './documents/document.module';
 import { SearchModule } from './search/search.module';
 import { TemplatesModule } from './templates/templates.module';
+import { TimeTrackingModule } from './time-tracking/time-tracking.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { TemplatesModule } from './templates/templates.module';
     DocumentModule,
     SearchModule,
     TemplatesModule,
+    TimeTrackingModule,
     SchedulerModule,
   ],
   controllers: [AppController],

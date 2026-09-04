@@ -79,7 +79,8 @@
       "configuration": "Configuration"
     },
     "tasks": "Tasks",
-    "documents": "Documents"
+    "documents": "Documents",
+    "secureLinks": "Secure Links"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -943,6 +944,18 @@
       "title": "Operation Successful",
       "errorTitle": "Operation Failed",
       "id": "ID"
+    },
+    "secureLinks": {
+      "title": "Secure Access Links",
+      "description": "Generate time-bound secure URLs for external sharing.",
+      "form": {
+        "documentId": "Document",
+        "purpose": "Purpose",
+        "generate": "Generate Secure Link",
+        "success": "Link Generated",
+        "url": "Signed URL",
+        "expiresAt": "Expires At"
+      }
     }
   }
 }

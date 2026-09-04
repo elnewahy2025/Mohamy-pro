@@ -11,6 +11,7 @@ import {
   Scale,
   Settings2,
   ShieldAlert,
+  ShieldCheck,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ export const appNavGroups: AppNavGroup[] = [
       { href: '/operations', labelKey: 'navigation.operations', icon: Activity },
       { href: '/tasks', labelKey: 'navigation.tasks', icon: CheckSquare },
       { href: '/documents', labelKey: 'navigation.documents', icon: FileText },
+      { href: '/secure-links', labelKey: 'navigation.secureLinks', icon: ShieldCheck },
     ],
   },
   {

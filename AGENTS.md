@@ -1415,6 +1415,23 @@ tenant isolation
 Child-table tenant remediation:
 
 ```text
+
+## Phase 16 — Secure Links
+
+Status:
+
+`	ext
+Delivered
+`
+
+Security:
+
+`	ext
+FORCE RLS
+tenant isolation
+`
+
+
 20260907000000_...
 ```
 

@@ -285,6 +285,8 @@ model User {
   documentDownloads        DocumentDownload[]
   humanReviews             HumanReview[]
   approvedDocumentMetadata ApprovedDocumentMetadata[]
+  timeEntries              TimeEntry[]
+  timers                   Timer[]
 
   @@index([status, createdAt])
 }
@@ -410,6 +412,9 @@ model Tenant {
   templateVersions         TemplateVersion[]
   templateApprovals        TemplateApproval[]
   documentGenerationJobs   DocumentGenerationJob[]
+  rates                    Rate[]
+  timeEntries              TimeEntry[]
+  timers                   Timer[]
 
   @@index([status, createdAt])
 }
@@ -588,6 +593,8 @@ model Case {
   tasks                  Task[]
   documents              Document[]
   documentGenerationJobs DocumentGenerationJob[]
+  timeEntries            TimeEntry[]
+  timers                 Timer[]
 
   @@unique([tenantId, caseNumber])
   @@index([tenantId, status])
@@ -833,6 +840,8 @@ model Client {
   parties                Party[]
   cases                  Case[]
   documentGenerationJobs DocumentGenerationJob[]
+  timeEntries            TimeEntry[]
+  timers                 Timer[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, name])
@@ -1955,4 +1964,102 @@ model DocumentGenerationJob {
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, templateId, createdAt])
+}
+
+// ==============================================================================
+// Phase 20: Time Tracking
+// ==============================================================================
+
+enum TimeEntryStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  INVOICED
+}
+
+enum RateType {
+  USER
+  CLIENT
+  CASE
+  DEFAULT
+}
+
+enum TimerStatus {
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CurrencyCode {
+  EGP
+  USD
+}
+
+model Rate {
+  id            String       @id @default(uuid())
+  tenantId      String
+  type          RateType
+  referenceId   String // Can be UserId, ClientId, CaseId, or 'DEFAULT'
+  hourlyRate    Decimal      @db.Decimal(19, 4)
+  currency      CurrencyCode @default(EGP)
+  effectiveFrom DateTime     @default(now())
+  effectiveTo   DateTime?
+  createdBy     String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, type, referenceId])
+}
+
+model TimeEntry {
+  id              String          @id @default(uuid())
+  tenantId        String
+  userId          String
+  caseId          String?
+  clientId        String?
+  date            DateTime        @db.Date
+  durationMinutes Int
+  description     String
+  isBillable      Boolean         @default(true)
+  rateAmount      Decimal?        @db.Decimal(19, 4)
+  currency        CurrencyCode?
+  totalAmount     Decimal?        @db.Decimal(19, 4)
+  status          TimeEntryStatus @default(DRAFT)
+  approvedBy      String?
+  invoiceId       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, userId, date])
+  @@index([tenantId, caseId, status])
+}
+
+model Timer {
+  id                 String      @id @default(uuid())
+  tenantId           String
+  userId             String
+  caseId             String?
+  clientId           String?
+  startedAt          DateTime    @default(now())
+  accumulatedSeconds Int         @default(0)
+  description        String?
+  status             TimerStatus @default(RUNNING)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, userId, status])
 }
