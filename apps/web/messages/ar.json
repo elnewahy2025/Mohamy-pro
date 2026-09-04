@@ -610,6 +610,59 @@
       "party": "ربط أطراف القضية"
     }
   },
+  "casesTimeline": {
+    "eyebrow": "المرحلة 10 · الجدول الزمني للقضية",
+    "title": "الجدول الزمني للقضية",
+    "description": "سجل زمني تراكمي غير قابل للتعديل لكل ما يتعلق بالقضية.",
+    "list": "تحميل الجدول الزمني",
+    "append": "إضافة حدث",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "caseId": "معرّف القضية",
+      "appendCaseId": "معرّف القضية (إضافة)",
+      "eventType": "نوع الحدث",
+      "payload": "الحمولة (JSON)"
+    },
+    "placeholders": {
+      "caseId": "00000000-0000-4000-8000-000000000000",
+      "eventType": "CASE_CREATED أو CLIENT_ADDED أو PARTY_ADDED أو STATUS_CHANGED…",
+      "payload": "{\"status\": \"OPEN\"} أو اتركه فارغاً"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرّف",
+      "eventType": "نوع الحدث",
+      "occurredAt": "وقت الحدث",
+      "total": "الإجمالي",
+      "page": "الصفحة",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي"
+    },
+    "events": {
+      "CASE_CREATED": "تم إنشاء القضية",
+      "CLIENT_ADDED": "تمت إضافة العميل",
+      "PARTY_ADDED": "تمت إضافة الطرف",
+      "DOCUMENT_UPLOADED": "تم رفع مستند",
+      "TASK_CREATED": "تم إنشاء مهمة",
+      "HEARING_SCHEDULED": "تمت جدولة جلسة",
+      "DEADLINE_CREATED": "تم إنشاء موعد نهائي",
+      "STATUS_CHANGED": "تغيّرت الحالة",
+      "NOTE_ADDED": "تمت إضافة ملاحظة",
+      "INVOICE_CREATED": "تم إنشاء فاتورة",
+      "PAYMENT_RECEIVED": "تم استلام دفعة",
+      "DOCUMENT_APPROVED": "تمت الموافقة على مستند",
+      "CASE_CLOSED": "أُغلقت القضية"
+    },
+    "sections": {
+      "timeline": {
+        "heading": "الجدول الزمني للقضية",
+        "description": "اعرض الجدول الزمني غير القابل للتعديل وأضف أحداثاً صريحة لقضية."
+      }
+    }
+  },
   "legalConfig": {
     "navLabel": "الإعداد القانوني",
     "eyebrow": "المرحلة 9 · المحاكم والاختصاصات والدول",

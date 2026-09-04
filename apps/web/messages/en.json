@@ -610,6 +610,59 @@
       "party": "Link case parties"
     }
   },
+  "casesTimeline": {
+    "eyebrow": "Phase 10 · Case timeline",
+    "title": "Case timeline",
+    "description": "An append-only, chronological history of everything relevant to a case.",
+    "list": "Load timeline",
+    "append": "Append event",
+    "submitting": "Working…",
+    "labels": {
+      "caseId": "Case ID",
+      "appendCaseId": "Case ID (append)",
+      "eventType": "Event type",
+      "payload": "Payload (JSON)"
+    },
+    "placeholders": {
+      "caseId": "00000000-0000-4000-8000-000000000000",
+      "eventType": "CASE_CREATED, CLIENT_ADDED, PARTY_ADDED, STATUS_CHANGED, …",
+      "payload": "{\"status\": \"OPEN\"} or omit"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "eventType": "Event type",
+      "occurredAt": "Occurred at",
+      "total": "Total",
+      "page": "Page",
+      "errorTitle": "Something went wrong"
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "events": {
+      "CASE_CREATED": "Case created",
+      "CLIENT_ADDED": "Client added",
+      "PARTY_ADDED": "Party added",
+      "DOCUMENT_UPLOADED": "Document uploaded",
+      "TASK_CREATED": "Task created",
+      "HEARING_SCHEDULED": "Hearing scheduled",
+      "DEADLINE_CREATED": "Deadline created",
+      "STATUS_CHANGED": "Status changed",
+      "NOTE_ADDED": "Note added",
+      "INVOICE_CREATED": "Invoice created",
+      "PAYMENT_RECEIVED": "Payment received",
+      "DOCUMENT_APPROVED": "Document approved",
+      "CASE_CLOSED": "Case closed"
+    },
+    "sections": {
+      "timeline": {
+        "heading": "Case timeline",
+        "description": "View the immutable timeline and append explicit events for a case."
+      }
+    }
+  },
   "legalConfig": {
     "navLabel": "Legal configuration",
     "eyebrow": "Phase 9 · Courts, jurisdictions & countries",

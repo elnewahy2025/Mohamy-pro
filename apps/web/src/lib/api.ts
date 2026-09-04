@@ -1189,6 +1189,50 @@ export interface CaseGateBlock {
   conflictCheckId: string;
 }
 
+export type CaseTimelineEventType =
+  | 'CASE_CREATED'
+  | 'CLIENT_ADDED'
+  | 'PARTY_ADDED'
+  | 'DOCUMENT_UPLOADED'
+  | 'TASK_CREATED'
+  | 'HEARING_SCHEDULED'
+  | 'DEADLINE_CREATED'
+  | 'STATUS_CHANGED'
+  | 'NOTE_ADDED'
+  | 'INVOICE_CREATED'
+  | 'PAYMENT_RECEIVED'
+  | 'DOCUMENT_APPROVED'
+  | 'CASE_CLOSED';
+
+export interface CaseTimelineEvent {
+  id: string;
+  tenantId: string;
+  caseId: string;
+  eventType: CaseTimelineEventType;
+  occurredAt: string;
+  actorUserId: string | null;
+  actorMembershipId: string | null;
+  payload: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CaseTimelineListResult {
+  data: CaseTimelineEvent[];
+  pagination: PaginationMeta;
+}
+
+export interface CreateCaseTimelineEventRequest {
+  caseId: string;
+  eventType: CaseTimelineEventType;
+  payload?: Record<string, unknown>;
+}
+
+export interface ListCaseTimelineQuery {
+  page?: number;
+  limit?: number;
+}
+
 const CASES_PREFIX = '/cases';
 
 export class CasesClient {
@@ -1238,6 +1282,25 @@ export class CasesClient {
     return this.client.body<void>(
       `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/parties/${encodeURIComponent(req.partyId)}`,
       'DELETE',
+    );
+  }
+
+  getTimeline(caseId: string, query: ListCaseTimelineQuery = {}): Promise<CaseTimelineListResult> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    const qs = params.toString();
+    return this.client.body<CaseTimelineListResult>(
+      `${CASES_PREFIX}/${encodeURIComponent(caseId)}/timeline${qs ? `?${qs}` : ''}`,
+      'GET',
+    );
+  }
+
+  appendTimelineEvent(req: CreateCaseTimelineEventRequest): Promise<CaseTimelineEvent> {
+    return this.client.body<CaseTimelineEvent>(
+      `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/timeline`,
+      'POST',
+      { eventType: req.eventType, payload: req.payload },
     );
   }
 }

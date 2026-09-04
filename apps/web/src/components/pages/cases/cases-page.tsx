@@ -5,6 +5,7 @@ import { CaseSection } from '@/components/pages/cases/case-section';
 import { CaseListSection } from '@/components/pages/cases/case-list-section';
 import { CasePartySection } from '@/components/pages/cases/case-party-section';
 import { CaseDetailSection } from '@/components/pages/cases/case-detail-section';
+import { CaseTimelineSection } from '@/components/pages/cases/case-timeline-section';
 
 export function CasesPage(): React.ReactNode {
   const t = useTranslations();
@@ -21,6 +22,7 @@ export function CasesPage(): React.ReactNode {
         <CaseSection />
         <CasePartySection />
         <CaseDetailSection />
+        <CaseTimelineSection />
       </div>
     </section>
   );

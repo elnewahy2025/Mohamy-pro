@@ -1049,3 +1049,102 @@ describe('LegalConfigClient (Phase 9)', () => {
     expect(result.courtId).toBe('court1');
   });
 });
+
+describe('CaseTimelineClient (Phase 10)', () => {
+  const base = 'http://localhost';
+  const baseEvent = {
+    id: 'evt1',
+    tenantId: 't1',
+    caseId: 'case1',
+    eventType: 'CASE_CREATED',
+    occurredAt: '2026-01-01T00:00:00.000Z',
+    actorUserId: 'u1',
+    actorMembershipId: 'm1',
+    payload: { caseNumber: 'CASE-001', status: 'OPEN' },
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  } as const;
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-timeline' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('lists a case timeline via GET /cases/:caseId/timeline with page/limit', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/cases/case1/timeline?page=1&limit=20': () =>
+        enveloped({
+          data: [baseEvent],
+          pagination: { page: 1, limit: 20, total: 1 },
+        }),
+    });
+    const client = new CasesClient(new ApiClient(base, fetchMock));
+
+    const result = await client.getTimeline('case1', { page: 1, limit: 20 });
+
+    const call = calls.find((c) => c.url.includes('/cases/case1/timeline'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).toContain('page=1');
+    expect(String(call?.url)).toContain('limit=20');
+    expect(result.data[0].eventType).toBe('CASE_CREATED');
+    expect(result.pagination.total).toBe(1);
+  });
+
+  it('appends a timeline event via POST /cases/:caseId/timeline', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/cases/case1/timeline': (_url, init) =>
+        init?.method === 'POST'
+          ? enveloped({ ...baseEvent, eventType: 'STATUS_CHANGED' }, 201)
+          : enveloped({ data: [baseEvent], pagination: { page: 1, limit: 20, total: 1 } }),
+    });
+    const client = new CasesClient(new ApiClient(base, fetchMock));
+
+    const result = await client.appendTimelineEvent({
+      caseId: 'case1',
+      eventType: 'STATUS_CHANGED',
+      payload: { oldStatus: 'OPEN', newStatus: 'ON_HOLD' },
+    });
+
+    const call = calls.find((c) => c.url.endsWith('/cases/case1/timeline') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      eventType: 'STATUS_CHANGED',
+      payload: { oldStatus: 'OPEN', newStatus: 'ON_HOLD' },
+    });
+    expect(result.eventType).toBe('STATUS_CHANGED');
+  });
+});
