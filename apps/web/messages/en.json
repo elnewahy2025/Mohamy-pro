@@ -10,7 +10,35 @@
     "secureDocuments": "Legal documents are never exposed through public URLs.",
     "signIn": "Sign in",
     "signOut": "Sign out",
-    "authenticatedAs": "Authenticated as"
+    "authenticatedAs": "Authenticated as",
+    "enums": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived",
+      "PENDING": "Pending",
+      "IN_REVIEW": "In Review",
+      "COMPLETED": "Completed",
+      "OPEN": "Open",
+      "ON_HOLD": "On Hold",
+      "CLOSED": "Closed",
+      "DRAFT": "Draft",
+      "FINAL": "Final",
+      "INDIVIDUAL": "Individual",
+      "ORGANIZATION": "Organization",
+      "PARTY": "Party",
+      "RELATED_ENTITY": "Related Entity",
+      "EMAIL": "Email",
+      "PHONE": "Phone",
+      "FAX": "Fax",
+      "WEBSITE": "Website",
+      "MOBILE": "Mobile",
+      "MAILING": "Mailing",
+      "BILLING": "Billing",
+      "REGISTERED": "Registered",
+      "BRANCH": "Branch",
+      "CIVIL": "Civil",
+      "CRIMINAL": "Criminal",
+      "COMMERCIAL": "Commercial"
+    }
   },
   "navigation": {
     "overview": "Overview",
@@ -268,8 +296,8 @@
       "organizationId": "00000000-0000-4000-8000-000000000000",
       "branchId": "00000000-0000-4000-8000-000000000000",
       "entityId": "00000000-0000-4000-8000-000000000000",
-      "key": "feature.enabled",
-      "value": "JSON value"
+      "key": "e.g. feature.enabled",
+      "value": "Plain text or JSON"
     },
     "result": {
       "title": "Operation completed",

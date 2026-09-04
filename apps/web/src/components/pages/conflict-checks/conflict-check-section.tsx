@@ -14,6 +14,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const conflictCheckSchema = z.object({
@@ -156,15 +157,13 @@ export function ConflictCheckSection(): React.ReactNode {
       </div>
       {fields.map((field, index) => (
         <div key={field.id} className="form-grid" style={{ marginTop: '1rem' }}>
-          <FormField
+          <FormSelect
             label={`${t('conflictChecks.labels.partyKind')} ${index + 1}`}
-            error={errors.parties?.[index]?.kind ? t(`form.errors.${errors.parties[index]?.kind?.message}`) : undefined}
-            inputProps={{
-              type: 'text',
-              autoComplete: 'off',
-              placeholder: t('conflictChecks.placeholders.partyKind'),
-              ...register(`parties.${index}.kind`),
-            }}
+            selectProps={register(`parties.${index}.kind` as const)}
+            options={[
+              { label: t('common.enums.PARTY'), value: 'PARTY' },
+              { label: t('common.enums.RELATED_ENTITY'), value: 'RELATED_ENTITY' },
+            ]}
           />
           <FormField
             label={`${t('conflictChecks.labels.partyName')} ${index + 1}`}

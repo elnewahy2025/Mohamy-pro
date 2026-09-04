@@ -155,3 +155,6 @@ hand and must not be rewritten with prettier.
 Do NOT run `npm run format` or `npx prettier` — npm errors with `EBADDEVENGINES`. Use the
 direct binary: `./node_modules/.bin/prettier ...` from `backend/api`. Run `--check` first,
 then `--write` only the files you changed (do not reformat unrelated/untouched files).
+
+## Frontend Components
+When building forms in `apps/web`, always use `<FormSelect>` for enum and select fields rather than a basic text `<FormField>`. Always use `<FormField inputProps={{ type: 'date' }}>` or `type: 'datetime-local'` for dates.

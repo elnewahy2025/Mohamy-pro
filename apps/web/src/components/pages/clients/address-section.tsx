@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const addressSchema = z.object({
@@ -164,15 +165,15 @@ export function AddressSection(): React.ReactNode {
             ...register('id'),
           }}
         />
-        <FormField
+        <FormSelect
           label={t('clients.labels.addressType')}
-          error={errors.type ? t(`form.errors.${errors.type.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('clients.placeholders.addressType'),
-            ...register('type'),
-          }}
+          selectProps={register('type')}
+          options={[
+            { label: t('common.enums.MAILING'), value: 'MAILING' },
+            { label: t('common.enums.BILLING'), value: 'BILLING' },
+            { label: t('common.enums.REGISTERED'), value: 'REGISTERED' },
+            { label: t('common.enums.BRANCH'), value: 'BRANCH' },
+          ]}
         />
         <FormField
           label={t('clients.labels.line1')}

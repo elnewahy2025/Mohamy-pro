@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const partySchema = z.object({
@@ -137,15 +138,13 @@ export function PartySection(): React.ReactNode {
             ...register('id'),
           }}
         />
-        <FormField
+        <FormSelect
           label={t('parties.labels.partyType')}
-          error={errors.partyType ? t(`form.errors.${errors.partyType.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('parties.placeholders.partyType'),
-            ...register('partyType'),
-          }}
+          selectProps={register('partyType')}
+          options={[
+            { label: t('common.enums.INDIVIDUAL'), value: 'PERSON' },
+            { label: t('common.enums.ORGANIZATION'), value: 'ORGANIZATION' },
+          ]}
         />
         <FormField
           label={t('parties.labels.name')}

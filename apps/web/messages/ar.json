@@ -10,7 +10,35 @@
     "secureDocuments": "لا تُعرض المستندات القانونية عبر روابط عامة.",
     "signIn": "تسجيل الدخول",
     "signOut": "تسجيل الخروج",
-    "authenticatedAs": "تم تسجيل الدخول باسم"
+    "authenticatedAs": "تم تسجيل الدخول باسم",
+    "enums": {
+      "ACTIVE": "نشط",
+      "ARCHIVED": "مؤرشف",
+      "PENDING": "قيد الانتظار",
+      "IN_REVIEW": "قيد المراجعة",
+      "COMPLETED": "مكتمل",
+      "OPEN": "مفتوح",
+      "ON_HOLD": "معلق",
+      "CLOSED": "مغلق",
+      "DRAFT": "مسودة",
+      "FINAL": "نهائي",
+      "INDIVIDUAL": "فرد",
+      "ORGANIZATION": "مؤسسة",
+      "PARTY": "طرف",
+      "RELATED_ENTITY": "كيان ذو صلة",
+      "EMAIL": "بريد إلكتروني",
+      "PHONE": "هاتف",
+      "FAX": "فاكس",
+      "WEBSITE": "موقع إلكتروني",
+      "MOBILE": "جوال",
+      "MAILING": "بريدي",
+      "BILLING": "فواتير",
+      "REGISTERED": "مسجل",
+      "BRANCH": "فرع",
+      "CIVIL": "مدني",
+      "CRIMINAL": "جنائي",
+      "COMMERCIAL": "تجاري"
+    }
   },
   "navigation": {
     "overview": "نظرة عامة",
@@ -268,8 +296,8 @@
       "organizationId": "00000000-0000-4000-8000-000000000000",
       "branchId": "00000000-0000-4000-8000-000000000000",
       "entityId": "00000000-0000-4000-8000-000000000000",
-      "key": "feature.enabled",
-      "value": "قيمة JSON"
+      "key": "مثال: feature.enabled",
+      "value": "نص عادي أو JSON"
     },
     "result": {
       "title": "اكتملت العملية",

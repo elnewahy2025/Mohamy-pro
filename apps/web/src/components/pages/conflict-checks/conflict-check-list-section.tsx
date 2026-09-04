@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const filterSchema = z.object({
@@ -90,15 +91,14 @@ export function ConflictCheckListSection(): React.ReactNode {
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <FormSelect
           label={t('conflictChecks.labels.status')}
-          error={errors.status ? t(`form.errors.${errors.status.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('conflictChecks.placeholders.statusFilter'),
-            ...register('status'),
-          }}
+          selectProps={register('status')}
+          options={[
+            { label: t('common.enums.PENDING'), value: 'PENDING' },
+            { label: t('common.enums.IN_REVIEW'), value: 'IN_REVIEW' },
+            { label: t('common.enums.COMPLETED'), value: 'COMPLETED' },
+          ]}
         />
       </div>
       <div className="form-actions form-actions-row">

@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const contactSchema = z.object({
@@ -128,15 +129,16 @@ export function ContactSection(): React.ReactNode {
             ...register('id'),
           }}
         />
-        <FormField
+        <FormSelect
           label={t('clients.labels.contactType')}
-          error={errors.type ? t(`form.errors.${errors.type.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('clients.placeholders.contactType'),
-            ...register('type'),
-          }}
+          selectProps={register('type')}
+          options={[
+            { label: t('common.enums.EMAIL'), value: 'EMAIL' },
+            { label: t('common.enums.PHONE'), value: 'PHONE' },
+            { label: t('common.enums.FAX'), value: 'FAX' },
+            { label: t('common.enums.WEBSITE'), value: 'WEBSITE' },
+            { label: t('common.enums.MOBILE'), value: 'MOBILE' },
+          ]}
         />
         <FormField
           label={t('clients.labels.contactValue')}

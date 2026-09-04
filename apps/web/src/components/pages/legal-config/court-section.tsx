@@ -14,6 +14,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const courtSchema = z.object({
@@ -120,15 +121,14 @@ export function CourtSection(): React.ReactNode {
             ...register('name'),
           }}
         />
-        <FormField
+        <FormSelect
           label={t('legalConfig.labels.courtType')}
-          error={errors.courtType ? t(`form.errors.${errors.courtType.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('legalConfig.placeholders.courtType'),
-            ...register('courtType'),
-          }}
+          selectProps={register('courtType')}
+          options={[
+            { label: t('common.enums.CIVIL'), value: 'CIVIL' },
+            { label: t('common.enums.CRIMINAL'), value: 'CRIMINAL' },
+            { label: t('common.enums.COMMERCIAL'), value: 'COMMERCIAL' },
+          ]}
         />
         <FormField
           label={t('legalConfig.labels.department')}

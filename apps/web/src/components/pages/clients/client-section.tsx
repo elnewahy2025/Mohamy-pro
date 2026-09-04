@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const clientSchema = z.object({
@@ -133,14 +134,13 @@ export function ClientSection(): React.ReactNode {
             ...register('id'),
           }}
         />
-        <FormField
+        <FormSelect
           label={t('clients.labels.clientType')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('clients.placeholders.clientType'),
-            ...register('clientType'),
-          }}
+          selectProps={register('clientType')}
+          options={[
+            { label: t('common.enums.INDIVIDUAL'), value: 'INDIVIDUAL' },
+            { label: t('common.enums.ORGANIZATION'), value: 'ORGANIZATION' },
+          ]}
         />
         <FormField
           label={t('clients.labels.name')}

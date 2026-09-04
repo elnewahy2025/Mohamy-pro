@@ -17,6 +17,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const filterSchema = z.object({
@@ -105,23 +106,21 @@ export function PartyListSection(): React.ReactNode {
             ...register('search'),
           }}
         />
-        <FormField
+        <FormSelect
           label={t('parties.labels.status')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('parties.placeholders.status'),
-            ...register('status'),
-          }}
+          selectProps={register('status')}
+          options={[
+            { label: t('common.enums.ACTIVE'), value: 'ACTIVE' },
+            { label: t('common.enums.ARCHIVED'), value: 'ARCHIVED' },
+          ]}
         />
-        <FormField
+        <FormSelect
           label={t('parties.labels.partyType')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('parties.placeholders.partyTypeFilter'),
-            ...register('partyType'),
-          }}
+          selectProps={register('partyType')}
+          options={[
+            { label: t('common.enums.INDIVIDUAL'), value: 'INDIVIDUAL' },
+            { label: t('common.enums.ORGANIZATION'), value: 'ORGANIZATION' },
+          ]}
         />
       </div>
       <div className="form-actions form-actions-row">

@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const caseSchema = z.object({
@@ -205,14 +206,14 @@ export function CaseSection(): React.ReactNode {
             ...register('caseType'),
           }}
         />
-        <FormField
+        <FormSelect
           label={t('cases.labels.status')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.status'),
-            ...register('status'),
-          }}
+          selectProps={register('status')}
+          options={[
+            { label: t('common.enums.OPEN'), value: 'OPEN' },
+            { label: t('common.enums.ON_HOLD'), value: 'ON_HOLD' },
+            { label: t('common.enums.CLOSED'), value: 'CLOSED' },
+          ]}
         />
         <FormField
           label={t('cases.labels.priority')}
@@ -226,7 +227,7 @@ export function CaseSection(): React.ReactNode {
         <FormField
           label={t('cases.labels.openDate')}
           inputProps={{
-            type: 'text',
+            type: 'date',
             autoComplete: 'off',
             placeholder: t('cases.placeholders.openDate'),
             ...register('openDate'),
@@ -235,7 +236,7 @@ export function CaseSection(): React.ReactNode {
         <FormField
           label={t('cases.labels.closeDate')}
           inputProps={{
-            type: 'text',
+            type: 'date',
             autoComplete: 'off',
             placeholder: t('cases.placeholders.closeDate'),
             ...register('closeDate'),
