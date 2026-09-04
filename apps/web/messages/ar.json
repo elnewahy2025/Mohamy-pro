@@ -48,7 +48,14 @@
       "RELATIVE": "نسبي",
       "RULE_BASED": "مبني على قاعدة",
       "MANUAL": "يدوي",
-      "RECURRING": "متكرر"
+      "RECURRING": "متكرر",
+      "TODO": "للعمل",
+      "IN_PROGRESS": "قيد التنفيذ",
+      "BLOCKED": "محظور",
+      "LOW": "منخفض",
+      "MEDIUM": "متوسط",
+      "HIGH": "مرتفع",
+      "CRITICAL": "حرج"
     }
   },
   "navigation": {
@@ -71,7 +78,7 @@
       "configuration": "الإعداد"
     },
     "workflows": "سير العمل",
-    "hearings": "الجلسات"
+    "tasks": "المهام"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -867,6 +874,38 @@
     "create": "إنشاء موعد",
     "createRule": "إنشاء قاعدة",
     "submitting": "جاري الإرسال...",
+    "result": {
+      "title": "نجحت العملية",
+      "errorTitle": "فشلت العملية",
+      "id": "المعرف",
+      "name": "الاسم"
+    }
+  },
+  "tasks": {
+    "title": "إدارة المهام",
+    "eyebrow": "المهام",
+    "description": "إدارة العمليات، تفويض المسؤوليات، وتتبع حالات المهام.",
+    "sections": {
+      "list": "جميع المهام",
+      "create": "إنشاء مهمة"
+    },
+    "labels": {
+      "caseId": "القضية (اختياري)",
+      "title": "العنوان",
+      "description": "الوصف",
+      "priority": "الأولوية",
+      "dueDate": "تاريخ الاستحقاق",
+      "assignedUserId": "المستخدم المعين",
+      "parentTaskId": "المهمة الأساسية",
+      "status": "الحالة"
+    },
+    "placeholders": {
+      "title": "أدخل عنوان المهمة",
+      "description": "أدخل الوصف"
+    },
+    "create": "إنشاء مهمة",
+    "submitting": "جاري الإرسال...",
+    "updateStatus": "تحديث الحالة",
     "result": {
       "title": "نجحت العملية",
       "errorTitle": "فشلت العملية",

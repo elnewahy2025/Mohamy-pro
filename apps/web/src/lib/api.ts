@@ -1662,3 +1662,61 @@ export class DeadlinesClient {
   }
 }
 
+// --- Phase 14: Tasks ---
+
+export interface TaskResult {
+  id: string;
+  caseId?: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  dueDate?: string;
+  assignedUserId?: string;
+  parentTaskId?: string;
+}
+
+export interface CreateTaskRequest {
+  caseId?: string;
+  title: string;
+  description?: string;
+  priority?: string;
+  dueDate?: string;
+  assignedUserId?: string;
+  parentTaskId?: string;
+}
+
+export interface UpdateTaskStatusRequest {
+  status: string;
+}
+
+export interface AssignTaskRequest {
+  assignedUserId: string;
+}
+
+const TASKS_PREFIX = '/v1/tasks';
+
+export class TasksClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  listTasks(caseId?: string, assignedUserId?: string): Promise<{ data: TaskResult[] }> {
+    const params = new URLSearchParams();
+    if (caseId) params.append('caseId', caseId);
+    if (assignedUserId) params.append('assignedUserId', assignedUserId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.client.body<{ data: TaskResult[] }>(TASKS_PREFIX + qs, 'GET');
+  }
+
+  createTask(req: CreateTaskRequest): Promise<TaskResult> {
+    return this.client.body<TaskResult>(TASKS_PREFIX, 'POST', req);
+  }
+
+  updateStatus(id: string, req: UpdateTaskStatusRequest): Promise<TaskResult> {
+    return this.client.body<TaskResult>(`${TASKS_PREFIX}/${encodeURIComponent(id)}/status`, 'PATCH', req);
+  }
+
+  assignTask(id: string, req: AssignTaskRequest): Promise<TaskResult> {
+    return this.client.body<TaskResult>(`${TASKS_PREFIX}/${encodeURIComponent(id)}/assign`, 'PATCH', req);
+  }
+}
+

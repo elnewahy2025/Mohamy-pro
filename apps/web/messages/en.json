@@ -48,7 +48,14 @@
       "RELATIVE": "Relative",
       "RULE_BASED": "Rule Based",
       "MANUAL": "Manual",
-      "RECURRING": "Recurring"
+      "RECURRING": "Recurring",
+      "TODO": "To Do",
+      "IN_PROGRESS": "In Progress",
+      "BLOCKED": "Blocked",
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
     }
   },
   "navigation": {
@@ -71,7 +78,7 @@
       "matters": "Matters",
       "configuration": "Configuration"
     },
-    "hearings": "Hearings"
+    "tasks": "Tasks"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -867,6 +874,38 @@
     "create": "Create Deadline",
     "createRule": "Create Rule",
     "submitting": "Submitting...",
+    "result": {
+      "title": "Operation Successful",
+      "errorTitle": "Operation Failed",
+      "id": "ID",
+      "name": "Name"
+    }
+  },
+  "tasks": {
+    "title": "Task Management",
+    "eyebrow": "Tasks",
+    "description": "Manage operations, delegate responsibilities, and track task statuses.",
+    "sections": {
+      "list": "All Tasks",
+      "create": "Create Task"
+    },
+    "labels": {
+      "caseId": "Case (Optional)",
+      "title": "Title",
+      "description": "Description",
+      "priority": "Priority",
+      "dueDate": "Due Date",
+      "assignedUserId": "Assigned User",
+      "parentTaskId": "Parent Task",
+      "status": "Status"
+    },
+    "placeholders": {
+      "title": "Enter task title",
+      "description": "Enter description"
+    },
+    "create": "Create Task",
+    "submitting": "Submitting...",
+    "updateStatus": "Update Status",
     "result": {
       "title": "Operation Successful",
       "errorTitle": "Operation Failed",

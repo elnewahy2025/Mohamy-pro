@@ -4,6 +4,7 @@ import {
   Briefcase,
   Building2,
   Calendar,
+  CheckSquare,
   Gavel,
   LayoutDashboard,
   Scale,
@@ -34,6 +35,7 @@ export const appNavGroups: AppNavGroup[] = [
     items: [
       { href: '/', labelKey: 'navigation.overview', icon: LayoutDashboard },
       { href: '/operations', labelKey: 'navigation.operations', icon: Activity },
+      { href: '/tasks', labelKey: 'navigation.tasks', icon: CheckSquare },
     ],
   },
   {
