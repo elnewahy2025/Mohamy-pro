@@ -17,8 +17,14 @@
     "operations": "Operations",
     "organization": "Organization",
     "clients": "Clients",
+    "conflictChecks": "Conflict checks",
     "integrations": "Integrations",
-    "settings": "Settings"
+    "settings": "Settings",
+    "groups": {
+      "workspace": "Workspace",
+      "clientsParties": "Clients & Parties",
+      "configuration": "Configuration"
+    }
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -324,6 +330,60 @@
       "client": "Create client",
       "contact": "Client contacts",
       "address": "Client addresses"
+    }
+  },
+  "conflictChecks": {
+    "navLabel": "Conflict checks",
+    "eyebrow": "Phase 6 · Conflict check foundation",
+    "title": "Screen prospective parties for conflicts of interest.",
+    "description": "Request a conflict check before accepting a matter, review prospective parties against existing clients, and record an allow or block decision with a reason.",
+    "entity": {
+      "check": { "title": "Conflict check", "description": "Request a check and manage its review decision." },
+      "list": { "title": "Conflict check list", "description": "Search and filter the conflict checks in the active workspace." }
+    },
+    "request": "Request check",
+    "startReview": "Start review",
+    "decideAllow": "Allow",
+    "decideBlock": "Block",
+    "addParty": "Add party",
+    "remove": "Remove",
+    "submitting": "Working…",
+    "labels": {
+      "id": "Conflict check ID",
+      "clientId": "Client ID",
+      "reason": "Reason",
+      "status": "Status",
+      "partyKind": "Kind",
+      "partyName": "Name",
+      "partyEmail": "Email"
+    },
+    "placeholders": {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "clientId": "Optional client ID",
+      "reason": "Optional reason",
+      "statusFilter": "PENDING, IN_REVIEW or COMPLETED",
+      "partyKind": "PARTY or RELATED_ENTITY",
+      "partyName": "e.g. Acme Corp",
+      "partyEmail": "name@example.com"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "status": "Status",
+      "decision": "Decision",
+      "parties": "Parties",
+      "total": "Total",
+      "page": "Page",
+      "list": "Search",
+      "errorTitle": "Something went wrong"
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "sections": {
+      "list": "Conflict check list",
+      "check": "Request a conflict check"
     }
   }
 }

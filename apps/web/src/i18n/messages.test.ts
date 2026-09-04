@@ -22,16 +22,28 @@ describe('localized frontend messages', () => {
       operations: 'Operations',
       organization: 'Organization',
       clients: 'Clients',
+      conflictChecks: 'Conflict checks',
       integrations: 'Integrations',
       settings: 'Settings',
+      groups: {
+        workspace: 'Workspace',
+        clientsParties: 'Clients & Parties',
+        configuration: 'Configuration',
+      },
     });
     expect(ar.navigation).toEqual({
       overview: 'نظرة عامة',
       operations: 'العمليات',
       organization: 'المؤسسة',
       clients: 'العملاء',
+      conflictChecks: 'فحص تضارب المصالح',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
+      groups: {
+        workspace: 'مساحة العمل',
+        clientsParties: 'العملاء والأطراف',
+        configuration: 'الإعداد',
+      },
     });
     expect(en.settings.ltr).toBe('LTR');
     expect(ar.settings.rtl).toBe('RTL');

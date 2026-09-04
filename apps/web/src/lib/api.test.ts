@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, ClientsClient } from './api';
+import { ApiClient, ClientsClient, ConflictChecksClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -334,5 +334,166 @@ describe('ClientsClient (Phase 5)', () => {
     const call = calls.find((c) => c.url.endsWith('/clients/c1/addresses/a1'));
     expect(call?.init?.method).toBe('DELETE');
     expect(JSON.parse(String(call?.init?.body))).toEqual({ reason: 'moved' });
+  });
+});
+
+describe('ConflictChecksClient (Phase 6)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-conflict' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const baseCheck = {
+    id: 'x1',
+    tenantId: 't1',
+    status: 'PENDING',
+    requesterUserId: 'u1',
+    clientId: null,
+    decision: 'PENDING',
+    reason: null,
+    reviewerUserId: null,
+    reviewedAt: null,
+    matchSummary: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    parties: [
+      {
+        id: 'p1',
+        tenantId: 't1',
+        kind: 'PARTY',
+        name: 'Acme Corp',
+        normalizedName: 'acme corp',
+        email: 'legal@acme.com',
+      },
+    ],
+  } as const;
+
+  it('requests a conflict check via POST /conflict-checks', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/conflict-checks': () => enveloped(baseCheck, 201),
+    });
+    const client = new ConflictChecksClient(new ApiClient(base, fetchMock));
+
+    const result = await client.request({
+      clientId: null,
+      parties: [{ kind: 'PARTY', name: 'Acme Corp', email: 'legal@acme.com' }],
+    });
+
+    const call = calls.find((c) => c.url.endsWith('/conflict-checks'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      clientId: null,
+      parties: [{ kind: 'PARTY', name: 'Acme Corp', email: 'legal@acme.com' }],
+    });
+    expect(result.id).toBe('x1');
+  });
+
+  it('lists conflict checks with query params on GET /conflict-checks', async () => {
+    const { fetchMock, calls } = clientWith({
+      'status=PENDING': () =>
+        enveloped({
+          data: [
+            {
+              id: 'x1',
+              tenantId: 't1',
+              status: 'PENDING',
+              requesterUserId: 'u1',
+              clientId: null,
+              decision: 'PENDING',
+              reviewerUserId: null,
+              createdAt: '2026-01-01T00:00:00.000Z',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+              partyCount: 1,
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 1 },
+        }),
+    });
+    const client = new ConflictChecksClient(new ApiClient(base, fetchMock));
+
+    const result = await client.list({ page: 1, limit: 20, status: 'PENDING' });
+
+    const call = calls.find((c) => c.url.includes('/conflict-checks?'));
+    expect(String(call?.url)).toContain('page=1');
+    expect(String(call?.url)).toContain('limit=20');
+    expect(String(call?.url)).toContain('status=PENDING');
+    expect(result.pagination.total).toBe(1);
+  });
+
+  it('gets a single conflict check via GET /conflict-checks/:id', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/conflict-checks/x1': () => enveloped(baseCheck),
+    });
+    const client = new ConflictChecksClient(new ApiClient(base, fetchMock));
+
+    const result = await client.get('x1');
+
+    const call = calls.find((c) => c.url.endsWith('/conflict-checks/x1'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result.parties).toHaveLength(1);
+  });
+
+  it('starts review via POST /conflict-checks/:id/review', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/conflict-checks/x1/review': () =>
+        enveloped({ ...baseCheck, status: 'IN_REVIEW' }),
+    });
+    const client = new ConflictChecksClient(new ApiClient(base, fetchMock));
+
+    const result = await client.startReview({ id: 'x1' });
+
+    const call = calls.find((c) => c.url.endsWith('/conflict-checks/x1/review'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({});
+    expect(result.status).toBe('IN_REVIEW');
+  });
+
+  it('records a decision via POST /conflict-checks/:id/decide', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/conflict-checks/x1/decide': () =>
+        enveloped({ ...baseCheck, status: 'COMPLETED', decision: 'ALLOW', reviewerUserId: 'u1' }),
+    });
+    const client = new ConflictChecksClient(new ApiClient(base, fetchMock));
+
+    const result = await client.decide({ id: 'x1', decision: 'ALLOW', reason: 'no overlap' });
+
+    const call = calls.find((c) => c.url.endsWith('/conflict-checks/x1/decide'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ decision: 'ALLOW', reason: 'no overlap' });
+    expect(result.decision).toBe('ALLOW');
   });
 });

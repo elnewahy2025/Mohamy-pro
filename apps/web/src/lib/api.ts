@@ -755,3 +755,128 @@ export class ClientsClient {
     );
   }
 }
+
+export type ConflictCheckStatus = 'PENDING' | 'IN_REVIEW' | 'COMPLETED';
+export type ConflictDecision = 'PENDING' | 'ALLOW' | 'BLOCK';
+export type ConflictPartyKind = 'PARTY' | 'RELATED_ENTITY';
+
+export interface ConflictPartyResult {
+  id: string;
+  tenantId: string;
+  kind: ConflictPartyKind;
+  name: string;
+  normalizedName: string;
+  email: string | null;
+}
+
+export interface ConflictMatchResult {
+  partyName: string;
+  normalized: string;
+  matchedClientIds: string[];
+  reasons: string[];
+}
+
+export interface ConflictCheckResult {
+  id: string;
+  tenantId: string;
+  status: ConflictCheckStatus;
+  requesterUserId: string;
+  clientId: string | null;
+  decision: ConflictDecision;
+  reason: string | null;
+  reviewerUserId: string | null;
+  reviewedAt: string | null;
+  matchSummary: ConflictMatchResult[] | null;
+  createdAt: string;
+  updatedAt: string;
+  parties: ConflictPartyResult[];
+}
+
+export interface ConflictCheckListRow {
+  id: string;
+  tenantId: string;
+  status: ConflictCheckStatus;
+  requesterUserId: string;
+  clientId: string | null;
+  decision: ConflictDecision;
+  reviewerUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  partyCount: number;
+}
+
+export interface ConflictCheckListResult {
+  data: ConflictCheckListRow[];
+  pagination: PaginationMeta;
+}
+
+export interface CreateConflictCheckRequest {
+  clientId?: string | null;
+  parties: Array<{
+    kind: ConflictPartyKind;
+    name: string;
+    email?: string | null;
+  }>;
+}
+
+export interface StartConflictReviewRequest {
+  id: string;
+  note?: string;
+}
+
+export interface DecideConflictCheckRequest {
+  id: string;
+  decision: Extract<ConflictDecision, 'ALLOW' | 'BLOCK'>;
+  reason?: string;
+}
+
+export interface ListConflictChecksQuery {
+  page?: number;
+  limit?: number;
+  status?: ConflictCheckStatus;
+}
+
+const CONFLICT_CHECKS_PREFIX = '/conflict-checks';
+
+export class ConflictChecksClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  request(req: CreateConflictCheckRequest): Promise<ConflictCheckResult> {
+    return this.client.body<ConflictCheckResult>(CONFLICT_CHECKS_PREFIX, 'POST', req);
+  }
+
+  list(query: ListConflictChecksQuery = {}): Promise<ConflictCheckListResult> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.status) params.set('status', query.status);
+    const qs = params.toString();
+    return this.client.body<ConflictCheckListResult>(
+      `${CONFLICT_CHECKS_PREFIX}${qs ? `?${qs}` : ''}`,
+      'GET',
+    );
+  }
+
+  get(id: string): Promise<ConflictCheckResult> {
+    return this.client.body<ConflictCheckResult>(
+      `${CONFLICT_CHECKS_PREFIX}/${encodeURIComponent(id)}`,
+      'GET',
+    );
+  }
+
+  startReview(req: StartConflictReviewRequest): Promise<ConflictCheckResult> {
+    return this.client.body<ConflictCheckResult>(
+      `${CONFLICT_CHECKS_PREFIX}/${encodeURIComponent(req.id)}/review`,
+      'POST',
+      { note: req.note ?? undefined },
+    );
+  }
+
+  decide(req: DecideConflictCheckRequest): Promise<ConflictCheckResult> {
+    return this.client.body<ConflictCheckResult>(
+      `${CONFLICT_CHECKS_PREFIX}/${encodeURIComponent(req.id)}/decide`,
+      'POST',
+      { decision: req.decision, reason: req.reason ?? undefined },
+    );
+  }
+}

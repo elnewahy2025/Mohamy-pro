@@ -17,8 +17,14 @@
     "operations": "العمليات",
     "organization": "المؤسسة",
     "clients": "العملاء",
+    "conflictChecks": "فحص تضارب المصالح",
     "integrations": "التكاملات",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "groups": {
+      "workspace": "مساحة العمل",
+      "clientsParties": "العملاء والأطراف",
+      "configuration": "الإعداد"
+    }
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -324,6 +330,60 @@
       "client": "إنشاء عميل",
       "contact": "جهات اتصال العميل",
       "address": "عناوين العميل"
+    }
+  },
+  "conflictChecks": {
+    "navLabel": "فحص تضارب المصالح",
+    "eyebrow": "المرحلة 6 · أساس فحص تضارب المصالح",
+    "title": "فحص الأطراف المحتملة بحثاً عن تضارب المصالح.",
+    "description": "اطلب فحص تضارب المصالح قبل قبول أي قضية، وراجع الأطراف المحتملة مقابل العملاء الحاليين، وسجّل قرار السماح أو الرفض مع السبب.",
+    "entity": {
+      "check": { "title": "فحص تضارب المصالح", "description": "اطلب فحصاً وأدر قرار المراجعة." },
+      "list": { "title": "قائمة فحوصات تضارب المصالح", "description": "ابحث وصفِّ فحوصات تضارب المصالح في مساحة العمل النشطة." }
+    },
+    "request": "طلب فحص",
+    "startReview": "بدء المراجعة",
+    "decideAllow": "السماح",
+    "decideBlock": "الرفض",
+    "addParty": "إضافة طرف",
+    "remove": "إزالة",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "id": "معرّف فحص تضارب المصالح",
+      "clientId": "معرّف العميل",
+      "reason": "السبب",
+      "status": "الحالة",
+      "partyKind": "النوع",
+      "partyName": "الاسم",
+      "partyEmail": "البريد الإلكتروني"
+    },
+    "placeholders": {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "clientId": "معرّف العميل (اختياري)",
+      "reason": "السبب (اختياري)",
+      "statusFilter": "PENDING أو IN_REVIEW أو COMPLETED",
+      "partyKind": "PARTY أو RELATED_ENTITY",
+      "partyName": "مثال: شركة أكمة",
+      "partyEmail": "name@example.com"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرّف",
+      "status": "الحالة",
+      "decision": "القرار",
+      "parties": "الأطراف",
+      "total": "الإجمالي",
+      "page": "الصفحة",
+      "list": "بحث",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي"
+    },
+    "sections": {
+      "list": "قائمة فحوصات تضارب المصالح",
+      "check": "طلب فحص تضارب المصالح"
     }
   }
 }
