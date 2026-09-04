@@ -37,7 +37,12 @@
       "BRANCH": "فرع",
       "CIVIL": "مدني",
       "CRIMINAL": "جنائي",
-      "COMMERCIAL": "تجاري"
+      "COMMERCIAL": "تجاري",
+      "PUBLISHED": "منشور",
+      "RETIRED": "متقاعد",
+      "SCHEDULED": "مجدولة",
+      "POSTPONED": "مؤجلة",
+      "CANCELLED": "ملغاة"
     }
   },
   "navigation": {
@@ -56,7 +61,9 @@
       "clientsParties": "العملاء والأطراف",
       "matters": "القضايا",
       "configuration": "الإعداد"
-    }
+    },
+    "workflows": "سير العمل",
+    "hearings": "الجلسات"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -748,6 +755,80 @@
         "heading": "مواقع المحاكم",
         "description": "أضف الفروع والمواقع الفعلية لمحكمة."
       }
+    }
+  },
+  "workflows": {
+    "navLabel": "سير العمل",
+    "eyebrow": "المرحلة 11 - محرك سير العمل",
+    "title": "تحديد إجراءات التشغيل القياسية.",
+    "description": "تكوين حالات سير العمل والانتقالات والعمليات الآلية.",
+    "create": "إنشاء",
+    "createVersion": "إنشاء إصدار",
+    "publish": "نشر",
+    "submitting": "جاري العمل...",
+    "labels": {
+      "id": "المعرف",
+      "name": "الاسم",
+      "caseType": "نوع القضية",
+      "versionId": "معرف الإصدار"
+    },
+    "placeholders": {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "مثال: التقاضي القياسي",
+      "caseType": "مثال: مدني",
+      "versionId": "00000000-0000-0000-0000-000000000000"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرف",
+      "name": "الاسم",
+      "version": "الإصدار",
+      "status": "الحالة",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "list": "قائمة سير العمل",
+      "workflow": "إنشاء سير عمل",
+      "version": "إنشاء إصدار",
+      "publish": "نشر الإصدار"
+    }
+  },
+  "hearings": {
+    "navLabel": "الجلسات",
+    "eyebrow": "المرحلة 12 - إدارة الجلسات",
+    "title": "إدارة جلسات المحكمة القادمة والسابقة.",
+    "description": "جدولة الجلسات وتسجيل النتائج وإدارة الحضور في المحكمة.",
+    "schedule": "جدولة جلسة",
+    "recordOutcome": "تسجيل نتيجة",
+    "submitting": "جاري العمل...",
+    "labels": {
+      "caseId": "القضية",
+      "courtId": "المحكمة",
+      "courtLocationId": "موقع المحكمة",
+      "assignedLawyerId": "المحامي المعين",
+      "date": "التاريخ",
+      "time": "الوقت",
+      "hearingType": "نوع الجلسة",
+      "notes": "ملاحظات",
+      "status": "الحالة",
+      "outcome": "النتيجة"
+    },
+    "placeholders": {
+      "date": "حدد تاريخاً",
+      "time": "مثال: 10:00 صباحاً",
+      "hearingType": "مثال: مبدئية",
+      "notes": "أي سياق إضافي..."
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "معرف الجلسة",
+      "status": "الحالة",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "list": "قائمة الجلسات",
+      "schedule": "جدولة جلسة",
+      "outcome": "تسجيل نتيجة"
     }
   }
 }

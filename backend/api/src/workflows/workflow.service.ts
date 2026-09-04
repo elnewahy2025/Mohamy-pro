@@ -23,6 +23,7 @@ export class WorkflowService {
         tenantId,
         name: dto.name,
         caseType: dto.caseType,
+        status: dto.status,
       },
     });
   }

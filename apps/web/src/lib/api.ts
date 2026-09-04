@@ -1447,3 +1447,159 @@ export class LegalConfigClient {
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+// Workflow Engine (Phase 11)
+// -----------------------------------------------------------------------------
+
+export type WorkflowVersionStatus = 'DRAFT' | 'PUBLISHED' | 'RETIRED';
+
+export interface WorkflowStateResult {
+  id: string;
+  name: string;
+  isInitial: boolean;
+  isFinal: boolean;
+}
+
+export interface WorkflowTransitionResult {
+  id: string;
+  fromStateId: string | null;
+  toStateId: string;
+  conditions: Record<string, unknown> | null;
+  actions: Record<string, unknown> | null;
+  requiresApproval: boolean;
+}
+
+export interface WorkflowVersionResult {
+  id: string;
+  workflowId: string;
+  version: number;
+  status: WorkflowVersionStatus;
+  states?: WorkflowStateResult[];
+  transitions?: WorkflowTransitionResult[];
+}
+
+export interface WorkflowResult {
+  id: string;
+  tenantId: string;
+  name: string;
+  caseType: string | null;
+  versions?: WorkflowVersionResult[];
+}
+
+export interface CreateWorkflowRequest {
+  name: string;
+  caseType?: string;
+  status?: string;
+}
+
+export interface CreateWorkflowStateRequest {
+  name: string;
+  isInitial?: boolean;
+  isFinal?: boolean;
+}
+
+export interface CreateWorkflowTransitionRequest {
+  fromStateName?: string;
+  toStateName: string;
+  conditions?: Record<string, unknown>;
+  actions?: Record<string, unknown>;
+  requiresApproval?: boolean;
+}
+
+export interface CreateWorkflowVersionRequest {
+  states: CreateWorkflowStateRequest[];
+  transitions: CreateWorkflowTransitionRequest[];
+}
+
+const WORKFLOWS_PREFIX = '/workflows';
+
+export class WorkflowsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  listWorkflows(): Promise<WorkflowResult[]> {
+    return this.client.body<WorkflowResult[]>(WORKFLOWS_PREFIX, 'GET');
+  }
+
+  createWorkflow(req: CreateWorkflowRequest): Promise<WorkflowResult> {
+    return this.client.body<WorkflowResult>(WORKFLOWS_PREFIX, 'POST', req);
+  }
+
+  createVersion(workflowId: string, req: CreateWorkflowVersionRequest): Promise<WorkflowVersionResult> {
+    return this.client.body<WorkflowVersionResult>(
+      `${WORKFLOWS_PREFIX}/${encodeURIComponent(workflowId)}/versions`,
+      'POST',
+      req,
+    );
+  }
+
+  publishVersion(versionId: string): Promise<WorkflowVersionResult> {
+    return this.client.body<WorkflowVersionResult>(
+      `${WORKFLOWS_PREFIX}/versions/${encodeURIComponent(versionId)}/publish`,
+      'POST',
+    );
+  }
+}
+
+export interface HearingResult {
+  id: string;
+  tenantId: string;
+  caseId: string;
+  courtId: string | null;
+  courtLocationId: string | null;
+  assignedLawyerId: string | null;
+  date: string;
+  time: string | null;
+  hearingType: string | null;
+  status: 'SCHEDULED' | 'COMPLETED' | 'POSTPONED' | 'CANCELLED';
+  outcome: string | null;
+  notes: string | null;
+  nextHearingId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateHearingRequest {
+  caseId: string;
+  courtId?: string;
+  courtLocationId?: string;
+  assignedLawyerId?: string;
+  date: string;
+  time?: string;
+  hearingType?: string;
+  notes?: string;
+  nextHearingId?: string;
+}
+
+export interface UpdateHearingOutcomeRequest {
+  outcome?: string;
+  status: 'SCHEDULED' | 'COMPLETED' | 'POSTPONED' | 'CANCELLED';
+}
+
+const HEARINGS_PREFIX = '/v1/hearings';
+
+export class HearingsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  listHearings(caseId?: string): Promise<HearingResult[]> {
+    const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
+    return this.client.body<HearingResult[]>(`${HEARINGS_PREFIX}${qs}`, 'GET');
+  }
+
+  createHearing(req: CreateHearingRequest): Promise<HearingResult> {
+    return this.client.body<HearingResult>(HEARINGS_PREFIX, 'POST', req);
+  }
+
+  recordOutcome(id: string, req: UpdateHearingOutcomeRequest): Promise<HearingResult> {
+    return this.client.body<HearingResult>(
+      `${HEARINGS_PREFIX}/${encodeURIComponent(id)}/outcome`,
+      'POST',
+      req,
+    );
+  }
+
+  deleteHearing(id: string): Promise<void> {
+    return this.client.body<void>(`${HEARINGS_PREFIX}/${encodeURIComponent(id)}`, 'DELETE');
+  }
+}
+

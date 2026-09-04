@@ -50,6 +50,7 @@ export const appNavGroups: AppNavGroup[] = [
     icon: Briefcase,
     items: [
       { href: '/cases', labelKey: 'navigation.cases', icon: Briefcase },
+      { href: '/hearings', labelKey: 'navigation.hearings', icon: Briefcase },
     ],
   },
   {
@@ -59,6 +60,7 @@ export const appNavGroups: AppNavGroup[] = [
     items: [
       { href: '/organization', labelKey: 'navigation.organization', icon: Building2 },
       { href: '/legal-config', labelKey: 'navigation.legalConfig', icon: Scale },
+      { href: '/workflows', labelKey: 'navigation.workflows', icon: Activity },
       { href: '/integrations', labelKey: 'navigation.integrations', icon: ArrowRightLeft },
       { href: '/settings', labelKey: 'navigation.settings', icon: Settings2 },
     ],

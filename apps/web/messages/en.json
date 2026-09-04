@@ -18,9 +18,11 @@
       "IN_REVIEW": "In Review",
       "COMPLETED": "Completed",
       "OPEN": "Open",
+      "DRAFT": "Draft",
+      "PUBLISHED": "Published",
+      "RETIRED": "Retired",
       "ON_HOLD": "On Hold",
       "CLOSED": "Closed",
-      "DRAFT": "Draft",
       "FINAL": "Final",
       "INDIVIDUAL": "Individual",
       "ORGANIZATION": "Organization",
@@ -37,7 +39,10 @@
       "BRANCH": "Branch",
       "CIVIL": "Civil",
       "CRIMINAL": "Criminal",
-      "COMMERCIAL": "Commercial"
+      "COMMERCIAL": "Commercial",
+      "SCHEDULED": "Scheduled",
+      "POSTPONED": "Postponed",
+      "CANCELLED": "Cancelled"
     }
   },
   "navigation": {
@@ -49,6 +54,7 @@
     "cases": "Cases",
     "conflictChecks": "Conflict checks",
     "legalConfig": "Legal configuration",
+    "workflows": "Workflows",
     "integrations": "Integrations",
     "settings": "Settings",
     "groups": {
@@ -56,7 +62,8 @@
       "clientsParties": "Clients & Parties",
       "matters": "Matters",
       "configuration": "Configuration"
-    }
+    },
+    "hearings": "Hearings"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -748,6 +755,80 @@
         "heading": "Court locations",
         "description": "Add branches and physical locations to a court."
       }
+    }
+  },
+  "workflows": {
+    "navLabel": "Workflows",
+    "eyebrow": "Phase 11 - Workflow Engine",
+    "title": "Define standard operating procedures.",
+    "description": "Configure state machines, transitions, and automated workflows.",
+    "create": "Create",
+    "createVersion": "Create version",
+    "publish": "Publish",
+    "submitting": "Working...",
+    "labels": {
+      "id": "ID",
+      "name": "Name",
+      "caseType": "Case type",
+      "versionId": "Version ID"
+    },
+    "placeholders": {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "e.g. Standard Litigation",
+      "caseType": "e.g. Civil",
+      "versionId": "00000000-0000-0000-0000-000000000000"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "name": "Name",
+      "version": "Version",
+      "status": "Status",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "list": "Workflow list",
+      "workflow": "Create workflow",
+      "version": "Author version",
+      "publish": "Publish version"
+    }
+  },
+  "hearings": {
+    "navLabel": "Hearings",
+    "eyebrow": "Phase 12 - Hearing Management",
+    "title": "Manage upcoming and past court hearings.",
+    "description": "Schedule hearings, record outcomes, and manage court appearances.",
+    "schedule": "Schedule hearing",
+    "recordOutcome": "Record outcome",
+    "submitting": "Working...",
+    "labels": {
+      "caseId": "Case",
+      "courtId": "Court",
+      "courtLocationId": "Court Location",
+      "assignedLawyerId": "Assigned Lawyer",
+      "date": "Date",
+      "time": "Time",
+      "hearingType": "Hearing Type",
+      "notes": "Notes",
+      "status": "Status",
+      "outcome": "Outcome"
+    },
+    "placeholders": {
+      "date": "Select a date",
+      "time": "e.g. 10:00 AM",
+      "hearingType": "e.g. Preliminary",
+      "notes": "Any additional context..."
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "Hearing ID",
+      "status": "Status",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "list": "Hearing list",
+      "schedule": "Schedule hearing",
+      "outcome": "Record outcome"
     }
   }
 }

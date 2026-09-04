@@ -1,3 +1,4 @@
+import { HierarchyStatus } from '@prisma/client';
 import {
   IsString,
   IsNotEmpty,
@@ -5,6 +6,7 @@ import {
   IsBoolean,
   IsObject,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -16,6 +18,10 @@ export class CreateWorkflowDto {
   @IsString()
   @IsOptional()
   caseType?: string;
+
+  @IsEnum(HierarchyStatus)
+  @IsOptional()
+  status?: HierarchyStatus;
 }
 
 export class CreateWorkflowStateDto {

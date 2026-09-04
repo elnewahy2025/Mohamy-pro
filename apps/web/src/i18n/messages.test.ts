@@ -24,8 +24,10 @@ describe('localized frontend messages', () => {
       clients: 'Clients',
       parties: 'Parties',
       cases: 'Cases',
+      hearings: 'Hearings',
       conflictChecks: 'Conflict checks',
       legalConfig: 'Legal configuration',
+      workflows: 'Workflows',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -42,8 +44,10 @@ describe('localized frontend messages', () => {
       clients: 'العملاء',
       parties: 'الأطراف',
       cases: 'القضايا',
+      hearings: 'الجلسات',
       conflictChecks: 'فحص تضارب المصالح',
       legalConfig: 'الإعداد القانوني',
+      workflows: 'سير العمل',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {
