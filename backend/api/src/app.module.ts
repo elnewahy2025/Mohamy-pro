@@ -33,6 +33,7 @@ import { HearingModule } from './hearings/hearing.module';
 import { DeadlineModule } from './deadlines/deadline.module';
 import { TaskModule } from './tasks/task.module';
 import { DocumentModule } from './documents/document.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { DocumentModule } from './documents/document.module';
     DeadlineModule,
     TaskModule,
     DocumentModule,
+    SearchModule,
     SchedulerModule,
   ],
   controllers: [AppController],

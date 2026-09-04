@@ -405,6 +405,7 @@ model Tenant {
   documentDownloads        DocumentDownload[]
   ocrProcessings           OcrProcessing[]
   approvedDocumentMetadata ApprovedDocumentMetadata[]
+  searchReindexJobs        SearchReindexJob[]
 
   @@index([status, createdAt])
 }
@@ -1725,6 +1726,46 @@ model ApprovedDocumentMetadata {
   documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
   processing      OcrProcessing   @relation(fields: [ocrProcessingId], references: [id], onDelete: Cascade)
   reviewer        User?           @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+}
+
+// ==============================================================================
+// Phase 18: Search Subsystem
+// ==============================================================================
+
+enum SearchReindexStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model SearchIndexVersion {
+  id         String   @id @default(uuid())
+  entityType String
+  indexName  String   @unique
+  aliasName  String
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  jobs SearchReindexJob[]
+}
+
+model SearchReindexJob {
+  id             String              @id @default(uuid())
+  tenantId       String?
+  entityType     String
+  targetIndexId  String
+  status         SearchReindexStatus @default(PENDING)
+  startedAt      DateTime            @default(now())
+  completedAt    DateTime?
+  error          String?             @db.Text
+  totalItems     Int                 @default(0)
+  processedItems Int                 @default(0)
+
+  targetIndex SearchIndexVersion @relation(fields: [targetIndexId], references: [id], onDelete: Restrict)
+  tenant      Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
 }
