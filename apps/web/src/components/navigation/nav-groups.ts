@@ -4,6 +4,7 @@ import {
   Briefcase,
   Building2,
   LayoutDashboard,
+  Scale,
   Settings2,
   ShieldAlert,
   Users,
@@ -57,6 +58,7 @@ export const appNavGroups: AppNavGroup[] = [
     icon: Settings2,
     items: [
       { href: '/organization', labelKey: 'navigation.organization', icon: Building2 },
+      { href: '/legal-config', labelKey: 'navigation.legalConfig', icon: Scale },
       { href: '/integrations', labelKey: 'navigation.integrations', icon: ArrowRightLeft },
       { href: '/settings', labelKey: 'navigation.settings', icon: Settings2 },
     ],

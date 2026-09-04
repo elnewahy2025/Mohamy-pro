@@ -1241,3 +1241,146 @@ export class CasesClient {
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+// Legal Configuration (Phase 9): Country / Jurisdiction / Court / Court Location
+// -----------------------------------------------------------------------------
+
+export interface CountryResult {
+  id: string;
+  code: string;
+  name: string;
+  status: HierarchyStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JurisdictionResult {
+  id: string;
+  tenantId: string | null;
+  countryId: string;
+  name: string;
+  status: HierarchyStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CourtResult {
+  id: string;
+  tenantId: string | null;
+  jurisdictionId: string;
+  name: string;
+  courtType: string | null;
+  department: string | null;
+  status: HierarchyStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CourtLocationResult {
+  id: string;
+  tenantId: string | null;
+  courtId: string;
+  name: string;
+  city: string | null;
+  address: string | null;
+  status: HierarchyStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCountryRequest {
+  code: string;
+  name: string;
+}
+
+export interface CreateJurisdictionRequest {
+  countryId: string;
+  name: string;
+}
+
+export interface CreateCourtRequest {
+  jurisdictionId: string;
+  name: string;
+  courtType?: string | null;
+  department?: string | null;
+}
+
+export interface CreateCourtLocationRequest {
+  courtId: string;
+  name: string;
+  city?: string | null;
+  address?: string | null;
+}
+
+const LEGAL_CONFIG_PREFIX = '/legal-config';
+
+export class LegalConfigClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  listCountries(): Promise<CountryResult[]> {
+    return this.client.body<CountryResult[]>(
+      `${LEGAL_CONFIG_PREFIX}/countries`,
+      'GET',
+    );
+  }
+
+  createCountry(req: CreateCountryRequest): Promise<CountryResult> {
+    return this.client.body<CountryResult>(
+      `${LEGAL_CONFIG_PREFIX}/countries`,
+      'POST',
+      req,
+    );
+  }
+
+  listJurisdictions(countryId?: string): Promise<JurisdictionResult[]> {
+    const qs = countryId
+      ? `?countryId=${encodeURIComponent(countryId)}`
+      : '';
+    return this.client.body<JurisdictionResult[]>(
+      `${LEGAL_CONFIG_PREFIX}/jurisdictions${qs}`,
+      'GET',
+    );
+  }
+
+  createJurisdiction(req: CreateJurisdictionRequest): Promise<JurisdictionResult> {
+    return this.client.body<JurisdictionResult>(
+      `${LEGAL_CONFIG_PREFIX}/jurisdictions`,
+      'POST',
+      req,
+    );
+  }
+
+  listCourts(jurisdictionId?: string): Promise<CourtResult[]> {
+    const qs = jurisdictionId
+      ? `?jurisdictionId=${encodeURIComponent(jurisdictionId)}`
+      : '';
+    return this.client.body<CourtResult[]>(
+      `${LEGAL_CONFIG_PREFIX}/courts${qs}`,
+      'GET',
+    );
+  }
+
+  createCourt(req: CreateCourtRequest): Promise<CourtResult> {
+    return this.client.body<CourtResult>(
+      `${LEGAL_CONFIG_PREFIX}/courts`,
+      'POST',
+      req,
+    );
+  }
+
+  listCourtLocations(courtId: string): Promise<CourtLocationResult[]> {
+    return this.client.body<CourtLocationResult[]>(
+      `${LEGAL_CONFIG_PREFIX}/court-locations?courtId=${encodeURIComponent(courtId)}`,
+      'GET',
+    );
+  }
+
+  createCourtLocation(req: CreateCourtLocationRequest): Promise<CourtLocationResult> {
+    return this.client.body<CourtLocationResult>(
+      `${LEGAL_CONFIG_PREFIX}/court-locations`,
+      'POST',
+      req,
+    );
+  }
+}

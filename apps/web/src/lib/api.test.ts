@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, CasesClient, ClientsClient, ConflictChecksClient, PartyClient } from './api';
+import { ApiClient, CasesClient, ClientsClient, ConflictChecksClient, LegalConfigClient, PartyClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -867,5 +867,185 @@ describe('CasesClient (Phase 8)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/cases/case1/parties/p1'));
     expect(call?.init?.method).toBe('DELETE');
+  });
+});
+
+describe('LegalConfigClient (Phase 9)', () => {
+  const base = 'http://localhost';
+  const baseCountry = {
+    id: 'country1',
+    code: 'AE',
+    name: 'UAE',
+    status: 'ACTIVE',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  } as const;
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-legal' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('creates a country via POST /legal-config/countries', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/legal-config/countries': (_url, init) =>
+        init?.method === 'POST'
+          ? enveloped({ ...baseCountry, code: 'AE', name: 'UAE' }, 201)
+          : enveloped([baseCountry]),
+    });
+    const client = new LegalConfigClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createCountry({ code: 'AE', name: 'UAE' });
+
+    const call = calls.find((c) => c.url.endsWith('/legal-config/countries') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ code: 'AE', name: 'UAE' });
+    expect(result.code).toBe('AE');
+  });
+
+  it('lists countries via GET /legal-config/countries', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/legal-config/countries': () => enveloped([baseCountry]),
+    });
+    const client = new LegalConfigClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listCountries();
+
+    const call = calls.find((c) => c.url.endsWith('/legal-config/countries'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('UAE');
+  });
+
+  it('creates and lists jurisdictions scoped by countryId', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/legal-config/jurisdictions?countryId=country1': () =>
+        enveloped([
+          {
+            id: 'j1', tenantId: 't1', countryId: 'country1', name: 'Dubai',
+            status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ]),
+      '/legal-config/jurisdictions': (_url, init) =>
+        init?.method === 'POST'
+          ? enveloped(
+              { id: 'j1', tenantId: 't1', countryId: 'country1', name: 'Dubai', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              201,
+            )
+          : enveloped([]),
+    });
+    const client = new LegalConfigClient(new ApiClient(base, fetchMock));
+
+    const created = await client.createJurisdiction({ countryId: 'country1', name: 'Dubai' });
+    expect(created.countryId).toBe('country1');
+
+    const list = await client.listJurisdictions('country1');
+    expect(list[0].name).toBe('Dubai');
+
+    const listAll = calls.find((c) => c.url.endsWith('/legal-config/jurisdictions?countryId=country1'));
+    expect(String(listAll?.url)).toContain('countryId=country1');
+  });
+
+  it('creates and lists courts scoped by jurisdictionId', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/legal-config/courts?jurisdictionId=j1': () =>
+        enveloped([
+          {
+            id: 'court1', tenantId: 't1', jurisdictionId: 'j1', name: 'Dubai Courts',
+            courtType: 'Civil', department: null, status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ]),
+      '/legal-config/courts': (_url, init) =>
+        init?.method === 'POST'
+          ? enveloped(
+              { id: 'court1', tenantId: 't1', jurisdictionId: 'j1', name: 'Dubai Courts', courtType: 'Civil', department: null, status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              201,
+            )
+          : enveloped([]),
+    });
+    const client = new LegalConfigClient(new ApiClient(base, fetchMock));
+
+    const created = await client.createCourt({ jurisdictionId: 'j1', name: 'Dubai Courts', courtType: 'Civil' });
+    expect(created.jurisdictionId).toBe('j1');
+
+    const list = await client.listCourts('j1');
+    expect(list[0].courtType).toBe('Civil');
+
+    const listAll = calls.find((c) => c.url.endsWith('/legal-config/courts?jurisdictionId=j1'));
+    expect(String(listAll?.url)).toContain('jurisdictionId=j1');
+  });
+
+  it('lists court locations requiring a courtId', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/legal-config/court-locations?courtId=court1': () =>
+        enveloped([
+          {
+            id: 'loc1', tenantId: 't1', courtId: 'court1', name: 'Main Hall',
+            city: 'Dubai', address: 'Somewhere', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ]),
+    });
+    const client = new LegalConfigClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listCourtLocations('court1');
+
+    const call = calls.find((c) => c.url.includes('/legal-config/court-locations'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).toContain('courtId=court1');
+    expect(result[0].name).toBe('Main Hall');
+  });
+
+  it('creates a court location via POST /legal-config/court-locations', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/legal-config/court-locations': (_url, init) =>
+        init?.method === 'POST'
+          ? enveloped(
+              { id: 'loc1', tenantId: 't1', courtId: 'court1', name: 'Main Hall', city: 'Dubai', address: null, status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              201,
+            )
+          : enveloped([]),
+    });
+    const client = new LegalConfigClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createCourtLocation({ courtId: 'court1', name: 'Main Hall', city: 'Dubai' });
+
+    const call = calls.find((c) => c.url.endsWith('/legal-config/court-locations') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ courtId: 'court1', name: 'Main Hall', city: 'Dubai' });
+    expect(result.courtId).toBe('court1');
   });
 });

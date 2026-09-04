@@ -25,6 +25,7 @@ describe('localized frontend messages', () => {
       parties: 'Parties',
       cases: 'Cases',
       conflictChecks: 'Conflict checks',
+      legalConfig: 'Legal configuration',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -42,6 +43,7 @@ describe('localized frontend messages', () => {
       parties: 'الأطراف',
       cases: 'القضايا',
       conflictChecks: 'فحص تضارب المصالح',
+      legalConfig: 'الإعداد القانوني',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {

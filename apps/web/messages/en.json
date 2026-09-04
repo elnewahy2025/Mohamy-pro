@@ -20,6 +20,7 @@
     "parties": "Parties",
     "cases": "Cases",
     "conflictChecks": "Conflict checks",
+    "legalConfig": "Legal configuration",
     "integrations": "Integrations",
     "settings": "Settings",
     "groups": {
@@ -59,9 +60,18 @@
     "title": "An operational foundation you can trust.",
     "description": "Every core capability has an explicit contract, a checkable state, and a safe path to scale.",
     "items": {
-      "health": { "title": "Health and observability", "description": "Clear readiness checks for every required service." },
-      "async": { "title": "Asynchronous processing", "description": "A queue foundation with bounded retries and durable handoff." },
-      "events": { "title": "Event safety", "description": "Outbox and idempotency foundations to prevent duplication and loss." }
+      "health": {
+        "title": "Health and observability",
+        "description": "Clear readiness checks for every required service."
+      },
+      "async": {
+        "title": "Asynchronous processing",
+        "description": "A queue foundation with bounded retries and durable handoff."
+      },
+      "events": {
+        "title": "Event safety",
+        "description": "Outbox and idempotency foundations to prevent duplication and loss."
+      }
     }
   },
   "integrations": {
@@ -69,11 +79,28 @@
     "title": "Services with clear boundaries.",
     "description": "Integrations pass through independent layers, keeping secrets and private links outside the client.",
     "tableLabel": "Service status",
-    "headers": { "service": "Service", "role": "Role", "status": "Status", "port": "Port" },
+    "headers": {
+      "service": "Service",
+      "role": "Role",
+      "status": "Status",
+      "port": "Port"
+    },
     "services": {
-      "postgres": { "role": "Primary relational data", "status": "Ready", "port": "55432" },
-      "redis": { "role": "Cache and queue transport", "status": "Ready", "port": "56379" },
-      "minio": { "role": "Private object storage", "status": "Ready", "port": "59000" }
+      "postgres": {
+        "role": "Primary relational data",
+        "status": "Ready",
+        "port": "55432"
+      },
+      "redis": {
+        "role": "Cache and queue transport",
+        "status": "Ready",
+        "port": "56379"
+      },
+      "minio": {
+        "role": "Private object storage",
+        "status": "Ready",
+        "port": "59000"
+      }
     }
   },
   "auth": {
@@ -197,11 +224,26 @@
     "title": "Shape the operating hierarchy.",
     "description": "Create the organization, branches, departments, teams, and tenant settings that define how work is structured.",
     "entity": {
-      "organization": { "title": "Organization", "description": "The top-level tenant entity." },
-      "branch": { "title": "Branch", "description": "A location or unit under the organization." },
-      "department": { "title": "Department", "description": "A division under a branch." },
-      "team": { "title": "Team", "description": "A flat assignment construct scoped to the tenant." },
-      "settings": { "title": "Settings", "description": "Tenant-scoped key/value settings." }
+      "organization": {
+        "title": "Organization",
+        "description": "The top-level tenant entity."
+      },
+      "branch": {
+        "title": "Branch",
+        "description": "A location or unit under the organization."
+      },
+      "department": {
+        "title": "Department",
+        "description": "A division under a branch."
+      },
+      "team": {
+        "title": "Team",
+        "description": "A flat assignment construct scoped to the tenant."
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Tenant-scoped key/value settings."
+      }
     },
     "create": "Create",
     "update": "Update",
@@ -256,10 +298,22 @@
     "title": "Manage the people and organizations you work with.",
     "description": "Create and manage individual clients and organizations, track their contact channels and addresses, and archive them when no longer needed.",
     "entity": {
-      "client": { "title": "Client", "description": "An individual or organization counterparty." },
-      "list": { "title": "Client list", "description": "Search and filter the clients in the active workspace." },
-      "contact": { "title": "Contacts", "description": "Contact channels (phone, email, fax, website, mobile) for a client." },
-      "address": { "title": "Addresses", "description": "Addresses for a client." }
+      "client": {
+        "title": "Client",
+        "description": "An individual or organization counterparty."
+      },
+      "list": {
+        "title": "Client list",
+        "description": "Search and filter the clients in the active workspace."
+      },
+      "contact": {
+        "title": "Contacts",
+        "description": "Contact channels (phone, email, fax, website, mobile) for a client."
+      },
+      "address": {
+        "title": "Addresses",
+        "description": "Addresses for a client."
+      }
     },
     "create": "Create",
     "update": "Update",
@@ -341,8 +395,14 @@
     "title": "Screen prospective parties for conflicts of interest.",
     "description": "Request a conflict check before accepting a matter, review prospective parties against existing clients, and record an allow or block decision with a reason.",
     "entity": {
-      "check": { "title": "Conflict check", "description": "Request a check and manage its review decision." },
-      "list": { "title": "Conflict check list", "description": "Search and filter the conflict checks in the active workspace." }
+      "check": {
+        "title": "Conflict check",
+        "description": "Request a check and manage its review decision."
+      },
+      "list": {
+        "title": "Conflict check list",
+        "description": "Search and filter the conflict checks in the active workspace."
+      }
     },
     "request": "Request check",
     "startReview": "Start review",
@@ -548,6 +608,65 @@
       "list": "Case list",
       "case": "Create case",
       "party": "Link case parties"
+    }
+  },
+  "legalConfig": {
+    "navLabel": "Legal configuration",
+    "eyebrow": "Phase 9 · Courts, jurisdictions & countries",
+    "title": "Configure the courts and legal jurisdictions your firm operates in.",
+    "description": "Build the legal dictionary for your workspace — countries, jurisdictions, courts, and court locations. Countries are a shared global dictionary; jurisdictions, courts, and court locations can be tenant-specific or global.",
+    "create": "Create",
+    "list": "List",
+    "submitting": "Working…",
+    "labels": {
+      "id": "ID",
+      "code": "ISO code",
+      "name": "Name",
+      "countryId": "Country ID",
+      "jurisdictionId": "Jurisdiction ID",
+      "courtId": "Court ID",
+      "courtType": "Court type",
+      "department": "Department",
+      "city": "City",
+      "address": "Address"
+    },
+    "placeholders": {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "code": "e.g. AE",
+      "name": "e.g. UAE",
+      "countryId": "00000000-0000-4000-8000-000000000000",
+      "jurisdictionId": "00000000-0000-4000-8000-000000000000",
+      "courtId": "00000000-0000-4000-8000-000000000000",
+      "courtType": "e.g. Civil",
+      "department": "Optional department",
+      "city": "e.g. Dubai",
+      "address": "Optional street address"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "name": "Name",
+      "code": "Code",
+      "count": "Entries",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "country": {
+        "heading": "Countries",
+        "description": "Create managed countries that populate the global dictionary."
+      },
+      "jurisdiction": {
+        "heading": "Jurisdictions",
+        "description": "Attach tenant or global jurisdictions to a country."
+      },
+      "court": {
+        "heading": "Courts",
+        "description": "Register courts under a jurisdiction."
+      },
+      "courtLocation": {
+        "heading": "Court locations",
+        "description": "Add branches and physical locations to a court."
+      }
     }
   }
 }
