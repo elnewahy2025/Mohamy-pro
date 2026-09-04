@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session/session.guard';
+import { CsrfGuard } from '../auth/session/csrf.guard';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { DocumentOperations } from './document.operations';
 import { DocumentService } from './document.service';
@@ -26,7 +27,7 @@ import {
   path: 'documents',
   version: '1',
 })
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, CsrfGuard)
 export class DocumentController {
   constructor(
     private readonly operations: DocumentOperations,
@@ -116,7 +117,7 @@ export class DocumentController {
     const eventType =
       dto.status === 'ARCHIVED'
         ? AUDIT_EVENT_TYPES.DOCUMENT_ARCHIVED
-        : AUDIT_EVENT_TYPES.DOCUMENT_UPLOADED; // We don't have a specific event for status update, fallback to uploaded or could add one
+        : AUDIT_EVENT_TYPES.DOCUMENT_STATUS_CHANGED;
 
     return this.operations.run(
       request,
@@ -126,7 +127,9 @@ export class DocumentController {
       async (tx) => {
         return this.documentService.updateStatus(tx, ctx.tenantId, id, dto);
       },
-      { status: dto.status },
+      dto.status === 'ARCHIVED'
+        ? { documentId: id }
+        : { documentId: id, status: dto.status },
     );
   }
 

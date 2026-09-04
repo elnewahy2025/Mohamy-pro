@@ -66,6 +66,9 @@ describe('CaseService', () => {
           },
           case: { create: jest.fn().mockResolvedValue(mockCase) },
           party: { findMany: jest.fn().mockResolvedValue([]) },
+          caseTimelineEvent: {
+            create: jest.fn().mockResolvedValue({ id: 'evt-1' }),
+          },
         };
         return op(tx as any);
       });
@@ -112,6 +115,9 @@ describe('CaseService', () => {
             findFirst: jest.fn().mockResolvedValue({ id: 'role-1' }),
           },
           caseParty: { create: jest.fn().mockResolvedValue(mockLink) },
+          caseTimelineEvent: {
+            create: jest.fn().mockResolvedValue({ id: 'evt-1' }),
+          },
         };
         return op(tx as any);
       });
@@ -165,6 +171,9 @@ describe('CaseService', () => {
       mockOps.run.mockImplementationOnce(async (req, ctx, type, target, op) => {
         const tx = {
           case: { update: jest.fn().mockResolvedValue(updated) },
+          caseTimelineEvent: {
+            create: jest.fn().mockResolvedValue({ id: 'evt-1' }),
+          },
         };
         return op(tx as any);
       });

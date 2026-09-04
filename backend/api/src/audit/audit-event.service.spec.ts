@@ -120,4 +120,44 @@ describe('AuditEventService', () => {
       }),
     ).rejects.toThrow(AuditWriteError);
   });
+
+  it('guards that Phase 10-15 controller-emitted keys are allowlisted and never use error', () => {
+    const phaseEventKeys: Record<string, string[]> = {
+      [AUDIT_EVENT_TYPES.WORKFLOW_CREATED]: ['name', 'caseType', 'workflowId'],
+      [AUDIT_EVENT_TYPES.HEARING_DELETED]: ['hearingId'],
+      [AUDIT_EVENT_TYPES.HEARING_OUTCOME_RECORDED]: ['outcome', 'status'],
+      [AUDIT_EVENT_TYPES.TASK_COMPLETED]: ['status'],
+      [AUDIT_EVENT_TYPES.DOCUMENT_UPLOADED]: [
+        'documentId',
+        'caseId',
+        'clientId',
+        'documentType',
+        'versionNumber',
+        'storageObjectId',
+      ],
+      [AUDIT_EVENT_TYPES.DOCUMENT_ARCHIVED]: ['documentId'],
+      [AUDIT_EVENT_TYPES.DOCUMENT_STATUS_CHANGED]: [
+        'documentId',
+        'status',
+        'previousStatus',
+      ],
+    };
+
+    for (const [eventType, expectedKeys] of Object.entries(phaseEventKeys)) {
+      const allowlist = METADATA_ALLOWLIST[eventType];
+      if (allowlist === undefined) {
+        throw new Error(`Event '${eventType}' must have an allowlist entry`);
+      }
+      for (const key of expectedKeys) {
+        if (!allowlist.includes(key)) {
+          throw new Error(`Allowlist for '${eventType}' must include '${key}'`);
+        }
+      }
+      if (allowlist.includes('error')) {
+        throw new Error(
+          `Allowlist for '${eventType}' must not include 'error'`,
+        );
+      }
+    }
+  });
 });

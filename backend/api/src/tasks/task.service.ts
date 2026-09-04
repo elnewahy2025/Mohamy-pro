@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { TaskNotFoundError, TaskInvalidStateError } from './task.errors';
+import {
+  TaskAccessDeniedError,
+  TaskNotFoundError,
+  TaskInvalidStateError,
+} from './task.errors';
 import type {
   CreateTaskDto,
   UpdateTaskStatusDto,
@@ -17,6 +21,25 @@ export class TaskService {
     reporterUserId: string,
     dto: CreateTaskDto,
   ) {
+    await this.requireVisible(tx, dto.caseId, () =>
+      tx.case.findFirst({
+        where: { id: dto.caseId, tenantId },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.parentTaskId, () =>
+      tx.task.findFirst({
+        where: { id: dto.parentTaskId, tenantId },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.assignedUserId, () =>
+      tx.membership.findFirst({
+        where: { id: dto.assignedUserId, tenantId },
+        select: { id: true },
+      }),
+    );
+
     return tx.task.create({
       data: {
         tenantId,
@@ -33,6 +56,16 @@ export class TaskService {
         escalationRule: dto.escalationRule ?? Prisma.DbNull,
       },
     });
+  }
+
+  private async requireVisible(
+    tx: Prisma.TransactionClient,
+    id: string | undefined | null,
+    query: () => Promise<{ id: string } | null>,
+  ): Promise<void> {
+    if (!id) return;
+    const found = await query();
+    if (!found) throw new TaskAccessDeniedError('RELATED_ENTITY_NOT_IN_TENANT');
   }
 
   async listTasks(
@@ -109,6 +142,13 @@ export class TaskService {
     });
 
     if (!task) throw new TaskNotFoundError('Task not found');
+
+    await this.requireVisible(tx, dto.assignedUserId, () =>
+      tx.membership.findFirst({
+        where: { id: dto.assignedUserId, tenantId },
+        select: { id: true },
+      }),
+    );
 
     return tx.task.update({
       where: { id: taskId },

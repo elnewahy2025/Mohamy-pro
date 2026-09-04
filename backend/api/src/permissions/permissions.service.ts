@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import type { Request } from 'express';
 import { Prisma, RoleScope } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
@@ -53,6 +53,20 @@ export class PermissionsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditEventService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    try {
+      const tenantsWired = await this.reconcileBuiltInRoles(randomUUID());
+      this.logger.log(
+        `Reconciled built-in role permissions for ${tenantsWired} tenant(s) at startup`,
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to reconcile built-in role permissions at startup',
+        error as Error,
+      );
+    }
+  }
 
   async assertTenantPermission(
     input: TenantPermissionInput,

@@ -99,27 +99,6 @@ export class CaseTimelineOperations {
         message: 'Case timeline operation failed',
         reason: error instanceof Error ? error.message : String(error),
       });
-
-      await this.audit.write(
-        {
-          eventType,
-          outcome: 'FAILED',
-          actorUserId: ctx.userId,
-          actorMembershipId: ctx.actorMembershipId,
-          tenantId: ctx.tenantId,
-          targetType,
-          targetId: null,
-          policy: CASE_TIMELINE_PERMISSION,
-          correlationId,
-          ipHash: this.optionalHash(request.ip),
-          userAgentHash: this.optionalHash(request.headers['user-agent']),
-          metadata: {
-            ...metadata,
-            error: error instanceof Error ? error.message : String(error),
-          },
-        },
-        this.prisma,
-      );
       throw error;
     }
   }

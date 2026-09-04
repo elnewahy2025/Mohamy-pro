@@ -1,5 +1,61 @@
 import { ConfigService } from '@nestjs/config';
-import * as client from 'openid-client';
+// NOTE: `openid-client` is ESM-only; jest runs this suite as CommonJS, so the
+// real package cannot be required. It is mocked at module scope below — the
+// service under test only consumes it via the `client.*` namespace.
+type TokenEndpointResponse = {
+  access_token: string;
+  id_token?: unknown;
+  refresh_token?: unknown;
+  expires_in?: unknown;
+  token_type: string;
+  scope?: unknown;
+};
+type TokenEndpointResponseHelpers = {
+  claims: () => undefined;
+  expiresIn: () => unknown;
+};
+type Configuration = {
+  issuer: string;
+  jwks_uri?: string;
+  authorization_endpoint: string;
+  token_endpoint: string;
+  userinfo_endpoint?: string;
+  revocation_endpoint?: string;
+  end_session_endpoint?: string;
+};
+
+jest.mock('openid-client', () => {
+  class ConfigurationImpl {
+    public metadata: Record<string, unknown>;
+    constructor(
+      metadata: Record<string, unknown>,
+      public clientId?: string,
+      public clientSecret?: string,
+    ) {
+      this.metadata = metadata;
+    }
+    serverMetadata(): Record<string, unknown> {
+      return this.metadata;
+    }
+  }
+  class AuthorizationResponseError extends Error {}
+  class ResponseBodyError extends Error {}
+  return {
+    Configuration: ConfigurationImpl,
+    AuthorizationResponseError,
+    ResponseBodyError,
+    discovery: jest.fn(),
+    randomPKCECodeVerifier: jest.fn(),
+    calculatePKCECodeChallenge: jest.fn(),
+    randomState: jest.fn(),
+    randomNonce: jest.fn(),
+    buildAuthorizationUrl: jest.fn(),
+    authorizationCodeGrant: jest.fn(),
+    refreshTokenGrant: jest.fn(),
+    tokenRevocation: jest.fn(),
+  };
+});
+
 import type { ValidatedEnvironment } from '../../config/env.validation';
 import {
   OidcConfigurationError,
@@ -7,6 +63,11 @@ import {
   OidcTokenValidationError,
 } from '../auth.errors';
 import { OidcProviderService } from './oidc-provider.service';
+
+// jest.mock above hoists and replaces the real ESM `openid-client` with the
+// manual mock at runtime; this namespace import only resolves to that mock.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import * as client from 'openid-client';
 
 const SERVER_METADATA = {
   issuer: 'https://issuer.example/oidc',
@@ -78,6 +139,7 @@ describe('OidcProviderService', () => {
 
   beforeEach(() => {
     jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   it('fails configuration when OIDC_ISSUER is missing', async () => {

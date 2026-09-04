@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session/session.guard';
+import { CsrfGuard } from '../auth/session/csrf.guard';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { HearingOperations } from './hearing.operations';
 import { HearingService } from './hearing.service';
@@ -21,7 +22,7 @@ import { CreateHearingDto, UpdateHearingOutcomeDto } from './hearing.dto';
   path: 'hearings',
   version: '1',
 })
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, CsrfGuard)
 export class HearingController {
   constructor(
     private readonly operations: HearingOperations,

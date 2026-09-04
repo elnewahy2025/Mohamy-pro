@@ -5,9 +5,10 @@ import { DocumentOperations } from './document.operations';
 import { DatabaseModule } from '../infrastructure/database/database.module';
 import { AuditModule } from '../audit/audit.module';
 import { PermissionsModule } from '../permissions/permissions.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [DatabaseModule, AuditModule, PermissionsModule],
+  imports: [DatabaseModule, AuditModule, PermissionsModule, AuthModule],
   controllers: [DocumentController],
   providers: [DocumentService, DocumentOperations],
   exports: [DocumentService, DocumentOperations],

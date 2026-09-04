@@ -387,7 +387,14 @@ model Tenant {
   deadlineRules        DeadlineRule[]
   deadlines            Deadline[]
   tasks                Task[]
+  taskChecklists       TaskChecklist[]
+  taskDependencies     TaskDependency[]
   documents            Document[]
+  documentVersions     DocumentVersion[]
+  documentTags         DocumentTag[]
+  documentMetadatas    DocumentMetadata[]
+  documentShares       DocumentShare[]
+  documentAccesses     DocumentAccess[]
 
   @@index([status, createdAt])
 }
@@ -1281,6 +1288,7 @@ model Task {
 
 model TaskChecklist {
   id          String   @id @default(uuid())
+  tenantId    String
   taskId      String
   title       String
   isCompleted Boolean  @default(false)
@@ -1288,21 +1296,26 @@ model TaskChecklist {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
+  @@index([tenantId])
 }
 
 model TaskDependency {
   id                 String   @id @default(uuid())
+  tenantId           String
   dependentTaskId    String
   prerequisiteTaskId String
   createdAt          DateTime @default(now())
 
-  dependent    Task @relation("TaskDependent", fields: [dependentTaskId], references: [id], onDelete: Cascade)
-  prerequisite Task @relation("TaskPrerequisite", fields: [prerequisiteTaskId], references: [id], onDelete: Cascade)
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  dependent    Task   @relation("TaskDependent", fields: [dependentTaskId], references: [id], onDelete: Cascade)
+  prerequisite Task   @relation("TaskPrerequisite", fields: [prerequisiteTaskId], references: [id], onDelete: Cascade)
 
   @@unique([dependentTaskId, prerequisiteTaskId])
+  @@index([tenantId])
 }
 
 enum DocumentStatus {
@@ -1341,6 +1354,7 @@ model Document {
 
 model DocumentVersion {
   id              String         @id @default(uuid())
+  tenantId        String
   documentId      String
   versionNumber   Int
   storageObjectId String         // Reference to cloud storage / ObjectStorage UUID
@@ -1350,54 +1364,70 @@ model DocumentVersion {
   createdAt       DateTime       @default(now())
   createdById     String?
 
-  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  createdBy       Membership?    @relation("DocumentVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  document      Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy     Membership?  @relation("DocumentVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@unique([documentId, versionNumber])
+  @@index([tenantId])
 }
 
 model DocumentTag {
   id              String         @id @default(uuid())
+  tenantId        String
   documentId      String
   tag             String
 
-  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([documentId, tag])
+  @@index([tenantId])
 }
 
 model DocumentMetadata {
   id              String         @id @default(uuid())
+  tenantId        String
   documentId      String
   key             String
   value           String
 
-  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([documentId, key])
+  @@index([tenantId])
 }
 
 model DocumentShare {
   id              String         @id @default(uuid())
+  tenantId        String
   documentId      String
   sharedWithEmail String
   expiresAt       DateTime?
   createdAt       DateTime       @default(now())
   createdById     String?
 
-  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  createdBy       Membership?    @relation("DocumentSharer", fields: [createdById], references: [id], onDelete: SetNull)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  document  Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy Membership? @relation("DocumentSharer", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
 }
 
 model DocumentAccess {
   id              String         @id @default(uuid())
+  tenantId        String
   documentId      String
   accessedById    String?
   accessedAt      DateTime       @default(now())
   action          String         // e.g., 'VIEW', 'DOWNLOAD', 'PRINT'
   ipAddress       String?
 
-  document        Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  accessedBy      Membership?    @relation("DocumentAccessor", fields: [accessedById], references: [id], onDelete: SetNull)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  document   Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  accessedBy Membership? @relation("DocumentAccessor", fields: [accessedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
 }
 

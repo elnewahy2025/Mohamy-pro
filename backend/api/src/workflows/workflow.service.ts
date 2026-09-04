@@ -60,7 +60,14 @@ export class WorkflowService {
     const nextVersion =
       workflow.versions.length > 0 ? workflow.versions[0].version + 1 : 1;
 
-    return tx.workflowVersion.create({
+    const initialStates = dto.states.filter((s) => s.isInitial);
+    if (initialStates.length !== 1) {
+      throw new WorkflowInvalidStateError(
+        'A workflow version must define exactly one initial state',
+      );
+    }
+
+    const createdStates = await tx.workflowVersion.create({
       data: {
         tenantId,
         workflowId,
@@ -74,22 +81,57 @@ export class WorkflowService {
             isFinal: s.isFinal ?? false,
           })),
         },
-        transitions: {
-          create: dto.transitions.map((t) => ({
-            tenantId,
-            fromStateId: t.fromStateId,
-            toStateId: t.toStateId,
-            conditions: t.conditions ?? Prisma.JsonNull,
-            actions: t.actions ?? Prisma.JsonNull,
-            requiresApproval: t.requiresApproval ?? false,
-          })),
-        },
       },
+      include: {
+        states: true,
+      },
+    });
+
+    const stateByKey = new Map(
+      createdStates.states.map((state) => [state.name, state.id]),
+    );
+
+    const transitions = dto.transitions.map((t) => {
+      const toStateId = stateByKey.get(t.toStateName);
+      if (!toStateId) {
+        throw new WorkflowInvalidStateError(
+          `Transition references unknown state "${t.toStateName}"`,
+        );
+      }
+      const fromStateId = t.fromStateName
+        ? (stateByKey.get(t.fromStateName) ?? null)
+        : null;
+      if (t.fromStateName && !fromStateId) {
+        throw new WorkflowInvalidStateError(
+          `Transition references unknown state "${t.fromStateName}"`,
+        );
+      }
+      return {
+        tenantId,
+        versionId: createdStates.id,
+        fromStateId,
+        toStateId,
+        conditions: t.conditions ?? Prisma.JsonNull,
+        actions: t.actions ?? Prisma.JsonNull,
+        requiresApproval: t.requiresApproval ?? false,
+      };
+    });
+
+    await tx.workflowTransition.createMany({
+      data: transitions,
+    });
+
+    const versionWithGraph = await tx.workflowVersion.findUnique({
+      where: { id: createdStates.id },
       include: {
         states: true,
         transitions: true,
       },
     });
+    if (!versionWithGraph)
+      throw new WorkflowNotFoundError('Workflow version not found');
+
+    return versionWithGraph;
   }
 
   async publishVersion(

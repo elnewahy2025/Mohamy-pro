@@ -104,6 +104,35 @@ RLS `FORCE ..._tenant_isolation` via `app_tenant_context_is_valid()`, service la
   concrete value = tenant-scoped. RLS `FORCE` policies allow global (`tenantId IS NULL`) +
   own-tenant reads and tenant-scoped writes; `LegalConfigOperations.requireParentVisible`
   prevents attaching a child to another tenant's parent. Delivered (create + list).
+- **Phase 10** — Case Timeline (`CaseTimelineEvent`, `CanViewCaseTimeline`, `case-timeline/`
+  module, `20260904160000_...`). Delivered. RLS `FORCE` + `_tenant_isolation`.
+- **Phase 11** — Workflow Engine definition/storage (`Workflow`/`WorkflowVersion`/
+  `WorkflowState`/`WorkflowTransition`, `CanManageWorkflows`, `workflows/` module,
+  `20260905100000_...`). **Storage only** — execution engine deferred (recorded, not silent).
+  RLS `FORCE` + `_tenant_isolation`.
+- **Phase 12** — Hearing Management (`Hearing`, `CanManageHearings`, `hearings/` module,
+  `20260906100000_...`). Delivered. Internal-calendar/attendee aggregation deferred.
+  RLS `FORCE` + `_tenant_isolation`.
+- **Phase 13** — Legal Deadline Engine (`DeadlineRule`/`Deadline`, `CanManageDeadlines`,
+  `deadlines/` module, `20260906120000_...`). CRUD delivered; computation engine deferred.
+  RLS `FORCE` + `_tenant_isolation`.
+- **Phase 14** — Task Management (`Task`/`TaskChecklist`/`TaskDependency`, `CanManageTasks`,
+  `tasks/` module, `20260906140000_...`). Delivered. RLS `FORCE` + `_tenant_isolation`. Child
+  tables (`TaskChecklist`, `TaskDependency`) got `tenantId` via `20260907000000_...`.
+- **Phase 15** — Document Management (`Document`/`DocumentVersion`/`DocumentTag`/
+  `DocumentMetadata`/`DocumentShare`/`DocumentAccess`, `CanManageDocuments`, `documents/`
+  module, `20260906150000_...`). **Metadata/CRUD only** — real object storage deferred
+  (security-sensitive, recorded not silent). RLS `FORCE` + `_tenant_isolation`. Child tables
+  got `tenantId` via `20260907000000_...`.
+- **Phase 10–15 remediation (R0–R10)** — see `docs/AUDIT_REMEDIATION_PHASES_10_15.md`.
+  Cross-cutting: `20260905100000` workflow migration repaired in place (un-applied chain);
+  `20260907000000_phase10_15_rls_isolation` adds `tenantId` to 7 child tables and FORCE-RLS on
+  all 16 Phase 10-15 tables; `20260907010000_phase10_15_permission_seal` seals the 6
+  Phase-10-15 permissions; `reconcileBuiltInRoles` runs at startup; all 6 controllers use
+  `@UseGuards(SessionGuard, CsrfGuard)`; cross-tenant attach guards via `requireVisible`; audit
+  allowlist expanded + `workflow.version.created` added. Status: implemented + gated
+  (tsc=0, nest build=0, prettier clean, 322/322 jest tests), **not yet applied to a live DB**
+  (no PostgreSQL in this env) — a fresh-DB `prisma migrate deploy` is release-gating.
 
 ## Prettier Setup (shared with other agents)
 

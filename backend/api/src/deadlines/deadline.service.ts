@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  DeadlineAccessDeniedError,
   DeadlineNotFoundError,
   DeadlineInvalidStateError,
 } from './deadline.errors';
@@ -44,6 +45,25 @@ export class DeadlineService {
     tenantId: string,
     dto: CreateDeadlineDto,
   ) {
+    await this.requireVisible(tx, dto.caseId, () =>
+      tx.case.findFirst({
+        where: { id: dto.caseId, tenantId },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.ruleId, () =>
+      tx.deadlineRule.findFirst({
+        where: { id: dto.ruleId, tenantId },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.assignedUserId, () =>
+      tx.membership.findFirst({
+        where: { id: dto.assignedUserId, tenantId },
+        select: { id: true },
+      }),
+    );
+
     return tx.deadline.create({
       data: {
         tenantId,
@@ -56,6 +76,17 @@ export class DeadlineService {
         assignedUserId: dto.assignedUserId,
       },
     });
+  }
+
+  private async requireVisible(
+    tx: Prisma.TransactionClient,
+    id: string | undefined | null,
+    query: () => Promise<{ id: string } | null>,
+  ): Promise<void> {
+    if (!id) return;
+    const found = await query();
+    if (!found)
+      throw new DeadlineAccessDeniedError('RELATED_ENTITY_NOT_IN_TENANT');
   }
 
   async listDeadlines(

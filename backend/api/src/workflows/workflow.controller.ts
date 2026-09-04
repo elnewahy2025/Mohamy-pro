@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session/session.guard';
+import { CsrfGuard } from '../auth/session/csrf.guard';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { WorkflowOperations } from './workflow.operations';
 import { WorkflowService } from './workflow.service';
@@ -19,7 +20,7 @@ import { CreateWorkflowDto, CreateWorkflowVersionDto } from './workflow.dto';
   path: 'workflows',
   version: '1',
 })
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, CsrfGuard)
 export class WorkflowController {
   constructor(
     private readonly operations: WorkflowOperations,
@@ -62,8 +63,7 @@ export class WorkflowController {
     return this.operations.run(
       request,
       ctx,
-      // We log version created but we didn't add WORKFLOW_VERSION_CREATED, so we might just use WORKFLOW_CREATED for now
-      AUDIT_EVENT_TYPES.WORKFLOW_CREATED,
+      AUDIT_EVENT_TYPES.WORKFLOW_VERSION_CREATED,
       'WorkflowVersion',
       async (tx) => {
         return this.workflowService.createVersion(tx, ctx.tenantId, id, dto);

@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session/session.guard';
+import { CsrfGuard } from '../auth/session/csrf.guard';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { TaskOperations } from './task.operations';
 import { TaskService } from './task.service';
@@ -21,7 +22,7 @@ import { CreateTaskDto, UpdateTaskStatusDto, AssignTaskDto } from './task.dto';
   path: 'tasks',
   version: '1',
 })
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, CsrfGuard)
 export class TaskController {
   constructor(
     private readonly operations: TaskOperations,

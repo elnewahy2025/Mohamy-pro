@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  HearingAccessDeniedError,
   HearingNotFoundError,
   HearingInvalidStateError,
 } from './hearing.errors';
@@ -15,6 +16,40 @@ export class HearingService {
     tenantId: string,
     dto: CreateHearingDto,
   ) {
+    await this.requireVisible(tx, dto.caseId, () =>
+      tx.case.findFirst({
+        where: { id: dto.caseId, tenantId },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.courtId, () =>
+      tx.court.findFirst({
+        where: { id: dto.courtId, OR: [{ tenantId: null }, { tenantId }] },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.courtLocationId, () =>
+      tx.courtLocation.findFirst({
+        where: {
+          id: dto.courtLocationId,
+          OR: [{ tenantId: null }, { tenantId }],
+        },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.assignedLawyerId, () =>
+      tx.membership.findFirst({
+        where: { id: dto.assignedLawyerId, tenantId },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.nextHearingId, () =>
+      tx.hearing.findFirst({
+        where: { id: dto.nextHearingId, tenantId },
+        select: { id: true },
+      }),
+    );
+
     return tx.hearing.create({
       data: {
         tenantId,
@@ -29,6 +64,17 @@ export class HearingService {
         nextHearingId: dto.nextHearingId,
       },
     });
+  }
+
+  private async requireVisible(
+    tx: Prisma.TransactionClient,
+    id: string | undefined | null,
+    query: () => Promise<{ id: string } | null>,
+  ): Promise<void> {
+    if (!id) return;
+    const found = await query();
+    if (!found)
+      throw new HearingAccessDeniedError('RELATED_ENTITY_NOT_IN_TENANT');
   }
 
   async listHearings(

@@ -35,11 +35,11 @@ export class CreateWorkflowStateDto {
 export class CreateWorkflowTransitionDto {
   @IsString()
   @IsOptional()
-  fromStateId?: string;
+  fromStateName?: string;
 
   @IsString()
   @IsNotEmpty()
-  toStateId: string;
+  toStateName: string;
 
   @IsObject()
   @IsOptional()

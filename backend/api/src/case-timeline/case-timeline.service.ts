@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, type CaseTimelineEventType } from '@prisma/client';
 import { PrismaService } from '../infrastructure/database/prisma.service';
+import { CaseTimelineAccessDeniedError } from './case-timeline.errors';
 import type { CaseTimelineQueryDto } from './case-timeline.dto';
 import type { Paginated } from '../common/api/envelope';
 import type { CaseTimelineEvent } from '@prisma/client';
@@ -24,6 +25,14 @@ export class CaseTimelineService {
     actorMembershipId: string | null,
     input: CreateTimelineEventInput,
   ): Promise<CaseTimelineEvent> {
+    const caseInTenant = await tx.case.findFirst({
+      where: { id: input.caseId, tenantId },
+      select: { id: true },
+    });
+    if (!caseInTenant) {
+      throw new CaseTimelineAccessDeniedError('NO_CASE_IN_TENANT');
+    }
+
     return await tx.caseTimelineEvent.create({
       data: {
         tenantId,

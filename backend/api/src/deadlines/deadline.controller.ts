@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session/session.guard';
+import { CsrfGuard } from '../auth/session/csrf.guard';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { DeadlineOperations } from './deadline.operations';
 import { DeadlineService } from './deadline.service';
@@ -24,7 +25,7 @@ import {
   path: 'deadlines',
   version: '1',
 })
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, CsrfGuard)
 export class DeadlineController {
   constructor(
     private readonly operations: DeadlineOperations,

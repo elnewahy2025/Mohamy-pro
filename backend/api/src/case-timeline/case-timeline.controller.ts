@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session/session.guard';
+import { CsrfGuard } from '../auth/session/csrf.guard';
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { CaseTimelineOperations } from './case-timeline.operations';
 import { CaseTimelineService } from './case-timeline.service';
@@ -23,7 +24,7 @@ import {
   path: 'cases/:caseId/timeline',
   version: '1',
 })
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, CsrfGuard)
 export class CaseTimelineController {
   constructor(
     private readonly operations: CaseTimelineOperations,

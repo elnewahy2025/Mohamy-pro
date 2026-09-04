@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  DocumentAccessDeniedError,
   DocumentNotFoundError,
   DocumentInvalidStateError,
 } from './document.errors';
@@ -21,6 +22,19 @@ export class DocumentService {
     uploaderUserId: string,
     dto: CreateDocumentDto,
   ) {
+    await this.requireVisible(tx, dto.caseId, () =>
+      tx.case.findFirst({
+        where: { id: dto.caseId, tenantId },
+        select: { id: true },
+      }),
+    );
+    await this.requireVisible(tx, dto.clientId, () =>
+      tx.client.findFirst({
+        where: { id: dto.clientId, tenantId },
+        select: { id: true },
+      }),
+    );
+
     return tx.document.create({
       data: {
         tenantId,
@@ -32,6 +46,7 @@ export class DocumentService {
         uploadedById: uploaderUserId,
         versions: {
           create: {
+            tenantId,
             versionNumber: 1,
             storageObjectId: dto.storageObjectId,
             mimeType: dto.mimeType,
@@ -45,6 +60,17 @@ export class DocumentService {
         versions: true,
       },
     });
+  }
+
+  private async requireVisible(
+    tx: Prisma.TransactionClient,
+    id: string | undefined | null,
+    query: () => Promise<{ id: string } | null>,
+  ): Promise<void> {
+    if (!id) return;
+    const found = await query();
+    if (!found)
+      throw new DocumentAccessDeniedError('RELATED_ENTITY_NOT_IN_TENANT');
   }
 
   async listDocuments(
@@ -101,6 +127,7 @@ export class DocumentService {
 
     return tx.documentVersion.create({
       data: {
+        tenantId: doc.tenantId,
         documentId: doc.id,
         versionNumber: nextVersion,
         storageObjectId: dto.storageObjectId,
@@ -150,6 +177,7 @@ export class DocumentService {
 
     return tx.documentShare.create({
       data: {
+        tenantId: doc.tenantId,
         documentId,
         sharedWithEmail: dto.sharedWithEmail,
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
