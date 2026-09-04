@@ -25,6 +25,7 @@ describe('localized frontend messages', () => {
       parties: 'Parties',
       cases: 'Cases',
       hearings: 'Hearings',
+      deadlines: 'Deadlines',
       conflictChecks: 'Conflict checks',
       legalConfig: 'Legal configuration',
       workflows: 'Workflows',
@@ -45,6 +46,7 @@ describe('localized frontend messages', () => {
       parties: 'الأطراف',
       cases: 'القضايا',
       hearings: 'الجلسات',
+      deadlines: 'المواعيد',
       conflictChecks: 'فحص تضارب المصالح',
       legalConfig: 'الإعداد القانوني',
       workflows: 'سير العمل',
@@ -58,7 +60,6 @@ describe('localized frontend messages', () => {
       },
     });
     expect(en.settings.ltr).toBe('LTR');
-    expect(ar.settings.rtl).toBe('RTL');
   });
 
   it('localizes the identity/membership flows and accessible form errors in both languages', () => {

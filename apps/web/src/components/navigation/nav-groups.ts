@@ -3,6 +3,8 @@ import {
   ArrowRightLeft,
   Briefcase,
   Building2,
+  Calendar,
+  Gavel,
   LayoutDashboard,
   Scale,
   Settings2,
@@ -50,7 +52,8 @@ export const appNavGroups: AppNavGroup[] = [
     icon: Briefcase,
     items: [
       { href: '/cases', labelKey: 'navigation.cases', icon: Briefcase },
-      { href: '/hearings', labelKey: 'navigation.hearings', icon: Briefcase },
+      { href: '/hearings', labelKey: 'navigation.hearings', icon: Gavel },
+      { href: '/deadlines', labelKey: 'navigation.deadlines', icon: Calendar },
     ],
   },
   {

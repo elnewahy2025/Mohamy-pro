@@ -1603,3 +1603,62 @@ export class HearingsClient {
   }
 }
 
+// --- Phase 13: Deadlines ---
+
+export interface DeadlineRuleResult {
+  id: string;
+  name: string;
+  description?: string;
+  effectiveFrom: string;
+  effectiveTo?: string;
+}
+
+export interface DeadlineResult {
+  id: string;
+  caseId: string;
+  title: string;
+  deadlineType: string;
+  dueDate: string;
+  status: string;
+  ruleId?: string;
+}
+
+export interface CreateDeadlineRuleRequest {
+  name: string;
+  description?: string;
+  effectiveFrom: string;
+  effectiveTo?: string;
+}
+
+export interface CreateDeadlineRequest {
+  caseId: string;
+  title: string;
+  description?: string;
+  deadlineType: string;
+  dueDate: string;
+  ruleId?: string;
+}
+
+const DEADLINES_PREFIX = '/v1/deadlines';
+
+export class DeadlinesClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  listDeadlines(caseId?: string): Promise<{ data: DeadlineResult[] }> {
+    const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
+    return this.client.body<{ data: DeadlineResult[] }>(DEADLINES_PREFIX + qs, 'GET');
+  }
+
+  createDeadline(req: CreateDeadlineRequest): Promise<DeadlineResult> {
+    return this.client.body<DeadlineResult>(DEADLINES_PREFIX, 'POST', req);
+  }
+
+  listRules(): Promise<{ data: DeadlineRuleResult[] }> {
+    return this.client.body<{ data: DeadlineRuleResult[] }>(DEADLINES_PREFIX + '/rules', 'GET');
+  }
+
+  createRule(req: CreateDeadlineRuleRequest): Promise<DeadlineRuleResult> {
+    return this.client.body<DeadlineRuleResult>(DEADLINES_PREFIX + '/rules', 'POST', req);
+  }
+}
+

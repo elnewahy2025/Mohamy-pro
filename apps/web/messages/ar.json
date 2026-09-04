@@ -42,7 +42,13 @@
       "RETIRED": "متقاعد",
       "SCHEDULED": "مجدولة",
       "POSTPONED": "مؤجلة",
-      "CANCELLED": "ملغاة"
+      "CANCELLED": "ملغى",
+      "OVERDUE": "متأخر",
+      "FIXED": "ثابت",
+      "RELATIVE": "نسبي",
+      "RULE_BASED": "مبني على قاعدة",
+      "MANUAL": "يدوي",
+      "RECURRING": "متكرر"
     }
   },
   "navigation": {
@@ -52,6 +58,8 @@
     "clients": "العملاء",
     "parties": "الأطراف",
     "cases": "القضايا",
+    "hearings": "الجلسات",
+    "deadlines": "المواعيد",
     "conflictChecks": "فحص تضارب المصالح",
     "legalConfig": "الإعداد القانوني",
     "integrations": "التكاملات",
@@ -829,6 +837,41 @@
       "list": "قائمة الجلسات",
       "schedule": "جدولة جلسة",
       "outcome": "تسجيل نتيجة"
+    }
+  },
+  "deadlines": {
+    "title": "المواعيد القانونية",
+    "eyebrow": "محرك المواعيد",
+    "description": "إدارة مواعيد القضايا، إنشاء قواعد الحساب، وتتبع المواعيد القادمة.",
+    "sections": {
+      "list": "جميع المواعيد",
+      "schedule": "جدولة موعد",
+      "rules": "قواعد المواعيد"
+    },
+    "labels": {
+      "caseId": "القضية",
+      "title": "العنوان",
+      "description": "الوصف",
+      "deadlineType": "النوع",
+      "dueDate": "تاريخ الاستحقاق",
+      "ruleId": "القاعدة",
+      "name": "اسم القاعدة",
+      "effectiveFrom": "ساري من",
+      "effectiveTo": "ساري إلى"
+    },
+    "placeholders": {
+      "title": "أدخل عنوان الموعد",
+      "description": "أدخل الوصف",
+      "name": "أدخل اسم القاعدة"
+    },
+    "create": "إنشاء موعد",
+    "createRule": "إنشاء قاعدة",
+    "submitting": "جاري الإرسال...",
+    "result": {
+      "title": "نجحت العملية",
+      "errorTitle": "فشلت العملية",
+      "id": "المعرف",
+      "name": "الاسم"
     }
   }
 }

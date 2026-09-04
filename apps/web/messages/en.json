@@ -42,7 +42,13 @@
       "COMMERCIAL": "Commercial",
       "SCHEDULED": "Scheduled",
       "POSTPONED": "Postponed",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "OVERDUE": "Overdue",
+      "FIXED": "Fixed",
+      "RELATIVE": "Relative",
+      "RULE_BASED": "Rule Based",
+      "MANUAL": "Manual",
+      "RECURRING": "Recurring"
     }
   },
   "navigation": {
@@ -52,6 +58,8 @@
     "clients": "Clients",
     "parties": "Parties",
     "cases": "Cases",
+    "hearings": "Hearings",
+    "deadlines": "Deadlines",
     "conflictChecks": "Conflict checks",
     "legalConfig": "Legal configuration",
     "workflows": "Workflows",
@@ -829,6 +837,41 @@
       "list": "Hearing list",
       "schedule": "Schedule hearing",
       "outcome": "Record outcome"
+    }
+  },
+  "deadlines": {
+    "title": "Legal Deadlines",
+    "eyebrow": "Deadline Engine",
+    "description": "Manage case deadlines, create calculation rules, and track upcoming deadlines.",
+    "sections": {
+      "list": "All Deadlines",
+      "schedule": "Schedule Deadline",
+      "rules": "Deadline Rules"
+    },
+    "labels": {
+      "caseId": "Case",
+      "title": "Title",
+      "description": "Description",
+      "deadlineType": "Type",
+      "dueDate": "Due Date",
+      "ruleId": "Rule",
+      "name": "Rule Name",
+      "effectiveFrom": "Effective From",
+      "effectiveTo": "Effective To"
+    },
+    "placeholders": {
+      "title": "Enter deadline title",
+      "description": "Enter description",
+      "name": "Enter rule name"
+    },
+    "create": "Create Deadline",
+    "createRule": "Create Rule",
+    "submitting": "Submitting...",
+    "result": {
+      "title": "Operation Successful",
+      "errorTitle": "Operation Failed",
+      "id": "ID",
+      "name": "Name"
     }
   }
 }
