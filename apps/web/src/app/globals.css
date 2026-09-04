@@ -103,6 +103,7 @@ h1 { color: var(--ink); font-size: clamp(2.6rem, 5vw, 5.4rem); letter-spacing: -
 code { color: var(--ink); font-family: 'DM Mono', monospace; font-size: .65rem; }
 .security-note { align-items: center; color: var(--muted); display: flex; font-size: .7rem; gap: .7rem; margin: 1.25rem 0 0; }
 .security-note span { color: var(--teal); font-size: 1rem; }
+.settings-stack { display: grid; gap: 1.5rem; }
 .settings-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.5rem; }
 .settings-card-heading { align-items: flex-start; display: flex; gap: 1rem; }
 .settings-icon { align-items: center; background: var(--mint); border-radius: 10px; color: var(--teal); display: flex; font-size: 1rem; height: 42px; justify-content: center; width: 42px; }

@@ -15,6 +15,8 @@
   "navigation": {
     "overview": "Overview",
     "operations": "Operations",
+    "organization": "Organization",
+    "clients": "Clients",
     "integrations": "Integrations",
     "settings": "Settings"
   },
@@ -178,6 +180,150 @@
       "errorTitle": "Something went wrong",
       "successAriaLive": "Operation result",
       "requestId": "Request ID"
+    }
+  },
+  "orgConfig": {
+    "navLabel": "Organization",
+    "eyebrow": "Phase 4 · Organization configuration",
+    "title": "Shape the operating hierarchy.",
+    "description": "Create the organization, branches, departments, teams, and tenant settings that define how work is structured.",
+    "entity": {
+      "organization": { "title": "Organization", "description": "The top-level tenant entity." },
+      "branch": { "title": "Branch", "description": "A location or unit under the organization." },
+      "department": { "title": "Department", "description": "A division under a branch." },
+      "team": { "title": "Team", "description": "A flat assignment construct scoped to the tenant." },
+      "settings": { "title": "Settings", "description": "Tenant-scoped key/value settings." }
+    },
+    "create": "Create",
+    "update": "Update",
+    "archive": "Archive",
+    "submitting": "Working…",
+    "labels": {
+      "name": "Name",
+      "slug": "Slug",
+      "reason": "Reason",
+      "description": "Description",
+      "organizationId": "Organization ID",
+      "branchId": "Branch ID",
+      "key": "Setting key",
+      "value": "Value",
+      "entityId": "Entity ID"
+    },
+    "placeholders": {
+      "name": "e.g. Main Office",
+      "slug": "main-office",
+      "reason": "Optional archival reason",
+      "description": "Optional description",
+      "organizationId": "00000000-0000-4000-8000-000000000000",
+      "branchId": "00000000-0000-4000-8000-000000000000",
+      "entityId": "00000000-0000-4000-8000-000000000000",
+      "key": "feature.enabled",
+      "value": "JSON value"
+    },
+    "result": {
+      "title": "Operation completed",
+      "status": "Status",
+      "id": "ID",
+      "created": "Created",
+      "version": "Version",
+      "total": "Total",
+      "list": "List",
+      "get": "Get",
+      "put": "Save",
+      "notFound": "Setting not found",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "organization": "Organization",
+      "branch": "Branches",
+      "department": "Departments",
+      "team": "Teams",
+      "settings": "Settings"
+    }
+  },
+  "clients": {
+    "navLabel": "Clients",
+    "eyebrow": "Phase 5 · Client management",
+    "title": "Manage the people and organizations you work with.",
+    "description": "Create and manage individual clients and organizations, track their contact channels and addresses, and archive them when no longer needed.",
+    "entity": {
+      "client": { "title": "Client", "description": "An individual or organization counterparty." },
+      "list": { "title": "Client list", "description": "Search and filter the clients in the active workspace." },
+      "contact": { "title": "Contacts", "description": "Contact channels (phone, email, fax, website, mobile) for a client." },
+      "address": { "title": "Addresses", "description": "Addresses for a client." }
+    },
+    "create": "Create",
+    "update": "Update",
+    "archive": "Archive",
+    "remove": "Remove",
+    "submitting": "Working…",
+    "labels": {
+      "name": "Name",
+      "legalName": "Legal name",
+      "source": "Source",
+      "notes": "Notes",
+      "reason": "Reason",
+      "clientType": "Client type",
+      "clientId": "Client ID",
+      "contactType": "Contact type",
+      "contactValue": "Value",
+      "contactLabel": "Label",
+      "addressType": "Address type",
+      "line1": "Line 1",
+      "line2": "Line 2",
+      "city": "City",
+      "region": "Region",
+      "postalCode": "Postal code",
+      "country": "Country",
+      "isPrimary": "Is primary",
+      "search": "Search",
+      "status": "Status",
+      "entityId": "Entity ID"
+    },
+    "placeholders": {
+      "name": "e.g. Ahmed Hassan",
+      "legalName": "Optional legal name",
+      "source": "Optional source",
+      "notes": "Optional internal notes",
+      "reason": "Optional reason",
+      "clientType": "INDIVIDUAL or ORGANIZATION",
+      "clientId": "00000000-0000-4000-8000-000000000000",
+      "contactType": "EMAIL, PHONE, FAX, WEBSITE, MOBILE",
+      "contactValue": "name@example.com",
+      "contactLabel": "Optional label",
+      "addressType": "MAILING, BILLING, REGISTERED, BRANCH",
+      "line1": "Street and number",
+      "line2": "Optional second line",
+      "city": "City",
+      "region": "Optional region",
+      "postalCode": "Optional postal code",
+      "country": "Country",
+      "isPrimary": "true or false",
+      "search": "Search by name",
+      "status": "ACTIVE or ARCHIVED",
+      "clientTypeFilter": "INDIVIDUAL or ORGANIZATION",
+      "entityId": "00000000-0000-4000-8000-000000000000"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "name": "Name",
+      "status": "Status",
+      "type": "Type",
+      "total": "Total",
+      "page": "Page",
+      "list": "Search",
+      "errorTitle": "Something went wrong"
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "sections": {
+      "list": "Client list",
+      "client": "Create client",
+      "contact": "Client contacts",
+      "address": "Client addresses"
     }
   }
 }

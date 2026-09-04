@@ -206,10 +206,10 @@ export class ApiClient {
     return crypto.randomUUID();
   }
 
-  private async body<T>(
+  async body<T>(
     path: string,
     method: string,
-    payload: unknown,
+    payload?: unknown,
   ): Promise<T> {
     const token = await this.csrfToken();
     const res = await this.fetcher(`${this.baseUrl}${path}`, {
@@ -310,6 +310,448 @@ export class ApiClient {
       '/membership/members/reinstate',
       'PATCH',
       request,
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Organization Configuration (Phase 4)
+// -----------------------------------------------------------------------------
+
+export type HierarchyStatus = 'ACTIVE' | 'ARCHIVED';
+
+export interface OrganizationResult {
+  id: string;
+  tenantId: string;
+  slug: string;
+  name: string;
+  status: HierarchyStatus;
+}
+
+export interface BranchResult {
+  id: string;
+  tenantId: string;
+  organizationId: string;
+  slug: string;
+  name: string;
+  status: HierarchyStatus;
+}
+
+export interface DepartmentResult {
+  id: string;
+  tenantId: string;
+  branchId: string;
+  slug: string;
+  name: string;
+  status: HierarchyStatus;
+}
+
+export interface TeamResult {
+  id: string;
+  tenantId: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  status: HierarchyStatus;
+}
+
+export interface CreateOrganizationRequest {
+  slug: string;
+  name: string;
+}
+
+export interface UpdateOrganizationRequest {
+  id: string;
+  slug?: string;
+  name?: string;
+}
+
+export interface ArchiveOrganizationRequest {
+  id: string;
+  reason?: string;
+}
+
+export interface CreateBranchRequest {
+  organizationId: string;
+  slug: string;
+  name: string;
+}
+
+export interface UpdateBranchRequest {
+  id: string;
+  slug?: string;
+  name?: string;
+}
+
+export interface ArchiveBranchRequest {
+  id: string;
+  reason?: string;
+}
+
+export interface CreateDepartmentRequest {
+  branchId: string;
+  slug: string;
+  name: string;
+}
+
+export interface UpdateDepartmentRequest {
+  id: string;
+  slug?: string;
+  name?: string;
+}
+
+export interface ArchiveDepartmentRequest {
+  id: string;
+  reason?: string;
+}
+
+export interface CreateTeamRequest {
+  slug: string;
+  name: string;
+  description?: string | null;
+}
+
+export interface UpdateTeamRequest {
+  id: string;
+  slug?: string;
+  name?: string;
+  description?: string | null;
+}
+
+export interface ArchiveTeamRequest {
+  id: string;
+  reason?: string;
+}
+
+export interface OrganizationSetting {
+  tenantId: string;
+  key: string;
+  value: unknown;
+  version: number;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+}
+
+export interface OrganizationSettingList {
+  data: OrganizationSetting[];
+  pagination: PaginationMeta;
+}
+
+export interface SetOrganizationSettingResult {
+  id: string;
+  tenantId: string;
+  key: string;
+  version: number;
+  created: boolean;
+}
+
+export interface ListSettingsQuery {
+  page?: number;
+  limit?: number;
+}
+
+export interface SetOrganizationSettingRequest {
+  value: unknown;
+}
+
+const ORG_PREFIX = '/organization-config';
+
+export class OrgConfigClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  // Organizations
+  createOrganization(req: CreateOrganizationRequest): Promise<OrganizationResult> {
+    return this.client.body<OrganizationResult>(`${ORG_PREFIX}/organizations`, 'POST', req);
+  }
+  updateOrganization(req: UpdateOrganizationRequest): Promise<OrganizationResult> {
+    return this.client.body<OrganizationResult>(`${ORG_PREFIX}/organizations`, 'PATCH', req);
+  }
+  archiveOrganization(req: ArchiveOrganizationRequest): Promise<OrganizationResult> {
+    return this.client.body<OrganizationResult>(`${ORG_PREFIX}/organizations/archive`, 'PATCH', req);
+  }
+
+  // Branches
+  createBranch(req: CreateBranchRequest): Promise<BranchResult> {
+    return this.client.body<BranchResult>(`${ORG_PREFIX}/branches`, 'POST', req);
+  }
+  updateBranch(req: UpdateBranchRequest): Promise<BranchResult> {
+    return this.client.body<BranchResult>(`${ORG_PREFIX}/branches`, 'PATCH', req);
+  }
+  archiveBranch(req: ArchiveBranchRequest): Promise<BranchResult> {
+    return this.client.body<BranchResult>(`${ORG_PREFIX}/branches/archive`, 'PATCH', req);
+  }
+
+  // Departments
+  createDepartment(req: CreateDepartmentRequest): Promise<DepartmentResult> {
+    return this.client.body<DepartmentResult>(`${ORG_PREFIX}/departments`, 'POST', req);
+  }
+  updateDepartment(req: UpdateDepartmentRequest): Promise<DepartmentResult> {
+    return this.client.body<DepartmentResult>(`${ORG_PREFIX}/departments`, 'PATCH', req);
+  }
+  archiveDepartment(req: ArchiveDepartmentRequest): Promise<DepartmentResult> {
+    return this.client.body<DepartmentResult>(`${ORG_PREFIX}/departments/archive`, 'PATCH', req);
+  }
+
+  // Teams
+  createTeam(req: CreateTeamRequest): Promise<TeamResult> {
+    return this.client.body<TeamResult>(`${ORG_PREFIX}/teams`, 'POST', req);
+  }
+  updateTeam(req: UpdateTeamRequest): Promise<TeamResult> {
+    return this.client.body<TeamResult>(`${ORG_PREFIX}/teams`, 'PATCH', req);
+  }
+  archiveTeam(req: ArchiveTeamRequest): Promise<TeamResult> {
+    return this.client.body<TeamResult>(`${ORG_PREFIX}/teams/archive`, 'PATCH', req);
+  }
+
+  // Settings
+  listSettings(query: ListSettingsQuery = {}): Promise<OrganizationSettingList> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    const qs = params.toString();
+    return this.client.body<OrganizationSettingList>(
+      `${ORG_PREFIX}/settings${qs ? `?${qs}` : ''}`,
+      'GET',
+    );
+  }
+  getSetting(key: string): Promise<OrganizationSetting | null> {
+    return this.client.body<OrganizationSetting | null>(
+      `${ORG_PREFIX}/settings/${encodeURIComponent(key)}`,
+      'GET',
+    );
+  }
+  setSetting(key: string, value: unknown): Promise<SetOrganizationSettingResult> {
+    return this.client.body<SetOrganizationSettingResult>(
+      `${ORG_PREFIX}/settings/${encodeURIComponent(key)}`,
+      'PUT',
+      { value },
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Client Management (Phase 5)
+// -----------------------------------------------------------------------------
+
+export type ClientType = 'INDIVIDUAL' | 'ORGANIZATION';
+export type ClientStatus = 'ACTIVE' | 'ARCHIVED';
+export type ContactType = 'PHONE' | 'EMAIL' | 'FAX' | 'WEBSITE' | 'MOBILE';
+export type AddressType = 'MAILING' | 'BILLING' | 'REGISTERED' | 'BRANCH';
+
+export interface ClientResult {
+  id: string;
+  tenantId: string;
+  clientType: ClientType;
+  name: string;
+  legalName: string | null;
+  displayName: string;
+  status: ClientStatus;
+  source: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientContactResult {
+  id: string;
+  tenantId: string;
+  clientId: string;
+  type: ContactType;
+  value: string;
+  label: string | null;
+  isPrimary: boolean;
+}
+
+export interface ClientAddressResult {
+  id: string;
+  tenantId: string;
+  clientId: string;
+  type: AddressType;
+  line1: string;
+  line2: string | null;
+  city: string;
+  region: string | null;
+  postalCode: string | null;
+  country: string;
+  isPrimary: boolean;
+}
+
+export interface ClientListResult {
+  data: ClientResult[];
+  pagination: PaginationMeta;
+}
+
+export interface CreateClientRequest {
+  clientType: ClientType;
+  name: string;
+  legalName?: string | null;
+  source?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateClientRequest {
+  id: string;
+  name?: string;
+  legalName?: string | null;
+  source?: string | null;
+  notes?: string | null;
+}
+
+export interface ArchiveClientRequest {
+  id: string;
+  reason?: string;
+}
+
+export interface ListClientsQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: ClientStatus;
+  clientType?: ClientType;
+}
+
+export interface CreateClientContactRequest {
+  clientId: string;
+  type: ContactType;
+  value: string;
+  label?: string | null;
+  isPrimary?: boolean;
+}
+
+export interface UpdateClientContactRequest {
+  id: string;
+  clientId: string;
+  value?: string;
+  label?: string | null;
+  isPrimary?: boolean;
+}
+
+export interface RemoveClientContactRequest {
+  id: string;
+  clientId: string;
+  reason?: string;
+}
+
+export interface CreateClientAddressRequest {
+  clientId: string;
+  type: AddressType;
+  line1: string;
+  line2?: string | null;
+  city: string;
+  region?: string | null;
+  postalCode?: string | null;
+  country: string;
+  isPrimary?: boolean;
+}
+
+export interface UpdateClientAddressRequest {
+  id: string;
+  clientId: string;
+  line1?: string;
+  line2?: string | null;
+  city?: string;
+  region?: string | null;
+  postalCode?: string | null;
+  country?: string;
+  isPrimary?: boolean;
+}
+
+export interface RemoveClientAddressRequest {
+  id: string;
+  clientId: string;
+  reason?: string;
+}
+
+const CLIENTS_PREFIX = '/clients';
+
+export class ClientsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  // Clients
+  createClient(req: CreateClientRequest): Promise<ClientResult> {
+    return this.client.body<ClientResult>(CLIENTS_PREFIX, 'POST', req);
+  }
+  listClients(query: ListClientsQuery = {}): Promise<ClientListResult> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.search) params.set('search', query.search);
+    if (query.status) params.set('status', query.status);
+    if (query.clientType) params.set('clientType', query.clientType);
+    const qs = params.toString();
+    return this.client.body<ClientListResult>(
+      `${CLIENTS_PREFIX}${qs ? `?${qs}` : ''}`,
+      'GET',
+    );
+  }
+  getClient(id: string): Promise<ClientResult> {
+    return this.client.body<ClientResult>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(id)}`,
+      'GET',
+    );
+  }
+  updateClient(req: UpdateClientRequest): Promise<ClientResult> {
+    return this.client.body<ClientResult>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(req.id)}`,
+      'PATCH',
+      req,
+    );
+  }
+  archiveClient(req: ArchiveClientRequest): Promise<ClientResult> {
+    return this.client.body<ClientResult>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(req.id)}`,
+      'DELETE',
+      { reason: req.reason ?? undefined },
+    );
+  }
+
+  // Contacts
+  createContact(req: CreateClientContactRequest): Promise<ClientContactResult> {
+    return this.client.body<ClientContactResult>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(req.clientId)}/contacts`,
+      'POST',
+      req,
+    );
+  }
+  updateContact(req: UpdateClientContactRequest): Promise<ClientContactResult> {
+    return this.client.body<ClientContactResult>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(req.clientId)}/contacts/${encodeURIComponent(req.id)}`,
+      'PATCH',
+      req,
+    );
+  }
+  removeContact(req: RemoveClientContactRequest): Promise<void> {
+    return this.client.body<void>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(req.clientId)}/contacts/${encodeURIComponent(req.id)}`,
+      'DELETE',
+      { reason: req.reason ?? undefined },
+    );
+  }
+
+  // Addresses
+  createAddress(req: CreateClientAddressRequest): Promise<ClientAddressResult> {
+    return this.client.body<ClientAddressResult>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(req.clientId)}/addresses`,
+      'POST',
+      req,
+    );
+  }
+  updateAddress(req: UpdateClientAddressRequest): Promise<ClientAddressResult> {
+    return this.client.body<ClientAddressResult>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(req.clientId)}/addresses/${encodeURIComponent(req.id)}`,
+      'PATCH',
+      req,
+    );
+  }
+  removeAddress(req: RemoveClientAddressRequest): Promise<void> {
+    return this.client.body<void>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(req.clientId)}/addresses/${encodeURIComponent(req.id)}`,
+      'DELETE',
+      { reason: req.reason ?? undefined },
     );
   }
 }

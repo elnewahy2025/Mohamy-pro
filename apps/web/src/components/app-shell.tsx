@@ -17,6 +17,8 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>):
   const navigation = [
     { href: '/', label: t('navigation.overview') },
     { href: '/operations', label: t('navigation.operations') },
+    { href: '/organization', label: t('navigation.organization') },
+    { href: '/clients', label: t('navigation.clients') },
     { href: '/integrations', label: t('navigation.integrations') },
     { href: '/settings', label: t('navigation.settings') },
   ] as const;

@@ -20,12 +20,16 @@ describe('localized frontend messages', () => {
     expect(en.navigation).toEqual({
       overview: 'Overview',
       operations: 'Operations',
+      organization: 'Organization',
+      clients: 'Clients',
       integrations: 'Integrations',
       settings: 'Settings',
     });
     expect(ar.navigation).toEqual({
       overview: 'نظرة عامة',
       operations: 'العمليات',
+      organization: 'المؤسسة',
+      clients: 'العملاء',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
     });

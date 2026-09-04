@@ -15,6 +15,8 @@
   "navigation": {
     "overview": "نظرة عامة",
     "operations": "العمليات",
+    "organization": "المؤسسة",
+    "clients": "العملاء",
     "integrations": "التكاملات",
     "settings": "الإعدادات"
   },
@@ -178,6 +180,150 @@
       "errorTitle": "حدث خطأ ما",
       "successAriaLive": "نتيجة العملية",
       "requestId": "معرّف الطلب"
+    }
+  },
+  "orgConfig": {
+    "navLabel": "المؤسسة",
+    "eyebrow": "المرحلة 4 · إعداد المؤسسة",
+    "title": "شكّل التسلسل التشغيلي.",
+    "description": "أنشئ المؤسسة والفروع والأقسام والفرق وإعدادات المؤسسة التي تحدّد كيفية تنظيم العمل.",
+    "entity": {
+      "organization": { "title": "المؤسسة", "description": "الكيان الأساسي على مستوى المؤسسة." },
+      "branch": { "title": "الفرع", "description": "موقع أو وحدة تحت المؤسسة." },
+      "department": { "title": "القسم", "description": "تقسيم تحت أحد الفروع." },
+      "team": { "title": "الفريق", "description": "بناء تعيين مسطّح على نطاق المؤسسة." },
+      "settings": { "title": "الإعدادات", "description": "إعدادات مفتاح/قيمة على نطاق المؤسسة." }
+    },
+    "create": "إنشاء",
+    "update": "تحديث",
+    "archive": "أرشفة",
+    "submitting": "جارٍ التنفيذ…",
+    "labels": {
+      "name": "الاسم",
+      "slug": "المعرف المختصر",
+      "reason": "السبب",
+      "description": "الوصف",
+      "organizationId": "معرّف المؤسسة",
+      "branchId": "معرّف الفرع",
+      "key": "مفتاح الإعداد",
+      "value": "القيمة",
+      "entityId": "معرّف الكيان"
+    },
+    "placeholders": {
+      "name": "مثال: المكتب الرئيسي",
+      "slug": "main-office",
+      "reason": "سبب أرشفة اختياري",
+      "description": "وصف اختياري",
+      "organizationId": "00000000-0000-4000-8000-000000000000",
+      "branchId": "00000000-0000-4000-8000-000000000000",
+      "entityId": "00000000-0000-4000-8000-000000000000",
+      "key": "feature.enabled",
+      "value": "قيمة JSON"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "status": "الحالة",
+      "id": "المعرّف",
+      "created": "تم الإنشاء",
+      "version": "الإصدار",
+      "total": "الإجمالي",
+      "list": "قائمة",
+      "get": "عرض",
+      "put": "حفظ",
+      "notFound": "الإعداد غير موجود",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "organization": "المؤسسة",
+      "branch": "الفروع",
+      "department": "الأقسام",
+      "team": "الفرق",
+      "settings": "الإعدادات"
+    }
+  },
+  "clients": {
+    "navLabel": "العملاء",
+    "eyebrow": "المرحلة 5 · إدارة العملاء",
+    "title": "إدارة الأشخاص والمؤسسات التي تعمل معها.",
+    "description": "إنشاء وإدارة العملاء الأفراد والمؤسسات، وتتبع قنوات التواصل والعناوين، وأرشفتهم عند عدم الحاجة.",
+    "entity": {
+      "client": { "title": "العميل", "description": "طرف مقابل فرد أو مؤسسة." },
+      "list": { "title": "قائمة العملاء", "description": "البحث وتصفية العملاء في مساحة العمل النشطة." },
+      "contact": { "title": "جهات الاتصال", "description": "قنوات التواصل (هاتف، بريد، فاكس، موقع، جوال) لعميل." },
+      "address": { "title": "العناوين", "description": "عناوين العميل." }
+    },
+    "create": "إنشاء",
+    "update": "تحديث",
+    "archive": "أرشفة",
+    "remove": "إزالة",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "name": "الاسم",
+      "legalName": "الاسم القانوني",
+      "source": "المصدر",
+      "notes": "ملاحظات",
+      "reason": "السبب",
+      "clientType": "نوع العميل",
+      "clientId": "معرّف العميل",
+      "contactType": "نوع جهة الاتصال",
+      "contactValue": "القيمة",
+      "contactLabel": "التسمية",
+      "addressType": "نوع العنوان",
+      "line1": "السطر الأول",
+      "line2": "السطر الثاني",
+      "city": "المدينة",
+      "region": "المنطقة",
+      "postalCode": "الرمز البريدي",
+      "country": "الدولة",
+      "isPrimary": "أساسي",
+      "search": "بحث",
+      "status": "الحالة",
+      "entityId": "معرّف الكيان"
+    },
+    "placeholders": {
+      "name": "مثال احمد حسن",
+      "legalName": "الاسم القانوني (اختياري)",
+      "source": "المصدر (اختياري)",
+      "notes": "ملاحظات داخلية (اختياري)",
+      "reason": "السبب (اختياري)",
+      "clientType": "INDIVIDUAL أو ORGANIZATION",
+      "clientId": "00000000-0000-4000-8000-000000000000",
+      "contactType": "EMAIL و PHONE و FAX و WEBSITE و MOBILE",
+      "contactValue": "name@example.com",
+      "contactLabel": "التسمية (اختياري)",
+      "addressType": "MAILING و BILLING و REGISTERED و BRANCH",
+      "line1": "الشارع ورقم المبنى",
+      "line2": "السطر الثاني (اختياري)",
+      "city": "المدينة",
+      "region": "المنطقة (اختياري)",
+      "postalCode": "الرمز البريدي (اختياري)",
+      "country": "الدولة",
+      "isPrimary": "true أو false",
+      "search": "البحث بالاسم",
+      "status": "ACTIVE أو ARCHIVED",
+      "clientTypeFilter": "INDIVIDUAL أو ORGANIZATION",
+      "entityId": "00000000-0000-4000-8000-000000000000"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرّف",
+      "name": "الاسم",
+      "status": "الحالة",
+      "type": "النوع",
+      "total": "الإجمالي",
+      "page": "الصفحة",
+      "list": "بحث",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي"
+    },
+    "sections": {
+      "list": "قائمة العملاء",
+      "client": "إنشاء عميل",
+      "contact": "جهات اتصال العميل",
+      "address": "عناوين العميل"
     }
   }
 }
