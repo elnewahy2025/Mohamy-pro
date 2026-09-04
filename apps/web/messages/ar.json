@@ -78,7 +78,8 @@
       "configuration": "الإعداد"
     },
     "workflows": "سير العمل",
-    "tasks": "المهام"
+    "tasks": "المهام",
+    "documents": "المستندات"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -911,6 +912,37 @@
       "errorTitle": "فشلت العملية",
       "id": "المعرف",
       "name": "الاسم"
+    }
+  },
+  "documents": {
+    "title": "إدارة المستندات",
+    "eyebrow": "المستندات",
+    "description": "رفع وإدارة ومشاركة المستندات القانونية بأمان.",
+    "sections": {
+      "list": "جميع المستندات",
+      "create": "رفع مستند"
+    },
+    "labels": {
+      "caseId": "القضية (اختياري)",
+      "clientId": "العميل (اختياري)",
+      "title": "العنوان",
+      "description": "الوصف",
+      "documentType": "نوع المستند",
+      "status": "الحالة",
+      "file": "الملف"
+    },
+    "placeholders": {
+      "title": "أدخل عنوان المستند",
+      "description": "أدخل الوصف",
+      "documentType": "مثال: عقد، مرافعة، هوية"
+    },
+    "create": "رفع",
+    "submitting": "جاري الرفع...",
+    "updateStatus": "تحديث الحالة",
+    "result": {
+      "title": "نجحت العملية",
+      "errorTitle": "فشلت العملية",
+      "id": "المعرف"
     }
   }
 }

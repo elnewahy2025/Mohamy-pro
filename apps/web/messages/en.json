@@ -78,7 +78,8 @@
       "matters": "Matters",
       "configuration": "Configuration"
     },
-    "tasks": "Tasks"
+    "tasks": "Tasks",
+    "documents": "Documents"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -911,6 +912,37 @@
       "errorTitle": "Operation Failed",
       "id": "ID",
       "name": "Name"
+    }
+  },
+  "documents": {
+    "title": "Document Management",
+    "eyebrow": "Documents",
+    "description": "Upload, manage, and share legal documents securely.",
+    "sections": {
+      "list": "All Documents",
+      "create": "Upload Document"
+    },
+    "labels": {
+      "caseId": "Case (Optional)",
+      "clientId": "Client (Optional)",
+      "title": "Title",
+      "description": "Description",
+      "documentType": "Document Type",
+      "status": "Status",
+      "file": "File"
+    },
+    "placeholders": {
+      "title": "Enter document title",
+      "description": "Enter description",
+      "documentType": "e.g., Contract, Pleading, Identity"
+    },
+    "create": "Upload",
+    "submitting": "Uploading...",
+    "updateStatus": "Update Status",
+    "result": {
+      "title": "Operation Successful",
+      "errorTitle": "Operation Failed",
+      "id": "ID"
     }
   }
 }

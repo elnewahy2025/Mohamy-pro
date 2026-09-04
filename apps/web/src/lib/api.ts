@@ -1720,3 +1720,74 @@ export class TasksClient {
   }
 }
 
+// --- Phase 15: Documents ---
+
+export interface DocumentResult {
+  id: string;
+  caseId?: string;
+  clientId?: string;
+  title: string;
+  description?: string;
+  documentType?: string;
+  status: string;
+  versions?: any[];
+}
+
+export interface CreateDocumentRequest {
+  caseId?: string;
+  clientId?: string;
+  title: string;
+  description?: string;
+  documentType?: string;
+  storageObjectId: string;
+  mimeType: string;
+  fileSize: number;
+  checksum?: string;
+}
+
+export interface UploadNewVersionRequest {
+  storageObjectId: string;
+  mimeType: string;
+  fileSize: number;
+  checksum?: string;
+}
+
+export interface UpdateDocumentStatusRequest {
+  status: string;
+}
+
+export interface ShareDocumentRequest {
+  sharedWithEmail: string;
+  expiresAt?: string;
+}
+
+const DOCUMENTS_PREFIX = '/v1/documents';
+
+export class DocumentsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  listDocuments(caseId?: string, clientId?: string): Promise<{ data: DocumentResult[] }> {
+    const params = new URLSearchParams();
+    if (caseId) params.append('caseId', caseId);
+    if (clientId) params.append('clientId', clientId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.client.body<{ data: DocumentResult[] }>(DOCUMENTS_PREFIX + qs, 'GET');
+  }
+
+  createDocument(req: CreateDocumentRequest): Promise<DocumentResult> {
+    return this.client.body<DocumentResult>(DOCUMENTS_PREFIX, 'POST', req);
+  }
+
+  uploadNewVersion(id: string, req: UploadNewVersionRequest): Promise<any> {
+    return this.client.body<any>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/versions`, 'POST', req);
+  }
+
+  updateStatus(id: string, req: UpdateDocumentStatusRequest): Promise<DocumentResult> {
+    return this.client.body<DocumentResult>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/status`, 'PATCH', req);
+  }
+
+  shareDocument(id: string, req: ShareDocumentRequest): Promise<any> {
+    return this.client.body<any>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/shares`, 'POST', req);
+  }
+}
+
