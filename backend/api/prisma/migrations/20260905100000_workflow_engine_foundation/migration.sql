@@ -35,13 +35,7 @@ ALTER TABLE "ClientContact" DROP COLUMN "type",
 ADD COLUMN     "type" "ClientContactType" NOT NULL;
 
 -- AlterTable
-ALTER TABLE "ConflictCheck" DROP COLUMN "prospectiveParties",
-ADD COLUMN     "matchSummary" TEXT;
-
--- AlterTable
-ALTER TABLE "ConflictParty" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL,
-DROP COLUMN "kind",
+ALTER TABLE "ConflictParty" DROP COLUMN "kind",
 ADD COLUMN     "kind" "ConflictPartyType" NOT NULL;
 
 -- AlterTable
