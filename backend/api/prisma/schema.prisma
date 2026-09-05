@@ -363,6 +363,7 @@ model Tenant {
   departments              Department[]
   teams                    Team[]
   memberships              Membership[]
+  directPermissionGrants DirectPermissionGrant[]
   activeSessions           AppSession[]               @relation("SessionActiveTenant")
   invitations              Invitation[]
   roles                    Role[]
@@ -531,6 +532,8 @@ model Membership {
   teamMembers       TeamMember[]
   invitationsSent   Invitation[]       @relation("InvitationInviterMembership")
   denialsCreated    AccessDenial[]     @relation("DenialCreatedByMembership")
+  directGrants        DirectPermissionGrant[] @relation("DirectGrantMembership")
+  directGrantsCreated DirectPermissionGrant[] @relation("DirectGrantCreator")
   auditEvents       AuditEvent[]       @relation("AuditActorMembership")
   hearings          Hearing[]
   deadlines         Deadline[]
@@ -761,6 +764,25 @@ model GlobalRoleAssignment {
 }
 
 // Tenant-owned explicit denials.
+
+model DirectPermissionGrant {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  membershipId          String
+  permissionKey         String
+  grantedByMembershipId String
+  revokedAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  membership Membership @relation("DirectGrantMembership", fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  grantedBy Membership @relation("DirectGrantCreator", fields: [grantedByMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@index([tenantId, membershipId])
+  @@index([tenantId, permissionKey])
+}
+
 model AccessDenial {
   id                    String       @id @default(uuid())
   tenantId              String

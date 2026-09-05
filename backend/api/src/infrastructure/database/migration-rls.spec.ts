@@ -254,6 +254,23 @@ describe('Phase 10-15 migration assertions', () => {
     expect(calendarMigration).not.toContain('accessToken');
   });
 
+  it('creates DirectPermissionGrant with FORCE RLS (G2)', () => {
+    const g2Migration = readMigration(
+      '20260908000004_g2_denial_direct_grants',
+    );
+
+    expect(g2Migration).toContain('CREATE TABLE "DirectPermissionGrant"');
+    expect(g2Migration).toContain(
+      'ALTER TABLE "DirectPermissionGrant" ENABLE ROW LEVEL SECURITY',
+    );
+    expect(g2Migration).toContain(
+      'ALTER TABLE "DirectPermissionGrant" FORCE ROW LEVEL SECURITY',
+    );
+    expect(g2Migration).toContain(
+      '"DirectPermissionGrant_tenant_isolation"',
+    );
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

@@ -34,6 +34,8 @@ function input(
 function makeService(input: {
   membership: { id: string; status: string } | null;
   rolePermissionKeys: string[];
+  directPermissionKeys?: string[];
+  denials?: Record<string, unknown>[];
 }) {
   const auditWrite = jest.fn().mockResolvedValue({ id: 'audit-1' });
   const audit = { write: auditWrite } as unknown as AuditEventService;
@@ -49,6 +51,50 @@ function makeService(input: {
     (ctx: unknown, cb: (tx: unknown) => Promise<unknown>) => cb(selectionTx),
   );
 
+  const accessDenialFindFirst = jest.fn(
+    async (args: { where?: Record<string, unknown> }) => {
+      const where = args.where ?? {};
+      const and = (where.AND ?? []) as Record<string, unknown>[];
+      const flat: Record<string, unknown> = { ...where };
+      delete flat.AND;
+      const matches = (input.denials ?? []).filter((denial) => {
+        const d = denial as Record<string, unknown>;
+        for (const clause of and) {
+          if (!matchesClause(d, clause)) return false;
+        }
+        for (const [key, value] of Object.entries(flat)) {
+          if ((d as Record<string, unknown>)[key] !== value) return false;
+        }
+        return true;
+      });
+      return matches[0] ?? null;
+    },
+  );
+
+  function matchesClause(
+    denial: Record<string, unknown>,
+    clause: Record<string, unknown>,
+  ): boolean {
+    if ('OR' in clause) {
+      return (clause.OR as Record<string, unknown>[]).some((branch) =>
+        matchesClause(denial, branch),
+      );
+    }
+    return Object.entries(clause).every(([key, value]) => {
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value)
+      ) {
+        const ops = value as Record<string, unknown>;
+        if ('lte' in ops) return (denial[key] as Date) <= (ops.lte as Date);
+        if ('gt' in ops) return (denial[key] as Date) > (ops.gt as Date);
+        return false;
+      }
+      return denial[key] === value;
+    });
+  }
+
   const tenantTx = {
     membershipRole: {
       findMany: jest.fn().mockResolvedValue(
@@ -57,6 +103,14 @@ function makeService(input: {
         })),
       ),
     },
+    directPermissionGrant: {
+      findMany: jest.fn().mockResolvedValue(
+        (input.directPermissionKeys ?? []).map((key) => ({
+          permissionKey: key,
+        })),
+      ),
+    },
+    accessDenial: { findFirst: accessDenialFindFirst },
   };
   const tenantContext = jest.fn(
     (ctx: unknown, cb: (tx: unknown) => Promise<unknown>) => cb(tenantTx),
@@ -75,8 +129,26 @@ function makeService(input: {
   } as unknown as PrismaService;
 
   const service = new PermissionsService(prisma, audit);
-  return { service, auditWrite, membershipSelection, tenantContext };
+  return {
+    service,
+    auditWrite,
+    membershipSelection,
+    tenantContext,
+    accessDenialFindFirst,
+  };
 }
+
+const ACTIVE_DENIAL = {
+  id: 'denial-1',
+  tenantId: TENANT_ID,
+  permissionKey: PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP,
+  status: 'ACTIVE',
+  subjectUserId: null,
+  resourceType: null,
+  resourceId: null,
+  startsAt: new Date('2020-01-01T00:00:00Z'),
+  endsAt: null,
+};
 
 describe('PermissionsService', () => {
   it('permits an active member whose role grants the named permission', async () => {
@@ -144,6 +216,170 @@ describe('PermissionsService', () => {
       service.assertTenantPermission(
         input({ permissionKey: PERMISSION_KEYS.CAN_SWITCH_TENANT }),
       ),
+    ).resolves.toEqual({ membershipId: MEMBERSHIP_ID });
+  });
+
+  it('denies a role grant overridden by an explicit denial (G2-2)', async () => {
+    const { service, auditWrite } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [ACTIVE_DENIAL],
+    });
+
+    await expect(
+      service.assertTenantPermission(input()),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+    const deniedCall = auditWrite.mock.calls.find(
+      (call: unknown[]) =>
+        (call[0] as { reasonCode?: string }).reasonCode ===
+        'DENIED_BY_EXPLICIT_DENIAL',
+    );
+    expect(deniedCall).toBeDefined();
+  });
+
+  it('denies a direct grant overridden by an explicit denial (G2-3)', async () => {
+    const { service } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [],
+      directPermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [ACTIVE_DENIAL],
+    });
+
+    await expect(
+      service.assertTenantPermission(input()),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it('allows a direct grant with no denial present', async () => {
+    const { service } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [],
+      directPermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+    });
+
+    await expect(service.assertTenantPermission(input())).resolves.toEqual({
+      membershipId: MEMBERSHIP_ID,
+    });
+  });
+
+  it('denies despite multiple role grants when denied (G2-4)', async () => {
+    const { service } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [
+        PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP,
+        PERMISSION_KEYS.CAN_VIEW_TENANT,
+      ],
+      directPermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [ACTIVE_DENIAL],
+    });
+
+    await expect(
+      service.assertTenantPermission(input()),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it('denies when nothing is granted but a denial exists (G2-5)', async () => {
+    const { service } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [],
+      denials: [ACTIVE_DENIAL],
+    });
+
+    await expect(
+      service.assertTenantPermission(input()),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it('scopes denial lookup to the active tenant (G2-6)', async () => {
+    const { service, accessDenialFindFirst } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [{ ...ACTIVE_DENIAL, tenantId: 'other-tenant' }],
+    });
+
+    await expect(service.assertTenantPermission(input())).resolves.toEqual({
+      membershipId: MEMBERSHIP_ID,
+    });
+    const where = accessDenialFindFirst.mock.calls[0][0].where as Record<
+      string,
+      unknown
+    >;
+    const and = where.AND as Record<string, unknown>[];
+    expect(and).toContainEqual({ tenantId: TENANT_ID });
+  });
+
+  it('respects denial scope: mismatched resource allows, matched denies (G2-7)', async () => {
+    const resourceDenial = {
+      ...ACTIVE_DENIAL,
+      resourceType: 'case',
+      resourceId: 'case-1',
+    };
+    const scoped = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [resourceDenial],
+    });
+
+    await expect(
+      scoped.service.assertTenantPermission(
+        input({ resource: { type: 'case', id: 'case-2' } }),
+      ),
+    ).resolves.toEqual({ membershipId: MEMBERSHIP_ID });
+    await expect(
+      scoped.service.assertTenantPermission(
+        input({ resource: { type: 'case', id: 'case-1' } }),
+      ),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it('applies subject-scoped denials only to the subject user', async () => {
+    const otherDenied = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [{ ...ACTIVE_DENIAL, subjectUserId: 'other-user' }],
+    });
+    await expect(
+      otherDenied.service.assertTenantPermission(input()),
+    ).resolves.toEqual({ membershipId: MEMBERSHIP_ID });
+
+    const selfDenied = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [{ ...ACTIVE_DENIAL, subjectUserId: USER_ID }],
+    });
+    await expect(
+      selfDenied.service.assertTenantPermission(input()),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
+  it('restores the grant after the denial is revoked or expires (G2-8)', async () => {
+    const revoked = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [{ ...ACTIVE_DENIAL, status: 'REVOKED' }],
+    });
+    await expect(
+      revoked.service.assertTenantPermission(input()),
+    ).resolves.toEqual({ membershipId: MEMBERSHIP_ID });
+
+    const expired = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [{ ...ACTIVE_DENIAL, endsAt: new Date('2020-06-01T00:00:00Z') }],
+    });
+    await expect(
+      expired.service.assertTenantPermission(input()),
+    ).resolves.toEqual({ membershipId: MEMBERSHIP_ID });
+
+    const future = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP],
+      denials: [
+        { ...ACTIVE_DENIAL, startsAt: new Date('2999-01-01T00:00:00Z') },
+      ],
+    });
+    await expect(
+      future.service.assertTenantPermission(input()),
     ).resolves.toEqual({ membershipId: MEMBERSHIP_ID });
   });
 

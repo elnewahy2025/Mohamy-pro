@@ -39,6 +39,7 @@ import { TimeTrackingModule } from './time-tracking/time-tracking.module';
 import { BillingModule } from './billing/billing.module';
 import { CommunicationsModule } from './communications/communications.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { DenialsModule } from './denials/denials.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { CalendarModule } from './calendar/calendar.module';
     BillingModule,
     CommunicationsModule,
     CalendarModule,
+    DenialsModule,
     SchedulerModule,
   ],
   controllers: [AppController],

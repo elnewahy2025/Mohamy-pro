@@ -142,6 +142,8 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'refund.issued': ['paymentId', 'amount'],
   'message.queued': ['channel', 'direction'],
   'message.status.recorded': ['status'],
+  'denial.created': ['permissionKey'],
+  'denial.revoked': ['denialId'],
   'calendar.connected': ['provider'],
   'calendar.disabled': [],
   'calendar.synced': ['connectionId'],

@@ -25,6 +25,7 @@ export interface TenantPermissionInput {
   tenantId: string;
   permissionKey: PermissionKey;
   operationId: string;
+  resource?: { type: string; id: string };
 }
 
 export interface GlobalPermissionInput {
@@ -261,6 +262,48 @@ export class PermissionsService {
             entry.role.permissions.map((rp) => rp.permission.key),
           ),
         );
+        const directGrants = await transaction.directPermissionGrant.findMany({
+          where: {
+            tenantId: input.tenantId,
+            membershipId,
+            revokedAt: null,
+          },
+          select: { permissionKey: true },
+        });
+        for (const grant of directGrants) keys.add(grant.permissionKey);
+        // Explicit denials override every grant (roles and direct alike).
+        // Denial scope: same tenant, ACTIVE, in force now, subject unset or
+        // the actor, and resource unset (key-level) or exactly matching the
+        // evaluated resource. Tenant scoping is explicit AND RLS-enforced.
+        const now = new Date();
+        const denial = await transaction.accessDenial.findFirst({
+          where: {
+            AND: [
+              { tenantId: input.tenantId },
+              { permissionKey: input.permissionKey },
+              { status: 'ACTIVE' },
+              {
+                OR: [{ subjectUserId: null }, { subjectUserId: input.userId }],
+              },
+              { startsAt: { lte: now } },
+              { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+              input.resource
+                ? {
+                    OR: [
+                      { resourceType: null, resourceId: null },
+                      {
+                        resourceType: input.resource.type,
+                        resourceId: input.resource.id,
+                      },
+                    ],
+                  }
+                : { resourceType: null, resourceId: null },
+            ],
+          },
+          select: { id: true },
+        });
+        if (denial)
+          return { allowed: false, reason: 'DENIED_BY_EXPLICIT_DENIAL' };
         if (keys.has(input.permissionKey))
           return { allowed: true, membershipId };
         // CanSwitchTenant is a membership-default capability: any ACTIVE
