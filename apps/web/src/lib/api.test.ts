@@ -1373,3 +1373,294 @@ describe('Client URL prefixes (prefix regression)', () => {
     expect(call?.url).not.toContain('/v1/v1');
   });
 });
+
+describe('HearingsClient (Phase 12)', () => {
+  const base = 'http://localhost';
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-hearing' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('lists hearings scoped by caseId via GET /hearings', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/hearings?caseId=case1': () => enveloped([]),
+    });
+    const client = new HearingsClient(new ApiClient(base, fetchMock));
+
+    await client.listHearings('case1');
+
+    const call = calls.find((c) => c.url.includes('/hearings'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).toContain('caseId=case1');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+  });
+
+  it('records an outcome via POST /hearings/:id/outcome', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/hearings/h1/outcome': () =>
+        enveloped({ id: 'h1', status: 'COMPLETED', outcome: 'Adjourned' }, 200),
+    });
+    const client = new HearingsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.recordOutcome('h1', { outcome: 'Adjourned', status: 'COMPLETED' });
+
+    const call = calls.find((c) => c.url.endsWith('/hearings/h1/outcome'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('COMPLETED');
+  });
+});
+
+describe('DeadlinesClient (Phase 13)', () => {
+  const base = 'http://localhost';
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-deadline' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('lists deadlines scoped by caseId via GET /deadlines', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/deadlines?caseId=case1': () => enveloped({ data: [] }),
+    });
+    const client = new DeadlinesClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listDeadlines('case1');
+
+    const call = calls.find((c) => c.url.includes('/deadlines'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+    expect(result.data).toHaveLength(0);
+  });
+
+  it('creates a rule via POST /deadlines/rules', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/deadlines/rules': (_url, init) =>
+        init?.method === 'POST'
+          ? enveloped({ id: 'r1', name: 'Filing', effectiveFrom: '2026-01-01' }, 201)
+          : enveloped({ data: [] }),
+    });
+    const client = new DeadlinesClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createRule({ name: 'Filing', effectiveFrom: '2026-01-01' });
+
+    const call = calls.find((c) => c.url.endsWith('/deadlines/rules') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(result.name).toBe('Filing');
+  });
+});
+
+describe('TasksClient (Phase 14)', () => {
+  const base = 'http://localhost';
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-task' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('lists tasks with filters via GET /tasks', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/tasks?caseId=case1': () => enveloped({ data: [] }),
+    });
+    const client = new TasksClient(new ApiClient(base, fetchMock));
+
+    await client.listTasks('case1');
+
+    const call = calls.find((c) => c.url.includes('/tasks?'));
+    expect(String(call?.url)).toContain('caseId=case1');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+  });
+
+  it('updates status via PATCH /tasks/:id/status', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/tasks/t1/status': () =>
+        enveloped({ id: 't1', title: 'Draft', status: 'IN_PROGRESS', priority: 'HIGH' }),
+    });
+    const client = new TasksClient(new ApiClient(base, fetchMock));
+
+    const result = await client.updateStatus('t1', { status: 'IN_PROGRESS' });
+
+    const call = calls.find((c) => c.url.endsWith('/tasks/t1/status'));
+    expect(call?.init?.method).toBe('PATCH');
+    expect(result.status).toBe('IN_PROGRESS');
+  });
+});
+
+describe('DocumentsClient (Phase 15)', () => {
+  const base = 'http://localhost';
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-doc' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('creates a document via POST /documents', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/documents': (_url, init) =>
+        init?.method === 'POST'
+          ? enveloped({ id: 'd1', title: 'Contract', status: 'DRAFT' }, 201)
+          : enveloped({ data: [] }),
+    });
+    const client = new DocumentsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createDocument({
+      title: 'Contract',
+      storageObjectId: 's1',
+      mimeType: 'application/pdf',
+      fileSize: 1024,
+    });
+
+    const call = calls.find((c) => c.url.endsWith('/documents') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+    expect(result.title).toBe('Contract');
+  });
+
+  it('generates an access grant via POST /documents/:id/security/access', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/documents/d1/security/access': () => enveloped({ data: { grantId: 'g1' } }, 201),
+    });
+    const client = new DocumentsClient(new ApiClient(base, fetchMock));
+
+    await client.generateAccessGrant('d1', { documentVersionId: 'v1', purpose: 'DOWNLOAD' });
+
+    const call = calls.find((c) => c.url.endsWith('/documents/d1/security/access'));
+    expect(call?.init?.method).toBe('POST');
+  });
+});

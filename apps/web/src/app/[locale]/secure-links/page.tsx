@@ -2,7 +2,8 @@ import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { DocumentSecureLinkSection } from '@/components/pages/documents/document-secure-link-section';
 
-export async function generateMetadata({ params: { locale } }: { params: { locale: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   const t = await getTranslations({ locale });
   return {
     title: `${t('documents.secureLinks.title')} - ${t('brand')}`,

@@ -189,6 +189,9 @@
       "atLeastOneRole": "Select at least one role.",
       "tooLong": "This value is too long.",
       "invalidDate": "Enter a valid date-time value."
+    },
+    "select": {
+      "placeholder": "Select {label}"
     }
   },
   "identity": {
@@ -659,7 +662,8 @@
     "sections": {
       "list": "Case list",
       "case": "Create case",
-      "party": "Link case parties"
+      "party": "Link case parties",
+      "details": "Details"
     }
   },
   "casesTimeline": {

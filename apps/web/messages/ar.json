@@ -189,6 +189,9 @@
       "atLeastOneRole": "اختر دوراً واحداً على الأقل.",
       "tooLong": "هذه القيمة طويلة جداً.",
       "invalidDate": "أدخل قيمة تاريخ ووقت صالحة."
+    },
+    "select": {
+      "placeholder": "اختر {label}"
     }
   },
   "identity": {
@@ -659,7 +662,8 @@
     "sections": {
       "list": "قائمة القضايا",
       "case": "إنشاء قضية",
-      "party": "ربط أطراف القضية"
+      "party": "ربط أطراف القضية",
+      "details": "التفاصيل"
     }
   },
   "casesTimeline": {

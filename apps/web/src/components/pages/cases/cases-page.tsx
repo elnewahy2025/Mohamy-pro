@@ -44,7 +44,7 @@ export function CasesPage(): React.ReactNode {
           variant={activeTab === 'details' ? 'default' : 'ghost'} 
           onClick={() => setActiveTab('details')}
         >
-          Details
+          {t('cases.sections.details')}
         </Button>
         <Button 
           variant={activeTab === 'timeline' ? 'default' : 'ghost'} 

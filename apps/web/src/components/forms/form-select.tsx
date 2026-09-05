@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, type SelectHTMLAttributes } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface FormSelectProps {
   label: string;
@@ -20,6 +21,7 @@ export function FormSelect({
   selectProps,
   options,
 }: FormSelectProps): React.ReactNode {
+  const t = useTranslations();
   const inputId = useId();
   const hintId = hint || error ? `${inputId}-hint` : undefined;
   const errorId = error ? `${inputId}-error` : undefined;
@@ -38,7 +40,7 @@ export function FormSelect({
         {...selectProps}
       >
         <option value="" disabled>
-          Select {label.toLowerCase()}
+          {t('form.select.placeholder', { label: label.toLowerCase() })}
         </option>
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
