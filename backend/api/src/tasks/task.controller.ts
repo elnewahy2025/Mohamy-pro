@@ -35,13 +35,17 @@ export class TaskController {
     @Query('caseId') caseId?: string,
     @Query('assignedUserId') assignedUserId?: string,
   ) {
-    const ctx = await this.operations.authorize(request);
+    const ctx = await this.operations.authorizeCaseAccess(request);
     return this.operations.read(request, ctx, async (tx) => {
       return this.taskService.listTasks(
         tx,
         ctx.tenantId,
         caseId,
         assignedUserId,
+        {
+          scope: ctx.scope,
+          membershipId: ctx.actorMembershipId,
+        },
       );
     });
   }

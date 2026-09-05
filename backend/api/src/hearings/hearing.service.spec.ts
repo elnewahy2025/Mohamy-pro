@@ -4,12 +4,13 @@ import {
   HearingInvalidStateError,
   HearingNotFoundError,
 } from './hearing.errors';
+import { ResourceAccessDeniedError } from '../permissions/permission.errors';
 
 describe('HearingService', () => {
   let service: HearingService;
 
   beforeEach(() => {
-    service = new HearingService();
+    service = new HearingService({} as any);
   });
 
   describe('createHearing', () => {
@@ -147,5 +148,54 @@ describe('HearingService', () => {
         service.deleteHearing(tx as any, 'tenant-1', 'hearing-foreign'),
       ).rejects.toBeInstanceOf(HearingNotFoundError);
     });
+  });
+});
+
+describe('HearingService assigned scoping (G6)', () => {
+  const scoped = { scope: 'ASSIGNED', membershipId: 'mem-1' } as const;
+
+  function serviceWith(resourceAccess: unknown) {
+    return new HearingService(resourceAccess as never);
+  }
+
+  it('requires assignment for a scoped caseId and filters otherwise', async () => {
+    const resourceAccess = {
+      requireAssignedCase: jest.fn().mockResolvedValue(undefined),
+      assignedCaseIds: jest.fn().mockResolvedValue(['case-9']),
+    };
+    const service = serviceWith(resourceAccess);
+    const findMany = jest.fn().mockResolvedValue([]);
+    const tx = { hearing: { findMany } };
+
+    await service.listHearings(tx as any, 't1', 'case-9', scoped);
+    expect(resourceAccess.requireAssignedCase).toHaveBeenCalledWith(
+      tx,
+      't1',
+      'mem-1',
+      'case-9',
+    );
+
+    await service.listHearings(tx as any, 't1', undefined, scoped);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ caseId: { in: ['case-9'] } }),
+      }),
+    );
+  });
+
+  it('denies unassigned case reads without enumeration', async () => {
+    const resourceAccess = {
+      requireAssignedCase: jest
+        .fn()
+        .mockRejectedValue(new ResourceAccessDeniedError()),
+      assignedCaseIds: jest.fn(),
+    };
+    const service = serviceWith(resourceAccess);
+    const tx = { hearing: { findMany: jest.fn() } };
+
+    await expect(
+      service.listHearings(tx as any, 't1', 'case-7', scoped),
+    ).rejects.toBeInstanceOf(ResourceAccessDeniedError);
+    expect(tx.hearing.findMany).not.toHaveBeenCalled();
   });
 });

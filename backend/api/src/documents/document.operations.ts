@@ -7,6 +7,8 @@ import { hashToken } from '../auth/session/session-crypto';
 import { getCorrelationId } from '../common/middleware/correlation-id.middleware';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import { PermissionsService } from '../permissions/permissions.service';
+import { authorizeCaseAccess } from '../permissions/authorize-case-access';
+import type { CaseAccessScope } from '../permissions/resource-access.service';
 import {
   PERMISSION_KEYS,
   type PermissionKey,
@@ -52,6 +54,12 @@ export class DocumentOperations {
       tenantId: auth.activeTenantId,
       actorMembershipId,
     };
+  }
+
+  async authorizeCaseAccess(
+    request: Request,
+  ): Promise<DocumentContext & { scope: CaseAccessScope }> {
+    return authorizeCaseAccess(request, this.permissions, DOCUMENT_PERMISSION);
   }
 
   async run<T>(

@@ -40,13 +40,17 @@ export class DocumentController {
     @Query('caseId') caseId?: string,
     @Query('clientId') clientId?: string,
   ) {
-    const ctx = await this.operations.authorize(request);
+    const ctx = await this.operations.authorizeCaseAccess(request);
     return this.operations.read(request, ctx, async (tx) => {
       return this.documentService.listDocuments(
         tx,
         ctx.tenantId,
         caseId,
         clientId,
+        {
+          scope: ctx.scope,
+          membershipId: ctx.actorMembershipId,
+        },
       );
     });
   }

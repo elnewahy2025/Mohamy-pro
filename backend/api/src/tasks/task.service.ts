@@ -1,6 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  ResourceAccessService,
+  type CaseAccessScope,
+} from '../permissions/resource-access.service';
+
+export interface CaseScope {
+  scope: CaseAccessScope;
+  membershipId: string;
+}
+import {
   TaskAccessDeniedError,
   TaskNotFoundError,
   TaskInvalidStateError,
@@ -14,6 +23,8 @@ import type {
 @Injectable()
 export class TaskService {
   private readonly logger = new Logger(TaskService.name);
+
+  constructor(private readonly resourceAccess: ResourceAccessService) {}
 
   async createTask(
     tx: Prisma.TransactionClient,
@@ -73,7 +84,39 @@ export class TaskService {
     tenantId: string,
     caseId?: string,
     assignedUserId?: string,
+    access?: CaseScope,
   ) {
+    if (access?.scope === 'ASSIGNED') {
+      if (caseId) {
+        await this.resourceAccess.requireAssignedCase(
+          tx,
+          tenantId,
+          access.membershipId,
+          caseId,
+        );
+      } else {
+        const ids = await this.resourceAccess.assignedCaseIds(
+          tx,
+          tenantId,
+          access.membershipId,
+        );
+        return tx.task.findMany({
+          where: {
+            tenantId,
+            caseId: { in: ids },
+            ...(assignedUserId ? { assignedUserId } : {}),
+          },
+          include: {
+            assignedUser: true,
+            checklists: true,
+            dependencies: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+      }
+    }
     return tx.task.findMany({
       where: {
         tenantId,

@@ -5,6 +5,15 @@ import { CaseTimelineAccessDeniedError } from './case-timeline.errors';
 import type { CaseTimelineQueryDto } from './case-timeline.dto';
 import type { Paginated } from '../common/api/envelope';
 import type { CaseTimelineEvent } from '@prisma/client';
+import {
+  ResourceAccessService,
+  type CaseAccessScope,
+} from '../permissions/resource-access.service';
+
+export interface CaseScope {
+  scope: CaseAccessScope;
+  membershipId: string;
+}
 
 export interface CreateTimelineEventInput {
   caseId: string;
@@ -16,7 +25,10 @@ export interface CreateTimelineEventInput {
 export class CaseTimelineService {
   private readonly logger = new Logger(CaseTimelineService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly resourceAccess: ResourceAccessService,
+  ) {}
 
   async recordEvent(
     tx: Prisma.TransactionClient,
@@ -50,7 +62,16 @@ export class CaseTimelineService {
     tenantId: string,
     caseId: string,
     query: CaseTimelineQueryDto,
+    access?: CaseScope,
   ): Promise<Paginated<CaseTimelineEvent>> {
+    if (access?.scope === 'ASSIGNED') {
+      await this.resourceAccess.requireAssignedCase(
+        tx,
+        tenantId,
+        access.membershipId,
+        caseId,
+      );
+    }
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;

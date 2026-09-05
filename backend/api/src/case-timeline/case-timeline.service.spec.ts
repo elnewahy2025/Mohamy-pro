@@ -1,11 +1,12 @@
 import { CaseTimelineService } from './case-timeline.service';
+import { ResourceAccessDeniedError } from '../permissions/permission.errors';
 import { CaseTimelineAccessDeniedError } from './case-timeline.errors';
 
 describe('CaseTimelineService', () => {
   let service: CaseTimelineService;
 
   beforeEach(() => {
-    service = new CaseTimelineService({} as any);
+    service = new CaseTimelineService({} as any, {} as any);
   });
 
   describe('recordEvent', () => {
@@ -76,5 +77,38 @@ describe('CaseTimelineService', () => {
         where: { tenantId: 'tenant-1', caseId: 'case-1' },
       });
     });
+  });
+});
+
+describe('CaseTimelineService assigned scoping (G6)', () => {
+  const scoped = { scope: 'ASSIGNED', membershipId: 'mem-1' } as const;
+
+  it('requires assignment before listing a case timeline', async () => {
+    const resourceAccess = {
+      requireAssignedCase: jest.fn().mockResolvedValue(undefined),
+      assignedCaseIds: jest.fn(),
+    };
+    const service = new CaseTimelineService({} as any, resourceAccess as never);
+    const tx = {
+      caseTimelineEvent: {
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+
+    await service.listTimeline(tx as any, 't1', 'case-9', {}, scoped);
+    expect(resourceAccess.requireAssignedCase).toHaveBeenCalledWith(
+      tx,
+      't1',
+      'mem-1',
+      'case-9',
+    );
+
+    resourceAccess.requireAssignedCase.mockRejectedValue(
+      new ResourceAccessDeniedError(),
+    );
+    await expect(
+      service.listTimeline(tx as any, 't1', 'case-7', {}, scoped),
+    ).rejects.toBeInstanceOf(ResourceAccessDeniedError);
   });
 });

@@ -11,6 +11,8 @@ import {
   PERMISSION_KEYS,
   type PermissionKey,
 } from '../permissions/permission.constants';
+import { authorizeCaseAccess } from '../permissions/authorize-case-access';
+import type { CaseAccessScope } from '../permissions/resource-access.service';
 import { HearingAccessDeniedError } from './hearing.errors';
 
 export const HEARING_PERMISSION: PermissionKey =
@@ -52,6 +54,12 @@ export class HearingOperations {
       tenantId: auth.activeTenantId,
       actorMembershipId,
     };
+  }
+
+  async authorizeCaseAccess(
+    request: Request,
+  ): Promise<HearingContext & { scope: CaseAccessScope }> {
+    return authorizeCaseAccess(request, this.permissions, HEARING_PERMISSION);
   }
 
   async run<T>(

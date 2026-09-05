@@ -7,6 +7,7 @@ import { hashToken } from '../auth/session/session-crypto';
 import { getCorrelationId } from '../common/middleware/correlation-id.middleware';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import { PermissionsService } from '../permissions/permissions.service';
+import { ResourceAccessService } from '../permissions/resource-access.service';
 import {
   PERMISSION_KEYS,
   type PermissionKey,
@@ -38,6 +39,7 @@ export class CaseOperations {
     private readonly prisma: PrismaService,
     private readonly audit: AuditEventService,
     private readonly permissions: PermissionsService,
+    private readonly resourceAccess: ResourceAccessService,
   ) {}
 
   async authorize(request: Request): Promise<CaseContext> {
@@ -183,31 +185,27 @@ export class CaseOperations {
     ctx: CaseContext,
     caseId: string,
   ): Promise<void> {
-    const assignment = await transaction.caseAssignment.findFirst({
-      where: {
+    try {
+      await this.resourceAccess.requireAssignedCase(
+        transaction,
+        ctx.tenantId,
+        ctx.actorMembershipId,
         caseId,
-        membershipId: ctx.actorMembershipId,
-        tenantId: ctx.tenantId,
-        revokedAt: null,
-      },
-      select: { id: true },
-    });
-    if (!assignment) throw new CaseAccessDeniedError('NO_CASE_ASSIGNMENT');
+      );
+    } catch {
+      throw new CaseAccessDeniedError('NO_CASE_ASSIGNMENT');
+    }
   }
 
   async assignedCaseIds(
     transaction: Prisma.TransactionClient,
     ctx: CaseContext,
   ): Promise<string[]> {
-    const rows = await transaction.caseAssignment.findMany({
-      where: {
-        membershipId: ctx.actorMembershipId,
-        tenantId: ctx.tenantId,
-        revokedAt: null,
-      },
-      select: { caseId: true },
-    });
-    return rows.map((row) => row.caseId);
+    return this.resourceAccess.assignedCaseIds(
+      transaction,
+      ctx.tenantId,
+      ctx.actorMembershipId,
+    );
   }
 
   private optionalHash(value: string | string[] | undefined): string | null {

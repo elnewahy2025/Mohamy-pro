@@ -67,6 +67,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       code = exception.code;
       message = exception.message;
       details = exception.details;
+    } else if (
+      exception instanceof Error &&
+      /AccessDeniedError$/.test(exception.name)
+    ) {
+      status = HttpStatus.FORBIDDEN;
+      code = ERROR_CODES.FORBIDDEN;
+      message = defaultMessageForCode(code);
+      details = [];
     } else if (exception instanceof BadRequestException) {
       const validation = validationDetails(exception);
       if (validation) {

@@ -63,9 +63,12 @@ export class DeadlineController {
     @Req() request: Request,
     @Query('caseId') caseId?: string,
   ) {
-    const ctx = await this.operations.authorize(request);
+    const ctx = await this.operations.authorizeCaseAccess(request);
     return this.operations.read(request, ctx, async (tx) => {
-      return this.deadlineService.listDeadlines(tx, ctx.tenantId, caseId);
+      return this.deadlineService.listDeadlines(tx, ctx.tenantId, caseId, {
+        scope: ctx.scope,
+        membershipId: ctx.actorMembershipId,
+      });
     });
   }
 

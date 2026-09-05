@@ -1,6 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  ResourceAccessService,
+  type CaseAccessScope,
+} from '../permissions/resource-access.service';
+
+export interface CaseScope {
+  scope: CaseAccessScope;
+  membershipId: string;
+}
+import {
   DocumentAccessDeniedError,
   DocumentNotFoundError,
   DocumentInvalidStateError,
@@ -15,6 +24,8 @@ import type {
 @Injectable()
 export class DocumentService {
   private readonly logger = new Logger(DocumentService.name);
+
+  constructor(private readonly resourceAccess: ResourceAccessService) {}
 
   async createDocument(
     tx: Prisma.TransactionClient,
@@ -78,7 +89,42 @@ export class DocumentService {
     tenantId: string,
     caseId?: string,
     clientId?: string,
+    access?: CaseScope,
   ) {
+    if (access?.scope === 'ASSIGNED') {
+      if (caseId) {
+        await this.resourceAccess.requireAssignedCase(
+          tx,
+          tenantId,
+          access.membershipId,
+          caseId,
+        );
+      } else {
+        const ids = await this.resourceAccess.assignedCaseIds(
+          tx,
+          tenantId,
+          access.membershipId,
+        );
+        return tx.document.findMany({
+          where: {
+            tenantId,
+            caseId: { in: ids },
+            ...(clientId ? { clientId } : {}),
+          },
+          include: {
+            uploadedBy: true,
+            versions: {
+              orderBy: { versionNumber: 'desc' },
+              take: 1,
+            },
+            tags: true,
+          },
+          orderBy: {
+            updatedAt: 'desc',
+          },
+        });
+      }
+    }
     return tx.document.findMany({
       where: {
         tenantId,

@@ -37,13 +37,17 @@ export class CaseTimelineController {
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Query() query: CaseTimelineQueryDto,
   ) {
-    const ctx = await this.operations.authorize(request);
+    const ctx = await this.operations.authorizeCaseAccess(request);
     return this.operations.read(request, ctx, async (tx) => {
       return this.caseTimelineService.listTimeline(
         tx,
         ctx.tenantId,
         caseId,
         query,
+        {
+          scope: ctx.scope,
+          membershipId: ctx.actorMembershipId,
+        },
       );
     });
   }

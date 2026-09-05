@@ -59,6 +59,20 @@ describe('HttpExceptionFilter', () => {
     expect(body.error.code).toBe('IDEMPOTENCY_CONFLICT');
   });
 
+  it('maps legacy *AccessDeniedError names to non-enumerating 403', () => {
+    status = jest.fn().mockReturnThis();
+    const host = makeHost(HttpStatus.FORBIDDEN, status);
+    const exception = new Error('NO_CASE_IN_TENANT');
+    exception.name = 'CaseAccessDeniedError';
+    filter.catch(exception, host);
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+    const response = host.switchToHttp().getResponse();
+    const body = response.json.mock.calls[0][0];
+    expect(body.error.code).toBe('FORBIDDEN');
+    expect(JSON.stringify(body)).not.toContain('NO_CASE_IN_TENANT');
+  });
+
   it('uses a safe INTERNAL_ERROR for unknown exceptions', () => {
     status = jest.fn().mockReturnThis();
     const host = makeHost(HttpStatus.INTERNAL_SERVER_ERROR, status);

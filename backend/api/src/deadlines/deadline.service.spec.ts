@@ -1,4 +1,5 @@
 import { DeadlineService } from './deadline.service';
+import { ResourceAccessDeniedError } from '../permissions/permission.errors';
 import {
   DeadlineAccessDeniedError,
   DeadlineInvalidStateError,
@@ -9,7 +10,7 @@ describe('DeadlineService', () => {
   let service: DeadlineService;
 
   beforeEach(() => {
-    service = new DeadlineService();
+    service = new DeadlineService({} as any);
   });
 
   describe('createDeadline', () => {
@@ -131,5 +132,41 @@ describe('DeadlineService', () => {
         } as any),
       ).rejects.toBeInstanceOf(DeadlineNotFoundError);
     });
+  });
+});
+
+describe('DeadlineService assigned scoping (G6)', () => {
+  const scoped = { scope: 'ASSIGNED', membershipId: 'mem-1' } as const;
+
+  it('requires assignment for a scoped caseId and filters otherwise', async () => {
+    const resourceAccess = {
+      requireAssignedCase: jest.fn().mockResolvedValue(undefined),
+      assignedCaseIds: jest.fn().mockResolvedValue(['case-9']),
+    };
+    const service = new DeadlineService(resourceAccess as never);
+    const findMany = jest.fn().mockResolvedValue([]);
+    const tx = { deadline: { findMany } };
+
+    await service.listDeadlines(tx as any, 't1', 'case-9', scoped);
+    expect(resourceAccess.requireAssignedCase).toHaveBeenCalledWith(
+      tx,
+      't1',
+      'mem-1',
+      'case-9',
+    );
+
+    await service.listDeadlines(tx as any, 't1', undefined, scoped);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ caseId: { in: ['case-9'] } }),
+      }),
+    );
+
+    resourceAccess.requireAssignedCase.mockRejectedValue(
+      new ResourceAccessDeniedError(),
+    );
+    await expect(
+      service.listDeadlines(tx as any, 't1', 'case-7', scoped),
+    ).rejects.toBeInstanceOf(ResourceAccessDeniedError);
   });
 });

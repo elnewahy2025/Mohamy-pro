@@ -8,6 +8,22 @@ import { ApiError } from '../common/api/api-error';
  * machine reason is retained only for server-side logging and audit, never the
  * HTTP response.
  */
+/**
+ * Non-enumerating resource denial for assignment-scoped access. Surfaced as
+ * the identical 403 envelope as PermissionDeniedError so observers cannot
+ * distinguish "no such resource" from "not assigned".
+ */
+export class ResourceAccessDeniedError extends ApiError {
+  constructor() {
+    super({
+      status: 403,
+      code: 'FORBIDDEN',
+      message: 'Access denied.',
+    });
+    this.name = 'ResourceAccessDeniedError';
+  }
+}
+
 export class PermissionDeniedError extends ApiError {
   readonly internalReason: string;
   readonly permissionKey: string;

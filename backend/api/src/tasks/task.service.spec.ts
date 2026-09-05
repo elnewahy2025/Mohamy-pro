@@ -1,4 +1,5 @@
 import { TaskService } from './task.service';
+import { ResourceAccessDeniedError } from '../permissions/permission.errors';
 import {
   TaskAccessDeniedError,
   TaskInvalidStateError,
@@ -9,7 +10,7 @@ describe('TaskService', () => {
   let service: TaskService;
 
   beforeEach(() => {
-    service = new TaskService();
+    service = new TaskService({} as any);
   });
 
   describe('createTask', () => {
@@ -171,5 +172,41 @@ describe('TaskService', () => {
         } as any),
       ).rejects.toBeInstanceOf(TaskNotFoundError);
     });
+  });
+});
+
+describe('TaskService assigned scoping (G6)', () => {
+  const scoped = { scope: 'ASSIGNED', membershipId: 'mem-1' } as const;
+
+  it('requires assignment for a scoped caseId and filters otherwise', async () => {
+    const resourceAccess = {
+      requireAssignedCase: jest.fn().mockResolvedValue(undefined),
+      assignedCaseIds: jest.fn().mockResolvedValue(['case-9']),
+    };
+    const service = new TaskService(resourceAccess as never);
+    const findMany = jest.fn().mockResolvedValue([]);
+    const tx = { task: { findMany } };
+
+    await service.listTasks(tx as any, 't1', 'case-9', undefined, scoped);
+    expect(resourceAccess.requireAssignedCase).toHaveBeenCalledWith(
+      tx,
+      't1',
+      'mem-1',
+      'case-9',
+    );
+
+    await service.listTasks(tx as any, 't1', undefined, undefined, scoped);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ caseId: { in: ['case-9'] } }),
+      }),
+    );
+
+    resourceAccess.requireAssignedCase.mockRejectedValue(
+      new ResourceAccessDeniedError(),
+    );
+    await expect(
+      service.listTasks(tx as any, 't1', 'case-7', undefined, scoped),
+    ).rejects.toBeInstanceOf(ResourceAccessDeniedError);
   });
 });

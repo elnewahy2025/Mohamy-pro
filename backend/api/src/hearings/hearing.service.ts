@@ -6,10 +6,21 @@ import {
   HearingInvalidStateError,
 } from './hearing.errors';
 import type { CreateHearingDto, UpdateHearingOutcomeDto } from './hearing.dto';
+import {
+  ResourceAccessService,
+  type CaseAccessScope,
+} from '../permissions/resource-access.service';
+
+export interface CaseScope {
+  scope: CaseAccessScope;
+  membershipId: string;
+}
 
 @Injectable()
 export class HearingService {
   private readonly logger = new Logger(HearingService.name);
+
+  constructor(private readonly resourceAccess: ResourceAccessService) {}
 
   async createHearing(
     tx: Prisma.TransactionClient,
@@ -81,7 +92,33 @@ export class HearingService {
     tx: Prisma.TransactionClient,
     tenantId: string,
     caseId?: string,
+    access?: CaseScope,
   ) {
+    if (access?.scope === 'ASSIGNED') {
+      if (caseId) {
+        await this.resourceAccess.requireAssignedCase(
+          tx,
+          tenantId,
+          access.membershipId,
+          caseId,
+        );
+      } else {
+        const ids = await this.resourceAccess.assignedCaseIds(
+          tx,
+          tenantId,
+          access.membershipId,
+        );
+        return tx.hearing.findMany({
+          where: { tenantId, caseId: { in: ids } },
+          include: {
+            court: true,
+            courtLocation: true,
+            assignedLawyer: true,
+          },
+          orderBy: { date: 'asc' },
+        });
+      }
+    }
     return tx.hearing.findMany({
       where: {
         tenantId,

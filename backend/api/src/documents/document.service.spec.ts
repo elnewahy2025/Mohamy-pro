@@ -1,4 +1,5 @@
 import { DocumentService } from './document.service';
+import { ResourceAccessDeniedError } from '../permissions/permission.errors';
 import {
   DocumentAccessDeniedError,
   DocumentInvalidStateError,
@@ -9,7 +10,7 @@ describe('DocumentService', () => {
   let service: DocumentService;
 
   beforeEach(() => {
-    service = new DocumentService();
+    service = new DocumentService({} as any);
   });
 
   describe('createDocument', () => {
@@ -167,5 +168,38 @@ describe('DocumentService', () => {
         ),
       ).rejects.toBeInstanceOf(DocumentNotFoundError);
     });
+  });
+});
+
+describe('DocumentService assigned scoping (G6)', () => {
+  const scoped = { scope: 'ASSIGNED', membershipId: 'mem-1' } as const;
+
+  it('requires assignment for a scoped caseId and filters otherwise', async () => {
+            const resourceAccess = {
+      requireAssignedCase: jest.fn().mockResolvedValue(undefined),
+      assignedCaseIds: jest.fn().mockResolvedValue(['case-9']),
+    };
+    const service = new DocumentService(resourceAccess as never);
+    const findMany = jest.fn().mockResolvedValue([]);
+    const tx = { document: { findMany } };
+
+    await service.listDocuments(tx as any, 't1', 'case-9', undefined, scoped);
+    expect(resourceAccess.requireAssignedCase).toHaveBeenCalledWith(
+      tx, 't1', 'mem-1', 'case-9',
+    );
+
+    await service.listDocuments(tx as any, 't1', undefined, undefined, scoped);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ caseId: { in: ['case-9'] } }),
+      }),
+    );
+
+    resourceAccess.requireAssignedCase.mockRejectedValue(
+      new ResourceAccessDeniedError(),
+    );
+    await expect(
+      service.listDocuments(tx as any, 't1', 'case-7', undefined, scoped),
+    ).rejects.toBeInstanceOf(ResourceAccessDeniedError);
   });
 });

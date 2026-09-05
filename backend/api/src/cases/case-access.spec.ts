@@ -3,6 +3,7 @@ import { CaseOperations } from './case.operations';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import { AuditEventService } from '../audit/audit-event.service';
 import { PermissionsService } from '../permissions/permissions.service';
+import { ResourceAccessService } from '../permissions/resource-access.service';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { PermissionDeniedError } from '../permissions/permission.errors';
 
@@ -26,7 +27,8 @@ function operations(grantedKeys: string[]) {
   } as unknown as PermissionsService;
   const prisma = {} as unknown as PrismaService;
   const audit = {} as unknown as AuditEventService;
-  return new CaseOperations(prisma, audit, permissions);
+  const resourceAccess = {} as unknown as ResourceAccessService;
+  return new CaseOperations(prisma, audit, permissions, resourceAccess);
 }
 
 describe('CaseOperations.authorizeCaseAccess (G5)', () => {

@@ -10,10 +10,21 @@ import type {
   CreateDeadlineDto,
   CompleteDeadlineDto,
 } from './deadline.dto';
+import {
+  ResourceAccessService,
+  type CaseAccessScope,
+} from '../permissions/resource-access.service';
+
+export interface CaseScope {
+  scope: CaseAccessScope;
+  membershipId: string;
+}
 
 @Injectable()
 export class DeadlineService {
   private readonly logger = new Logger(DeadlineService.name);
+
+  constructor(private readonly resourceAccess: ResourceAccessService) {}
 
   async createRule(
     tx: Prisma.TransactionClient,
@@ -93,7 +104,34 @@ export class DeadlineService {
     tx: Prisma.TransactionClient,
     tenantId: string,
     caseId?: string,
+    access?: CaseScope,
   ) {
+    if (access?.scope === 'ASSIGNED') {
+      if (caseId) {
+        await this.resourceAccess.requireAssignedCase(
+          tx,
+          tenantId,
+          access.membershipId,
+          caseId,
+        );
+      } else {
+        const ids = await this.resourceAccess.assignedCaseIds(
+          tx,
+          tenantId,
+          access.membershipId,
+        );
+        return tx.deadline.findMany({
+          where: { tenantId, caseId: { in: ids } },
+          include: {
+            rule: true,
+            assignedUser: true,
+          },
+          orderBy: {
+            dueDate: 'asc',
+          },
+        });
+      }
+    }
     return tx.deadline.findMany({
       where: {
         tenantId,
