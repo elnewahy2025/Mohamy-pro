@@ -17,6 +17,7 @@ import { PermissionDeniedError } from './permission.errors';
 import {
   ROLE_KEY_PLATFORM_ADMIN,
   ROLE_KEY_TENANT_ADMIN,
+  ROLE_KEY_TENANT_MANAGER,
 } from './role.constants';
 
 export interface TenantPermissionInput {
@@ -142,6 +143,7 @@ export class PermissionsService {
             role.id,
             ROLE_PERMISSIONS[ROLE_KEY_TENANT_ADMIN],
           );
+          await this.ensureTenantManagerRole(transaction, tenant.id);
           return true;
         },
       );
@@ -167,6 +169,42 @@ export class PermissionsService {
     });
 
     return tenantRolesWired;
+  }
+
+  /**
+   * Ensures the tenant.manager role row exists for a tenant and carries its
+   * matrix permissions. Never assigns members: assignment stays an explicit
+   * admin action through the invitation/role-grant paths. Runs inside the
+   * caller's transaction so RLS is satisfied by the surrounding context.
+   */
+  private async ensureTenantManagerRole(
+    transaction: Prisma.TransactionClient,
+    tenantId: string,
+  ): Promise<void> {
+    let manager = await transaction.role.findFirst({
+      where: {
+        tenantId,
+        scope: RoleScope.TENANT,
+        key: ROLE_KEY_TENANT_MANAGER,
+      },
+      select: { id: true },
+    });
+    if (!manager) {
+      manager = await transaction.role.create({
+        data: {
+          tenantId,
+          scope: RoleScope.TENANT,
+          key: ROLE_KEY_TENANT_MANAGER,
+          name: 'Tenant Manager',
+        },
+        select: { id: true },
+      });
+    }
+    await this.grantRolePermissions(
+      transaction,
+      manager.id,
+      ROLE_PERMISSIONS[ROLE_KEY_TENANT_MANAGER],
+    );
   }
 
   /**

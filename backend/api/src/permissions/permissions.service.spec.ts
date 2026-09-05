@@ -383,6 +383,76 @@ describe('PermissionsService', () => {
     ).resolves.toEqual({ membershipId: MEMBERSHIP_ID });
   });
 
+  it('ensures the tenant.manager role with its matrix on reconcile (G3)', async () => {
+    const audit = { write: jest.fn() } as unknown as AuditEventService;
+    const roleFindFirst = jest
+      .fn()
+      .mockResolvedValueOnce({ id: 'admin-role' })
+      .mockResolvedValueOnce(null);
+    const roleCreate = jest.fn().mockResolvedValue({ id: 'manager-role' });
+    const tenantTx = {
+      role: { findFirst: roleFindFirst, create: roleCreate },
+      permission: { findUnique: jest.fn().mockResolvedValue({ id: 'perm' }) },
+      rolePermission: { upsert: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      tenant: { findMany: jest.fn().mockResolvedValue([{ id: 't1' }]) },
+      withTenantContext: jest.fn(
+        (_ctx: unknown, cb: (tx: unknown) => Promise<unknown>) => cb(tenantTx),
+      ),
+      $transaction: jest.fn(),
+    } as unknown as PrismaService;
+    const service = new PermissionsService(prisma, audit);
+
+    const wired = await service.reconcileBuiltInRoles('op-1');
+
+    expect(wired).toBe(1);
+    expect(roleCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tenantId: 't1',
+          scope: 'TENANT',
+          key: 'tenant.manager',
+          name: 'Tenant Manager',
+        }),
+      }),
+    );
+    const grantedKeys = (
+      tenantTx.rolePermission.upsert as jest.Mock
+    ).mock.calls.map(
+      (call: unknown[]) =>
+        call[0] as { create: { roleId: string; permissionId: string } },
+    );
+    expect(grantedKeys.length).toBeGreaterThan(0);
+  });
+
+  it('reuses the existing manager role instead of duplicating it (G3)', async () => {
+    const audit = { write: jest.fn() } as unknown as AuditEventService;
+    const tenantTx = {
+      role: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce({ id: 'admin-role' })
+          .mockResolvedValueOnce({ id: 'manager-role' }),
+        create: jest.fn(),
+      },
+      permission: { findUnique: jest.fn().mockResolvedValue({ id: 'perm' }) },
+      rolePermission: { upsert: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      tenant: { findMany: jest.fn().mockResolvedValue([{ id: 't1' }]) },
+      withTenantContext: jest.fn(
+        (_ctx: unknown, cb: (tx: unknown) => Promise<unknown>) => cb(tenantTx),
+      ),
+      $transaction: jest.fn(),
+    } as unknown as PrismaService;
+    const service = new PermissionsService(prisma, audit);
+
+    await service.reconcileBuiltInRoles('op-1');
+
+    expect(tenantTx.role.create).not.toHaveBeenCalled();
+  });
+
   it('denies CanSwitchTenant for a membership that is not ACTIVE (W3)', async () => {
     const { service } = makeService({
       membership: { id: MEMBERSHIP_ID, status: 'SUSPENDED' },

@@ -4,12 +4,13 @@
 Define the authoritative mapping between roles, permissions, resources, actions, scopes, and denials. This matrix is the source for automated authorization tests.
 
 ## 2. Default Roles
-- **Platform Admin**: Superuser for the entire SaaS platform (cross-tenant).
-- **Tenant Admin**: Administrator for a specific law firm (Tenant).
-- **Managing Partner**: High-level oversight within a Tenant.
-- **Lawyer**: Standard legal practitioner.
-- **Paralegal/Staff**: Support staff with limited scope.
-- **Client**: External user accessing the Client Portal.
+- **Platform Admin**: Superuser for the entire SaaS platform (cross-tenant). IMPLEMENTED (`platform.admin`).
+- **Tenant Admin**: Administrator for a specific law firm (Tenant). IMPLEMENTED (`tenant.admin`, all tenant keys).
+- **Tenant Manager**: Approve/record powers only (`CanViewTenant`, `CanApproveTimeEntries`, `CanPublishWorkflowVersions`, `CanApproveInvoices`, `CanRecordPayments`). IMPLEMENTED (`tenant.manager`, ensured per tenant by reconcile; members assigned explicitly, never automatic).
+- **Managing Partner**: High-level oversight within a Tenant. DEFERRED — semantics require read/update-split case keys, which do not exist; granting `CanManageCases` would exceed the documented Read/Update scope. Blocked, not silently dropped.
+- **Lawyer**: Standard legal practitioner. DEFERRED — semantics require case-assignment enforcement (G5); creating it tenant-wide today would misrepresent "assigned cases only".
+- **Paralegal/Staff**: Support staff with limited scope. DEFERRED — same assignment blocker as Lawyer.
+- **Client**: External user accessing the Client Portal. DEFERRED — requires the Phase 24 portal; no authentication surface exists for external clients today.
 
 ## 3. Core Permission Matrix
 
