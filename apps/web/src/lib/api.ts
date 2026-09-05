@@ -97,6 +97,36 @@ export interface MembershipReinstateRequest {
   reason?: string;
 }
 
+export interface RoleResult {
+  id: string;
+  tenantId: string | null;
+  scope: string;
+  key: string;
+  name: string;
+  description: string | null;
+  permissions: { permission: { key: string } }[];
+}
+
+export interface RoleCreateRequest {
+  key: string;
+  name: string;
+  description?: string;
+}
+
+export interface RolePermissionsRequest {
+  permissionKeys: string[];
+}
+
+export interface RoleAssignRequest {
+  membershipId: string;
+}
+
+export interface MembershipRoleResult {
+  id: string;
+  membershipId: string;
+  roleId: string;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -270,6 +300,58 @@ export class ApiClient {
       '/membership/invitations/accept',
       'POST',
       { token },
+    );
+  }
+
+  async listRoles(): Promise<RoleResult[]> {
+    return this.body<RoleResult[]>('/roles', 'GET');
+  }
+
+  async createRole(request: RoleCreateRequest): Promise<RoleResult> {
+    return this.body<RoleResult>('/roles', 'POST', request);
+  }
+
+  async grantRolePermissions(
+    id: string,
+    request: RolePermissionsRequest,
+  ): Promise<RoleResult> {
+    return this.body<RoleResult>(
+      `/roles/${encodeURIComponent(id)}/permissions`,
+      'POST',
+      request,
+    );
+  }
+
+  async revokeRolePermissions(
+    id: string,
+    request: RolePermissionsRequest,
+  ): Promise<RoleResult> {
+    return this.body<RoleResult>(
+      `/roles/${encodeURIComponent(id)}/permissions`,
+      'DELETE',
+      request,
+    );
+  }
+
+  async assignRole(
+    id: string,
+    request: RoleAssignRequest,
+  ): Promise<MembershipRoleResult> {
+    return this.body<MembershipRoleResult>(
+      `/roles/${encodeURIComponent(id)}/assign`,
+      'POST',
+      request,
+    );
+  }
+
+  async revokeRoleAssignment(
+    id: string,
+    request: RoleAssignRequest,
+  ): Promise<MembershipRoleResult> {
+    return this.body<MembershipRoleResult>(
+      `/roles/${encodeURIComponent(id)}/revoke`,
+      'POST',
+      request,
     );
   }
 

@@ -274,6 +274,36 @@
       "errorTitle": "حدث خطأ ما",
       "successAriaLive": "نتيجة العملية",
       "requestId": "معرّف الطلب"
+    },
+    "roles": {
+      "navLabel": "الأدوار",
+      "title": "الأدوار والإسنادات",
+      "description": "أنشئ أدوار المستأجر، وامنح الصلاحيات، وأسند الأدوار للأعضاء. الأدوار المدمجة غير قابلة للتعديل.",
+      "keyLabel": "مفتاح الدور",
+      "keyPlaceholder": "support.lead",
+      "nameLabel": "اسم الدور",
+      "namePlaceholder": "قائد الدعم",
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "وصف اختياري",
+      "roleIdLabel": "معرّف الدور",
+      "roleIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "permissionKeysLabel": "مفاتيح الصلاحيات",
+      "permissionKeysPlaceholder": "CanViewTenant, CanManageCases",
+      "membershipIdLabel": "معرّف العضوية",
+      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "list": "عرض الأدوار",
+      "create": "إنشاء دور",
+      "grant": "منح الصلاحيات",
+      "revokePermissions": "سحب الصلاحيات",
+      "assign": "إسناد دور",
+      "revokeAssignment": "سحب الإسناد",
+      "submitting": "جارٍ العمل…",
+      "resultTitle": "اكتملت العملية",
+      "sections": {
+        "list": "الأدوار",
+        "create": "الإنشاء والمنح",
+        "assign": "الإسناد والسحب"
+      }
     }
   },
   "orgConfig": {

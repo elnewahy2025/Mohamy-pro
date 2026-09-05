@@ -274,6 +274,36 @@
       "errorTitle": "Something went wrong",
       "successAriaLive": "Operation result",
       "requestId": "Request ID"
+    },
+    "roles": {
+      "navLabel": "Roles",
+      "title": "Roles and assignments",
+      "description": "Create tenant roles, grant permissions, and assign roles to members. Built-in roles are immutable.",
+      "keyLabel": "Role key",
+      "keyPlaceholder": "support.lead",
+      "nameLabel": "Role name",
+      "namePlaceholder": "Support Lead",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional description",
+      "roleIdLabel": "Role ID",
+      "roleIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "permissionKeysLabel": "Permission keys",
+      "permissionKeysPlaceholder": "CanViewTenant, CanManageCases",
+      "membershipIdLabel": "Membership ID",
+      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "list": "List roles",
+      "create": "Create role",
+      "grant": "Grant permissions",
+      "revokePermissions": "Revoke permissions",
+      "assign": "Assign role",
+      "revokeAssignment": "Revoke assignment",
+      "submitting": "Working…",
+      "resultTitle": "Operation completed",
+      "sections": {
+        "list": "Roles",
+        "create": "Create and grant",
+        "assign": "Assign and revoke"
+      }
     }
   },
   "orgConfig": {

@@ -1967,3 +1967,109 @@ describe('CalendarClient (Phase 23)', () => {
     expect(result[0].kind).toBe('DEADLINE');
   });
 });
+
+describe('ApiClient role administration (G4)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function mutatingFetch(handlers?: Record<string, (url: string, init?: RequestInit) => Response>): {
+    fetchMock: (url: string | URL | Request, init?: RequestInit) => Promise<Response>;
+    calls: Array<{ url: string; init?: RequestInit }>;
+  } {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-role' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (handlers) {
+        for (const suffix of Object.keys(handlers)) {
+          if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        }
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('lists roles via GET /roles', async () => {
+    const { fetchMock, calls } = mutatingFetch({
+      '/roles': () => enveloped([{ id: 'r1', key: 'tenant.admin', permissions: [] }]),
+    });
+    const client = new ApiClient(base, fetchMock);
+
+    const result = await client.listRoles();
+
+    const call = calls.find((c) => c.url.endsWith('/roles'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result).toHaveLength(1);
+    expect(result[0].key).toBe('tenant.admin');
+  });
+
+  it('creates a role via POST /roles', async () => {
+    const { fetchMock, calls } = mutatingFetch({
+      '/roles': () => enveloped({ id: 'r2', key: 'support.lead', permissions: [] }, 201),
+    });
+    const client = new ApiClient(base, fetchMock);
+
+    const result = await client.createRole({ key: 'support.lead', name: 'Support Lead' });
+
+    const call = calls.find((c) => c.url.endsWith('/roles') && c.init?.method === 'POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ key: 'support.lead', name: 'Support Lead' });
+    expect(result.key).toBe('support.lead');
+  });
+
+  it('grants and revokes permissions on role permission routes', async () => {
+    const { fetchMock, calls } = mutatingFetch({
+      '/roles/r1/permissions': () =>
+        enveloped({ id: 'r1', key: 'support.lead', permissions: [] }),
+    });
+    const client = new ApiClient(base, fetchMock);
+
+    await client.grantRolePermissions('r1', { permissionKeys: ['CanViewTenant'] });
+    const grant = calls.find((c) => c.url.endsWith('/roles/r1/permissions') && c.init?.method === 'POST');
+    expect(JSON.parse(String(grant?.init?.body))).toEqual({ permissionKeys: ['CanViewTenant'] });
+
+    await client.revokeRolePermissions('r1', { permissionKeys: ['CanViewTenant'] });
+    const revoke = calls.find((c) => c.url.endsWith('/roles/r1/permissions') && c.init?.method === 'DELETE');
+    expect(JSON.parse(String(revoke?.init?.body))).toEqual({ permissionKeys: ['CanViewTenant'] });
+  });
+
+  it('assigns and revokes member roles', async () => {
+    const { fetchMock, calls } = mutatingFetch({
+      '/roles/r1/assign': () => enveloped({ id: 'a1', membershipId: 'm2', roleId: 'r1' }, 201),
+      '/roles/r1/revoke': () => enveloped({ id: 'a1', membershipId: 'm2', roleId: 'r1' }),
+    });
+    const client = new ApiClient(base, fetchMock);
+
+    const assigned = await client.assignRole('r1', { membershipId: 'm2' });
+    expect(assigned.membershipId).toBe('m2');
+
+    const revoked = await client.revokeRoleAssignment('r1', { membershipId: 'm2' });
+    expect(revoked.id).toBe('a1');
+
+    const assignCall = calls.find((c) => c.url.endsWith('/roles/r1/assign'));
+    expect(assignCall?.init?.method).toBe('POST');
+  });
+});
