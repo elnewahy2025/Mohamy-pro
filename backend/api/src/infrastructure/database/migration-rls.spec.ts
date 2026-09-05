@@ -255,9 +255,7 @@ describe('Phase 10-15 migration assertions', () => {
   });
 
   it('creates DirectPermissionGrant with FORCE RLS (G2)', () => {
-    const g2Migration = readMigration(
-      '20260908000004_g2_denial_direct_grants',
-    );
+    const g2Migration = readMigration('20260908000004_g2_denial_direct_grants');
 
     expect(g2Migration).toContain('CREATE TABLE "DirectPermissionGrant"');
     expect(g2Migration).toContain(
@@ -266,9 +264,20 @@ describe('Phase 10-15 migration assertions', () => {
     expect(g2Migration).toContain(
       'ALTER TABLE "DirectPermissionGrant" FORCE ROW LEVEL SECURITY',
     );
-    expect(g2Migration).toContain(
-      '"DirectPermissionGrant_tenant_isolation"',
+    expect(g2Migration).toContain('"DirectPermissionGrant_tenant_isolation"');
+  });
+
+  it('creates CaseAssignment with FORCE RLS (G5)', () => {
+    const g5Migration = readMigration('20260908000005_g5_case_assignment');
+
+    expect(g5Migration).toContain('CREATE TABLE "CaseAssignment"');
+    expect(g5Migration).toContain(
+      'ALTER TABLE "CaseAssignment" ENABLE ROW LEVEL SECURITY',
     );
+    expect(g5Migration).toContain(
+      'ALTER TABLE "CaseAssignment" FORCE ROW LEVEL SECURITY',
+    );
+    expect(g5Migration).toContain('"CaseAssignment_tenant_isolation"');
   });
 
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {

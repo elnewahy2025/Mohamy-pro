@@ -5,7 +5,7 @@ import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import type { Paginated } from '../common/api/envelope';
 import { ConflictGateService } from '../conflict-checks/conflict-gate.service';
 import { CaseOperations } from './case.operations';
-import { CaseGateRejectionError } from './case.errors';
+import { CaseAccessDeniedError, CaseGateRejectionError } from './case.errors';
 import type {
   AddCasePartyDto,
   CaseQueryDto,
@@ -96,8 +96,11 @@ export class CaseService {
   }
 
   async getCase(request: Request, id: string): Promise<CaseDetail> {
-    const ctx = await this.ops.authorize(request);
+    const ctx = await this.ops.authorizeCaseAccess(request);
     return this.ops.read(request, ctx, async (tx) => {
+      if (ctx.scope === 'ASSIGNED') {
+        await this.ops.requireCaseAssignment(tx, ctx, id);
+      }
       const existing = await tx.case.findFirst({
         where: { id, tenantId: ctx.tenantId },
         include: {
@@ -121,9 +124,12 @@ export class CaseService {
     request: Request,
     query: CaseQueryDto,
   ): Promise<Paginated<CaseListItem>> {
-    const ctx = await this.ops.authorize(request);
+    const ctx = await this.ops.authorizeCaseAccess(request);
     return this.ops.read(request, ctx, async (tx) => {
       const where: Prisma.CaseWhereInput = { tenantId: ctx.tenantId };
+      if (ctx.scope === 'ASSIGNED') {
+        where.id = { in: await this.ops.assignedCaseIds(tx, ctx) };
+      }
       if (query.status) where.status = query.status;
       if (query.search) {
         where.OR = [
@@ -159,7 +165,7 @@ export class CaseService {
     id: string,
     dto: UpdateCaseDto,
   ): Promise<Case> {
-    const ctx = await this.ops.authorize(request);
+    const ctx = await this.ops.authorizeCaseAccess(request);
     return this.ops.run(
       request,
       ctx,
@@ -167,6 +173,9 @@ export class CaseService {
       'Case',
       async (tx) => {
         const existing = await this.ops.requireCaseInTenant(tx, ctx, id);
+        if (ctx.scope === 'ASSIGNED') {
+          await this.ops.requireCaseAssignment(tx, ctx, id);
+        }
         const updatedCase = await tx.case.update({
           where: { id, tenantId: ctx.tenantId },
           data: {
@@ -207,7 +216,7 @@ export class CaseService {
     caseId: string,
     dto: AddCasePartyDto,
   ): Promise<CaseParty> {
-    const ctx = await this.ops.authorize(request);
+    const ctx = await this.ops.authorizeCaseAccess(request);
     return this.ops.run(
       request,
       ctx,
@@ -215,6 +224,9 @@ export class CaseService {
       'CaseParty',
       async (tx) => {
         await this.ops.requireCaseInTenant(tx, ctx, caseId);
+        if (ctx.scope === 'ASSIGNED') {
+          await this.ops.requireCaseAssignment(tx, ctx, caseId);
+        }
 
         const party = await tx.party.findFirst({
           where: { id: dto.partyId, tenantId: ctx.tenantId },
@@ -272,7 +284,7 @@ export class CaseService {
   }
 
   async removeParty(request: Request, caseId: string, partyId: string) {
-    const ctx = await this.ops.authorize(request);
+    const ctx = await this.ops.authorizeCaseAccess(request);
     return this.ops.run(
       request,
       ctx,
@@ -280,6 +292,9 @@ export class CaseService {
       'CaseParty',
       async (tx) => {
         await this.ops.requireCaseInTenant(tx, ctx, caseId);
+        if (ctx.scope === 'ASSIGNED') {
+          await this.ops.requireCaseAssignment(tx, ctx, caseId);
+        }
         const result = await tx.caseParty.deleteMany({
           where: {
             tenantId: ctx.tenantId,
@@ -294,6 +309,87 @@ export class CaseService {
       },
       { partyId },
     );
+  }
+
+  async assignMember(request: Request, caseId: string, membershipId: string) {
+    const ctx = await this.ops.authorize(request);
+    return this.ops.run(
+      request,
+      ctx,
+      AUDIT_EVENT_TYPES.CASE_MEMBER_ASSIGNED,
+      'CaseAssignment',
+      async (tx) => {
+        await this.ops.requireCaseInTenant(tx, ctx, caseId);
+        const member = await tx.membership.findFirst({
+          where: { id: membershipId, tenantId: ctx.tenantId },
+          select: { id: true, status: true },
+        });
+        if (!member || member.status !== 'ACTIVE') {
+          throw new NotFoundException('Membership not found in tenant');
+        }
+        const current = await tx.caseAssignment.findFirst({
+          where: { caseId, membershipId, tenantId: ctx.tenantId },
+        });
+        if (current) {
+          if (current.revokedAt === null) return current;
+          return tx.caseAssignment.update({
+            where: { id: current.id },
+            data: { revokedAt: null },
+          });
+        }
+        return tx.caseAssignment.create({
+          data: {
+            tenantId: ctx.tenantId,
+            caseId,
+            membershipId,
+            createdByMembershipId: ctx.actorMembershipId,
+          },
+        });
+      },
+      { membershipId },
+    );
+  }
+
+  async unassignMember(request: Request, caseId: string, membershipId: string) {
+    const ctx = await this.ops.authorize(request);
+    return this.ops.run(
+      request,
+      ctx,
+      AUDIT_EVENT_TYPES.CASE_MEMBER_REVOKED,
+      'CaseAssignment',
+      async (tx) => {
+        await this.ops.requireCaseInTenant(tx, ctx, caseId);
+        if (membershipId === ctx.actorMembershipId) {
+          throw new CaseAccessDeniedError('SELF_UNASSIGN_FORBIDDEN');
+        }
+        const existing = await tx.caseAssignment.findFirst({
+          where: { caseId, membershipId, tenantId: ctx.tenantId },
+        });
+        if (!existing) {
+          throw new NotFoundException('Assignment not found on case');
+        }
+        return tx.caseAssignment.update({
+          where: { id: existing.id },
+          data: { revokedAt: new Date() },
+        });
+      },
+      { membershipId },
+    );
+  }
+
+  async listAssignees(request: Request, caseId: string) {
+    const ctx = await this.ops.authorizeCaseAccess(request);
+    return this.ops.read(request, ctx, async (tx) => {
+      await this.ops.requireCaseInTenant(tx, ctx, caseId);
+      if (ctx.scope === 'ASSIGNED') {
+        await this.ops.requireCaseAssignment(tx, ctx, caseId);
+      }
+      return tx.caseAssignment.findMany({
+        where: { caseId, tenantId: ctx.tenantId, revokedAt: null },
+        select: { id: true, membershipId: true, assignedAt: true },
+        orderBy: { assignedAt: 'asc' },
+      });
+    });
   }
 
   private async assertPartiesClear(

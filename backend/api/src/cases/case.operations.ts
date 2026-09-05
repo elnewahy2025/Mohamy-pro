@@ -14,6 +14,14 @@ import {
 import { CaseAccessDeniedError } from './case.errors';
 
 export const CASE_PERMISSION: PermissionKey = PERMISSION_KEYS.CAN_MANAGE_CASES;
+export const CASE_ASSIGNED_PERMISSION: PermissionKey =
+  PERMISSION_KEYS.CAN_ACCESS_ASSIGNED_CASES;
+
+export type CaseAccessScope = 'FULL' | 'ASSIGNED';
+
+export interface CaseAccessContext extends CaseContext {
+  scope: CaseAccessScope;
+}
 
 export interface CaseContext {
   sessionId: string;
@@ -33,24 +41,7 @@ export class CaseOperations {
   ) {}
 
   async authorize(request: Request): Promise<CaseContext> {
-    const auth = request.auth;
-    if (!auth) throw new CaseAccessDeniedError('UNAUTHENTICATED');
-    if (!auth.activeTenantId)
-      throw new CaseAccessDeniedError('TENANT_CONTEXT_REQUIRED');
-    const { membershipId: actorMembershipId } =
-      await this.permissions.assertTenantPermission({
-        request,
-        userId: auth.userId,
-        tenantId: auth.activeTenantId,
-        permissionKey: CASE_PERMISSION,
-        operationId: auth.sessionId,
-      });
-    return {
-      sessionId: auth.sessionId,
-      userId: auth.userId,
-      tenantId: auth.activeTenantId,
-      actorMembershipId,
-    };
+    return this.authorizeBase(request, CASE_PERMISSION);
   }
 
   async run<T>(
@@ -138,6 +129,85 @@ export class CaseOperations {
     });
     if (!found) throw new CaseAccessDeniedError('NO_CASE_IN_TENANT');
     return found;
+  }
+
+  /**
+   * Central case-access gate: holders of CanManageCases get FULL scope;
+   * otherwise holders of CanAccessAssignedCases get ASSIGNED scope.
+   * Authentication failures propagate; only permission denials fall through.
+   */
+  async authorizeCaseAccess(request: Request): Promise<CaseAccessContext> {
+    const base = await this.authorizeBase(request, CASE_PERMISSION).catch(
+      (error) => ({ failed: error as Error }),
+    );
+    if (!('failed' in base)) return { ...base, scope: 'FULL' as const };
+    if (
+      base.failed.message !== 'UNAUTHENTICATED' &&
+      base.failed.message !== 'TENANT_CONTEXT_REQUIRED'
+    ) {
+      const assigned = await this.authorizeBase(
+        request,
+        CASE_ASSIGNED_PERMISSION,
+      ).catch(() => null);
+      if (assigned) return { ...assigned, scope: 'ASSIGNED' as const };
+    }
+    throw base.failed;
+  }
+
+  private async authorizeBase(
+    request: Request,
+    permissionKey: PermissionKey,
+  ): Promise<CaseContext> {
+    const auth = request.auth;
+    if (!auth) throw new CaseAccessDeniedError('UNAUTHENTICATED');
+    if (!auth.activeTenantId)
+      throw new CaseAccessDeniedError('TENANT_CONTEXT_REQUIRED');
+    const { membershipId: actorMembershipId } =
+      await this.permissions.assertTenantPermission({
+        request,
+        userId: auth.userId,
+        tenantId: auth.activeTenantId,
+        permissionKey,
+        operationId: auth.sessionId,
+      });
+    return {
+      sessionId: auth.sessionId,
+      userId: auth.userId,
+      tenantId: auth.activeTenantId,
+      actorMembershipId,
+    };
+  }
+
+  async requireCaseAssignment(
+    transaction: Prisma.TransactionClient,
+    ctx: CaseContext,
+    caseId: string,
+  ): Promise<void> {
+    const assignment = await transaction.caseAssignment.findFirst({
+      where: {
+        caseId,
+        membershipId: ctx.actorMembershipId,
+        tenantId: ctx.tenantId,
+        revokedAt: null,
+      },
+      select: { id: true },
+    });
+    if (!assignment) throw new CaseAccessDeniedError('NO_CASE_ASSIGNMENT');
+  }
+
+  async assignedCaseIds(
+    transaction: Prisma.TransactionClient,
+    ctx: CaseContext,
+  ): Promise<string[]> {
+    const rows = await transaction.caseAssignment.findMany({
+      where: {
+        membershipId: ctx.actorMembershipId,
+        tenantId: ctx.tenantId,
+        revokedAt: null,
+      },
+      select: { caseId: true },
+    });
+    return rows.map((row) => row.caseId);
   }
 
   private optionalHash(value: string | string[] | undefined): string | null {

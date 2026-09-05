@@ -1257,6 +1257,22 @@ export interface RemoveCasePartyRequest {
   partyId: string;
 }
 
+export interface CaseAssignmentResult {
+  id: string;
+  membershipId: string;
+  assignedAt: string;
+}
+
+export interface AssignCaseMemberRequest {
+  caseId: string;
+  membershipId: string;
+}
+
+export interface UnassignCaseMemberRequest {
+  caseId: string;
+  membershipId: string;
+}
+
 export interface ListCasesQuery {
   page?: number;
   limit?: number;
@@ -1363,6 +1379,28 @@ export class CasesClient {
   removeParty(req: RemoveCasePartyRequest): Promise<void> {
     return this.client.body<void>(
       `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/parties/${encodeURIComponent(req.partyId)}`,
+      'DELETE',
+    );
+  }
+
+  listAssignees(caseId: string): Promise<CaseAssignmentResult[]> {
+    return this.client.body<CaseAssignmentResult[]>(
+      `${CASES_PREFIX}/${encodeURIComponent(caseId)}/assignments`,
+      'GET',
+    );
+  }
+
+  assignMember(req: AssignCaseMemberRequest): Promise<CaseAssignmentResult> {
+    return this.client.body<CaseAssignmentResult>(
+      `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/assignments`,
+      'POST',
+      { membershipId: req.membershipId },
+    );
+  }
+
+  unassignMember(req: UnassignCaseMemberRequest): Promise<void> {
+    return this.client.body<void>(
+      `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/assignments/${encodeURIComponent(req.membershipId)}`,
       'DELETE',
     );
   }

@@ -110,3 +110,8 @@ export class CaseQueryDto extends PaginationDto {
   @IsEnum(CaseStatus)
   status?: CaseStatus;
 }
+
+export class AssignCaseMemberDto {
+  @IsUUID(4)
+  membershipId!: string;
+}

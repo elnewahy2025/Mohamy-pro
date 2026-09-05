@@ -7,11 +7,12 @@ import { CaseListSection } from '@/components/pages/cases/case-list-section';
 import { CasePartySection } from '@/components/pages/cases/case-party-section';
 import { CaseDetailSection } from '@/components/pages/cases/case-detail-section';
 import { CaseTimelineSection } from '@/components/pages/cases/case-timeline-section';
+import { CaseAssignmentSection } from '@/components/pages/cases/case-assignment-section';
 import { Button } from '@/components/ui/button';
 
 export function CasesPage(): React.ReactNode {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<'list' | 'create' | 'parties' | 'details' | 'timeline'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'create' | 'parties' | 'details' | 'timeline' | 'assignments'>('list');
 
   return (
     <section className="page-section content-page">
@@ -52,6 +53,12 @@ export function CasesPage(): React.ReactNode {
         >
           {t('casesTimeline.title')}
         </Button>
+        <Button 
+          variant={activeTab === 'assignments' ? 'default' : 'ghost'} 
+          onClick={() => setActiveTab('assignments')}
+        >
+          {t('cases.sections.assignments')}
+        </Button>
       </div>
 
       <div className="settings-stack">
@@ -60,6 +67,7 @@ export function CasesPage(): React.ReactNode {
         {activeTab === 'parties' && <CasePartySection />}
         {activeTab === 'details' && <CaseDetailSection />}
         {activeTab === 'timeline' && <CaseTimelineSection />}
+        {activeTab === 'assignments' && <CaseAssignmentSection />}
       </div>
     </section>
   );

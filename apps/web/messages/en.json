@@ -633,6 +633,10 @@
       "party": {
         "title": "Case parties",
         "description": "Link parties and their roles to a case."
+      },
+      "assignments": {
+        "title": "Case assignments",
+        "description": "Assign members to a case; assigned-scope holders see only their cases."
       }
     },
     "create": "Create",
@@ -657,7 +661,8 @@
       "roleId": "Role ID",
       "clientName": "Client",
       "roleKey": "Role key",
-      "roleLabel": "Role"
+      "roleLabel": "Role",
+      "membershipId": "Membership ID"
     },
     "placeholders": {
       "id": "00000000-0000-4000-8000-000000000000",
@@ -674,7 +679,8 @@
       "partyIds": "Comma-separated party IDs",
       "partyId": "00000000-0000-4000-8000-000000000000",
       "roleId": "00000000-0000-4000-8000-000000000000",
-      "search": "Search by case number"
+      "search": "Search by case number",
+      "membershipId": "00000000-0000-4000-8000-000000000000"
     },
     "result": {
       "title": "Operation completed",
@@ -696,8 +702,11 @@
       "list": "Case list",
       "case": "Create case",
       "party": "Link case parties",
-      "details": "Details"
-    }
+      "details": "Details",
+      "assignments": "Assignments"
+    },
+    "assign": "Assign member",
+    "unassign": "Unassign"
   },
   "casesTimeline": {
     "eyebrow": "Phase 10 · Case timeline",

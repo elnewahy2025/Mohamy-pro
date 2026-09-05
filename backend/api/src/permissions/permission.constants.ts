@@ -32,6 +32,7 @@ export const PERMISSION_KEYS = {
   CAN_RECORD_PAYMENTS: 'CanRecordPayments',
   CAN_MANAGE_COMMUNICATIONS: 'CanManageCommunications',
   CAN_MANAGE_CALENDAR: 'CanManageCalendar',
+  CAN_ACCESS_ASSIGNED_CASES: 'CanAccessAssignedCases',
 } as const;
 
 export type PermissionKey =
@@ -172,6 +173,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Manage calendar connections, sync state, and conflicts within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_ACCESS_ASSIGNED_CASES,
+    description:
+      'Read and update only cases with an active assignment in the active tenant.',
+  },
 ];
 /**
  * Default permission set granted to each built-in role. Keyed by stable role
@@ -204,6 +210,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_RECORD_PAYMENTS,
     PERMISSION_KEYS.CAN_MANAGE_COMMUNICATIONS,
     PERMISSION_KEYS.CAN_MANAGE_CALENDAR,
+    PERMISSION_KEYS.CAN_ACCESS_ASSIGNED_CASES,
   ],
   [ROLE_KEY_TENANT_MANAGER]: [
     PERMISSION_KEYS.CAN_VIEW_TENANT,

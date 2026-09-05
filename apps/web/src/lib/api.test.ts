@@ -870,6 +870,86 @@ describe('CasesClient (Phase 8)', () => {
   });
 });
 
+describe('CasesClient assignments (G5)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-assign' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('assigns a member via POST /cases/:id/assignments', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/cases/case1/assignments': () => enveloped({ id: 'a1', membershipId: 'm2', assignedAt: '2026-01-01T00:00:00.000Z' }, 201),
+    });
+    const client = new CasesClient(new ApiClient(base, fetchMock));
+
+    const result = await client.assignMember({ caseId: 'case1', membershipId: 'm2' });
+
+    const call = calls.find((c) => c.url.endsWith('/cases/case1/assignments'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ membershipId: 'm2' });
+    expect(result.id).toBe('a1');
+  });
+
+  it('lists assignees via GET /cases/:id/assignments', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/cases/case1/assignments': () => enveloped([{ id: 'a1', membershipId: 'm2', assignedAt: '2026-01-01T00:00:00.000Z' }]),
+    });
+    const client = new CasesClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listAssignees('case1');
+
+    const call = calls.find((c) => c.url.endsWith('/cases/case1/assignments'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result).toHaveLength(1);
+  });
+
+  it('unassigns via DELETE /cases/:id/assignments/:membershipId', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/cases/case1/assignments/m2': () => enveloped({ removed: 1 }),
+    });
+    const client = new CasesClient(new ApiClient(base, fetchMock));
+
+    await client.unassignMember({ caseId: 'case1', membershipId: 'm2' });
+
+    const call = calls.find((c) => c.url.endsWith('/cases/case1/assignments/m2'));
+    expect(call?.init?.method).toBe('DELETE');
+  });
+});
+
 describe('LegalConfigClient (Phase 9)', () => {
   const base = 'http://localhost';
   const baseCountry = {

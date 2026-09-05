@@ -17,6 +17,7 @@ import { SessionGuard } from '../auth/session/session.guard';
 import { CaseService } from './case.service';
 import {
   AddCasePartyDto,
+  AssignCaseMemberDto,
   CaseQueryDto,
   CreateCaseDto,
   UpdateCaseDto,
@@ -68,5 +69,29 @@ export class CaseController {
     @Param('partyId') partyId: string,
   ) {
     await this.caseService.removeParty(request, id, partyId);
+  }
+
+  @Post(':id/assignments')
+  async assignMember(
+    @Req() request: Request,
+    @Param('id') id: string,
+    @Body() dto: AssignCaseMemberDto,
+  ) {
+    return this.caseService.assignMember(request, id, dto.membershipId);
+  }
+
+  @Delete(':id/assignments/:membershipId')
+  @HttpCode(204)
+  async unassignMember(
+    @Req() request: Request,
+    @Param('id') id: string,
+    @Param('membershipId') membershipId: string,
+  ) {
+    await this.caseService.unassignMember(request, id, membershipId);
+  }
+
+  @Get(':id/assignments')
+  async listAssignees(@Req() request: Request, @Param('id') id: string) {
+    return this.caseService.listAssignees(request, id);
   }
 }

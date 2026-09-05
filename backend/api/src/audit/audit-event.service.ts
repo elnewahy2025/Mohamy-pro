@@ -144,6 +144,8 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'message.status.recorded': ['status'],
   'denial.created': ['permissionKey'],
   'denial.revoked': ['denialId'],
+  'case.member.assigned': ['membershipId'],
+  'case.member.revoked': ['membershipId'],
   'role.created': ['roleKey'],
   'role.permission.granted': ['roleKey', 'permissionKeys'],
   'role.permission.revoked': ['roleKey', 'permissionKeys'],

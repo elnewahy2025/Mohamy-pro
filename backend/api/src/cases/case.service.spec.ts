@@ -23,9 +23,14 @@ describe('CaseService', () => {
   beforeEach(async () => {
     mockOps = {
       authorize: jest.fn().mockResolvedValue(mockCtx),
+      authorizeCaseAccess: jest
+        .fn()
+        .mockResolvedValue({ ...mockCtx, scope: 'FULL' }),
       run: jest.fn().mockImplementation((req, ctx, type, target, op) => op({})),
       read: jest.fn().mockImplementation((req, ctx, op) => op({})),
       requireCaseInTenant: jest.fn().mockResolvedValue({ id: 'case-1' }),
+      requireCaseAssignment: jest.fn().mockResolvedValue(undefined),
+      assignedCaseIds: jest.fn().mockResolvedValue([]),
     } as unknown as jest.Mocked<CaseOperations>;
 
     mockGate = {

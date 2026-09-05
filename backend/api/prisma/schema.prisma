@@ -382,6 +382,7 @@ model Tenant {
   partyRelationships       PartyRelationship[]
   cases                    Case[]
   caseParties              CaseParty[]
+  caseAssignments          CaseAssignment[]
   jurisdictions            Jurisdiction[]
   courts                   Court[]
   courtLocations           CourtLocation[]
@@ -532,6 +533,7 @@ model Membership {
   teamMembers       TeamMember[]
   invitationsSent   Invitation[]       @relation("InvitationInviterMembership")
   denialsCreated    AccessDenial[]     @relation("DenialCreatedByMembership")
+  caseAssignments   CaseAssignment[]
   directGrants        DirectPermissionGrant[] @relation("DirectGrantMembership")
   directGrantsCreated DirectPermissionGrant[] @relation("DirectGrantCreator")
   auditEvents       AuditEvent[]       @relation("AuditActorMembership")
@@ -611,6 +613,7 @@ model Case {
   client         Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
   parties        CaseParty[]
   timelineEvents CaseTimelineEvent[]
+  assignments    CaseAssignment[]
 
   workflowVersion        WorkflowVersion?        @relation(fields: [workflowVersionId], references: [id], onDelete: Restrict)
   currentState           WorkflowState?          @relation(fields: [currentStateId], references: [id], onDelete: Restrict)
@@ -634,6 +637,25 @@ model Case {
 }
 
 // Phase 8: Physical implementation of Phase 7 CasePartyContract
+
+model CaseAssignment {
+  id             String    @id @default(uuid())
+  tenantId       String
+  caseId         String
+  membershipId   String
+  assignedAt     DateTime  @default(now())
+  revokedAt      DateTime?
+  createdByMembershipId String?
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case       Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([caseId, membershipId])
+  @@index([tenantId, membershipId])
+  @@index([tenantId, caseId])
+}
+
 model CaseParty {
   id        String          @id @default(uuid())
   tenantId  String
