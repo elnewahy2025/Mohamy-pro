@@ -5,6 +5,38 @@
 
 Conventions: Windows 11 + PowerShell + Docker Desktop. Backend reads config via Nest `ConfigService` (`backend/api/.env`, never committed). After each daemon, run the listed verification before moving on.
 
+## Local stack (Docker Compose)
+
+`infrastructure/docker/docker-compose.yml` is the single definition for local development. Start everything (images pull on first run; ClamAV signatures take minutes):
+
+```powershell
+cd infrastructure\docker
+docker compose up -d --build
+docker compose ps
+```
+
+Per-service catalog (all values below are dev-only; production uses real secrets):
+
+| Service | Purpose | Image | Host:port | Env (api) | Creds (dev) | Volume | Health check | Integration | Need |
+|---|---|---|---|---|---|---|---|---|---|
+| postgres | System of record (Prisma) | postgres:16-alpine | localhost:55432 | `DATABASE_URL` / `DIRECT_DATABASE_URL` | mohamy / mohamy_password | `postgres_data` | `pg_isready` | `PrismaService`, all modules | required |
+| redis | BullMQ queues, rate limits, abuse counters | redis:7-alpine | localhost:56379 | `REDIS_URL` | none (dev) | `redis_data` | `redis-cli ping` | `RedisService`, OCR/search workers | required |
+| minio | S3 object storage (documents) | minio/minio:latest | localhost:59000 (console 59001) | `S3_*` | minioadmin / minioadmin | `minio_data` | `/minio/health/live` | `object-storage.service` | required |
+| mc-init | Creates `mohamy-docs` bucket + versioning (one-shot) | minio/mc:latest | — | — | — | none | completed exit 0 | minio | required |
+| clamav | Malware scanning (INSTREAM) | clamav/clamav:stable | localhost:53310 | `MALWARE_SCAN_ENABLED=true`, `CLAMAV_HOST`, `CLAMAV_PORT` | none | `clamav_data` (signature DB) | TCP 3310, 300s start period | `ClamAvMalwareScanner` | required |
+| vault | KMS Transit (dev, **ephemeral**) | hashicorp/vault:latest | localhost:58200 | `VAULT_ADDR/TOKEN/TRANSIT_KEY` (future contract) | dev-root-token | none (dev in-memory) | seal-status unsealed | `VaultKmsProvider` (fail-closed until wired) | deferred |
+| opensearch | Full-text search | opensearchproject/opensearch:2 | localhost:59200 | `OPENSEARCH_URL` (future contract) | none (security plugin off, dev) | `opensearch_data` | cluster yellow | `OpenSearchAdapter` (fail-closed until wired) | deferred |
+| api | NestJS API (built from `backend/api/Dockerfile`) | build | localhost:3000 | see compose `environment` | dev `SESSION_SECRET` in compose | none (immutable) | `/api/v1/health/live` via node fetch | all of the above | required |
+
+Startup order is enforced with `depends_on: service_healthy` (api additionally waits for `mc-init` success). The existing `start-mohamy-windows.ps1` flow is unchanged: it starts only postgres/redis/minio plus your pre-existing external security containers; run the full stack with compose when you need clamav/vault/opensearch/api.
+
+Migrations still run explicitly (never auto-applied by containers):
+```powershell
+$env:DIRECT_DATABASE_URL="postgresql://mohamy:mohamy_password@localhost:55432/mohamy_pro?schema=public"
+pnpm --filter api exec prisma migrate deploy
+```
+Frontend runs outside compose: `pnpm --filter web dev` (port 5173, `CORS_ORIGINS` already allows it).
+
 ---
 
 ## 0. Shared prerequisites (PowerShell)
