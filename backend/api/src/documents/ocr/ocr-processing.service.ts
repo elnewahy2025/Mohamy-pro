@@ -32,9 +32,14 @@ export class OcrProcessingService {
       `Enqueueing OCR processing for document version ${documentVersionId}`,
     );
 
-    // Determine idempotency / existing processing
+    // Determine idempotency / existing processing (tenant-scoped so one
+    // tenant's queued job is never returned for another tenant's document).
     const existing = await this.prisma.ocrProcessing.findFirst({
-      where: { documentVersionId, status: { in: ['QUEUED', 'PROCESSING'] } },
+      where: {
+        documentVersionId,
+        tenantId,
+        status: { in: ['QUEUED', 'PROCESSING'] },
+      },
     });
     if (existing) {
       return existing.id;
@@ -60,11 +65,14 @@ export class OcrProcessingService {
   async processDocument(
     processingId: string,
     documentStream: NodeJS.ReadableStream,
+    tenantId?: string,
   ): Promise<void> {
     const processing = await this.prisma.ocrProcessing.findUnique({
       where: { id: processingId },
     });
     if (!processing)
+      throw new BadRequestException('Processing record not found');
+    if (tenantId && processing.tenantId !== tenantId)
       throw new BadRequestException('Processing record not found');
 
     await this.prisma.ocrProcessing.update({

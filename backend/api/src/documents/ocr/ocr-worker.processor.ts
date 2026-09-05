@@ -69,6 +69,8 @@ export class OcrWorkerProcessor implements OnModuleInit, OnModuleDestroy {
 
       // The MinIO source-stream reader is not implemented yet (Phase 17
       // scaffold). Fail closed rather than persisting fabricated pages.
+      // Once implemented, pass tenantId through so processDocument enforces
+      // tenant ownership: processDocument(processingId, stream, tenantId).
       throw new OcrUnavailableError(
         'document source-stream reader is not implemented',
       );

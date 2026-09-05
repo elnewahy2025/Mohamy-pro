@@ -1,39 +1,51 @@
-import { Controller, Post, Get, Patch, Body, Param, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import { requireTimeTrackingContext } from './time-tracking-auth';
+import { CsrfGuard } from '../auth/session/csrf.guard';
+import { SessionGuard } from '../auth/session/session.guard';
+import { CreateTimeEntryDto } from './time-tracking.dto';
 import { TimeEntryService } from './time-entry.service';
 
-@Controller('v1/time-entries')
+@Controller({
+  path: 'time-entries',
+  version: '1',
+})
+@UseGuards(SessionGuard, CsrfGuard)
 export class TimeEntryController {
   constructor(private readonly timeEntryService: TimeEntryService) {}
 
   @Post()
-  async createEntry(@Body() data: any, @Req() req: any) {
-    return this.timeEntryService.createTimeEntry(
-      req.tenantId,
-      req.user?.id || 'system',
-      data,
-    );
+  async createEntry(@Body() dto: CreateTimeEntryDto, @Req() req: Request) {
+    const { tenantId, userId } = requireTimeTrackingContext(req);
+    return this.timeEntryService.createTimeEntry(tenantId, userId, dto);
   }
 
   @Get()
-  async listEntries(@Req() req: any) {
-    return this.timeEntryService.getTimeEntries(
-      req.tenantId,
-      req.user?.id || 'system',
-    );
+  async listEntries(@Req() req: Request) {
+    const { tenantId, userId } = requireTimeTrackingContext(req);
+    return this.timeEntryService.getTimeEntries(tenantId, userId);
   }
 
   @Patch(':id/submit')
-  async submitEntry(@Param('id') id: string, @Req() req: any) {
-    return this.timeEntryService.submitTimeEntry(req.tenantId, id);
+  async submitEntry(@Param('id') id: string, @Req() req: Request) {
+    const { tenantId, userId } = requireTimeTrackingContext(req);
+    return this.timeEntryService.submitTimeEntry(tenantId, userId, id);
   }
 
   @Patch(':id/approve')
-  async approveEntry(@Param('id') id: string, @Req() req: any) {
-    // Requires authorization
-    return this.timeEntryService.approveTimeEntry(
-      req.tenantId,
-      id,
-      req.user?.id || 'system',
-    );
+  async approveEntry(@Param('id') id: string, @Req() req: Request) {
+    const { tenantId, userId } = requireTimeTrackingContext(req);
+    // Approval authorization (manager/admin) is a product decision deferred
+    // explicitly: any authenticated tenant member can approve today.
+    return this.timeEntryService.approveTimeEntry(tenantId, id, userId);
   }
 }

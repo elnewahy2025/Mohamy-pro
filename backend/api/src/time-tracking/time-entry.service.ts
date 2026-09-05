@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import { TimeEntryStatus } from '@prisma/client';
+import { CreateTimeEntryDto } from './time-tracking.dto';
 
 @Injectable()
 export class TimeEntryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createTimeEntry(tenantId: string, userId: string, data: any) {
+  async createTimeEntry(
+    tenantId: string,
+    userId: string,
+    data: CreateTimeEntryDto,
+  ) {
     return this.prisma.timeEntry.create({
       data: {
         ...data,
@@ -24,9 +29,9 @@ export class TimeEntryService {
     });
   }
 
-  async submitTimeEntry(tenantId: string, entryId: string) {
+  async submitTimeEntry(tenantId: string, userId: string, entryId: string) {
     return this.prisma.timeEntry.update({
-      where: { id: entryId, tenantId },
+      where: { id: entryId, tenantId, userId },
       data: { status: TimeEntryStatus.SUBMITTED },
     });
   }

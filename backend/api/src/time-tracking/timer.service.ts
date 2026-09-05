@@ -1,12 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../infrastructure/database/prisma.service';
 import { TimerStatus } from '@prisma/client';
+import { StartTimerDto } from './time-tracking.dto';
 
 @Injectable()
 export class TimerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async startTimer(tenantId: string, userId: string, data: any) {
+  async startTimer(tenantId: string, userId: string, data: StartTimerDto) {
     // Stop any existing running timers
     await this.prisma.timer.updateMany({
       where: { tenantId, userId, status: TimerStatus.RUNNING },
@@ -23,17 +24,21 @@ export class TimerService {
     });
   }
 
-  async pauseTimer(tenantId: string, timerId: string) {
+  async pauseTimer(tenantId: string, userId: string, timerId: string) {
     // In reality, calculate diff and add to accumulatedSeconds
     return this.prisma.timer.update({
-      where: { id: timerId, tenantId },
+      where: { id: timerId, tenantId, userId },
       data: { status: TimerStatus.PAUSED },
     });
   }
 
-  async stopTimerAndCreateEntry(tenantId: string, timerId: string) {
+  async stopTimerAndCreateEntry(
+    tenantId: string,
+    userId: string,
+    timerId: string,
+  ) {
     const timer = await this.prisma.timer.update({
-      where: { id: timerId, tenantId },
+      where: { id: timerId, tenantId, userId },
       data: { status: TimerStatus.COMPLETED },
     });
 

@@ -1,11 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../infrastructure/database/prisma.service';
+import { CreateRateDto } from './time-tracking.dto';
 
 @Injectable()
 export class RateService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createRate(tenantId: string, userId: string, data: any) {
+  async createRate(tenantId: string, userId: string, data: CreateRateDto) {
     return this.prisma.rate.create({
       data: {
         ...data,
