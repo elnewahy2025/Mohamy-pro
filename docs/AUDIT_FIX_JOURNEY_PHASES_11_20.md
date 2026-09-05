@@ -80,3 +80,90 @@ Production boot failed with `UnknownDependenciesException` (SessionGuard deps mi
 ## 5. Residual verdict
 
 No known P0/P1 remains in the audited range. Production readiness is gated solely on items 1–2 above.
+
+---
+
+## 6. Complete change record (every commit, `5fbe4ccd..2e9cd7aa`)
+
+53 files, +2705/−208. Every commit pushed to `origin/main`, tree clean after each.
+
+| # | Commit | Message | Files / detail |
+|---|---|---|---|
+| 1 | `fac7e7c1` | test(web): add WorkflowsClient coverage, fix secureLinks nav assertions | `api.test.ts` (+4 adapted workflow tests), `messages.test.ts` (+secureLinks EN+AR). Rebase survivor of Step-0 local work (adopt-remote resolution). |
+| 2 | `b697dddd` | fix(web): correct hearings/deadlines/tasks/documents API prefixes | `api.ts` (4 one-line prefix fixes), `api.test.ts` (+4 URL-regression tests). Closes F2-1/F3-1/F4-4. |
+| 3 | `98943876` | fix(backend): phase16-19 foundation migration with RLS, fail-closed scaffolds | New `20260908000000_phase16_19_foundation/migration.sql` (19 enums, 20 tables, FORCE RLS ×20); `schema.prisma` (+tenantId ×5, +5 Tenant back-refs); 3 child-create sites wired; 6 adapters → `*UnavailableError` (+5 new error files); `migration-rls.spec.ts` (+3 tests). Closes F4-1/F4-2/F4-3. |
+| 4 | `9c39987e` | fix(web): i18n select placeholder and details tab, phase 12-15 client coverage, secure-links params | `form-select.tsx` (i18n placeholder), `cases-page.tsx` (details tab key), `messages/en+ar.json` (+`form.select.placeholder`, +`cases.sections.details`), `api.test.ts` (+8 client tests), `secure-links/page.tsx` (Next-16 async params). Closes F1-1/F1-2/F2-2/F3-2 + pre-existing build break. |
+| 5 | `39eb452d` | fix(backend): time-tracking auth/validation/scoping, tenant-scoped OCR reads, fail-closed specs | New `time-tracking.dto.ts` + `time-tracking-auth.ts`; 3 controllers rewritten (guards, versioned paths, no `any`, no `'system'`); services typed + owner-scoped; OCR tenant scoping; 8 new spec files. |
+| 6 | `36c7967f` | chore(web): add prettier with shared repo settings | `package.json` + `pnpm-lock.yaml` (prettier 3.9.6), new `apps/web/.prettierrc` (mirrors backend). `--write` withheld: web sources were never formatted; full-file writes would churn unrelated lines. |
+| 7 | `b0c37e51` | fix(backend): wire AuthModule into TimeTrackingModule | 2-line DI fix found by production boot (`UnknownDependenciesException`). |
+| 8 | `438b67f5` | docs: record phases 11-20 audit and fix journey | This file (§1–5). |
+| 9 | `dcb3d1ec` | feat(backend): manager role with approve/publish gates, timer-resume and entry-reject | `role.constants.ts` (+`tenant.manager`), `permission.constants.ts` (+2 keys, catalog, 3 matrices), `workflow.operations.ts` (+`authorizePublish`), `workflow.controller.ts` (publish gate), `time-tracking-auth.ts` (+permission assert), `time-entry.controller.ts` (approve+reject gates), `time-tracking.module.ts` (+PermissionsModule), `time-entry.service.ts` (+reject), `timer.service.ts` (+resume), `timer.controller.ts` (+resume route), 2 spec extensions. |
+| 10 | `2e9cd7aa` | chore(infra): full local daemon stack | `docker-compose.yml` (+clamav/vault/opensearch/mc-init/api, healthchecks, ordering, volumes), `.env.example` (+9 future-contract vars), `DAEMON_WIRING_GUIDE.md` (+service catalog). |
+
+## 7. Everything wanted from you (owner action items)
+
+### A. Deploy the migration — REQUIRED, blocks everything live
+Windows PowerShell, from repo root:
+```powershell
+git checkout main; git pull origin main   # >= 2e9cd7aa
+cd backend\api
+$env:DIRECT_DATABASE_URL="postgresql://<user>:<pass>@<neon-host>/<db>?sslmode=require"
+pnpm install
+pnpm exec prisma validate
+pnpm exec prisma migrate status    # 20260908000000_phase16_19_foundation must be pending, rest applied
+pnpm exec prisma migrate deploy    # <-- the task
+```
+If anything is pending-but-should-be-applied, or deploy errors: stop, paste output, do not retry blindly.
+
+### B. Prove the deploy — REQUIRED, paste me all four outputs
+```powershell
+pnpm run db:check
+# save each query to a .sql file, then Get-Content q.sql | pnpm exec prisma db execute --stdin
+# q1: new tables present
+SELECT tablename FROM pg_tables WHERE schemaname='public'
+  AND tablename IN ('DocumentSecurityMetadata','DocumentScan','SignedAccessGrant','DocumentDownload','OcrProcessing','OcrPage','OcrEntity','ClassificationResult','HumanReview','ApprovedDocumentMetadata','SearchIndexVersion','SearchReindexJob','Template','TemplateVersion','TemplateVariable','TemplateApproval','DocumentGenerationJob','Rate','TimeEntry','Timer')
+  ORDER BY 1;
+# q2: RLS forced on tenant tables
+SELECT tablename, rowsecurity, forcerowsecurity FROM pg_tables WHERE schemaname='public'
+  AND tablename IN ('DocumentScan','OcrProcessing','OcrPage','TimeEntry','TemplateVariable') ORDER BY 1;
+# q3: policies present
+SELECT tablename, policyname FROM pg_policies WHERE tablename IN ('DocumentScan','TimeEntry','SearchIndexVersion') ORDER BY 1,2;
+# q4: child FKs present
+SELECT conname FROM pg_constraint WHERE conname IN ('OcrPage_tenantId_fkey','OcrEntity_tenantId_fkey','ClassificationResult_tenantId_fkey','HumanReview_tenantId_fkey','TemplateVariable_tenantId_fkey') ORDER BY 1;
+```
+Expected: 20 rows / `t,t` on tenant tables / `*_tenant_isolation` + `SearchIndexVersion_tenant_context` / 5 FKs.
+
+### C. Start the local stack — REQUIRED for E2E
+```powershell
+cd infrastructure\docker
+docker compose up -d --build
+docker compose ps
+```
+All services healthy (clamav needs minutes for first signature download). Then run the app per `start-mohamy-windows.ps1` or compose `api` service, and confirm `/api/v1/health/ready` shows postgres/redis/queue/objectStorage up.
+
+### D. Decisions — REQUIRED before I wire/implement further
+1. Daemon endpoints or explicit defer per daemon (guide §0–6 lists exactly what I need per service).
+2. Approve-role confirmation: `tenant.manager` + `CanApproveTimeEntries`/`CanPublishWorkflowVersions` as implemented, or changes.
+3. Timer-resume/entry-reject as implemented, or changes.
+
+### E. After A–C — my next legs (no action needed to trigger beyond pasting outputs)
+1. Post-deploy verification from your B outputs + cross-tenant RLS probe design.
+2. Live E2E (upload→scan→OCR→search→timer→approve).
+3. Daemon wiring per your D.1 answers.
+4. Product-gap implementation per your D.2/D.3 answers.
+5. Final production-readiness statement.
+
+## 8. Remaining blockers (complete list)
+
+| # | Blocker | Owner | Depends on |
+|---|---|---|---|
+| 1 | `migrate deploy` not executed | you (§7.A) | nothing — do first |
+| 2 | Deploy proof outputs missing | you (§7.B) | #1 |
+| 3 | Local stack not started | you (§7.C) | Docker Desktop |
+| 4 | Daemon endpoints undecided | you (§7.D.1) | — |
+| 5 | Approve/resume/reject confirmation | you (§7.D.2–3) | — |
+| 6 | Live E2E never run | me | #1–#3 |
+| 7 | Real daemon integrations unwired | me | #4 |
+| 8 | Final verdict | me | #6–#7 |
+
+Nothing else is known-blocked: code-side P0/P1/P2/P3 from the audit are fixed, tested, and pushed.
