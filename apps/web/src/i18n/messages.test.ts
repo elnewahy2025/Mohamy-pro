@@ -32,6 +32,9 @@ describe('localized frontend messages', () => {
       legalConfig: 'Legal configuration',
       workflows: 'Workflows',
       secureLinks: 'Secure Links',
+      billing: 'Billing',
+      communications: 'Communications',
+      calendar: 'Calendar',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -56,6 +59,9 @@ describe('localized frontend messages', () => {
       legalConfig: 'الإعداد القانوني',
       workflows: 'سير العمل',
       secureLinks: 'الروابط الآمنة',
+      billing: 'الفوترة',
+      communications: 'الاتصالات',
+      calendar: 'التقويم',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {

@@ -179,6 +179,81 @@ describe('Phase 10-15 migration assertions', () => {
     }
   });
 
+  it('creates all 10 Phase 21 billing tables with FORCE RLS', () => {
+    const billingMigration = readMigration(
+      '20260908000001_phase21_billing_foundation',
+    );
+
+    for (const table of [
+      'Fee',
+      'Expense',
+      'Invoice',
+      'InvoiceLine',
+      'Payment',
+      'Credit',
+      'CreditApplication',
+      'Refund',
+      'LedgerEntry',
+      'TaxRule',
+    ]) {
+      expect(billingMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(billingMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(billingMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(billingMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+    expect(billingMigration).not.toContain('CREATE TYPE "CurrencyCode"');
+  });
+
+  it('creates all 4 Phase 22 communications tables with FORCE RLS', () => {
+    const commsMigration = readMigration(
+      '20260908000002_phase22_communications_foundation',
+    );
+
+    for (const table of [
+      'MessageThread',
+      'Message',
+      'MessageAttachment',
+      'MessageConsent',
+    ]) {
+      expect(commsMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(commsMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(commsMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(commsMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+  });
+
+  it('creates all 4 Phase 23 calendar tables with FORCE RLS', () => {
+    const calendarMigration = readMigration(
+      '20260908000003_phase23_calendar_foundation',
+    );
+
+    for (const table of [
+      'CalendarConnection',
+      'CalendarSyncCursor',
+      'CalendarEventMapping',
+      'CalendarSyncConflict',
+    ]) {
+      expect(calendarMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(calendarMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(calendarMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(calendarMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+    expect(calendarMigration).not.toContain('refreshToken');
+    expect(calendarMigration).not.toContain('accessToken');
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

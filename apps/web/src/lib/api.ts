@@ -1803,3 +1803,597 @@ export class DocumentsClient {
   }
 }
 
+
+// --- Phase 21: Billing + Finance ---
+
+export type FeeKind = 'FIXED' | 'HOURLY' | 'RETAINER' | 'MILESTONE';
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'SUPERSEDED';
+export type PaymentStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED';
+
+export interface FeeResult {
+  id: string;
+  tenantId: string;
+  caseId: string | null;
+  clientId: string | null;
+  kind: FeeKind;
+  description: string;
+  amount: string;
+  currency: string;
+  rateId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseResult {
+  id: string;
+  tenantId: string;
+  caseId: string | null;
+  description: string;
+  amount: string;
+  currency: string;
+  receiptObjectId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceLineResult {
+  id: string;
+  tenantId: string;
+  invoiceId: string;
+  description: string;
+  quantity: string;
+  unitAmount: string;
+  lineTotal: string;
+  feeId: string | null;
+  expenseId: string | null;
+  timeEntryId: string | null;
+  createdAt: string;
+}
+
+export interface InvoiceResult {
+  id: string;
+  tenantId: string;
+  caseId: string | null;
+  clientId: string | null;
+  invoiceNumber: string;
+  version: number;
+  supersedesId: string | null;
+  status: InvoiceStatus;
+  currency: string;
+  subtotal: string;
+  discountAmount: string;
+  taxAmount: string;
+  total: string;
+  taxRuleId: string | null;
+  taxRateSnapshot: string | null;
+  dueDate: string | null;
+  issuedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceDetail extends InvoiceResult {
+  lines: InvoiceLineResult[];
+  payments: PaymentResult[];
+}
+
+export interface PaymentResult {
+  id: string;
+  tenantId: string;
+  invoiceId: string;
+  amount: string;
+  currency: string;
+  status: PaymentStatus;
+  providerRef: string | null;
+  idempotencyKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreditResult {
+  id: string;
+  tenantId: string;
+  clientId: string;
+  caseId: string | null;
+  amount: string;
+  appliedAmount: string;
+  currency: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RefundResult {
+  id: string;
+  tenantId: string;
+  paymentId: string;
+  amount: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface LedgerEntryResult {
+  id: string;
+  tenantId: string;
+  transactionId: string;
+  side: 'DEBIT' | 'CREDIT';
+  amount: string;
+  currency: string;
+  caseId: string | null;
+  invoiceId: string | null;
+  paymentId: string | null;
+  memo: string | null;
+  createdAt: string;
+}
+
+export interface TaxRuleResult {
+  id: string;
+  tenantId: string;
+  name: string;
+  rate: string;
+  version: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceBalance {
+  invoiceId: string;
+  total: string;
+  paid: string;
+  outstanding: string;
+}
+
+export interface CreateFeeRequest {
+  caseId?: string;
+  clientId?: string;
+  kind: FeeKind;
+  description: string;
+  amount: number;
+  currency?: string;
+  rateId?: string;
+}
+
+export interface CreateExpenseRequest {
+  caseId?: string;
+  description: string;
+  amount: number;
+  currency?: string;
+  receiptObjectId?: string;
+}
+
+export interface CreateInvoiceRequest {
+  caseId?: string;
+  clientId?: string;
+  invoiceNumber: string;
+  discountAmount?: number;
+  taxRuleId?: string;
+  dueDate?: string;
+  timeEntryIds?: string[];
+  feeIds?: string[];
+  expenseIds?: string[];
+}
+
+export interface CreatePaymentRequest {
+  invoiceId: string;
+  amount: number;
+  currency?: string;
+  providerRef?: string;
+  idempotencyKey: string;
+}
+
+export interface CreateCreditRequest {
+  clientId: string;
+  caseId?: string;
+  amount: number;
+  currency?: string;
+}
+
+export interface ApplyCreditRequest {
+  invoiceId: string;
+  amount: number;
+}
+
+export interface CreateRefundRequest {
+  paymentId: string;
+  amount: number;
+  reason?: string;
+}
+
+export interface CreateTaxRuleRequest {
+  name: string;
+  rate: number;
+  version?: number;
+}
+
+const BILLING_PREFIX = '/billing';
+
+export class BillingsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  createFee(req: CreateFeeRequest): Promise<FeeResult> {
+    return this.client.body<FeeResult>(`${BILLING_PREFIX}/fees`, 'POST', req);
+  }
+
+  listFees(caseId?: string): Promise<FeeResult[]> {
+    const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
+    return this.client.body<FeeResult[]>(`${BILLING_PREFIX}/fees${qs}`, 'GET');
+  }
+
+  createExpense(req: CreateExpenseRequest): Promise<ExpenseResult> {
+    return this.client.body<ExpenseResult>(`${BILLING_PREFIX}/expenses`, 'POST', req);
+  }
+
+  listExpenses(caseId?: string): Promise<ExpenseResult[]> {
+    const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
+    return this.client.body<ExpenseResult[]>(`${BILLING_PREFIX}/expenses${qs}`, 'GET');
+  }
+
+  createInvoice(req: CreateInvoiceRequest): Promise<InvoiceDetail> {
+    return this.client.body<InvoiceDetail>(`${BILLING_PREFIX}/invoices`, 'POST', req);
+  }
+
+  listInvoices(caseId?: string, status?: string): Promise<InvoiceResult[]> {
+    const params = new URLSearchParams();
+    if (caseId) params.append('caseId', caseId);
+    if (status) params.append('status', status);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.client.body<InvoiceResult[]>(`${BILLING_PREFIX}/invoices${qs}`, 'GET');
+  }
+
+  getInvoice(id: string): Promise<InvoiceDetail> {
+    return this.client.body<InvoiceDetail>(`${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}`, 'GET');
+  }
+
+  issueInvoice(id: string): Promise<InvoiceDetail> {
+    return this.client.body<InvoiceDetail>(`${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/issue`, 'POST');
+  }
+
+  voidInvoice(id: string): Promise<InvoiceResult> {
+    return this.client.body<InvoiceResult>(`${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/void`, 'POST');
+  }
+
+  versionInvoice(id: string): Promise<InvoiceDetail> {
+    return this.client.body<InvoiceDetail>(`${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/version`, 'POST');
+  }
+
+  recordPayment(req: CreatePaymentRequest): Promise<PaymentResult> {
+    return this.client.body<PaymentResult>(`${BILLING_PREFIX}/payments`, 'POST', req);
+  }
+
+  listPayments(invoiceId?: string): Promise<PaymentResult[]> {
+    const qs = invoiceId ? `?invoiceId=${encodeURIComponent(invoiceId)}` : '';
+    return this.client.body<PaymentResult[]>(`${BILLING_PREFIX}/payments${qs}`, 'GET');
+  }
+
+  createCredit(req: CreateCreditRequest): Promise<CreditResult> {
+    return this.client.body<CreditResult>(`${BILLING_PREFIX}/credits`, 'POST', req);
+  }
+
+  applyCredit(id: string, req: ApplyCreditRequest): Promise<CreditResult> {
+    return this.client.body<CreditResult>(`${BILLING_PREFIX}/credits/${encodeURIComponent(id)}/apply`, 'POST', req);
+  }
+
+  issueRefund(req: CreateRefundRequest): Promise<RefundResult> {
+    return this.client.body<RefundResult>(`${BILLING_PREFIX}/refunds`, 'POST', req);
+  }
+
+  readLedger(caseId?: string): Promise<LedgerEntryResult[]> {
+    const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
+    return this.client.body<LedgerEntryResult[]>(`${BILLING_PREFIX}/ledger${qs}`, 'GET');
+  }
+
+  readBalances(invoiceId?: string, caseId?: string): Promise<InvoiceBalance[]> {
+    const params = new URLSearchParams();
+    if (invoiceId) params.append('invoiceId', invoiceId);
+    if (caseId) params.append('caseId', caseId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.client.body<InvoiceBalance[]>(`${BILLING_PREFIX}/balances${qs}`, 'GET');
+  }
+
+  createTaxRule(req: CreateTaxRuleRequest): Promise<TaxRuleResult> {
+    return this.client.body<TaxRuleResult>(`${BILLING_PREFIX}/tax-rules`, 'POST', req);
+  }
+
+  listTaxRules(): Promise<TaxRuleResult[]> {
+    return this.client.body<TaxRuleResult[]>(`${BILLING_PREFIX}/tax-rules`, 'GET');
+  }
+}
+
+// --- Phase 22: Communications ---
+
+export type CommunicationChannel = 'EMAIL' | 'SMS' | 'WHATSAPP' | 'PHONE' | 'INTERNAL' | 'PORTAL';
+export type MessageDirection = 'INBOUND' | 'OUTBOUND';
+export type MessageStatus = 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED' | 'READ';
+export type ThreadStatus = 'OPEN' | 'CLOSED';
+export type ConsentStatus = 'OPT_IN' | 'OPT_OUT';
+
+export interface MessageThreadResult {
+  id: string;
+  tenantId: string;
+  subject: string | null;
+  caseId: string | null;
+  clientId: string | null;
+  taskId: string | null;
+  status: ThreadStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MessageResult {
+  id: string;
+  tenantId: string;
+  threadId: string | null;
+  channel: CommunicationChannel;
+  direction: MessageDirection;
+  status: MessageStatus;
+  subject: string | null;
+  body: string;
+  caseId: string | null;
+  clientId: string | null;
+  taskId: string | null;
+  error: string | null;
+  sentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MessageAttachmentResult {
+  id: string;
+  tenantId: string;
+  messageId: string;
+  storageObjectId: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+}
+
+export interface MessageConsentResult {
+  id: string;
+  tenantId: string;
+  clientId: string;
+  channel: CommunicationChannel;
+  status: ConsentStatus;
+  decidedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateThreadRequest {
+  subject?: string;
+  caseId?: string;
+  clientId?: string;
+  taskId?: string;
+}
+
+export interface CreateMessageRequest {
+  threadId?: string;
+  channel: CommunicationChannel;
+  direction: MessageDirection;
+  subject?: string;
+  body: string;
+  caseId?: string;
+  clientId?: string;
+  taskId?: string;
+}
+
+export interface RecordMessageStatusRequest {
+  status: MessageStatus;
+  error?: string;
+}
+
+export interface AddAttachmentRequest {
+  storageObjectId: string;
+  mimeType: string;
+  fileSize: number;
+}
+
+export interface SetConsentRequest {
+  clientId: string;
+  channel: CommunicationChannel;
+  status: ConsentStatus;
+}
+
+const COMMS_PREFIX = '/communications';
+
+export class CommsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  createThread(req: CreateThreadRequest): Promise<MessageThreadResult> {
+    return this.client.body<MessageThreadResult>(`${COMMS_PREFIX}/threads`, 'POST', req);
+  }
+
+  listThreads(caseId?: string, clientId?: string): Promise<MessageThreadResult[]> {
+    const params = new URLSearchParams();
+    if (caseId) params.append('caseId', caseId);
+    if (clientId) params.append('clientId', clientId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.client.body<MessageThreadResult[]>(`${COMMS_PREFIX}/threads${qs}`, 'GET');
+  }
+
+  closeThread(id: string): Promise<MessageThreadResult> {
+    return this.client.body<MessageThreadResult>(`${COMMS_PREFIX}/threads/${encodeURIComponent(id)}/close`, 'POST');
+  }
+
+  composeMessage(req: CreateMessageRequest): Promise<MessageResult> {
+    return this.client.body<MessageResult>(`${COMMS_PREFIX}/messages`, 'POST', req);
+  }
+
+  listMessages(filters: { threadId?: string; caseId?: string; clientId?: string; channel?: string } = {}): Promise<MessageResult[]> {
+    const params = new URLSearchParams();
+    if (filters.threadId) params.append('threadId', filters.threadId);
+    if (filters.caseId) params.append('caseId', filters.caseId);
+    if (filters.clientId) params.append('clientId', filters.clientId);
+    if (filters.channel) params.append('channel', filters.channel);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.client.body<MessageResult[]>(`${COMMS_PREFIX}/messages${qs}`, 'GET');
+  }
+
+  recordStatus(id: string, req: RecordMessageStatusRequest): Promise<MessageResult> {
+    return this.client.body<MessageResult>(`${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/status`, 'POST', req);
+  }
+
+  addAttachment(id: string, req: AddAttachmentRequest): Promise<MessageAttachmentResult> {
+    return this.client.body<MessageAttachmentResult>(`${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/attachments`, 'POST', req);
+  }
+
+  listAttachments(id: string): Promise<MessageAttachmentResult[]> {
+    return this.client.body<MessageAttachmentResult[]>(`${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/attachments`, 'GET');
+  }
+
+  setConsent(req: SetConsentRequest): Promise<MessageConsentResult> {
+    return this.client.body<MessageConsentResult>(`${COMMS_PREFIX}/consents`, 'POST', req);
+  }
+
+  listConsents(clientId?: string): Promise<MessageConsentResult[]> {
+    const qs = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
+    return this.client.body<MessageConsentResult[]>(`${COMMS_PREFIX}/consents${qs}`, 'GET');
+  }
+}
+
+// --- Phase 23: Calendar Integrations ---
+
+export type CalendarProvider = 'GOOGLE' | 'MICROSOFT';
+export type CalendarConnectionStatus = 'ACTIVE' | 'DISABLED' | 'ERROR';
+export type CalendarLocalType = 'HEARING' | 'DEADLINE' | 'TASK';
+export type SyncDirection = 'PUSH' | 'PULL';
+export type ConflictResolution = 'PENDING' | 'LOCAL_WINS' | 'REMOTE_WINS';
+
+export interface CalendarConnectionResult {
+  id: string;
+  tenantId: string;
+  provider: CalendarProvider;
+  accountRef: string;
+  status: CalendarConnectionStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarSyncCursorResult {
+  id: string;
+  tenantId: string;
+  connectionId: string;
+  resource: string;
+  syncToken: string | null;
+  lastSyncedAt: string | null;
+  attempts: number;
+  nextRetryAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarEventMappingResult {
+  id: string;
+  tenantId: string;
+  connectionId: string;
+  localType: CalendarLocalType;
+  localId: string;
+  externalId: string | null;
+  etag: string | null;
+  direction: SyncDirection;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarSyncConflictResult {
+  id: string;
+  tenantId: string;
+  connectionId: string;
+  localType: CalendarLocalType;
+  localId: string;
+  externalId: string | null;
+  reason: string;
+  resolution: ConflictResolution;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgendaItem {
+  kind: CalendarLocalType;
+  id: string;
+  title: string;
+  startsAt: string;
+}
+
+export interface CreateConnectionRequest {
+  provider: CalendarProvider;
+  accountRef: string;
+}
+
+export interface PushEventRequest {
+  connectionId: string;
+  localType: CalendarLocalType;
+  localId: string;
+}
+
+export interface PullChangesRequest {
+  connectionId: string;
+}
+
+export interface ResolveConflictRequest {
+  resolution: ConflictResolution;
+}
+
+export interface WebhookReceiptRequest {
+  externalId?: string;
+  localType?: CalendarLocalType;
+  localId?: string;
+  reason: string;
+}
+
+const CALENDAR_PREFIX = '/calendar';
+
+export class CalendarClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  createConnection(req: CreateConnectionRequest): Promise<CalendarConnectionResult> {
+    return this.client.body<CalendarConnectionResult>(`${CALENDAR_PREFIX}/connections`, 'POST', req);
+  }
+
+  listConnections(): Promise<CalendarConnectionResult[]> {
+    return this.client.body<CalendarConnectionResult[]>(`${CALENDAR_PREFIX}/connections`, 'GET');
+  }
+
+  enableConnection(id: string): Promise<CalendarConnectionResult> {
+    return this.client.body<CalendarConnectionResult>(`${CALENDAR_PREFIX}/connections/${encodeURIComponent(id)}/enable`, 'POST');
+  }
+
+  disableConnection(id: string): Promise<CalendarConnectionResult> {
+    return this.client.body<CalendarConnectionResult>(`${CALENDAR_PREFIX}/connections/${encodeURIComponent(id)}/disable`, 'POST');
+  }
+
+  pushEvent(req: PushEventRequest): Promise<CalendarEventMappingResult> {
+    return this.client.body<CalendarEventMappingResult>(`${CALENDAR_PREFIX}/sync/push`, 'POST', req);
+  }
+
+  pullChanges(req: PullChangesRequest): Promise<{ cursor: CalendarSyncCursorResult; providerPending: boolean }> {
+    return this.client.body<{ cursor: CalendarSyncCursorResult; providerPending: boolean }>(`${CALENDAR_PREFIX}/sync/pull`, 'POST', req);
+  }
+
+  listMappings(connectionId?: string): Promise<CalendarEventMappingResult[]> {
+    const qs = connectionId ? `?connectionId=${encodeURIComponent(connectionId)}` : '';
+    return this.client.body<CalendarEventMappingResult[]>(`${CALENDAR_PREFIX}/mappings${qs}`, 'GET');
+  }
+
+  receiveWebhook(connectionId: string, req: WebhookReceiptRequest): Promise<CalendarSyncConflictResult> {
+    return this.client.body<CalendarSyncConflictResult>(`${CALENDAR_PREFIX}/webhooks/${encodeURIComponent(connectionId)}`, 'POST', req);
+  }
+
+  listConflicts(connectionId?: string): Promise<CalendarSyncConflictResult[]> {
+    const qs = connectionId ? `?connectionId=${encodeURIComponent(connectionId)}` : '';
+    return this.client.body<CalendarSyncConflictResult[]>(`${CALENDAR_PREFIX}/conflicts${qs}`, 'GET');
+  }
+
+  resolveConflict(id: string, req: ResolveConflictRequest): Promise<CalendarSyncConflictResult> {
+    return this.client.body<CalendarSyncConflictResult>(`${CALENDAR_PREFIX}/conflicts/${encodeURIComponent(id)}/resolve`, 'POST', req);
+  }
+
+  readAgenda(from?: string, to?: string): Promise<AgendaItem[]> {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.client.body<AgendaItem[]>(`${CALENDAR_PREFIX}/agenda${qs}`, 'GET');
+  }
+}

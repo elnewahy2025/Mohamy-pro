@@ -420,6 +420,24 @@ model Tenant {
   rates                    Rate[]
   timeEntries              TimeEntry[]
   timers                   Timer[]
+  fees                     Fee[]
+  expenses                 Expense[]
+  invoices                 Invoice[]
+  invoiceLines             InvoiceLine[]
+  payments                 Payment[]
+  credits                  Credit[]
+  creditApplications       CreditApplication[]
+  refunds                  Refund[]
+  ledgerEntries            LedgerEntry[]
+  taxRules                 TaxRule[]
+  calendarConnections      CalendarConnection[]
+  calendarSyncCursors      CalendarSyncCursor[]
+  calendarEventMappings    CalendarEventMapping[]
+  calendarSyncConflicts    CalendarSyncConflict[]
+  messageThreads           MessageThread[]
+  messages                 Message[]
+  messageAttachments       MessageAttachment[]
+  messageConsents          MessageConsent[]
 
   @@index([status, createdAt])
 }
@@ -600,6 +618,13 @@ model Case {
   documentGenerationJobs DocumentGenerationJob[]
   timeEntries            TimeEntry[]
   timers                 Timer[]
+  fees                   Fee[]
+  expenses               Expense[]
+  invoices               Invoice[]
+  credits                Credit[]
+  ledgerEntries          LedgerEntry[]
+  messageThreads         MessageThread[]
+  messages               Message[]
 
   @@unique([tenantId, caseNumber])
   @@index([tenantId, status])
@@ -847,6 +872,12 @@ model Client {
   documentGenerationJobs DocumentGenerationJob[]
   timeEntries            TimeEntry[]
   timers                 Timer[]
+  fees                   Fee[]
+  invoices               Invoice[]
+  credits                Credit[]
+  messageThreads         MessageThread[]
+  messages               Message[]
+  messageConsents        MessageConsent[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, name])
@@ -1313,6 +1344,8 @@ model Task {
   checklists   TaskChecklist[]
   dependencies TaskDependency[] @relation("TaskDependent")
   dependsOn    TaskDependency[] @relation("TaskPrerequisite")
+  messageThreads MessageThread[]
+  messages       Message[]
 
   @@index([tenantId, caseId])
   @@index([tenantId, assignedUserId])
@@ -2018,6 +2051,101 @@ enum CurrencyCode {
   USD
 }
 
+enum CommunicationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PHONE
+  INTERNAL
+  PORTAL
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  READ
+}
+
+enum ThreadStatus {
+  OPEN
+  CLOSED
+}
+
+enum ConsentStatus {
+  OPT_IN
+  OPT_OUT
+}
+
+enum CalendarProvider {
+  GOOGLE
+  MICROSOFT
+}
+
+enum CalendarConnectionStatus {
+  ACTIVE
+  DISABLED
+  ERROR
+}
+
+enum CalendarLocalType {
+  HEARING
+  DEADLINE
+  TASK
+}
+
+enum SyncDirection {
+  PUSH
+  PULL
+}
+
+enum ConflictResolution {
+  PENDING
+  LOCAL_WINS
+  REMOTE_WINS
+}
+
+enum FeeKind {
+  FIXED
+  HOURLY
+  RETAINER
+  MILESTONE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOID
+  SUPERSEDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum LedgerSide {
+  DEBIT
+  CREDIT
+}
+
+enum CreditStatus {
+  OPEN
+  APPLIED
+  EXHAUSTED
+}
+
+
 model Rate {
   id            String       @id @default(uuid())
   tenantId      String
@@ -2032,6 +2160,7 @@ model Rate {
   updatedAt     DateTime     @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  fees Fee[]
 
   @@index([tenantId, type, referenceId])
 }
@@ -2059,6 +2188,7 @@ model TimeEntry {
   user   User    @relation(fields: [userId], references: [id], onDelete: Restrict)
   case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
   client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  invoiceLines InvoiceLine[]
 
   @@index([tenantId, userId, date])
   @@index([tenantId, caseId, status])
@@ -2083,4 +2213,376 @@ model Timer {
   client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, userId, status])
+}
+
+
+model MessageThread {
+  id        String       @id @default(uuid())
+  tenantId  String
+  subject   String?
+  caseId    String?
+  clientId  String?
+  taskId    String?
+  status    ThreadStatus @default(OPEN)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case     Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client   Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  task     Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  messages Message[]
+
+  @@index([tenantId, caseId])
+  @@index([tenantId, clientId])
+  @@index([tenantId])
+}
+
+model Message {
+  id          String               @id @default(uuid())
+  tenantId    String
+  threadId    String?
+  channel     CommunicationChannel
+  direction   MessageDirection
+  status      MessageStatus        @default(QUEUED)
+  subject     String?
+  body        String               @db.Text
+  caseId      String?
+  clientId    String?
+  taskId      String?
+  error       String?              @db.Text
+  sentAt      DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  thread      MessageThread? @relation(fields: [threadId], references: [id], onDelete: SetNull)
+  case        Case?          @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client      Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  task        Task?          @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  attachments MessageAttachment[]
+
+  @@index([tenantId, threadId])
+  @@index([tenantId, caseId])
+  @@index([tenantId, clientId])
+  @@index([tenantId, channel, status])
+}
+
+model MessageAttachment {
+  id              String   @id @default(uuid())
+  tenantId        String
+  messageId       String
+  storageObjectId String
+  mimeType        String
+  fileSize        Int
+  createdAt       DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, messageId])
+}
+
+model MessageConsent {
+  id        String            @id @default(uuid())
+  tenantId  String
+  clientId  String
+  channel   CommunicationChannel
+  status    ConsentStatus
+  decidedAt DateTime          @default(now())
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, clientId, channel])
+  @@index([tenantId, clientId])
+}
+
+
+model CalendarConnection {
+  id         String                   @id @default(uuid())
+  tenantId   String
+  provider   CalendarProvider
+  accountRef String
+  status     CalendarConnectionStatus @default(DISABLED)
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+
+  tenant   Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  cursors  CalendarSyncCursor[]
+  mappings CalendarEventMapping[]
+  conflicts CalendarSyncConflict[]
+
+  @@unique([tenantId, provider, accountRef])
+  @@index([tenantId, status])
+}
+
+model CalendarSyncCursor {
+  id           String   @id @default(uuid())
+  tenantId     String
+  connectionId String
+  resource     String   @default("CALENDAR")
+  syncToken    String?  @db.Text
+  lastSyncedAt DateTime?
+  attempts     Int      @default(0)
+  nextRetryAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, connectionId, resource])
+  @@index([tenantId])
+}
+
+model CalendarEventMapping {
+  id          String            @id @default(uuid())
+  tenantId    String
+  connectionId String
+  localType   CalendarLocalType
+  localId     String
+  externalId  String?
+  etag        String?
+  direction   SyncDirection
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, connectionId, localType, localId])
+  @@index([tenantId, connectionId])
+}
+
+model CalendarSyncConflict {
+  id           String             @id @default(uuid())
+  tenantId     String
+  connectionId String
+  localType    CalendarLocalType
+  localId      String
+  externalId   String?
+  reason       String             @db.Text
+  resolution   ConflictResolution @default(PENDING)
+  resolvedAt   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, connectionId, resolution])
+}
+
+model Fee {
+  id          String   @id @default(uuid())
+  tenantId    String
+  caseId      String?
+  clientId    String?
+  kind        FeeKind
+  description String
+  amount      Decimal  @db.Decimal(19, 4)
+  currency    CurrencyCode @default(EGP)
+  rateId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  rate   Rate?  @relation(fields: [rateId], references: [id], onDelete: SetNull)
+  invoiceLines InvoiceLine[]
+
+  @@index([tenantId, caseId])
+  @@index([tenantId])
+}
+
+model Expense {
+  id              String   @id @default(uuid())
+  tenantId        String
+  caseId          String?
+  description     String
+  amount          Decimal  @db.Decimal(19, 4)
+  currency        CurrencyCode @default(EGP)
+  receiptObjectId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  invoiceLines InvoiceLine[]
+
+  @@index([tenantId, caseId])
+  @@index([tenantId])
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  tenantId       String
+  caseId         String?
+  clientId       String?
+  invoiceNumber  String
+  version        Int           @default(1)
+  supersedesId   String?
+  status         InvoiceStatus @default(DRAFT)
+  currency       CurrencyCode  @default(EGP)
+  subtotal       Decimal       @db.Decimal(19, 4)
+  discountAmount Decimal       @db.Decimal(19, 4) @default(0)
+  taxAmount      Decimal       @db.Decimal(19, 4) @default(0)
+  total          Decimal       @db.Decimal(19, 4)
+  taxRuleId      String?
+  taxRateSnapshot Decimal?     @db.Decimal(19, 4)
+  dueDate        DateTime?
+  issuedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case        Case?        @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client      Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  taxRule     TaxRule?     @relation(fields: [taxRuleId], references: [id], onDelete: SetNull)
+  supersedes  Invoice?     @relation("InvoiceVersion", fields: [supersedesId], references: [id], onDelete: SetNull)
+  versions    Invoice[]    @relation("InvoiceVersion")
+  lines       InvoiceLine[]
+  payments    Payment[]
+  creditApplications CreditApplication[]
+  ledgerEntries LedgerEntry[]
+
+  @@unique([tenantId, invoiceNumber, version])
+  @@index([tenantId, caseId, status])
+  @@index([tenantId])
+}
+
+model InvoiceLine {
+  id          String   @id @default(uuid())
+  tenantId    String
+  invoiceId   String
+  description String
+  quantity    Decimal  @db.Decimal(19, 4) @default(1)
+  unitAmount  Decimal  @db.Decimal(19, 4)
+  lineTotal   Decimal  @db.Decimal(19, 4)
+  feeId       String?
+  expenseId   String?
+  timeEntryId String?
+  createdAt   DateTime @default(now())
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  fee       Fee?     @relation(fields: [feeId], references: [id], onDelete: SetNull)
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  timeEntry TimeEntry? @relation(fields: [timeEntryId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, invoiceId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  tenantId       String
+  invoiceId      String
+  amount         Decimal       @db.Decimal(19, 4)
+  currency       CurrencyCode  @default(EGP)
+  status         PaymentStatus @default(PENDING)
+  providerRef    String?
+  idempotencyKey String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  refunds Refund[]
+  ledgerEntries LedgerEntry[]
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, invoiceId])
+}
+
+model Credit {
+  id          String       @id @default(uuid())
+  tenantId    String
+  clientId    String
+  caseId      String?
+  amount      Decimal      @db.Decimal(19, 4)
+  appliedAmount Decimal    @db.Decimal(19, 4) @default(0)
+  currency    CurrencyCode @default(EGP)
+  status      CreditStatus @default(OPEN)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  applications CreditApplication[]
+
+  @@index([tenantId, clientId])
+}
+
+
+model CreditApplication {
+  id        String   @id @default(uuid())
+  tenantId  String
+  creditId  String
+  invoiceId String
+  amount    Decimal  @db.Decimal(19, 4)
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  credit  Credit  @relation(fields: [creditId], references: [id], onDelete: Restrict)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, creditId])
+}
+
+model Refund {
+  id        String   @id @default(uuid())
+  tenantId  String
+  paymentId String
+  amount    Decimal  @db.Decimal(19, 4)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, paymentId])
+}
+
+model LedgerEntry {
+  id            String     @id @default(uuid())
+  tenantId      String
+  transactionId String
+  side          LedgerSide
+  amount        Decimal    @db.Decimal(19, 4)
+  currency      CurrencyCode @default(EGP)
+  caseId        String?
+  invoiceId     String?
+  paymentId     String?
+  memo          String?
+  createdAt     DateTime   @default(now())
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case    Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, transactionId])
+  @@index([tenantId, caseId])
+}
+
+model TaxRule {
+  id         String   @id @default(uuid())
+  tenantId   String
+  name       String
+  rate       Decimal  @db.Decimal(19, 4)
+  version    Int      @default(1)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  invoices Invoice[]
+
+  @@index([tenantId, active])
 }

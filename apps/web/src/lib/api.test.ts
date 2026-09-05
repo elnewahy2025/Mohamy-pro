@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
+import { ApiClient, BillingsClient, CalendarClient, CommsClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -1662,5 +1662,308 @@ describe('DocumentsClient (Phase 15)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/documents/d1/security/access'));
     expect(call?.init?.method).toBe('POST');
+  });
+});
+
+describe('BillingsClient (Phase 21)', () => {
+  const base = 'http://localhost';
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-billing' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('creates an invoice via POST /billing/invoices', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/billing/invoices': (_url, init) =>
+        init?.method === 'POST'
+          ? enveloped({ id: 'inv1', invoiceNumber: 'INV-001', status: 'DRAFT', total: '100.0000', lines: [], payments: [] }, 201)
+          : enveloped([]),
+    });
+    const client = new BillingsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createInvoice({ invoiceNumber: 'INV-001', feeIds: ['f1'] });
+
+    const call = calls.find((c) => c.url.endsWith('/billing/invoices') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ invoiceNumber: 'INV-001', feeIds: ['f1'] });
+    expect(result.status).toBe('DRAFT');
+  });
+
+  it('records a payment with idempotency key via POST /billing/payments', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/billing/payments': () => enveloped({ id: 'p1', status: 'SUCCEEDED', amount: '100.0000' }, 201),
+    });
+    const client = new BillingsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.recordPayment({ invoiceId: 'inv1', amount: 100, idempotencyKey: 'key-1' });
+
+    const call = calls.find((c) => c.url.endsWith('/billing/payments'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ invoiceId: 'inv1', amount: 100, idempotencyKey: 'key-1' });
+    expect(result.status).toBe('SUCCEEDED');
+  });
+
+  it('issues an invoice via POST /billing/invoices/:id/issue', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/billing/invoices/inv1/issue': () =>
+        enveloped({ id: 'inv1', status: 'ISSUED', lines: [], payments: [] }),
+    });
+    const client = new BillingsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.issueInvoice('inv1');
+
+    const call = calls.find((c) => c.url.endsWith('/billing/invoices/inv1/issue'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('ISSUED');
+  });
+
+  it('reads balances via GET /billing/balances', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/billing/balances?invoiceId=inv1': () =>
+        enveloped([{ invoiceId: 'inv1', total: '100.0000', paid: '60.0000', outstanding: '40.0000' }]),
+    });
+    const client = new BillingsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.readBalances('inv1');
+
+    const call = calls.find((c) => c.url.includes('/billing/balances'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).toContain('invoiceId=inv1');
+    expect(result[0].outstanding).toBe('40.0000');
+  });
+});
+
+describe('CommsClient (Phase 22)', () => {
+  const base = 'http://localhost';
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-comms' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('composes a message via POST /communications/messages', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/communications/messages': () =>
+        enveloped({ id: 'm1', channel: 'EMAIL', direction: 'OUTBOUND', status: 'QUEUED' }, 201),
+    });
+    const client = new CommsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.composeMessage({ channel: 'EMAIL', direction: 'OUTBOUND', body: 'Hello', caseId: 'c1' });
+
+    const call = calls.find((c) => c.url.endsWith('/communications/messages'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ channel: 'EMAIL', direction: 'OUTBOUND', body: 'Hello', caseId: 'c1' });
+    expect(result.status).toBe('QUEUED');
+  });
+
+  it('lists messages with filters via GET /communications/messages', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/communications/messages?caseId=c1': () => enveloped([]),
+    });
+    const client = new CommsClient(new ApiClient(base, fetchMock));
+
+    await client.listMessages({ caseId: 'c1' });
+
+    const call = calls.find((c) => c.url.includes('/communications/messages?'));
+    expect(String(call?.url)).toContain('caseId=c1');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+  });
+
+  it('records status via POST /communications/messages/:id/status', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/communications/messages/m1/status': () =>
+        enveloped({ id: 'm1', status: 'DELIVERED' }),
+    });
+    const client = new CommsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.recordStatus('m1', { status: 'DELIVERED' });
+
+    const call = calls.find((c) => c.url.endsWith('/communications/messages/m1/status'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('DELIVERED');
+  });
+
+  it('sets consent via POST /communications/consents', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/communications/consents': () =>
+        enveloped({ id: 'cs1', clientId: 'cl1', channel: 'SMS', status: 'OPT_OUT' }, 201),
+    });
+    const client = new CommsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.setConsent({ clientId: 'cl1', channel: 'SMS', status: 'OPT_OUT' });
+
+    const call = calls.find((c) => c.url.endsWith('/communications/consents'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('OPT_OUT');
+  });
+});
+
+describe('CalendarClient (Phase 23)', () => {
+  const base = 'http://localhost';
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-calendar' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('creates a disabled connection via POST /calendar/connections', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/calendar/connections': () =>
+        enveloped({ id: 'c1', provider: 'GOOGLE', accountRef: 'cal@example.com', status: 'DISABLED' }, 201),
+    });
+    const client = new CalendarClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createConnection({ provider: 'GOOGLE', accountRef: 'cal@example.com' });
+
+    const call = calls.find((c) => c.url.endsWith('/calendar/connections'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('DISABLED');
+  });
+
+  it('pushes a mapping via POST /calendar/sync/push', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/calendar/sync/push': () =>
+        enveloped({ id: 'm1', localType: 'HEARING', localId: 'h1', direction: 'PUSH' }, 201),
+    });
+    const client = new CalendarClient(new ApiClient(base, fetchMock));
+
+    const result = await client.pushEvent({ connectionId: 'c1', localType: 'HEARING', localId: 'h1' });
+
+    const call = calls.find((c) => c.url.endsWith('/calendar/sync/push'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ connectionId: 'c1', localType: 'HEARING', localId: 'h1' });
+    expect(result.direction).toBe('PUSH');
+  });
+
+  it('resolves a conflict via POST /calendar/conflicts/:id/resolve', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/calendar/conflicts/cf1/resolve': () =>
+        enveloped({ id: 'cf1', resolution: 'LOCAL_WINS' }),
+    });
+    const client = new CalendarClient(new ApiClient(base, fetchMock));
+
+    const result = await client.resolveConflict('cf1', { resolution: 'LOCAL_WINS' });
+
+    const call = calls.find((c) => c.url.endsWith('/calendar/conflicts/cf1/resolve'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.resolution).toBe('LOCAL_WINS');
+  });
+
+  it('reads the agenda via GET /calendar/agenda', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/calendar/agenda?from=2026-03-01': () =>
+        enveloped([{ kind: 'DEADLINE', id: 'd1', title: 'Filing', startsAt: '2026-03-01T10:00:00Z' }]),
+    });
+    const client = new CalendarClient(new ApiClient(base, fetchMock));
+
+    const result = await client.readAgenda('2026-03-01');
+
+    const call = calls.find((c) => c.url.includes('/calendar/agenda'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+    expect(result[0].kind).toBe('DEADLINE');
   });
 });

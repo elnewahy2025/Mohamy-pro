@@ -27,6 +27,11 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_DOCUMENTS: 'CanManageDocuments',
   CAN_APPROVE_TIME_ENTRIES: 'CanApproveTimeEntries',
   CAN_PUBLISH_WORKFLOW_VERSIONS: 'CanPublishWorkflowVersions',
+  CAN_MANAGE_BILLING: 'CanManageBilling',
+  CAN_APPROVE_INVOICES: 'CanApproveInvoices',
+  CAN_RECORD_PAYMENTS: 'CanRecordPayments',
+  CAN_MANAGE_COMMUNICATIONS: 'CanManageCommunications',
+  CAN_MANAGE_CALENDAR: 'CanManageCalendar',
 } as const;
 
 export type PermissionKey =
@@ -144,6 +149,29 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     key: PERMISSION_KEYS.CAN_PUBLISH_WORKFLOW_VERSIONS,
     description: 'Publish draft workflow versions within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_BILLING,
+    description:
+      'Create fees, expenses, draft invoices, credits, and tax rules within the active tenant.',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_APPROVE_INVOICES,
+    description: 'Issue, void, and version invoices within the active tenant.',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_RECORD_PAYMENTS,
+    description: 'Record payments and refunds within the active tenant.',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_COMMUNICATIONS,
+    description:
+      'Compose messages, manage threads and consent, and record delivery within the active tenant.',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_CALENDAR,
+    description:
+      'Manage calendar connections, sync state, and conflicts within the active tenant.',
+  },
 ];
 /**
  * Default permission set granted to each built-in role. Keyed by stable role
@@ -171,11 +199,18 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_DOCUMENTS,
     PERMISSION_KEYS.CAN_APPROVE_TIME_ENTRIES,
     PERMISSION_KEYS.CAN_PUBLISH_WORKFLOW_VERSIONS,
+    PERMISSION_KEYS.CAN_MANAGE_BILLING,
+    PERMISSION_KEYS.CAN_APPROVE_INVOICES,
+    PERMISSION_KEYS.CAN_RECORD_PAYMENTS,
+    PERMISSION_KEYS.CAN_MANAGE_COMMUNICATIONS,
+    PERMISSION_KEYS.CAN_MANAGE_CALENDAR,
   ],
   [ROLE_KEY_TENANT_MANAGER]: [
     PERMISSION_KEYS.CAN_VIEW_TENANT,
     PERMISSION_KEYS.CAN_APPROVE_TIME_ENTRIES,
     PERMISSION_KEYS.CAN_PUBLISH_WORKFLOW_VERSIONS,
+    PERMISSION_KEYS.CAN_APPROVE_INVOICES,
+    PERMISSION_KEYS.CAN_RECORD_PAYMENTS,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,

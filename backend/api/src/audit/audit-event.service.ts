@@ -131,6 +131,21 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'document.shared': ['documentId', 'sharedWithEmail'],
   'document.archived': ['documentId'],
   'document.status.changed': ['documentId', 'status', 'previousStatus'],
+  'fee.created': ['caseId'],
+  'expense.created': ['caseId'],
+  'invoice.drafted': ['invoiceNumber', 'total'],
+  'credit.created': ['clientId', 'amount'],
+  'tax.rule.created': ['name', 'rate'],
+  'invoice.issued': ['invoiceNumber', 'total'],
+  'invoice.voided': ['invoiceNumber', 'reason'],
+  'payment.recorded': ['invoiceId', 'amount'],
+  'refund.issued': ['paymentId', 'amount'],
+  'message.queued': ['channel', 'direction'],
+  'message.status.recorded': ['status'],
+  'calendar.connected': ['provider'],
+  'calendar.disabled': [],
+  'calendar.synced': ['connectionId'],
+  'calendar.conflict.recorded': ['reason'],
 };
 
 @Injectable()

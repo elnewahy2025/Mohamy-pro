@@ -80,7 +80,10 @@
     },
     "tasks": "Tasks",
     "documents": "Documents",
-    "secureLinks": "Secure Links"
+    "secureLinks": "Secure Links",
+    "billing": "Billing",
+    "communications": "Communications",
+    "calendar": "Calendar"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -959,6 +962,243 @@
         "success": "Link Generated",
         "url": "Signed URL",
         "expiresAt": "Expires At"
+      }
+    }
+  },
+  "billing": {
+    "eyebrow": "Phase 21 · Billing + Finance",
+    "title": "Bill matters with an immutable ledger.",
+    "description": "Create fees and expenses, build draft invoices from approved time, issue and collect payments, and read the append-only ledger.",
+    "create": "Create",
+    "issue": "Issue",
+    "void": "Void",
+    "newVersion": "New version",
+    "recordPayment": "Record payment",
+    "applyCredit": "Apply credit",
+    "issueRefund": "Issue refund",
+    "load": "Load",
+    "submitting": "Working…",
+    "labels": {
+      "caseId": "Case ID",
+      "clientId": "Client ID",
+      "invoiceId": "Invoice ID",
+      "paymentId": "Payment ID",
+      "creditId": "Credit ID",
+      "kind": "Kind",
+      "description": "Description",
+      "amount": "Amount",
+      "currency": "Currency",
+      "rateId": "Rate ID",
+      "receiptObjectId": "Receipt object ID",
+      "invoiceNumber": "Invoice number",
+      "discountAmount": "Discount amount",
+      "taxRuleId": "Tax rule ID",
+      "dueDate": "Due date",
+      "timeEntryIds": "Time entry IDs",
+      "feeIds": "Fee IDs",
+      "expenseIds": "Expense IDs",
+      "providerRef": "Provider reference",
+      "idempotencyKey": "Idempotency key",
+      "name": "Name",
+      "rate": "Rate",
+      "reason": "Reason"
+    },
+    "placeholders": {
+      "caseId": "00000000-0000-4000-8000-000000000000",
+      "clientId": "00000000-0000-4000-8000-000000000000",
+      "invoiceId": "00000000-0000-4000-8000-000000000000",
+      "paymentId": "00000000-0000-4000-8000-000000000000",
+      "creditId": "00000000-0000-4000-8000-000000000000",
+      "kind": "FIXED, HOURLY, RETAINER or MILESTONE",
+      "description": "e.g. Court filing fee",
+      "amount": "e.g. 150.0000",
+      "invoiceNumber": "e.g. INV-2026-001",
+      "idempotencyKey": "Unique key per payment attempt",
+      "name": "e.g. VAT 14%",
+      "rate": "e.g. 0.14 for 14%"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "total": "Total",
+      "outstanding": "Outstanding",
+      "status": "Status",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "fee": {
+        "heading": "Fees",
+        "description": "Create fixed, hourly, retainer, or milestone fees."
+      },
+      "expense": {
+        "heading": "Expenses",
+        "description": "Record case expenses flowing into invoices."
+      },
+      "invoice": {
+        "heading": "Invoices",
+        "description": "Build drafts from approved time, fees, and expenses."
+      },
+      "lifecycle": {
+        "heading": "Invoice lifecycle",
+        "description": "Issue, void, or version an invoice by ID."
+      },
+      "payment": {
+        "heading": "Payments",
+        "description": "Record payments with idempotency keys; replays return the original."
+      },
+      "credit": {
+        "heading": "Credits & refunds",
+        "description": "Create client credits, apply them, or refund payments."
+      },
+      "ledger": {
+        "heading": "Ledger",
+        "description": "Read-only append-only ledger entries for a case."
+      },
+      "balance": {
+        "heading": "Balances",
+        "description": "Outstanding balances per invoice or case."
+      },
+      "tax": {
+        "heading": "Tax rules",
+        "description": "Versioned tax rules snapshotted onto invoices at issue."
+      }
+    }
+  },
+  "communications": {
+    "eyebrow": "Phase 22 · Communications",
+    "title": "Every conversation, linked and auditable.",
+    "description": "Thread client and case conversations across channels. Outbound messages queue until a provider is wired; nothing is ever sent silently.",
+    "create": "Create",
+    "compose": "Compose",
+    "close": "Close thread",
+    "record": "Record status",
+    "apply": "Apply",
+    "load": "Load",
+    "submitting": "Working…",
+    "labels": {
+      "threadId": "Thread ID",
+      "caseId": "Case ID",
+      "clientId": "Client ID",
+      "taskId": "Task ID",
+      "messageId": "Message ID",
+      "subject": "Subject",
+      "channel": "Channel",
+      "direction": "Direction",
+      "status": "Status",
+      "body": "Body",
+      "error": "Error",
+      "storageObjectId": "Storage object ID",
+      "mimeType": "MIME type",
+      "fileSize": "File size"
+    },
+    "placeholders": {
+      "threadId": "00000000-0000-4000-8000-000000000000",
+      "caseId": "00000000-0000-4000-8000-000000000000",
+      "clientId": "00000000-0000-4000-8000-000000000000",
+      "taskId": "00000000-0000-4000-8000-000000000000",
+      "messageId": "00000000-0000-4000-8000-000000000000",
+      "subject": "e.g. Hearing reminder",
+      "channel": "EMAIL, SMS, WHATSAPP, PHONE, INTERNAL or PORTAL",
+      "direction": "INBOUND or OUTBOUND",
+      "status": "SENT, DELIVERED, FAILED or READ",
+      "body": "Message text (link a case, client, or task)",
+      "error": "Provider error, if any"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "status": "Status",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "threads": {
+        "heading": "Threads",
+        "description": "Open and close conversation threads."
+      },
+      "compose": {
+        "heading": "Compose",
+        "description": "Write messages; outbound rests at QUEUED until a provider exists."
+      },
+      "inbox": {
+        "heading": "Inbox",
+        "description": "Read message history by thread, case, client, or channel."
+      },
+      "delivery": {
+        "heading": "Delivery",
+        "description": "Record explicit delivery transitions and failures."
+      },
+      "attachments": {
+        "heading": "Attachments",
+        "description": "Attach stored objects to a message."
+      },
+      "consent": {
+        "heading": "Consent",
+        "description": "Manage per-client per-channel opt-in and opt-out."
+      }
+    }
+  },
+  "calendar": {
+    "eyebrow": "Phase 23 · Calendar Integrations",
+    "title": "One agenda, every calendar.",
+    "description": "Connect external calendars per tenant, sync without duplicates, resolve conflicts explicitly, and read the unified internal agenda.",
+    "create": "Create",
+    "enable": "Enable",
+    "disable": "Disable",
+    "push": "Push",
+    "pull": "Pull",
+    "resolve": "Resolve",
+    "load": "Load",
+    "submitting": "Working…",
+    "labels": {
+      "connectionId": "Connection ID",
+      "provider": "Provider",
+      "accountRef": "Account",
+      "localType": "Local type",
+      "localId": "Local ID",
+      "resolution": "Resolution",
+      "reason": "Reason",
+      "externalId": "External ID",
+      "from": "From",
+      "to": "To"
+    },
+    "placeholders": {
+      "connectionId": "00000000-0000-4000-8000-000000000000",
+      "provider": "GOOGLE or MICROSOFT",
+      "accountRef": "e.g. calendar@example.com",
+      "localType": "HEARING, DEADLINE or TASK",
+      "localId": "00000000-0000-4000-8000-000000000000",
+      "resolution": "LOCAL_WINS or REMOTE_WINS",
+      "reason": "e.g. remote moved the event",
+      "externalId": "Provider event ID, if known",
+      "from": "YYYY-MM-DD",
+      "to": "YYYY-MM-DD"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "status": "Status",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "connections": {
+        "heading": "Connections",
+        "description": "Connect accounts and enable or disable sync per tenant."
+      },
+      "sync": {
+        "heading": "Sync",
+        "description": "Push local items to mappings and advance pull cursors."
+      },
+      "mappings": {
+        "heading": "Mappings",
+        "description": "Local-to-external event links; re-push updates, never duplicates."
+      },
+      "conflicts": {
+        "heading": "Conflicts",
+        "description": "Pending conflicts keep both sides until resolved explicitly."
+      },
+      "agenda": {
+        "heading": "Agenda",
+        "description": "Unified internal view of hearings, deadlines, and tasks by date."
       }
     }
   }

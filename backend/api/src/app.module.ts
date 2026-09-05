@@ -36,6 +36,9 @@ import { DocumentModule } from './documents/document.module';
 import { SearchModule } from './search/search.module';
 import { TemplatesModule } from './templates/templates.module';
 import { TimeTrackingModule } from './time-tracking/time-tracking.module';
+import { BillingModule } from './billing/billing.module';
+import { CommunicationsModule } from './communications/communications.module';
+import { CalendarModule } from './calendar/calendar.module';
 
 @Module({
   imports: [
@@ -70,6 +73,9 @@ import { TimeTrackingModule } from './time-tracking/time-tracking.module';
     SearchModule,
     TemplatesModule,
     TimeTrackingModule,
+    BillingModule,
+    CommunicationsModule,
+    CalendarModule,
     SchedulerModule,
   ],
   controllers: [AppController],
