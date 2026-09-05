@@ -6,9 +6,10 @@ import { TemplateGenerationController } from './template-generation.controller';
 import { DocxTemplateRenderer } from './adapters/docx-template.renderer';
 import { LibreofficeConversionProvider } from './adapters/libreoffice-conversion.provider';
 import { DatabaseModule } from '../infrastructure/database/database.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, AuthModule],
   controllers: [TemplateController, TemplateGenerationController],
   providers: [
     TemplateService,

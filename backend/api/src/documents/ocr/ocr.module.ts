@@ -6,11 +6,12 @@ import { PaddleOcrAdapter } from './adapters/paddle-ocr.adapter';
 import { PyMuPdfTextExtractor } from './adapters/pymupdf-text.extractor';
 import { SpacyEntityExtractor } from './adapters/spacy-entity.extractor';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { AuthModule } from '../../auth/auth.module';
 
 import { OcrWorkerProcessor } from './ocr-worker.processor';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, AuthModule],
   controllers: [OcrController],
   providers: [
     OcrProcessingService,

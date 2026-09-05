@@ -6,9 +6,11 @@ import { SearchController } from './search.controller';
 import { AdminSearchController } from './admin-search.controller';
 import { OpenSearchAdapter } from './adapters/opensearch.adapter';
 import { DatabaseModule } from '../infrastructure/database/database.module';
+import { AuthModule } from '../auth/auth.module';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, AuthModule, PermissionsModule],
   controllers: [SearchController, AdminSearchController],
   providers: [
     SearchService,

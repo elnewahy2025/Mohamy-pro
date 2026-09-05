@@ -1,8 +1,36 @@
-import { Controller, Post, Param, Body, Req, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Body,
+  Req,
+  Get,
+  UseGuards,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import { SessionGuard } from '../../auth/session/session.guard';
+import { CsrfGuard } from '../../auth/session/csrf.guard';
 import { OcrProcessingService } from './ocr-processing.service';
 import { HumanReviewService } from './human-review.service';
 
-@Controller('v1/documents/:id/ocr')
+function requireAuthContext(request: Request): {
+  tenantId: string;
+  userId: string;
+} {
+  const auth = request.auth;
+  if (!auth) throw new UnauthorizedException('UNAUTHENTICATED');
+  if (!auth.activeTenantId)
+    throw new BadRequestException('TENANT_CONTEXT_REQUIRED');
+  return { tenantId: auth.activeTenantId, userId: auth.userId };
+}
+
+@Controller({
+  path: 'documents/:id/ocr',
+  version: '1',
+})
+@UseGuards(SessionGuard, CsrfGuard)
 export class OcrController {
   constructor(
     private readonly ocrService: OcrProcessingService,
@@ -13,11 +41,9 @@ export class OcrController {
   async initiateOcr(
     @Param('id') documentId: string,
     @Body('documentVersionId') documentVersionId: string,
-    @Req() req: any,
+    @Req() req: Request,
   ) {
-    const tenantId = req.tenantId; // from middleware/guard
-
-    // Check authorization/permissions here
+    const { tenantId } = requireAuthContext(req);
 
     const processingId = await this.ocrService.enqueueProcessing(
       tenantId,
@@ -34,17 +60,15 @@ export class OcrController {
     @Param('processingId') processingId: string,
     @Body('action') action: 'APPROVE' | 'REJECT',
     @Body('notes') notes: string,
-    @Req() req: any,
+    @Req() req: Request,
   ) {
-    const tenantId = req.tenantId;
-    const reviewerId = req.user?.id;
-
-    // Check authorization here
+    void documentId;
+    const { tenantId, userId } = requireAuthContext(req);
 
     await this.reviewService.submitReview(
       tenantId,
       processingId,
-      reviewerId,
+      userId,
       action,
       notes,
     );
