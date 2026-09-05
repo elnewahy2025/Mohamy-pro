@@ -9,9 +9,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { requireTimeTrackingContext } from './time-tracking-auth';
+import {
+  TIME_APPROVE_PERMISSION,
+  requireTimeTrackingContext,
+  requireTimeTrackingPermission,
+} from './time-tracking-auth';
 import { CsrfGuard } from '../auth/session/csrf.guard';
 import { SessionGuard } from '../auth/session/session.guard';
+import { PermissionsService } from '../permissions/permissions.service';
 import { CreateTimeEntryDto } from './time-tracking.dto';
 import { TimeEntryService } from './time-entry.service';
 
@@ -21,7 +26,10 @@ import { TimeEntryService } from './time-entry.service';
 })
 @UseGuards(SessionGuard, CsrfGuard)
 export class TimeEntryController {
-  constructor(private readonly timeEntryService: TimeEntryService) {}
+  constructor(
+    private readonly timeEntryService: TimeEntryService,
+    private readonly permissions: PermissionsService,
+  ) {}
 
   @Post()
   async createEntry(@Body() dto: CreateTimeEntryDto, @Req() req: Request) {
@@ -43,9 +51,21 @@ export class TimeEntryController {
 
   @Patch(':id/approve')
   async approveEntry(@Param('id') id: string, @Req() req: Request) {
-    const { tenantId, userId } = requireTimeTrackingContext(req);
-    // Approval authorization (manager/admin) is a product decision deferred
-    // explicitly: any authenticated tenant member can approve today.
+    const { tenantId, userId } = await requireTimeTrackingPermission(
+      req,
+      this.permissions,
+      TIME_APPROVE_PERMISSION,
+    );
     return this.timeEntryService.approveTimeEntry(tenantId, id, userId);
+  }
+
+  @Patch(':id/reject')
+  async rejectEntry(@Param('id') id: string, @Req() req: Request) {
+    const { tenantId, userId } = await requireTimeTrackingPermission(
+      req,
+      this.permissions,
+      TIME_APPROVE_PERMISSION,
+    );
+    return this.timeEntryService.rejectTimeEntry(tenantId, id, userId);
   }
 }

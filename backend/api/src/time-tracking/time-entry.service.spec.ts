@@ -34,6 +34,20 @@ describe('TimeEntryService', () => {
     });
   });
 
+  it('rejects with approver recorded, tenant-scoped', async () => {
+    const prisma = {
+      timeEntry: { update: jest.fn().mockResolvedValue({ id: 'e1' }) },
+    };
+    const service = new TimeEntryService(prisma as any);
+
+    await service.rejectTimeEntry('t1', 'e1', 'mgr1');
+
+    expect(prisma.timeEntry.update).toHaveBeenCalledWith({
+      where: { id: 'e1', tenantId: 't1' },
+      data: { status: TimeEntryStatus.REJECTED, approvedBy: 'mgr1' },
+    });
+  });
+
   it('scopes submit to the entry owner', async () => {
     const prisma = {
       timeEntry: { update: jest.fn().mockResolvedValue({ id: 'e1' }) },

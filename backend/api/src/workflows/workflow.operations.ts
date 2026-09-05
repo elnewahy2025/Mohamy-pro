@@ -16,6 +16,9 @@ import { WorkflowAccessDeniedError } from './workflow.errors';
 export const WORKFLOW_PERMISSION: PermissionKey =
   PERMISSION_KEYS.CAN_MANAGE_WORKFLOWS;
 
+export const WORKFLOW_PUBLISH_PERMISSION: PermissionKey =
+  PERMISSION_KEYS.CAN_PUBLISH_WORKFLOW_VERSIONS;
+
 export interface WorkflowContext {
   sessionId: string;
   userId: string;
@@ -44,6 +47,27 @@ export class WorkflowOperations {
         userId: auth.userId,
         tenantId: auth.activeTenantId,
         permissionKey: WORKFLOW_PERMISSION,
+        operationId: auth.sessionId,
+      });
+    return {
+      sessionId: auth.sessionId,
+      userId: auth.userId,
+      tenantId: auth.activeTenantId,
+      actorMembershipId,
+    };
+  }
+
+  async authorizePublish(request: Request): Promise<WorkflowContext> {
+    const auth = request.auth;
+    if (!auth) throw new WorkflowAccessDeniedError('UNAUTHENTICATED');
+    if (!auth.activeTenantId)
+      throw new WorkflowAccessDeniedError('TENANT_CONTEXT_REQUIRED');
+    const { membershipId: actorMembershipId } =
+      await this.permissions.assertTenantPermission({
+        request,
+        userId: auth.userId,
+        tenantId: auth.activeTenantId,
+        permissionKey: WORKFLOW_PUBLISH_PERMISSION,
         operationId: auth.sessionId,
       });
     return {

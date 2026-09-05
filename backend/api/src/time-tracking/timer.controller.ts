@@ -34,6 +34,12 @@ export class TimerController {
     return this.timerService.pauseTimer(tenantId, userId, id);
   }
 
+  @Patch(':id/resume')
+  async resumeTimer(@Param('id') id: string, @Req() req: Request) {
+    const { tenantId, userId } = requireTimeTrackingContext(req);
+    return this.timerService.resumeTimer(tenantId, userId, id);
+  }
+
   @Post(':id/stop')
   async stopTimer(@Param('id') id: string, @Req() req: Request) {
     const { tenantId, userId } = requireTimeTrackingContext(req);

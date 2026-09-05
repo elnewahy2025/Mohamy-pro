@@ -77,7 +77,7 @@ export class WorkflowController {
     @Req() request: Request,
     @Param('versionId', ParseUUIDPipe) versionId: string,
   ) {
-    const ctx = await this.operations.authorize(request);
+    const ctx = await this.operations.authorizePublish(request);
     return this.operations.run(
       request,
       ctx,

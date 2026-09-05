@@ -46,4 +46,11 @@ export class TimeEntryService {
       data: { status: TimeEntryStatus.APPROVED, approvedBy: approverId },
     });
   }
+
+  async rejectTimeEntry(tenantId: string, entryId: string, approverId: string) {
+    return this.prisma.timeEntry.update({
+      where: { id: entryId, tenantId },
+      data: { status: TimeEntryStatus.REJECTED, approvedBy: approverId },
+    });
+  }
 }

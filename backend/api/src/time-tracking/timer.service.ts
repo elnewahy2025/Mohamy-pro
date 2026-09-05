@@ -32,6 +32,18 @@ export class TimerService {
     });
   }
 
+  async resumeTimer(tenantId: string, userId: string, timerId: string) {
+    // Single active timer invariant: pause any other running timers first.
+    await this.prisma.timer.updateMany({
+      where: { tenantId, userId, status: TimerStatus.RUNNING },
+      data: { status: TimerStatus.PAUSED },
+    });
+    return this.prisma.timer.update({
+      where: { id: timerId, tenantId, userId },
+      data: { status: TimerStatus.RUNNING },
+    });
+  }
+
   async stopTimerAndCreateEntry(
     tenantId: string,
     userId: string,

@@ -23,6 +23,27 @@ describe('TimerService', () => {
     expect(data.status).toBe(TimerStatus.RUNNING);
   });
 
+  it('resumes owner timer after pausing other running timers', async () => {
+    const prisma = {
+      timer: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        update: jest.fn().mockResolvedValue({ id: 'tm1' }),
+      },
+    };
+    const service = new TimerService(prisma as any);
+
+    await service.resumeTimer('t1', 'u1', 'tm1');
+
+    expect(prisma.timer.updateMany).toHaveBeenCalledWith({
+      where: { tenantId: 't1', userId: 'u1', status: TimerStatus.RUNNING },
+      data: { status: TimerStatus.PAUSED },
+    });
+    expect(prisma.timer.update).toHaveBeenCalledWith({
+      where: { id: 'tm1', tenantId: 't1', userId: 'u1' },
+      data: { status: TimerStatus.RUNNING },
+    });
+  });
+
   it('stops only the owner timer and derives entry minutes', async () => {
     const prisma = {
       timer: {
