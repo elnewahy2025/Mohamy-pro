@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, CasesClient, ClientsClient, ConflictChecksClient, LegalConfigClient, PartyClient } from './api';
+import { ApiClient, CasesClient, ClientsClient, ConflictChecksClient, LegalConfigClient, PartyClient, WorkflowsClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -1146,5 +1146,155 @@ describe('CaseTimelineClient (Phase 10)', () => {
       payload: { oldStatus: 'OPEN', newStatus: 'ON_HOLD' },
     });
     expect(result.eventType).toBe('STATUS_CHANGED');
+  });
+});
+
+describe('WorkflowsClient (Phase 11)', () => {
+  const base = 'http://localhost';
+  const baseWorkflow = {
+    id: 'wf1',
+    tenantId: 't1',
+    name: 'Litigation',
+    caseType: 'Civil',
+    status: 'ACTIVE',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  } as const;
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-workflow' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('lists workflows with latest version via GET /workflows', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/workflows': () =>
+        enveloped([
+          {
+            ...baseWorkflow,
+            versions: [
+              {
+                id: 'v1', tenantId: 't1', workflowId: 'wf1', version: 1, status: 'DRAFT',
+                effectiveFrom: null, effectiveTo: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+              },
+            ],
+          },
+        ]),
+    });
+    const client = new WorkflowsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listWorkflows();
+
+    const call = calls.find((c) => c.url.endsWith('/workflows'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result).toHaveLength(1);
+    expect(result[0].versions?.[0]?.version).toBe(1);
+  });
+
+  it('creates a workflow via POST /workflows', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/workflows': (_url, init) =>
+        init?.method === 'POST' ? enveloped(baseWorkflow, 201) : enveloped([]),
+    });
+    const client = new WorkflowsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createWorkflow({ name: 'Litigation', caseType: 'Civil' });
+
+    const call = calls.find((c) => c.url.endsWith('/workflows') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ name: 'Litigation', caseType: 'Civil' });
+    expect(result.name).toBe('Litigation');
+  });
+
+  it('creates a workflow version with states and transitions via POST /workflows/:id/versions', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/workflows/wf1/versions': () =>
+        enveloped(
+          {
+            id: 'v1', tenantId: 't1', workflowId: 'wf1', version: 1, status: 'DRAFT',
+            effectiveFrom: null, effectiveTo: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+            states: [
+              { id: 's1', tenantId: 't1', versionId: 'v1', name: 'Open', isInitial: true, isFinal: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              { id: 's2', tenantId: 't1', versionId: 'v1', name: 'Closed', isInitial: false, isFinal: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+            ],
+            transitions: [
+              { id: 'tr1', tenantId: 't1', versionId: 'v1', fromStateId: null, toStateId: 's2', conditions: null, actions: null, requiresApproval: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+            ],
+          },
+          201,
+        ),
+    });
+    const client = new WorkflowsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createVersion('wf1', {
+      states: [
+        { name: 'Open', isInitial: true },
+        { name: 'Closed', isFinal: true },
+      ],
+      transitions: [{ toStateName: 'Closed' }],
+    });
+
+    const call = calls.find((c) => c.url.endsWith('/workflows/wf1/versions'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      states: [
+        { name: 'Open', isInitial: true },
+        { name: 'Closed', isFinal: true },
+      ],
+      transitions: [{ toStateName: 'Closed' }],
+    });
+    expect(result.states ?? []).toHaveLength(2);
+    expect(result.transitions?.[0]?.toStateId).toBe('s2');
+  });
+
+  it('publishes a version via POST /workflows/versions/:versionId/publish', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/workflows/versions/v1/publish': () =>
+        enveloped({
+          id: 'v1', tenantId: 't1', workflowId: 'wf1', version: 1, status: 'PUBLISHED',
+          effectiveFrom: '2026-01-01T00:00:00.000Z', effectiveTo: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
+    });
+    const client = new WorkflowsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.publishVersion('v1');
+
+    const call = calls.find((c) => c.url.endsWith('/workflows/versions/v1/publish'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('PUBLISHED');
   });
 });

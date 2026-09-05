@@ -31,6 +31,7 @@ describe('localized frontend messages', () => {
       conflictChecks: 'Conflict checks',
       legalConfig: 'Legal configuration',
       workflows: 'Workflows',
+      secureLinks: 'Secure Links',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -54,6 +55,7 @@ describe('localized frontend messages', () => {
       conflictChecks: 'فحص تضارب المصالح',
       legalConfig: 'الإعداد القانوني',
       workflows: 'سير العمل',
+      secureLinks: 'الروابط الآمنة',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {
