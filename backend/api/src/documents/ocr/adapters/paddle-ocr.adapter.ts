@@ -3,6 +3,7 @@ import {
   OcrProvider,
   OcrPageResult,
 } from '../interfaces/ocr-provider.interface';
+import { OcrUnavailableError } from '../ocr-unavailable.error';
 
 @Injectable()
 export class PaddleOcrAdapter implements OcrProvider {
@@ -11,22 +12,11 @@ export class PaddleOcrAdapter implements OcrProvider {
   async processImage(
     imageStream: NodeJS.ReadableStream,
   ): Promise<OcrPageResult> {
-    this.logger.log('Processing image with PaddleOCR...');
-    // In production, this would call a self-hosted PaddleOCR Python microservice
-    // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    return {
-      pageNumber: 1,
-      fullText: 'Simulated PaddleOCR extraction result.',
-      averageConfidence: 0.95,
-      blocks: [
-        { text: 'Simulated', confidence: 0.98 },
-        { text: 'PaddleOCR', confidence: 0.96 },
-        { text: 'extraction', confidence: 0.92 },
-        { text: 'result.', confidence: 0.94 },
-      ],
-    };
+    void imageStream;
+    this.logger.error(
+      'PaddleOCR called without a provider microservice: refusing to fabricate extraction text',
+    );
+    throw new OcrUnavailableError('PaddleOCR microservice is not connected');
   }
 
   getProviderName(): string {

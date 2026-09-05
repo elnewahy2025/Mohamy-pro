@@ -92,6 +92,93 @@ describe('Phase 10-15 migration assertions', () => {
     expect(sealMigration).toContain("'platform.admin'");
   });
 
+  it('creates all 20 Phase 16-19 tables in the foundation migration', () => {
+    const foundationMigration = readMigration(
+      '20260908000000_phase16_19_foundation',
+    );
+
+    for (const table of [
+      'DocumentSecurityMetadata',
+      'DocumentScan',
+      'SignedAccessGrant',
+      'DocumentDownload',
+      'OcrProcessing',
+      'OcrPage',
+      'OcrEntity',
+      'ClassificationResult',
+      'HumanReview',
+      'ApprovedDocumentMetadata',
+      'SearchIndexVersion',
+      'SearchReindexJob',
+      'Template',
+      'TemplateVersion',
+      'TemplateVariable',
+      'TemplateApproval',
+      'DocumentGenerationJob',
+      'Rate',
+      'TimeEntry',
+      'Timer',
+    ]) {
+      expect(foundationMigration).toContain(`CREATE TABLE "${table}"`);
+    }
+  });
+
+  it('enables FORCE RLS with a tenant_isolation policy on all 19 tenant tables', () => {
+    const foundationMigration = readMigration(
+      '20260908000000_phase16_19_foundation',
+    );
+
+    for (const table of [
+      'DocumentSecurityMetadata',
+      'DocumentScan',
+      'SignedAccessGrant',
+      'DocumentDownload',
+      'OcrProcessing',
+      'OcrPage',
+      'OcrEntity',
+      'ClassificationResult',
+      'HumanReview',
+      'ApprovedDocumentMetadata',
+      'SearchReindexJob',
+      'Template',
+      'TemplateVersion',
+      'TemplateVariable',
+      'TemplateApproval',
+      'DocumentGenerationJob',
+      'Rate',
+      'TimeEntry',
+      'Timer',
+    ]) {
+      expect(foundationMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(foundationMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(foundationMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+
+    expect(foundationMigration).toContain(
+      '"SearchIndexVersion_tenant_context"',
+    );
+  });
+
+  it('adds a tenantId FK on each Phase 16-19 child table', () => {
+    const foundationMigration = readMigration(
+      '20260908000000_phase16_19_foundation',
+    );
+
+    for (const table of [
+      'OcrPage',
+      'OcrEntity',
+      'ClassificationResult',
+      'HumanReview',
+      'TemplateVariable',
+    ]) {
+      expect(foundationMigration).toContain(`"${table}_tenantId_fkey"`);
+    }
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

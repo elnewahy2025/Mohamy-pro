@@ -406,10 +406,15 @@ model Tenant {
   signedAccessGrants       SignedAccessGrant[]
   documentDownloads        DocumentDownload[]
   ocrProcessings           OcrProcessing[]
+  ocrPages                 OcrPage[]
+  ocrEntities              OcrEntity[]
+  classificationResults    ClassificationResult[]
+  humanReviews             HumanReview[]
   approvedDocumentMetadata ApprovedDocumentMetadata[]
   searchReindexJobs        SearchReindexJob[]
   templates                Template[]
   templateVersions         TemplateVersion[]
+  templateVariables        TemplateVariable[]
   templateApprovals        TemplateApproval[]
   documentGenerationJobs   DocumentGenerationJob[]
   rates                    Rate[]
@@ -1664,6 +1669,7 @@ model OcrProcessing {
 
 model OcrPage {
   id               String           @id @default(uuid())
+  tenantId String
   ocrProcessingId  String
   pageNumber       Int
   extractionMethod ExtractionMethod
@@ -1672,13 +1678,16 @@ model OcrPage {
   metadata         Json?
   createdAt        DateTime         @default(now())
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   processing OcrProcessing @relation(fields: [ocrProcessingId], references: [id], onDelete: Cascade)
 
   @@index([ocrProcessingId])
+  @@index([tenantId])
 }
 
 model OcrEntity {
   id               String   @id @default(uuid())
+  tenantId String
   ocrProcessingId  String
   pageId           String?
   entityType       String
@@ -1691,26 +1700,32 @@ model OcrEntity {
   metadata         Json?
   createdAt        DateTime @default(now())
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   processing OcrProcessing @relation(fields: [ocrProcessingId], references: [id], onDelete: Cascade)
 
   @@index([ocrProcessingId])
+  @@index([tenantId])
 }
 
 model ClassificationResult {
   id                String   @id @default(uuid())
+  tenantId String
   ocrProcessingId   String
   predictedCategory String
   confidence        Float?
   modelVersion      String?
   createdAt         DateTime @default(now())
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   processing OcrProcessing @relation(fields: [ocrProcessingId], references: [id], onDelete: Cascade)
 
   @@index([ocrProcessingId])
+  @@index([tenantId])
 }
 
 model HumanReview {
   id              String            @id @default(uuid())
+  tenantId String
   ocrProcessingId String
   reviewerId      String?
   status          HumanReviewStatus @default(PENDING)
@@ -1719,10 +1734,12 @@ model HumanReview {
   reviewedAt      DateTime?
   createdAt       DateTime          @default(now())
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   processing OcrProcessing @relation(fields: [ocrProcessingId], references: [id], onDelete: Cascade)
   reviewer   User?         @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
 
   @@index([ocrProcessingId])
+  @@index([tenantId])
 }
 
 model ApprovedDocumentMetadata {
@@ -1903,6 +1920,7 @@ model TemplateVersion {
 
 model TemplateVariable {
   id                String                      @id @default(uuid())
+  tenantId String
   templateVersionId String
   key               String
   label             String
@@ -1914,7 +1932,10 @@ model TemplateVariable {
   defaultValue      Json?
   sensitivity       TemplateVariableSensitivity @default(INTERNAL)
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   templateVersion TemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 model TemplateApproval {

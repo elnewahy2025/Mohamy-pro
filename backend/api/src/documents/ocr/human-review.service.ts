@@ -48,6 +48,7 @@ export class HumanReviewService {
       // 1. Record the review
       await tx.humanReview.create({
         data: {
+          tenantId,
           ocrProcessingId: processingId,
           reviewerId,
           status: reviewStatus,

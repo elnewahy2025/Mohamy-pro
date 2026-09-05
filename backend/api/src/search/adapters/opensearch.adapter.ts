@@ -5,53 +5,35 @@ import {
   SearchResult,
   SearchAuthorizationContext,
 } from '../interfaces/search-provider.interface';
+import { SearchUnavailableError } from '../search-unavailable.error';
 
 @Injectable()
 export class OpenSearchAdapter implements SearchProvider {
   private readonly logger = new Logger(OpenSearchAdapter.name);
 
-  // In a real implementation, the OpenSearch client would be injected here.
-  // constructor(private readonly osClient: Client) {}
+  // The OpenSearch client is not injected yet (Phase 18 scaffold).
+  // Every method fails closed rather than returning fabricated results.
 
   async search(
     query: SearchQuery,
     authContext: SearchAuthorizationContext,
   ): Promise<SearchResult> {
-    this.logger.log(
-      `Executing OpenSearch query for tenant: ${authContext.tenantId}`,
+    void query;
+    this.logger.error(
+      `Search called without a provider for tenant: ${authContext.tenantId}`,
     );
-
-    // Simulate translating the query + authContext to OpenSearch DSL
-    // const osQuery = this.buildOpenSearchQuery(query, authContext);
-    // const response = await this.osClient.search(osQuery);
-
-    return {
-      items: [
-        {
-          entityType: 'CASE',
-          entityId: 'mock-case-id',
-          title: 'Mock Case from OpenSearch',
-          highlights: {
-            title: ['Mock <em>Case</em> from OpenSearch'],
-          },
-        },
-      ],
-      pagination: {
-        page: query.page || 1,
-        pageSize: query.pageSize || 25,
-        total: 1,
-      },
-    };
+    throw new SearchUnavailableError();
   }
 
   async suggest(
     query: string,
     authContext: SearchAuthorizationContext,
   ): Promise<string[]> {
-    this.logger.log(
-      `Fetching OpenSearch suggestions for tenant: ${authContext.tenantId}`,
+    void query;
+    this.logger.error(
+      `Suggest called without a provider for tenant: ${authContext.tenantId}`,
     );
-    return ['mock suggestion 1', 'mock suggestion 2'];
+    throw new SearchUnavailableError();
   }
 
   async indexDocument(
@@ -59,12 +41,17 @@ export class OpenSearchAdapter implements SearchProvider {
     entityId: string,
     document: any,
   ): Promise<void> {
-    this.logger.debug(`Indexing document ${entityId} into ${indexName}`);
-    // await this.osClient.index({ index: indexName, id: entityId, body: document });
+    void document;
+    this.logger.error(
+      `Index write for ${entityId} into ${indexName} dropped: no provider`,
+    );
+    throw new SearchUnavailableError();
   }
 
   async deleteDocument(indexName: string, entityId: string): Promise<void> {
-    this.logger.debug(`Deleting document ${entityId} from ${indexName}`);
-    // await this.osClient.delete({ index: indexName, id: entityId });
+    this.logger.error(
+      `Index delete for ${entityId} from ${indexName} dropped: no provider`,
+    );
+    throw new SearchUnavailableError();
   }
 }

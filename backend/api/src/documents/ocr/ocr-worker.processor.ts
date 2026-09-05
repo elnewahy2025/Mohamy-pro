@@ -7,6 +7,7 @@ import {
 import { Job, Worker } from 'bullmq';
 import { RedisService } from '../../infrastructure/redis/redis.service';
 import { OcrProcessingService } from './ocr-processing.service';
+import { OcrUnavailableError } from './ocr-unavailable.error';
 
 const OCR_QUEUE_NAME = 'ocr.document';
 
@@ -66,10 +67,11 @@ export class OcrWorkerProcessor implements OnModuleInit, OnModuleDestroy {
         `[Correlation: ${correlationId}] Processing OCR job for ${processingId} in tenant ${tenantId}`,
       );
 
-      // Mocking the stream. In a real app we would read from MinIO storage.
-      const mockStream: any = {};
-
-      await this.ocrProcessingService.processDocument(processingId, mockStream);
+      // The MinIO source-stream reader is not implemented yet (Phase 17
+      // scaffold). Fail closed rather than persisting fabricated pages.
+      throw new OcrUnavailableError(
+        'document source-stream reader is not implemented',
+      );
     }
   }
 }

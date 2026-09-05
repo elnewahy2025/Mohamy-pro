@@ -86,6 +86,7 @@ export class OcrProcessingService {
 
         await this.prisma.ocrPage.create({
           data: {
+            tenantId: processing.tenantId,
             ocrProcessingId: processingId,
             pageNumber: ocrResult.pageNumber,
             extractionMethod: ExtractionMethod.OCR,
@@ -110,6 +111,7 @@ export class OcrProcessingService {
         for (const entity of entities) {
           await this.prisma.ocrEntity.create({
             data: {
+              tenantId: processing.tenantId,
               ocrProcessingId: processingId,
               entityType: entity.entityType,
               value: entity.value,
