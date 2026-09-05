@@ -30,6 +30,8 @@ const SCAFFOLD_CONTROLLER_REL_PATHS: Record<string, string> = {
   'admin-search': 'search/admin-search.controller.ts',
   ocr: 'documents/ocr/ocr.controller.ts',
   'document-security': 'documents/security/document-security.controller.ts',
+  roles: 'roles/role.controller.ts',
+  denials: 'denials/denial.controller.ts',
 };
 
 describe('G1 scaffold controller guard assertions', () => {
