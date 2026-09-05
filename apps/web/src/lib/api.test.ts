@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, CasesClient, ClientsClient, ConflictChecksClient, LegalConfigClient, PartyClient, WorkflowsClient } from './api';
+import { ApiClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -1296,5 +1296,80 @@ describe('WorkflowsClient (Phase 11)', () => {
     const call = calls.find((c) => c.url.endsWith('/workflows/versions/v1/publish'));
     expect(call?.init?.method).toBe('POST');
     expect(result.status).toBe('PUBLISHED');
+  });
+});
+
+describe('Client URL prefixes (prefix regression)', () => {
+  const base = 'http://localhost';
+
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): { fetchMock: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-prefix' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('hits /api/v1/hearings (no doubled /v1)', async () => {
+    const { fetchMock, calls } = clientWith({ '/hearings': () => enveloped([]) });
+    await new HearingsClient(new ApiClient(base, fetchMock)).listHearings();
+    const call = calls.find((c) => c.url.includes('/hearings'));
+    expect(call?.url).toBe(`${base}/hearings`);
+    expect(call?.url).not.toContain('/v1/v1');
+  });
+
+  it('hits /api/v1/deadlines (no doubled /v1)', async () => {
+    const { fetchMock, calls } = clientWith({ '/deadlines': () => enveloped({ data: [] }) });
+    await new DeadlinesClient(new ApiClient(base, fetchMock)).listDeadlines();
+    const call = calls.find((c) => c.url.includes('/deadlines'));
+    expect(call?.url).toBe(`${base}/deadlines`);
+    expect(call?.url).not.toContain('/v1/v1');
+  });
+
+  it('hits /api/v1/tasks (no doubled /v1)', async () => {
+    const { fetchMock, calls } = clientWith({ '/tasks': () => enveloped({ data: [] }) });
+    await new TasksClient(new ApiClient(base, fetchMock)).listTasks();
+    const call = calls.find((c) => c.url.includes('/tasks'));
+    expect(call?.url).toBe(`${base}/tasks`);
+    expect(call?.url).not.toContain('/v1/v1');
+  });
+
+  it('hits /api/v1/documents (no doubled /v1)', async () => {
+    const { fetchMock, calls } = clientWith({ '/documents': () => enveloped({ data: [] }) });
+    await new DocumentsClient(new ApiClient(base, fetchMock)).listDocuments();
+    const call = calls.find((c) => c.url.includes('/documents'));
+    expect(call?.url).toBe(`${base}/documents`);
+    expect(call?.url).not.toContain('/v1/v1');
   });
 });

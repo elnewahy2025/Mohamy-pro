@@ -1576,7 +1576,7 @@ export interface UpdateHearingOutcomeRequest {
   status: 'SCHEDULED' | 'COMPLETED' | 'POSTPONED' | 'CANCELLED';
 }
 
-const HEARINGS_PREFIX = '/v1/hearings';
+const HEARINGS_PREFIX = '/hearings';
 
 export class HearingsClient {
   constructor(private readonly client = new ApiClient()) {}
@@ -1639,7 +1639,7 @@ export interface CreateDeadlineRequest {
   ruleId?: string;
 }
 
-const DEADLINES_PREFIX = '/v1/deadlines';
+const DEADLINES_PREFIX = '/deadlines';
 
 export class DeadlinesClient {
   constructor(private readonly client = new ApiClient()) {}
@@ -1694,7 +1694,7 @@ export interface AssignTaskRequest {
   assignedUserId: string;
 }
 
-const TASKS_PREFIX = '/v1/tasks';
+const TASKS_PREFIX = '/tasks';
 
 export class TasksClient {
   constructor(private readonly client = new ApiClient()) {}
@@ -1761,7 +1761,7 @@ export interface ShareDocumentRequest {
   expiresAt?: string;
 }
 
-const DOCUMENTS_PREFIX = '/v1/documents';
+const DOCUMENTS_PREFIX = '/documents';
 
 export class DocumentsClient {
   constructor(private readonly client = new ApiClient()) {}
