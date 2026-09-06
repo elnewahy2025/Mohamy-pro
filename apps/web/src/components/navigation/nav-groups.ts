@@ -42,6 +42,11 @@ export const appNavGroups: AppNavGroup[] = [
     items: [
       { href: '/', labelKey: 'navigation.overview', icon: LayoutDashboard },
       {
+        href: '/dashboard',
+        labelKey: 'navigation.dashboard',
+        icon: LayoutDashboard,
+      },
+      {
         href: '/operations',
         labelKey: 'navigation.operations',
         icon: Activity,

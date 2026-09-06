@@ -7,7 +7,9 @@ function sortedKeys(value: unknown, prefix = ''): string[] {
     return [prefix];
   }
   return Object.entries(value)
-    .flatMap(([key, child]) => sortedKeys(child, prefix ? `${prefix}.${key}` : key))
+    .flatMap(([key, child]) =>
+      sortedKeys(child, prefix ? `${prefix}.${key}` : key),
+    )
     .sort();
 }
 
@@ -39,6 +41,7 @@ describe('localized frontend messages', () => {
       transfer: 'Import / Export',
       notifications: 'Notifications',
       reports: 'Reports',
+      dashboard: 'Dashboard',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -70,6 +73,7 @@ describe('localized frontend messages', () => {
       transfer: 'استيراد / تصدير',
       notifications: 'التنبيهات',
       reports: 'التقارير',
+      dashboard: 'لوحة المتابعة',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {

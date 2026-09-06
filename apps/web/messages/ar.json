@@ -88,7 +88,8 @@
     "portal": "البوابة",
     "transfer": "استيراد / تصدير",
     "notifications": "التنبيهات",
-    "reports": "التقارير"
+    "reports": "التقارير",
+    "dashboard": "لوحة المتابعة"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -1437,6 +1438,42 @@
       "schedules": {
         "heading": "الجداول",
         "description": "تشغيل يومي أو أسبوعي مع ملخصات."
+      }
+    }
+  },
+  "dashboard": {
+    "eyebrow": "المرحلة 28 · لوحة المتابعة",
+    "title": "اليوم في لمحة.",
+    "description": "ملخص تشغيلي حي ضمن نطاق مستأجرك ومهامك.",
+    "load": "تحديث",
+    "submitting": "جارٍ التحميل…",
+    "kpis": {
+      "openCases": "القضايا المفتوحة",
+      "overdueDeadlines": "مواعيد متأخرة",
+      "openTasks": "مهام مفتوحة",
+      "unpaidInvoices": "فواتير غير مدفوعة",
+      "unreadNotifications": "تنبيهات غير مقروءة"
+    },
+    "result": {
+      "title": "تم تحميل اللوحة",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "kpis": {
+        "heading": "أرقام رئيسية",
+        "description": "إحصاءات القضايا والعمل والمال."
+      },
+      "upcoming": {
+        "heading": "القادم",
+        "description": "الجلسات والمواعيد ومهامك التالية."
+      },
+      "billing": {
+        "heading": "المستحقات",
+        "description": "الأرصدة غير المدفوعة حسب العملة."
+      },
+      "activity": {
+        "heading": "النشاط الأخير",
+        "description": "أحدث أحداث القضايا ضمن نطاقك."
       }
     }
   }

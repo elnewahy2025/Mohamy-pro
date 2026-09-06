@@ -88,7 +88,8 @@
     "portal": "Portal",
     "transfer": "Import / Export",
     "notifications": "Notifications",
-    "reports": "Reports"
+    "reports": "Reports",
+    "dashboard": "Dashboard"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -1437,6 +1438,42 @@
       "schedules": {
         "heading": "Schedules",
         "description": "Daily or weekly scheduled runs with summaries."
+      }
+    }
+  },
+  "dashboard": {
+    "eyebrow": "Phase 28 · Dashboard",
+    "title": "Today at a glance.",
+    "description": "Live operational summary scoped to your tenant and assignments.",
+    "load": "Refresh",
+    "submitting": "Loading…",
+    "kpis": {
+      "openCases": "Open cases",
+      "overdueDeadlines": "Overdue deadlines",
+      "openTasks": "Open tasks",
+      "unpaidInvoices": "Unpaid invoices",
+      "unreadNotifications": "Unread alerts"
+    },
+    "result": {
+      "title": "Dashboard loaded",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "kpis": {
+        "heading": "Key figures",
+        "description": "Counts across matters, work, and money."
+      },
+      "upcoming": {
+        "heading": "Upcoming",
+        "description": "Next hearings, deadlines, and your tasks."
+      },
+      "billing": {
+        "heading": "Receivables",
+        "description": "Unpaid balances by currency."
+      },
+      "activity": {
+        "heading": "Recent activity",
+        "description": "Latest case timeline events in scope."
       }
     }
   }

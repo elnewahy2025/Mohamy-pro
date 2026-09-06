@@ -42,6 +42,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { PortalModule } from './portal/portal.module';
 import { TransferModule } from './transfer/transfer.module';
 import { ReportingModule } from './reporting/reporting.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { DenialsModule } from './denials/denials.module';
 import { BreakGlassModule } from './breakglass/breakglass.module';
 import { RolesModule } from './roles/roles.module';
@@ -85,6 +86,7 @@ import { RolesModule } from './roles/roles.module';
     PortalModule,
     TransferModule,
     ReportingModule,
+    DashboardModule,
     DenialsModule,
     RolesModule,
     BreakGlassModule,

@@ -5,6 +5,7 @@ import {
   BreakGlassClient,
   CalendarClient,
   CommsClient,
+  DashboardClient,
   NotificationsClient,
   PortalClient,
   ReportsClient,
@@ -3462,5 +3463,86 @@ describe('ReportsClient (Phase 27)', () => {
     const call = calls.find((c) => c.url.endsWith('/reports/runs'));
     expect(call?.init?.method).toBe('GET');
     expect(result).toEqual([]);
+  });
+});
+
+describe('DashboardClient (Phase 28)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function dashboardWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-dashboard' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const summary = {
+    cases: { total: 3, open: 2, byStatus: { OPEN: 2, CLOSED: 1 } },
+    hearings: { upcoming: 1, next: [] },
+    deadlines: { overdue: 0, next: [] },
+    tasks: { open: 5, overdue: 1, assignedToMe: 2 },
+    billing: {
+      unpaidInvoices: 2,
+      overdueInvoices: 0,
+      unpaidTotals: { SAR: '125.75' },
+    },
+    activity: [],
+    notifications: { unread: 4 },
+  };
+
+  it('fetches the summary via GET /dashboard/summary', async () => {
+    const { fetchMock, calls } = dashboardWith({
+      '/dashboard/summary': () => enveloped(summary),
+    });
+    const client = new DashboardClient(new ApiClient(base, fetchMock));
+
+    const result = await client.summary();
+
+    const call = calls.find((c) => c.url.endsWith('/dashboard/summary'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result.cases.open).toBe(2);
+    expect(result.billing.unpaidTotals).toEqual({ SAR: '125.75' });
+    expect(result.notifications.unread).toBe(4);
   });
 });

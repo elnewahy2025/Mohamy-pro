@@ -3414,3 +3414,55 @@ export class ReportsClient {
     return this.client.body<ReportRunResult[]>(`${REPORTS_PREFIX}/runs`, 'GET');
   }
 }
+
+// --- Phase 28: Dashboard ---
+
+export interface DashboardSummary {
+  cases: { total: number; open: number; byStatus: Record<string, number> };
+  hearings: {
+    upcoming: number;
+    next: Array<{
+      id: string;
+      caseId: string;
+      date: string;
+      hearingType: string | null;
+      status: string;
+    }>;
+  };
+  deadlines: {
+    overdue: number;
+    next: Array<{
+      id: string;
+      caseId: string;
+      title: string;
+      dueDate: string;
+      status: string;
+    }>;
+  };
+  tasks: { open: number; overdue: number; assignedToMe: number };
+  billing: {
+    unpaidInvoices: number;
+    overdueInvoices: number;
+    unpaidTotals: Record<string, string>;
+  };
+  activity: Array<{
+    id: string;
+    caseId: string;
+    eventType: string;
+    occurredAt: string;
+  }>;
+  notifications: { unread: number };
+}
+
+const DASHBOARD_PREFIX = '/dashboard';
+
+export class DashboardClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  summary(): Promise<DashboardSummary> {
+    return this.client.body<DashboardSummary>(
+      `${DASHBOARD_PREFIX}/summary`,
+      'GET',
+    );
+  }
+}
