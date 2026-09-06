@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, BillingsClient, CalendarClient, CommsClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
+import { ApiClient, BillingsClient, BreakGlassClient, CalendarClient, CommsClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -947,6 +947,86 @@ describe('CasesClient assignments (G5)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/cases/case1/assignments/m2'));
     expect(call?.init?.method).toBe('DELETE');
+  });
+});
+
+describe('BreakGlassClient (G7)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-bg' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('activates via POST /breakglass', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/breakglass': () => enveloped({ id: 'bg1', reason: 'triage' }, 201),
+    });
+    const client = new BreakGlassClient(new ApiClient(base, fetchMock));
+
+    const result = await client.activate({ subjectMembershipId: 'm2', caseId: 'c1', reason: 'triage' });
+
+    const call = calls.find((c) => c.url.endsWith('/breakglass') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ subjectMembershipId: 'm2', caseId: 'c1', reason: 'triage' });
+    expect(result.id).toBe('bg1');
+  });
+
+  it('lists active grants via GET /breakglass', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/breakglass?caseId=c1': () => enveloped([{ id: 'bg1' }]),
+    });
+    const client = new BreakGlassClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listActive('c1');
+
+    const call = calls.find((c) => c.url.includes('/breakglass?'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result).toHaveLength(1);
+  });
+
+  it('revokes via POST /breakglass/:id/revoke', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/breakglass/bg1/revoke': () => enveloped({ id: 'bg1', revokedAt: '2026-01-01T00:00:00.000Z' }),
+    });
+    const client = new BreakGlassClient(new ApiClient(base, fetchMock));
+
+    await client.revoke('bg1');
+
+    const call = calls.find((c) => c.url.endsWith('/breakglass/bg1/revoke'));
+    expect(call?.init?.method).toBe('POST');
   });
 });
 

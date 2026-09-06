@@ -637,6 +637,10 @@
       "assignments": {
         "title": "Case assignments",
         "description": "Assign members to a case; assigned-scope holders see only their cases."
+      },
+      "breakglass": {
+        "title": "Break-glass access",
+        "description": "Emergency case access with mandatory reason, expiry, and audit."
       }
     },
     "create": "Create",
@@ -662,7 +666,10 @@
       "clientName": "Client",
       "roleKey": "Role key",
       "roleLabel": "Role",
-      "membershipId": "Membership ID"
+      "membershipId": "Membership ID",
+      "subjectMembershipId": "Subject membership ID",
+      "reason": "Reason",
+      "endsAt": "Expires at"
     },
     "placeholders": {
       "id": "00000000-0000-4000-8000-000000000000",
@@ -680,7 +687,10 @@
       "partyId": "00000000-0000-4000-8000-000000000000",
       "roleId": "00000000-0000-4000-8000-000000000000",
       "search": "Search by case number",
-      "membershipId": "00000000-0000-4000-8000-000000000000"
+      "membershipId": "00000000-0000-4000-8000-000000000000",
+      "subjectMembershipId": "00000000-0000-4000-8000-000000000000",
+      "reason": "e.g. Production outage triage",
+      "endsAt": "YYYY-MM-DDTHH:mm (max 24h)"
     },
     "result": {
       "title": "Operation completed",
@@ -703,10 +713,13 @@
       "case": "Create case",
       "party": "Link case parties",
       "details": "Details",
-      "assignments": "Assignments"
+      "assignments": "Assignments",
+      "breakglass": "Break-glass"
     },
     "assign": "Assign member",
-    "unassign": "Unassign"
+    "unassign": "Unassign",
+    "activate": "Activate break-glass",
+    "revokeGrant": "Revoke grant"
   },
   "casesTimeline": {
     "eyebrow": "Phase 10 · Case timeline",

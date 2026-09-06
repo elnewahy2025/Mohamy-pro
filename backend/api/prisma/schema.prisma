@@ -383,6 +383,7 @@ model Tenant {
   cases                    Case[]
   caseParties              CaseParty[]
   caseAssignments          CaseAssignment[]
+  breakGlassActivations    BreakGlassActivation[]
   jurisdictions            Jurisdiction[]
   courts                   Court[]
   courtLocations           CourtLocation[]
@@ -534,6 +535,8 @@ model Membership {
   invitationsSent   Invitation[]       @relation("InvitationInviterMembership")
   denialsCreated    AccessDenial[]     @relation("DenialCreatedByMembership")
   caseAssignments   CaseAssignment[]
+  breakGlassSubjects  BreakGlassActivation[] @relation("BreakGlassSubject")
+  breakGlassCreated   BreakGlassActivation[] @relation("BreakGlassCreator")
   directGrants        DirectPermissionGrant[] @relation("DirectGrantMembership")
   directGrantsCreated DirectPermissionGrant[] @relation("DirectGrantCreator")
   auditEvents       AuditEvent[]       @relation("AuditActorMembership")
@@ -614,6 +617,7 @@ model Case {
   parties        CaseParty[]
   timelineEvents CaseTimelineEvent[]
   assignments    CaseAssignment[]
+  breakGlassActivations BreakGlassActivation[]
 
   workflowVersion        WorkflowVersion?        @relation(fields: [workflowVersionId], references: [id], onDelete: Restrict)
   currentState           WorkflowState?          @relation(fields: [currentStateId], references: [id], onDelete: Restrict)
@@ -637,6 +641,29 @@ model Case {
 }
 
 // Phase 8: Physical implementation of Phase 7 CasePartyContract
+
+
+model BreakGlassActivation {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  subjectMembershipId   String
+  caseId                String
+  reason                String    @db.Text
+  startsAt              DateTime  @default(now())
+  endsAt                DateTime
+  revokedAt             DateTime?
+  createdByMembershipId String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  subject   Membership @relation("BreakGlassSubject", fields: [subjectMembershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  case      Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdBy Membership @relation("BreakGlassCreator", fields: [createdByMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@index([tenantId, subjectMembershipId])
+  @@index([tenantId, caseId])
+}
 
 model CaseAssignment {
   id             String    @id @default(uuid())

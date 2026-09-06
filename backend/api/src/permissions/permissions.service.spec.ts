@@ -453,6 +453,30 @@ describe('PermissionsService', () => {
     expect(tenantTx.role.create).not.toHaveBeenCalled();
   });
 
+  it('denies despite break-glass when a resource denial exists (G7 precedence)', async () => {
+    const { service } = makeService({
+      membership: { id: MEMBERSHIP_ID, status: 'ACTIVE' },
+      rolePermissionKeys: [PERMISSION_KEYS.CAN_ACCESS_ASSIGNED_CASES],
+      denials: [
+        {
+          ...ACTIVE_DENIAL,
+          permissionKey: PERMISSION_KEYS.CAN_ACCESS_ASSIGNED_CASES,
+          resourceType: 'case',
+          resourceId: 'case-1',
+        },
+      ],
+    });
+
+    await expect(
+      service.assertTenantPermission(
+        input({
+          permissionKey: PERMISSION_KEYS.CAN_ACCESS_ASSIGNED_CASES,
+          resource: { type: 'case', id: 'case-1' },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+  });
+
   it('denies CanSwitchTenant for a membership that is not ACTIVE (W3)', async () => {
     const { service } = makeService({
       membership: { id: MEMBERSHIP_ID, status: 'SUSPENDED' },

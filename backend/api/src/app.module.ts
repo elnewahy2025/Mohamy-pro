@@ -40,6 +40,7 @@ import { BillingModule } from './billing/billing.module';
 import { CommunicationsModule } from './communications/communications.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { DenialsModule } from './denials/denials.module';
+import { BreakGlassModule } from './breakglass/breakglass.module';
 import { RolesModule } from './roles/roles.module';
 
 @Module({
@@ -80,6 +81,7 @@ import { RolesModule } from './roles/roles.module';
     CalendarModule,
     DenialsModule,
     RolesModule,
+    BreakGlassModule,
     SchedulerModule,
   ],
   controllers: [AppController],

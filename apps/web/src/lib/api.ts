@@ -1273,6 +1273,25 @@ export interface UnassignCaseMemberRequest {
   membershipId: string;
 }
 
+export interface BreakGlassActivationResult {
+  id: string;
+  subjectMembershipId: string;
+  caseId: string;
+  reason: string;
+  startsAt: string;
+  endsAt: string;
+  revokedAt: string | null;
+  createdByMembershipId: string;
+  createdAt: string;
+}
+
+export interface ActivateBreakGlassRequest {
+  subjectMembershipId: string;
+  caseId: string;
+  reason: string;
+  endsAt?: string;
+}
+
 export interface ListCasesQuery {
   page?: number;
   limit?: number;
@@ -1421,6 +1440,35 @@ export class CasesClient {
       `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/timeline`,
       'POST',
       { eventType: req.eventType, payload: req.payload },
+    );
+  }
+}
+
+const BREAKGLASS_PREFIX = '/breakglass';
+
+export class BreakGlassClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  listActive(caseId?: string): Promise<BreakGlassActivationResult[]> {
+    const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
+    return this.client.body<BreakGlassActivationResult[]>(
+      `${BREAKGLASS_PREFIX}${qs}`,
+      'GET',
+    );
+  }
+
+  activate(req: ActivateBreakGlassRequest): Promise<BreakGlassActivationResult> {
+    return this.client.body<BreakGlassActivationResult>(
+      BREAKGLASS_PREFIX,
+      'POST',
+      req,
+    );
+  }
+
+  revoke(id: string): Promise<BreakGlassActivationResult> {
+    return this.client.body<BreakGlassActivationResult>(
+      `${BREAKGLASS_PREFIX}/${encodeURIComponent(id)}/revoke`,
+      'POST',
     );
   }
 }

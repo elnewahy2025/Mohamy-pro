@@ -280,6 +280,19 @@ describe('Phase 10-15 migration assertions', () => {
     expect(g5Migration).toContain('"CaseAssignment_tenant_isolation"');
   });
 
+  it('creates BreakGlassActivation with FORCE RLS (G7)', () => {
+    const g7Migration = readMigration('20260908000006_g7_breakglass');
+
+    expect(g7Migration).toContain('CREATE TABLE "BreakGlassActivation"');
+    expect(g7Migration).toContain(
+      'ALTER TABLE "BreakGlassActivation" ENABLE ROW LEVEL SECURITY',
+    );
+    expect(g7Migration).toContain(
+      'ALTER TABLE "BreakGlassActivation" FORCE ROW LEVEL SECURITY',
+    );
+    expect(g7Migration).toContain('"BreakGlassActivation_tenant_isolation"');
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',
