@@ -39,6 +39,7 @@ import { TimeTrackingModule } from './time-tracking/time-tracking.module';
 import { BillingModule } from './billing/billing.module';
 import { CommunicationsModule } from './communications/communications.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { PortalModule } from './portal/portal.module';
 import { DenialsModule } from './denials/denials.module';
 import { BreakGlassModule } from './breakglass/breakglass.module';
 import { RolesModule } from './roles/roles.module';
@@ -79,6 +80,7 @@ import { RolesModule } from './roles/roles.module';
     BillingModule,
     CommunicationsModule,
     CalendarModule,
+    PortalModule,
     DenialsModule,
     RolesModule,
     BreakGlassModule,

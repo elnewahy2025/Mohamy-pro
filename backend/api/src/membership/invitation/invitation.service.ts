@@ -128,6 +128,16 @@ export class InvitationService {
             requestedRoleKeys: dto.requestedRoleKeys,
           });
 
+          if (dto.clientId) {
+            const linked = await transaction.client.findFirst({
+              where: { id: dto.clientId, tenantId },
+              select: { id: true },
+            });
+            if (!linked) {
+              throw new InvitationDeniedError('UNKNOWN_CLIENT', 400);
+            }
+          }
+
           const invitation = await transaction.invitation.create({
             data: {
               tenantId,
@@ -138,6 +148,7 @@ export class InvitationService {
               requestedRoleKeys: dto.requestedRoleKeys,
               requestedScope: (dto.requestedScope ??
                 null) as Prisma.InputJsonValue,
+              clientId: dto.clientId ?? null,
               status: InvitationStatus.PENDING,
               expiresAt,
             },
@@ -294,6 +305,7 @@ export class InvitationService {
               activeFrom: new Date(),
               activatedAt: new Date(),
               invitedAt: new Date(),
+              clientId: validInvitation.clientId,
             },
           });
           await this.assignRoles(transaction, {

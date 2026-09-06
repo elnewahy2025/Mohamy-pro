@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, BillingsClient, BreakGlassClient, CalendarClient, CommsClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
+import { ApiClient, BillingsClient, BreakGlassClient, CalendarClient, CommsClient, PortalClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -1027,6 +1027,87 @@ describe('BreakGlassClient (G7)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/breakglass/bg1/revoke'));
     expect(call?.init?.method).toBe('POST');
+  });
+});
+
+describe('PortalClient (Phase 24)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-portal' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('lists own cases via GET /portal/cases', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/portal/cases': () => enveloped([{ id: 'c1', caseNumber: 'C-1', status: 'OPEN', priority: 'HIGH', openDate: null }]),
+    });
+    const client = new PortalClient(new ApiClient(base, fetchMock));
+
+    const result = await client.myCases();
+
+    const call = calls.find((c) => c.url.endsWith('/portal/cases'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+    expect(result).toHaveLength(1);
+  });
+
+  it('lists own invoices via GET /portal/invoices', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/portal/invoices': () => enveloped([{ id: 'i1', invoiceNumber: 'INV-1', status: 'ISSUED', total: '100.0000', dueDate: null, payments: [] }]),
+    });
+    const client = new PortalClient(new ApiClient(base, fetchMock));
+
+    const result = await client.myInvoices();
+
+    const call = calls.find((c) => c.url.endsWith('/portal/invoices'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result[0].invoiceNumber).toBe('INV-1');
+  });
+
+  it('reads the agenda via GET /portal/agenda', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/portal/agenda': () => enveloped([{ kind: 'HEARING', id: 'h1', title: 'Hearing SCHEDULED', startsAt: '2026-04-01T10:00:00Z' }]),
+    });
+    const client = new PortalClient(new ApiClient(base, fetchMock));
+
+    const result = await client.agenda();
+
+    const call = calls.find((c) => c.url.endsWith('/portal/agenda'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result[0].kind).toBe('HEARING');
   });
 });
 

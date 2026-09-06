@@ -521,6 +521,7 @@ model Membership {
   status            MembershipStatus   @default(INVITED)
   activeFrom        DateTime?
   activeUntil       DateTime?
+  clientId              String?
   invitedAt         DateTime?
   activatedAt       DateTime?
   suspendedAt       DateTime?
@@ -529,6 +530,7 @@ model Membership {
   updatedAt         DateTime           @updatedAt
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user              User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  client            Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
   activeSessions    AppSession[]       @relation("SessionActiveMembership")
   roles             MembershipRole[]
   teamMembers       TeamMember[]
@@ -730,6 +732,7 @@ model Invitation {
   tokenHash               String           @unique
   intendedEmailNormalized String?
   intendedProviderSubject String?
+  clientId                String?
   requestedRoleKeys       Json
   requestedScope          Json?
   status                  InvitationStatus @default(PENDING)
@@ -739,6 +742,7 @@ model Invitation {
   rejectedAt              DateTime?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
+  client                  Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
   tenant                  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   inviterMembership       Membership       @relation("InvitationInviterMembership", fields: [inviterMembershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
@@ -949,6 +953,8 @@ model Client {
   messageThreads         MessageThread[]
   messages               Message[]
   messageConsents        MessageConsent[]
+  portalMemberships      Membership[]
+  portalInvitations      Invitation[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, name])

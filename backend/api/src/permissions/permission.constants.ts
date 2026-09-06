@@ -1,6 +1,7 @@
 import {
   ROLE_KEY_TENANT_ADMIN,
   ROLE_KEY_TENANT_MANAGER,
+  ROLE_KEY_CLIENT,
   ROLE_KEY_PLATFORM_ADMIN,
 } from './role.constants';
 
@@ -32,6 +33,7 @@ export const PERMISSION_KEYS = {
   CAN_RECORD_PAYMENTS: 'CanRecordPayments',
   CAN_MANAGE_COMMUNICATIONS: 'CanManageCommunications',
   CAN_MANAGE_CALENDAR: 'CanManageCalendar',
+  CAN_ACCESS_PORTAL: 'CanAccessPortal',
   CAN_ACCESS_ASSIGNED_CASES: 'CanAccessAssignedCases',
 } as const;
 
@@ -178,6 +180,10 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Read and update only cases with an active assignment in the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_ACCESS_PORTAL,
+    description: 'Read own linked client records through the client portal.',
+  },
 ];
 /**
  * Default permission set granted to each built-in role. Keyed by stable role
@@ -218,6 +224,10 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_PUBLISH_WORKFLOW_VERSIONS,
     PERMISSION_KEYS.CAN_APPROVE_INVOICES,
     PERMISSION_KEYS.CAN_RECORD_PAYMENTS,
+  ],
+  [ROLE_KEY_CLIENT]: [
+    PERMISSION_KEYS.CAN_VIEW_TENANT,
+    PERMISSION_KEYS.CAN_ACCESS_PORTAL,
   ],
   [ROLE_KEY_PLATFORM_ADMIN]: [
     PERMISSION_KEYS.CAN_CREATE_TENANT,

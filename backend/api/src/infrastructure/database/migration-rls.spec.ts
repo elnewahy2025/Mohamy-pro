@@ -293,6 +293,20 @@ describe('Phase 10-15 migration assertions', () => {
     expect(g7Migration).toContain('"BreakGlassActivation_tenant_isolation"');
   });
 
+  it('adds portal client linkage columns without new RLS surface (Phase 24)', () => {
+    const portalMigration = readMigration(
+      '20260908000004_phase24_portal_linkage',
+    );
+
+    expect(portalMigration).toContain(
+      'ALTER TABLE "Membership" ADD COLUMN "clientId" TEXT',
+    );
+    expect(portalMigration).toContain(
+      'ALTER TABLE "Invitation" ADD COLUMN "clientId" TEXT',
+    );
+    expect(portalMigration).not.toContain('CREATE TABLE');
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

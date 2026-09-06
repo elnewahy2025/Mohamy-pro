@@ -84,7 +84,8 @@
     "secureLinks": "Secure Links",
     "billing": "Billing",
     "communications": "Communications",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "portal": "Portal"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -1252,6 +1253,40 @@
       "agenda": {
         "heading": "Agenda",
         "description": "Unified internal view of hearings, deadlines, and tasks by date."
+      }
+    }
+  },
+  "portal": {
+    "eyebrow": "Phase 24 · Client Portal",
+    "title": "Your matters, nothing else.",
+    "description": "Clients see strictly their own linked records. Nothing here can reach another client's data.",
+    "load": "Load",
+    "submitting": "Working…",
+    "result": {
+      "title": "Operation completed",
+      "total": "Total",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "cases": {
+        "heading": "My cases",
+        "description": "Cases linked to your client record."
+      },
+      "documents": {
+        "heading": "My documents",
+        "description": "Documents linked to your client record."
+      },
+      "agenda": {
+        "heading": "Agenda",
+        "description": "Your upcoming hearings and deadlines."
+      },
+      "messages": {
+        "heading": "Messages",
+        "description": "Messages addressed to your client record."
+      },
+      "invoices": {
+        "heading": "Invoices & credits",
+        "description": "Your invoices with payments, plus open credits."
       }
     }
   }

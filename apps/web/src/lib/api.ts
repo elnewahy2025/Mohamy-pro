@@ -2565,3 +2565,107 @@ export class CalendarClient {
     return this.client.body<AgendaItem[]>(`${CALENDAR_PREFIX}/agenda${qs}`, 'GET');
   }
 }
+
+// --- Phase 24: Client Portal ---
+
+export interface PortalCase {
+  id: string;
+  caseNumber: string;
+  status: string;
+  priority: string;
+  openDate: string | null;
+}
+
+export interface PortalDocument {
+  id: string;
+  title: string;
+  documentType: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface PortalHearing {
+  id: string;
+  caseId: string;
+  date: string;
+  status: string;
+}
+
+export interface PortalDeadline {
+  id: string;
+  caseId: string;
+  title: string;
+  dueDate: string;
+  status: string;
+}
+
+export interface PortalMessage {
+  id: string;
+  channel: string;
+  direction: string;
+  status: string;
+  subject: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface PortalInvoice {
+  id: string;
+  invoiceNumber: string;
+  status: string;
+  total: string;
+  dueDate: string | null;
+  payments: { id: string; amount: string; status: string }[];
+}
+
+export interface PortalCredit {
+  id: string;
+  amount: string;
+  appliedAmount: string;
+  status: string;
+}
+
+export interface PortalAgendaItem {
+  kind: 'HEARING' | 'DEADLINE';
+  id: string;
+  title: string;
+  startsAt: string;
+}
+
+const PORTAL_PREFIX = '/portal';
+
+export class PortalClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  myCases(): Promise<PortalCase[]> {
+    return this.client.body<PortalCase[]>(`${PORTAL_PREFIX}/cases`, 'GET');
+  }
+
+  myDocuments(): Promise<PortalDocument[]> {
+    return this.client.body<PortalDocument[]>(`${PORTAL_PREFIX}/documents`, 'GET');
+  }
+
+  myHearings(): Promise<PortalHearing[]> {
+    return this.client.body<PortalHearing[]>(`${PORTAL_PREFIX}/hearings`, 'GET');
+  }
+
+  myDeadlines(): Promise<PortalDeadline[]> {
+    return this.client.body<PortalDeadline[]>(`${PORTAL_PREFIX}/deadlines`, 'GET');
+  }
+
+  myMessages(): Promise<PortalMessage[]> {
+    return this.client.body<PortalMessage[]>(`${PORTAL_PREFIX}/messages`, 'GET');
+  }
+
+  myInvoices(): Promise<PortalInvoice[]> {
+    return this.client.body<PortalInvoice[]>(`${PORTAL_PREFIX}/invoices`, 'GET');
+  }
+
+  myCredits(): Promise<PortalCredit[]> {
+    return this.client.body<PortalCredit[]>(`${PORTAL_PREFIX}/credits`, 'GET');
+  }
+
+  agenda(): Promise<PortalAgendaItem[]> {
+    return this.client.body<PortalAgendaItem[]>(`${PORTAL_PREFIX}/agenda`, 'GET');
+  }
+}

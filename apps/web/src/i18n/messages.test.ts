@@ -35,6 +35,7 @@ describe('localized frontend messages', () => {
       billing: 'Billing',
       communications: 'Communications',
       calendar: 'Calendar',
+      portal: 'Portal',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -62,6 +63,7 @@ describe('localized frontend messages', () => {
       billing: 'الفوترة',
       communications: 'الاتصالات',
       calendar: 'التقويم',
+      portal: 'البوابة',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {

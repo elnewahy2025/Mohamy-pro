@@ -53,6 +53,7 @@ function makeService(
       intendedEmailNormalized?: string | null;
       requestedRoleKeys?: string[];
       expiresAt?: Date;
+      clientId?: string | null;
     } | null;
     tenantRoleCreatesNew?: boolean;
     abuse?: AbuseControlService;
@@ -124,6 +125,7 @@ function makeService(
           rejectedAt: null,
           acceptedAt: null,
           requestedScope: null,
+          clientId: overrides.invitation?.clientId ?? null,
         };
 
   const tenantTx = {
@@ -145,6 +147,7 @@ function makeService(
         .mockResolvedValue([{ id: 'role-1', key: 'tenant.admin' }]),
     },
     membership: { create: jest.fn().mockResolvedValue({ id: 'm' }) },
+    client: { findFirst: jest.fn().mockResolvedValue({ id: 'cl1' }) },
     user: {
       findUnique: jest.fn().mockResolvedValue({ status: 'ACTIVE' }),
       create: jest.fn().mockResolvedValue({ id: USER_ID }),
@@ -227,6 +230,34 @@ describe('InvitationService', () => {
         (auditWrite.mock.calls[0][0] as { eventType: string }).eventType,
       ).toBe(AUDIT_EVENT_TYPES.MEMBERSHIP_INVITED);
       expect(outboxCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('stores a validated client link on the invitation', async () => {
+      const { service, tenantTx } = makeService();
+      await service.create(request(), {
+        ...createDto,
+        clientId: 'cl1',
+      } as never);
+      expect(tenantTx.client.findFirst).toHaveBeenCalledWith({
+        where: { id: 'cl1', tenantId: TENANT_ID },
+        select: { id: true },
+      });
+      expect(tenantTx.invitation.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ clientId: 'cl1' }),
+        }),
+      );
+    });
+
+    it('rejects invitations for unknown clients', async () => {
+      const { service, tenantTx } = makeService();
+      (tenantTx.client.findFirst as jest.Mock).mockResolvedValue(null);
+      await expect(
+        service.create(request(), {
+          ...createDto,
+          clientId: 'missing',
+        } as never),
+      ).rejects.toBeInstanceOf(InvitationDeniedError);
     });
 
     it('requires an active tenant context', async () => {
@@ -317,6 +348,18 @@ describe('InvitationService', () => {
       expect(
         (auditWrite.mock.calls[1][0] as { eventType: string }).eventType,
       ).toBe(AUDIT_EVENT_TYPES.MEMBERSHIP_ACCEPTED);
+    });
+
+    it('copies the invitation client link onto the membership', async () => {
+      const { service, tenantTx } = makeService({
+        invitation: { intendedProviderSubject: 'sub-1', clientId: 'cl1' },
+      });
+      await service.accept(request(), { token: 'opaque-token' });
+      expect(tenantTx.membership.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ clientId: 'cl1' }),
+        }),
+      );
     });
 
     it('rejects when the invitation does not exist', async () => {

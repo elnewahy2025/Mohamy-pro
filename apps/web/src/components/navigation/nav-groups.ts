@@ -8,6 +8,7 @@ import {
   FileText,
   Gavel,
   MessageSquare,
+  DoorOpen,
   LayoutDashboard,
   ReceiptText,
   Scale,
@@ -52,6 +53,7 @@ export const appNavGroups: AppNavGroup[] = [
       { href: '/clients', labelKey: 'navigation.clients', icon: Users },
       { href: '/parties', labelKey: 'navigation.parties', icon: Users },
       { href: '/conflict-checks', labelKey: 'navigation.conflictChecks', icon: ShieldAlert },
+      { href: '/portal', labelKey: 'navigation.portal', icon: DoorOpen },
     ],
   },
   {

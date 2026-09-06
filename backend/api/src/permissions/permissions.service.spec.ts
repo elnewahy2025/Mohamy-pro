@@ -433,7 +433,8 @@ describe('PermissionsService', () => {
         findFirst: jest
           .fn()
           .mockResolvedValueOnce({ id: 'admin-role' })
-          .mockResolvedValueOnce({ id: 'manager-role' }),
+          .mockResolvedValueOnce({ id: 'manager-role' })
+          .mockResolvedValueOnce({ id: 'client-role' }),
         create: jest.fn(),
       },
       permission: { findUnique: jest.fn().mockResolvedValue({ id: 'perm' }) },

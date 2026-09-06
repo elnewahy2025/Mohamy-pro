@@ -15,6 +15,7 @@ import {
 } from './permission.constants';
 import { PermissionDeniedError } from './permission.errors';
 import {
+  ROLE_KEY_CLIENT,
   ROLE_KEY_PLATFORM_ADMIN,
   ROLE_KEY_TENANT_ADMIN,
   ROLE_KEY_TENANT_MANAGER,
@@ -143,7 +144,18 @@ export class PermissionsService {
             role.id,
             ROLE_PERMISSIONS[ROLE_KEY_TENANT_ADMIN],
           );
-          await this.ensureTenantManagerRole(transaction, tenant.id);
+          await this.ensureTenantRole(
+            transaction,
+            tenant.id,
+            ROLE_KEY_TENANT_MANAGER,
+            'Tenant Manager',
+          );
+          await this.ensureTenantRole(
+            transaction,
+            tenant.id,
+            ROLE_KEY_CLIENT,
+            'Client',
+          );
           return true;
         },
       );
@@ -172,38 +184,40 @@ export class PermissionsService {
   }
 
   /**
-   * Ensures the tenant.manager role row exists for a tenant and carries its
-   * matrix permissions. Never assigns members: assignment stays an explicit
-   * admin action through the invitation/role-grant paths. Runs inside the
-   * caller's transaction so RLS is satisfied by the surrounding context.
+   * Ensures a built-in tenant role row exists and carries its matrix
+   * permissions. Never assigns members: assignment stays an explicit admin
+   * action through the invitation/role-grant paths. Runs inside the caller's
+   * transaction so RLS is satisfied by the surrounding context.
    */
-  private async ensureTenantManagerRole(
+  private async ensureTenantRole(
     transaction: Prisma.TransactionClient,
     tenantId: string,
+    key: string,
+    name: string,
   ): Promise<void> {
-    let manager = await transaction.role.findFirst({
+    let role = await transaction.role.findFirst({
       where: {
         tenantId,
         scope: RoleScope.TENANT,
-        key: ROLE_KEY_TENANT_MANAGER,
+        key,
       },
       select: { id: true },
     });
-    if (!manager) {
-      manager = await transaction.role.create({
+    if (!role) {
+      role = await transaction.role.create({
         data: {
           tenantId,
           scope: RoleScope.TENANT,
-          key: ROLE_KEY_TENANT_MANAGER,
-          name: 'Tenant Manager',
+          key,
+          name,
         },
         select: { id: true },
       });
     }
     await this.grantRolePermissions(
       transaction,
-      manager.id,
-      ROLE_PERMISSIONS[ROLE_KEY_TENANT_MANAGER],
+      role.id,
+      ROLE_PERMISSIONS[key] ?? [],
     );
   }
 

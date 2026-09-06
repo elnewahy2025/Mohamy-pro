@@ -48,6 +48,15 @@ export class InvitationCreateDto {
   requestedRoleKeys!: string[];
 
   @ApiProperty({
+    description: 'Client record to link for portal memberships.',
+    required: false,
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  clientId?: string;
+
+  @ApiProperty({
     description: 'Hierarchy scope to apply to the invited membership.',
     required: false,
     nullable: true,
