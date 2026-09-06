@@ -56,7 +56,8 @@
       "MEDIUM": "Medium",
       "HIGH": "High",
       "CRITICAL": "Critical"
-    }
+    },
+    "signInRequired": "Please sign in to use this section."
   },
   "navigation": {
     "overview": "Overview",

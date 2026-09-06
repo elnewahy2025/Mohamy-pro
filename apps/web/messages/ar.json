@@ -56,7 +56,8 @@
       "MEDIUM": "متوسط",
       "HIGH": "مرتفع",
       "CRITICAL": "حرج"
-    }
+    },
+    "signInRequired": "يرجى تسجيل الدخول لاستخدام هذا القسم."
   },
   "navigation": {
     "overview": "نظرة عامة",

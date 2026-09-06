@@ -46,7 +46,13 @@ export function MappingsSection() {
     }
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="section-card">
+        <p>{t('common.signInRequired')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="section-card">
