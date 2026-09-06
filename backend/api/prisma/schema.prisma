@@ -436,6 +436,9 @@ model Tenant {
   importJobs               ImportJob[]
   importRowErrors          ImportRowError[]
   exportJobs               ExportJob[]
+  reportDefinitions        ReportDefinition[]
+  reportSchedules          ReportSchedule[]
+  reportRuns               ReportRun[]
   notificationRules        NotificationRule[]
   notifications            Notification[]
   notificationPreferences  NotificationPreference[]
@@ -2252,6 +2255,30 @@ enum NotificationAudience {
   ALL_MEMBERS
 }
 
+enum ReportDataSource {
+  CASE
+  CLIENT
+  PARTY
+  TASK
+  INVOICE
+  PAYMENT
+  HEARING
+  DEADLINE
+  DOCUMENT
+}
+
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+}
+
+enum ReportRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 enum FeeKind {
   FIXED
   HOURLY
@@ -2639,6 +2666,67 @@ model NotificationPreference {
 
   @@unique([tenantId, membershipId, channel])
   @@index([tenantId, membershipId])
+}
+
+
+model ReportDefinition {
+  id         String           @id @default(uuid())
+  tenantId   String
+  name       String
+  dataSource ReportDataSource
+  columns    Json
+  filters    Json?
+  groupBy    String?
+  sortBy     String?
+  sortDir    String?          @default("asc")
+  createdBy  String
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  schedules ReportSchedule[]
+  runs      ReportRun[]
+
+  @@index([tenantId])
+}
+
+model ReportSchedule {
+  id           String           @id @default(uuid())
+  tenantId     String
+  definitionId String
+  frequency    ReportFrequency
+  runAt        String
+  enabled      Boolean          @default(true)
+  lastRunAt    DateTime?
+  nextRunAt    DateTime?
+  createdBy    String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  definition ReportDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  runs       ReportRun[]
+
+  @@index([tenantId, enabled, nextRunAt])
+}
+
+model ReportRun {
+  id           String          @id @default(uuid())
+  tenantId     String
+  definitionId String?
+  scheduleId   String?
+  status       ReportRunStatus @default(QUEUED)
+  rowCount     Int             @default(0)
+  error        String?         @db.Text
+  triggeredBy  String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  definition ReportDefinition? @relation(fields: [definitionId], references: [id], onDelete: SetNull)
+  schedule   ReportSchedule?   @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
 }
 
 model Fee {

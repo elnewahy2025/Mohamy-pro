@@ -87,7 +87,8 @@
     "calendar": "التقويم",
     "portal": "البوابة",
     "transfer": "استيراد / تصدير",
-    "notifications": "التنبيهات"
+    "notifications": "التنبيهات",
+    "reports": "التقارير"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -1388,6 +1389,54 @@
       "rules": {
         "heading": "القواعد",
         "description": "قواعد الأحداث والجمهور والتصعيد للإدارة."
+      }
+    }
+  },
+  "reports": {
+    "eyebrow": "المرحلة 27 · التقارير",
+    "title": "إجابات، لا جداول خام.",
+    "description": "عرّف تقارير بالأعمدة المسموحة مرة واحدة، وشغّلها عند الطلب أو مجدولة. كل تشغيل يحترم المستأجر والنطاق.",
+    "create": "إنشاء",
+    "run": "تشغيل",
+    "load": "تحميل",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "definitionId": "معرّف التعريف",
+      "name": "الاسم",
+      "dataSource": "مصدر البيانات",
+      "columns": "الأعمدة",
+      "groupBy": "تجميع حسب",
+      "sortBy": "ترتيب حسب",
+      "frequency": "التكرار",
+      "runAt": "وقت التشغيل"
+    },
+    "placeholders": {
+      "definitionId": "00000000-0000-4000-8000-000000000000",
+      "name": "مثال: القضايا المفتوحة حسب الحالة",
+      "dataSource": "CASE أو CLIENT أو PARTY أو TASK أو INVOICE أو PAYMENT أو HEARING أو DEADLINE أو DOCUMENT",
+      "columns": "caseNumber, status",
+      "groupBy": "اسم عمود اختياري",
+      "sortBy": "اسم عمود اختياري",
+      "frequency": "DAILY أو WEEKLY",
+      "runAt": "HH:MM مثال: 06:00"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرّف",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "definitions": {
+        "heading": "التعاريف",
+        "description": "تعاريف التقارير بالأعمدة المسموحة."
+      },
+      "run": {
+        "heading": "التشغيل",
+        "description": "نفّذ تعريفاً مع تطبيق نطاقك."
+      },
+      "schedules": {
+        "heading": "الجداول",
+        "description": "تشغيل يومي أو أسبوعي مع ملخصات."
       }
     }
   }

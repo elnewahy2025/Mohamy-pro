@@ -38,6 +38,7 @@ describe('localized frontend messages', () => {
       portal: 'Portal',
       transfer: 'Import / Export',
       notifications: 'Notifications',
+      reports: 'Reports',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -68,6 +69,7 @@ describe('localized frontend messages', () => {
       portal: 'البوابة',
       transfer: 'استيراد / تصدير',
       notifications: 'التنبيهات',
+      reports: 'التقارير',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {

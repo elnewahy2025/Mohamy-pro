@@ -141,7 +141,8 @@ export class ApiError extends Error {
 }
 
 export const API_BASE_URL: string =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? (typeof window === 'undefined' ? 'http://127.0.0.1:3000' : '');
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  (typeof window === 'undefined' ? 'http://127.0.0.1:3000' : '');
 
 export const API_V1_URL = `${API_BASE_URL}/api/v1`;
 
@@ -187,10 +188,7 @@ export class ApiClient {
       throw new Error(`GET /auth/csrf failed with ${res.status}`);
     }
     const envelope = (await res.json()) as SuccessEnvelope<CsrfToken>;
-    if (
-      !envelope?.data ||
-      typeof envelope.data.csrfToken !== 'string'
-    ) {
+    if (!envelope?.data || typeof envelope.data.csrfToken !== 'string') {
       throw new Error('GET /auth/csrf returned an invalid CSRF payload');
     }
     return envelope.data.csrfToken;
@@ -220,12 +218,20 @@ export class ApiClient {
     try {
       return (await res.json()) as SuccessEnvelope<unknown> | ErrorEnvelope;
     } catch {
-      throw new ApiError(`${prefix} with ${res.status}`, 'HTTP_ERROR', [], res.status);
+      throw new ApiError(
+        `${prefix} with ${res.status}`,
+        'HTTP_ERROR',
+        [],
+        res.status,
+      );
     }
   }
 
   private idempotencyKey(): string {
-    if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
+    if (
+      typeof crypto === 'undefined' ||
+      typeof crypto.randomUUID !== 'function'
+    ) {
       throw new ApiError(
         'The browser environment does not provide crypto.randomUUID',
         'ENV_UNSUPPORTED',
@@ -236,11 +242,7 @@ export class ApiClient {
     return crypto.randomUUID();
   }
 
-  async body<T>(
-    path: string,
-    method: string,
-    payload?: unknown,
-  ): Promise<T> {
+  async body<T>(path: string, method: string, payload?: unknown): Promise<T> {
     const token = await this.csrfToken();
     const res = await this.fetcher(`${this.baseUrl}${path}`, {
       method,
@@ -270,7 +272,12 @@ export class ApiClient {
       );
     }
     if (!envelope.success || !('data' in envelope)) {
-      throw new ApiError(`${method} ${path} returned an invalid envelope`, 'INVALID_ENVELOPE', [], res.status);
+      throw new ApiError(
+        `${method} ${path} returned an invalid envelope`,
+        'INVALID_ENVELOPE',
+        [],
+        res.status,
+      );
     }
     return envelope.data as T;
   }
@@ -546,36 +553,78 @@ export class OrgConfigClient {
   constructor(private readonly client = new ApiClient()) {}
 
   // Organizations
-  createOrganization(req: CreateOrganizationRequest): Promise<OrganizationResult> {
-    return this.client.body<OrganizationResult>(`${ORG_PREFIX}/organizations`, 'POST', req);
+  createOrganization(
+    req: CreateOrganizationRequest,
+  ): Promise<OrganizationResult> {
+    return this.client.body<OrganizationResult>(
+      `${ORG_PREFIX}/organizations`,
+      'POST',
+      req,
+    );
   }
-  updateOrganization(req: UpdateOrganizationRequest): Promise<OrganizationResult> {
-    return this.client.body<OrganizationResult>(`${ORG_PREFIX}/organizations`, 'PATCH', req);
+  updateOrganization(
+    req: UpdateOrganizationRequest,
+  ): Promise<OrganizationResult> {
+    return this.client.body<OrganizationResult>(
+      `${ORG_PREFIX}/organizations`,
+      'PATCH',
+      req,
+    );
   }
-  archiveOrganization(req: ArchiveOrganizationRequest): Promise<OrganizationResult> {
-    return this.client.body<OrganizationResult>(`${ORG_PREFIX}/organizations/archive`, 'PATCH', req);
+  archiveOrganization(
+    req: ArchiveOrganizationRequest,
+  ): Promise<OrganizationResult> {
+    return this.client.body<OrganizationResult>(
+      `${ORG_PREFIX}/organizations/archive`,
+      'PATCH',
+      req,
+    );
   }
 
   // Branches
   createBranch(req: CreateBranchRequest): Promise<BranchResult> {
-    return this.client.body<BranchResult>(`${ORG_PREFIX}/branches`, 'POST', req);
+    return this.client.body<BranchResult>(
+      `${ORG_PREFIX}/branches`,
+      'POST',
+      req,
+    );
   }
   updateBranch(req: UpdateBranchRequest): Promise<BranchResult> {
-    return this.client.body<BranchResult>(`${ORG_PREFIX}/branches`, 'PATCH', req);
+    return this.client.body<BranchResult>(
+      `${ORG_PREFIX}/branches`,
+      'PATCH',
+      req,
+    );
   }
   archiveBranch(req: ArchiveBranchRequest): Promise<BranchResult> {
-    return this.client.body<BranchResult>(`${ORG_PREFIX}/branches/archive`, 'PATCH', req);
+    return this.client.body<BranchResult>(
+      `${ORG_PREFIX}/branches/archive`,
+      'PATCH',
+      req,
+    );
   }
 
   // Departments
   createDepartment(req: CreateDepartmentRequest): Promise<DepartmentResult> {
-    return this.client.body<DepartmentResult>(`${ORG_PREFIX}/departments`, 'POST', req);
+    return this.client.body<DepartmentResult>(
+      `${ORG_PREFIX}/departments`,
+      'POST',
+      req,
+    );
   }
   updateDepartment(req: UpdateDepartmentRequest): Promise<DepartmentResult> {
-    return this.client.body<DepartmentResult>(`${ORG_PREFIX}/departments`, 'PATCH', req);
+    return this.client.body<DepartmentResult>(
+      `${ORG_PREFIX}/departments`,
+      'PATCH',
+      req,
+    );
   }
   archiveDepartment(req: ArchiveDepartmentRequest): Promise<DepartmentResult> {
-    return this.client.body<DepartmentResult>(`${ORG_PREFIX}/departments/archive`, 'PATCH', req);
+    return this.client.body<DepartmentResult>(
+      `${ORG_PREFIX}/departments/archive`,
+      'PATCH',
+      req,
+    );
   }
 
   // Teams
@@ -586,11 +635,17 @@ export class OrgConfigClient {
     return this.client.body<TeamResult>(`${ORG_PREFIX}/teams`, 'PATCH', req);
   }
   archiveTeam(req: ArchiveTeamRequest): Promise<TeamResult> {
-    return this.client.body<TeamResult>(`${ORG_PREFIX}/teams/archive`, 'PATCH', req);
+    return this.client.body<TeamResult>(
+      `${ORG_PREFIX}/teams/archive`,
+      'PATCH',
+      req,
+    );
   }
 
   // Settings
-  listSettings(query: ListSettingsQuery = {}): Promise<OrganizationSettingList> {
+  listSettings(
+    query: ListSettingsQuery = {},
+  ): Promise<OrganizationSettingList> {
     const params = new URLSearchParams();
     if (query.page) params.set('page', String(query.page));
     if (query.limit) params.set('limit', String(query.limit));
@@ -606,7 +661,10 @@ export class OrgConfigClient {
       'GET',
     );
   }
-  setSetting(key: string, value: unknown): Promise<SetOrganizationSettingResult> {
+  setSetting(
+    key: string,
+    value: unknown,
+  ): Promise<SetOrganizationSettingResult> {
     return this.client.body<SetOrganizationSettingResult>(
       `${ORG_PREFIX}/settings/${encodeURIComponent(key)}`,
       'PUT',
@@ -924,7 +982,11 @@ export class ConflictChecksClient {
   constructor(private readonly client = new ApiClient()) {}
 
   request(req: CreateConflictCheckRequest): Promise<ConflictCheckResult> {
-    return this.client.body<ConflictCheckResult>(CONFLICT_CHECKS_PREFIX, 'POST', req);
+    return this.client.body<ConflictCheckResult>(
+      CONFLICT_CHECKS_PREFIX,
+      'POST',
+      req,
+    );
   }
 
   list(query: ListConflictChecksQuery = {}): Promise<ConflictCheckListResult> {
@@ -1101,10 +1163,15 @@ export class PartyClient {
   }
 
   listRoles(): Promise<PartyRoleResult[]> {
-    return this.client.body<PartyRoleResult[]>(`${PARTIES_PREFIX}/roles`, 'GET');
+    return this.client.body<PartyRoleResult[]>(
+      `${PARTIES_PREFIX}/roles`,
+      'GET',
+    );
   }
 
-  createRelationship(req: CreatePartyRelationshipRequest): Promise<PartyRelationshipResult> {
+  createRelationship(
+    req: CreatePartyRelationshipRequest,
+  ): Promise<PartyRelationshipResult> {
     return this.client.body<PartyRelationshipResult>(
       `${PARTIES_PREFIX}/${encodeURIComponent(req.fromPartyId)}/relationships`,
       'POST',
@@ -1424,7 +1491,10 @@ export class CasesClient {
     );
   }
 
-  getTimeline(caseId: string, query: ListCaseTimelineQuery = {}): Promise<CaseTimelineListResult> {
+  getTimeline(
+    caseId: string,
+    query: ListCaseTimelineQuery = {},
+  ): Promise<CaseTimelineListResult> {
     const params = new URLSearchParams();
     if (query.page) params.set('page', String(query.page));
     if (query.limit) params.set('limit', String(query.limit));
@@ -1435,7 +1505,9 @@ export class CasesClient {
     );
   }
 
-  appendTimelineEvent(req: CreateCaseTimelineEventRequest): Promise<CaseTimelineEvent> {
+  appendTimelineEvent(
+    req: CreateCaseTimelineEventRequest,
+  ): Promise<CaseTimelineEvent> {
     return this.client.body<CaseTimelineEvent>(
       `${CASES_PREFIX}/${encodeURIComponent(req.caseId)}/timeline`,
       'POST',
@@ -1457,7 +1529,9 @@ export class BreakGlassClient {
     );
   }
 
-  activate(req: ActivateBreakGlassRequest): Promise<BreakGlassActivationResult> {
+  activate(
+    req: ActivateBreakGlassRequest,
+  ): Promise<BreakGlassActivationResult> {
     return this.client.body<BreakGlassActivationResult>(
       BREAKGLASS_PREFIX,
       'POST',
@@ -1565,16 +1639,16 @@ export class LegalConfigClient {
   }
 
   listJurisdictions(countryId?: string): Promise<JurisdictionResult[]> {
-    const qs = countryId
-      ? `?countryId=${encodeURIComponent(countryId)}`
-      : '';
+    const qs = countryId ? `?countryId=${encodeURIComponent(countryId)}` : '';
     return this.client.body<JurisdictionResult[]>(
       `${LEGAL_CONFIG_PREFIX}/jurisdictions${qs}`,
       'GET',
     );
   }
 
-  createJurisdiction(req: CreateJurisdictionRequest): Promise<JurisdictionResult> {
+  createJurisdiction(
+    req: CreateJurisdictionRequest,
+  ): Promise<JurisdictionResult> {
     return this.client.body<JurisdictionResult>(
       `${LEGAL_CONFIG_PREFIX}/jurisdictions`,
       'POST',
@@ -1607,7 +1681,9 @@ export class LegalConfigClient {
     );
   }
 
-  createCourtLocation(req: CreateCourtLocationRequest): Promise<CourtLocationResult> {
+  createCourtLocation(
+    req: CreateCourtLocationRequest,
+  ): Promise<CourtLocationResult> {
     return this.client.body<CourtLocationResult>(
       `${LEGAL_CONFIG_PREFIX}/court-locations`,
       'POST',
@@ -1693,7 +1769,10 @@ export class WorkflowsClient {
     return this.client.body<WorkflowResult>(WORKFLOWS_PREFIX, 'POST', req);
   }
 
-  createVersion(workflowId: string, req: CreateWorkflowVersionRequest): Promise<WorkflowVersionResult> {
+  createVersion(
+    workflowId: string,
+    req: CreateWorkflowVersionRequest,
+  ): Promise<WorkflowVersionResult> {
     return this.client.body<WorkflowVersionResult>(
       `${WORKFLOWS_PREFIX}/${encodeURIComponent(workflowId)}/versions`,
       'POST',
@@ -1758,7 +1837,10 @@ export class HearingsClient {
     return this.client.body<HearingResult>(HEARINGS_PREFIX, 'POST', req);
   }
 
-  recordOutcome(id: string, req: UpdateHearingOutcomeRequest): Promise<HearingResult> {
+  recordOutcome(
+    id: string,
+    req: UpdateHearingOutcomeRequest,
+  ): Promise<HearingResult> {
     return this.client.body<HearingResult>(
       `${HEARINGS_PREFIX}/${encodeURIComponent(id)}/outcome`,
       'POST',
@@ -1767,7 +1849,10 @@ export class HearingsClient {
   }
 
   deleteHearing(id: string): Promise<void> {
-    return this.client.body<void>(`${HEARINGS_PREFIX}/${encodeURIComponent(id)}`, 'DELETE');
+    return this.client.body<void>(
+      `${HEARINGS_PREFIX}/${encodeURIComponent(id)}`,
+      'DELETE',
+    );
   }
 }
 
@@ -1814,7 +1899,10 @@ export class DeadlinesClient {
 
   listDeadlines(caseId?: string): Promise<{ data: DeadlineResult[] }> {
     const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
-    return this.client.body<{ data: DeadlineResult[] }>(DEADLINES_PREFIX + qs, 'GET');
+    return this.client.body<{ data: DeadlineResult[] }>(
+      DEADLINES_PREFIX + qs,
+      'GET',
+    );
   }
 
   createDeadline(req: CreateDeadlineRequest): Promise<DeadlineResult> {
@@ -1822,11 +1910,18 @@ export class DeadlinesClient {
   }
 
   listRules(): Promise<{ data: DeadlineRuleResult[] }> {
-    return this.client.body<{ data: DeadlineRuleResult[] }>(DEADLINES_PREFIX + '/rules', 'GET');
+    return this.client.body<{ data: DeadlineRuleResult[] }>(
+      DEADLINES_PREFIX + '/rules',
+      'GET',
+    );
   }
 
   createRule(req: CreateDeadlineRuleRequest): Promise<DeadlineRuleResult> {
-    return this.client.body<DeadlineRuleResult>(DEADLINES_PREFIX + '/rules', 'POST', req);
+    return this.client.body<DeadlineRuleResult>(
+      DEADLINES_PREFIX + '/rules',
+      'POST',
+      req,
+    );
   }
 }
 
@@ -1867,7 +1962,10 @@ const TASKS_PREFIX = '/tasks';
 export class TasksClient {
   constructor(private readonly client = new ApiClient()) {}
 
-  listTasks(caseId?: string, assignedUserId?: string): Promise<{ data: TaskResult[] }> {
+  listTasks(
+    caseId?: string,
+    assignedUserId?: string,
+  ): Promise<{ data: TaskResult[] }> {
     const params = new URLSearchParams();
     if (caseId) params.append('caseId', caseId);
     if (assignedUserId) params.append('assignedUserId', assignedUserId);
@@ -1880,11 +1978,19 @@ export class TasksClient {
   }
 
   updateStatus(id: string, req: UpdateTaskStatusRequest): Promise<TaskResult> {
-    return this.client.body<TaskResult>(`${TASKS_PREFIX}/${encodeURIComponent(id)}/status`, 'PATCH', req);
+    return this.client.body<TaskResult>(
+      `${TASKS_PREFIX}/${encodeURIComponent(id)}/status`,
+      'PATCH',
+      req,
+    );
   }
 
   assignTask(id: string, req: AssignTaskRequest): Promise<TaskResult> {
-    return this.client.body<TaskResult>(`${TASKS_PREFIX}/${encodeURIComponent(id)}/assign`, 'PATCH', req);
+    return this.client.body<TaskResult>(
+      `${TASKS_PREFIX}/${encodeURIComponent(id)}/assign`,
+      'PATCH',
+      req,
+    );
   }
 }
 
@@ -1934,12 +2040,18 @@ const DOCUMENTS_PREFIX = '/documents';
 export class DocumentsClient {
   constructor(private readonly client = new ApiClient()) {}
 
-  listDocuments(caseId?: string, clientId?: string): Promise<{ data: DocumentResult[] }> {
+  listDocuments(
+    caseId?: string,
+    clientId?: string,
+  ): Promise<{ data: DocumentResult[] }> {
     const params = new URLSearchParams();
     if (caseId) params.append('caseId', caseId);
     if (clientId) params.append('clientId', clientId);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<{ data: DocumentResult[] }>(DOCUMENTS_PREFIX + qs, 'GET');
+    return this.client.body<{ data: DocumentResult[] }>(
+      DOCUMENTS_PREFIX + qs,
+      'GET',
+    );
   }
 
   createDocument(req: CreateDocumentRequest): Promise<DocumentResult> {
@@ -1947,35 +2059,66 @@ export class DocumentsClient {
   }
 
   uploadNewVersion(id: string, req: UploadNewVersionRequest): Promise<any> {
-    return this.client.body<any>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/versions`, 'POST', req);
+    return this.client.body<any>(
+      `${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/versions`,
+      'POST',
+      req,
+    );
   }
 
-  updateStatus(id: string, req: UpdateDocumentStatusRequest): Promise<DocumentResult> {
-    return this.client.body<DocumentResult>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/status`, 'PATCH', req);
+  updateStatus(
+    id: string,
+    req: UpdateDocumentStatusRequest,
+  ): Promise<DocumentResult> {
+    return this.client.body<DocumentResult>(
+      `${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/status`,
+      'PATCH',
+      req,
+    );
   }
 
   shareDocument(id: string, req: ShareDocumentRequest): Promise<any> {
-    return this.client.body<any>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/shares`, 'POST', req);
+    return this.client.body<any>(
+      `${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/shares`,
+      'POST',
+      req,
+    );
   }
 
   deleteDocument(id: string): Promise<{ success: boolean }> {
-    return this.client.body<{ success: boolean }>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}`, 'DELETE');
+    return this.client.body<{ success: boolean }>(
+      `${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}`,
+      'DELETE',
+    );
   }
 
-  generateAccessGrant(id: string, req: { documentVersionId: string, purpose: string }): Promise<{ data: any }> {
-    return this.client.body<{ data: any }>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/security/access`, 'POST', req);
+  generateAccessGrant(
+    id: string,
+    req: { documentVersionId: string; purpose: string },
+  ): Promise<{ data: any }> {
+    return this.client.body<{ data: any }>(
+      `${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/security/access`,
+      'POST',
+      req,
+    );
   }
 
-  revokeAccessGrant(id: string, grantId: string): Promise<{ success: boolean }> {
-    return this.client.body<{ success: boolean }>(`${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/security/access/${encodeURIComponent(grantId)}/revoke`, 'POST');
+  revokeAccessGrant(
+    id: string,
+    grantId: string,
+  ): Promise<{ success: boolean }> {
+    return this.client.body<{ success: boolean }>(
+      `${DOCUMENTS_PREFIX}/${encodeURIComponent(id)}/security/access/${encodeURIComponent(grantId)}/revoke`,
+      'POST',
+    );
   }
 }
-
 
 // --- Phase 21: Billing + Finance ---
 
 export type FeeKind = 'FIXED' | 'HOURLY' | 'RETAINER' | 'MILESTONE';
-export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'SUPERSEDED';
+export type InvoiceStatus =
+  'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOID' | 'SUPERSEDED';
 export type PaymentStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED';
 
 export interface FeeResult {
@@ -2189,16 +2332,27 @@ export class BillingsClient {
   }
 
   createExpense(req: CreateExpenseRequest): Promise<ExpenseResult> {
-    return this.client.body<ExpenseResult>(`${BILLING_PREFIX}/expenses`, 'POST', req);
+    return this.client.body<ExpenseResult>(
+      `${BILLING_PREFIX}/expenses`,
+      'POST',
+      req,
+    );
   }
 
   listExpenses(caseId?: string): Promise<ExpenseResult[]> {
     const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
-    return this.client.body<ExpenseResult[]>(`${BILLING_PREFIX}/expenses${qs}`, 'GET');
+    return this.client.body<ExpenseResult[]>(
+      `${BILLING_PREFIX}/expenses${qs}`,
+      'GET',
+    );
   }
 
   createInvoice(req: CreateInvoiceRequest): Promise<InvoiceDetail> {
-    return this.client.body<InvoiceDetail>(`${BILLING_PREFIX}/invoices`, 'POST', req);
+    return this.client.body<InvoiceDetail>(
+      `${BILLING_PREFIX}/invoices`,
+      'POST',
+      req,
+    );
   }
 
   listInvoices(caseId?: string, status?: string): Promise<InvoiceResult[]> {
@@ -2206,49 +2360,86 @@ export class BillingsClient {
     if (caseId) params.append('caseId', caseId);
     if (status) params.append('status', status);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<InvoiceResult[]>(`${BILLING_PREFIX}/invoices${qs}`, 'GET');
+    return this.client.body<InvoiceResult[]>(
+      `${BILLING_PREFIX}/invoices${qs}`,
+      'GET',
+    );
   }
 
   getInvoice(id: string): Promise<InvoiceDetail> {
-    return this.client.body<InvoiceDetail>(`${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}`, 'GET');
+    return this.client.body<InvoiceDetail>(
+      `${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}`,
+      'GET',
+    );
   }
 
   issueInvoice(id: string): Promise<InvoiceDetail> {
-    return this.client.body<InvoiceDetail>(`${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/issue`, 'POST');
+    return this.client.body<InvoiceDetail>(
+      `${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/issue`,
+      'POST',
+    );
   }
 
   voidInvoice(id: string): Promise<InvoiceResult> {
-    return this.client.body<InvoiceResult>(`${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/void`, 'POST');
+    return this.client.body<InvoiceResult>(
+      `${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/void`,
+      'POST',
+    );
   }
 
   versionInvoice(id: string): Promise<InvoiceDetail> {
-    return this.client.body<InvoiceDetail>(`${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/version`, 'POST');
+    return this.client.body<InvoiceDetail>(
+      `${BILLING_PREFIX}/invoices/${encodeURIComponent(id)}/version`,
+      'POST',
+    );
   }
 
   recordPayment(req: CreatePaymentRequest): Promise<PaymentResult> {
-    return this.client.body<PaymentResult>(`${BILLING_PREFIX}/payments`, 'POST', req);
+    return this.client.body<PaymentResult>(
+      `${BILLING_PREFIX}/payments`,
+      'POST',
+      req,
+    );
   }
 
   listPayments(invoiceId?: string): Promise<PaymentResult[]> {
     const qs = invoiceId ? `?invoiceId=${encodeURIComponent(invoiceId)}` : '';
-    return this.client.body<PaymentResult[]>(`${BILLING_PREFIX}/payments${qs}`, 'GET');
+    return this.client.body<PaymentResult[]>(
+      `${BILLING_PREFIX}/payments${qs}`,
+      'GET',
+    );
   }
 
   createCredit(req: CreateCreditRequest): Promise<CreditResult> {
-    return this.client.body<CreditResult>(`${BILLING_PREFIX}/credits`, 'POST', req);
+    return this.client.body<CreditResult>(
+      `${BILLING_PREFIX}/credits`,
+      'POST',
+      req,
+    );
   }
 
   applyCredit(id: string, req: ApplyCreditRequest): Promise<CreditResult> {
-    return this.client.body<CreditResult>(`${BILLING_PREFIX}/credits/${encodeURIComponent(id)}/apply`, 'POST', req);
+    return this.client.body<CreditResult>(
+      `${BILLING_PREFIX}/credits/${encodeURIComponent(id)}/apply`,
+      'POST',
+      req,
+    );
   }
 
   issueRefund(req: CreateRefundRequest): Promise<RefundResult> {
-    return this.client.body<RefundResult>(`${BILLING_PREFIX}/refunds`, 'POST', req);
+    return this.client.body<RefundResult>(
+      `${BILLING_PREFIX}/refunds`,
+      'POST',
+      req,
+    );
   }
 
   readLedger(caseId?: string): Promise<LedgerEntryResult[]> {
     const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
-    return this.client.body<LedgerEntryResult[]>(`${BILLING_PREFIX}/ledger${qs}`, 'GET');
+    return this.client.body<LedgerEntryResult[]>(
+      `${BILLING_PREFIX}/ledger${qs}`,
+      'GET',
+    );
   }
 
   readBalances(invoiceId?: string, caseId?: string): Promise<InvoiceBalance[]> {
@@ -2256,21 +2447,32 @@ export class BillingsClient {
     if (invoiceId) params.append('invoiceId', invoiceId);
     if (caseId) params.append('caseId', caseId);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<InvoiceBalance[]>(`${BILLING_PREFIX}/balances${qs}`, 'GET');
+    return this.client.body<InvoiceBalance[]>(
+      `${BILLING_PREFIX}/balances${qs}`,
+      'GET',
+    );
   }
 
   createTaxRule(req: CreateTaxRuleRequest): Promise<TaxRuleResult> {
-    return this.client.body<TaxRuleResult>(`${BILLING_PREFIX}/tax-rules`, 'POST', req);
+    return this.client.body<TaxRuleResult>(
+      `${BILLING_PREFIX}/tax-rules`,
+      'POST',
+      req,
+    );
   }
 
   listTaxRules(): Promise<TaxRuleResult[]> {
-    return this.client.body<TaxRuleResult[]>(`${BILLING_PREFIX}/tax-rules`, 'GET');
+    return this.client.body<TaxRuleResult[]>(
+      `${BILLING_PREFIX}/tax-rules`,
+      'GET',
+    );
   }
 }
 
 // --- Phase 22: Communications ---
 
-export type CommunicationChannel = 'EMAIL' | 'SMS' | 'WHATSAPP' | 'PHONE' | 'INTERNAL' | 'PORTAL';
+export type CommunicationChannel =
+  'EMAIL' | 'SMS' | 'WHATSAPP' | 'PHONE' | 'INTERNAL' | 'PORTAL';
 export type MessageDirection = 'INBOUND' | 'OUTBOUND';
 export type MessageStatus = 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED' | 'READ';
 export type ThreadStatus = 'OPEN' | 'CLOSED';
@@ -2368,54 +2570,105 @@ export class CommsClient {
   constructor(private readonly client = new ApiClient()) {}
 
   createThread(req: CreateThreadRequest): Promise<MessageThreadResult> {
-    return this.client.body<MessageThreadResult>(`${COMMS_PREFIX}/threads`, 'POST', req);
+    return this.client.body<MessageThreadResult>(
+      `${COMMS_PREFIX}/threads`,
+      'POST',
+      req,
+    );
   }
 
-  listThreads(caseId?: string, clientId?: string): Promise<MessageThreadResult[]> {
+  listThreads(
+    caseId?: string,
+    clientId?: string,
+  ): Promise<MessageThreadResult[]> {
     const params = new URLSearchParams();
     if (caseId) params.append('caseId', caseId);
     if (clientId) params.append('clientId', clientId);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<MessageThreadResult[]>(`${COMMS_PREFIX}/threads${qs}`, 'GET');
+    return this.client.body<MessageThreadResult[]>(
+      `${COMMS_PREFIX}/threads${qs}`,
+      'GET',
+    );
   }
 
   closeThread(id: string): Promise<MessageThreadResult> {
-    return this.client.body<MessageThreadResult>(`${COMMS_PREFIX}/threads/${encodeURIComponent(id)}/close`, 'POST');
+    return this.client.body<MessageThreadResult>(
+      `${COMMS_PREFIX}/threads/${encodeURIComponent(id)}/close`,
+      'POST',
+    );
   }
 
   composeMessage(req: CreateMessageRequest): Promise<MessageResult> {
-    return this.client.body<MessageResult>(`${COMMS_PREFIX}/messages`, 'POST', req);
+    return this.client.body<MessageResult>(
+      `${COMMS_PREFIX}/messages`,
+      'POST',
+      req,
+    );
   }
 
-  listMessages(filters: { threadId?: string; caseId?: string; clientId?: string; channel?: string } = {}): Promise<MessageResult[]> {
+  listMessages(
+    filters: {
+      threadId?: string;
+      caseId?: string;
+      clientId?: string;
+      channel?: string;
+    } = {},
+  ): Promise<MessageResult[]> {
     const params = new URLSearchParams();
     if (filters.threadId) params.append('threadId', filters.threadId);
     if (filters.caseId) params.append('caseId', filters.caseId);
     if (filters.clientId) params.append('clientId', filters.clientId);
     if (filters.channel) params.append('channel', filters.channel);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<MessageResult[]>(`${COMMS_PREFIX}/messages${qs}`, 'GET');
+    return this.client.body<MessageResult[]>(
+      `${COMMS_PREFIX}/messages${qs}`,
+      'GET',
+    );
   }
 
-  recordStatus(id: string, req: RecordMessageStatusRequest): Promise<MessageResult> {
-    return this.client.body<MessageResult>(`${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/status`, 'POST', req);
+  recordStatus(
+    id: string,
+    req: RecordMessageStatusRequest,
+  ): Promise<MessageResult> {
+    return this.client.body<MessageResult>(
+      `${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/status`,
+      'POST',
+      req,
+    );
   }
 
-  addAttachment(id: string, req: AddAttachmentRequest): Promise<MessageAttachmentResult> {
-    return this.client.body<MessageAttachmentResult>(`${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/attachments`, 'POST', req);
+  addAttachment(
+    id: string,
+    req: AddAttachmentRequest,
+  ): Promise<MessageAttachmentResult> {
+    return this.client.body<MessageAttachmentResult>(
+      `${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/attachments`,
+      'POST',
+      req,
+    );
   }
 
   listAttachments(id: string): Promise<MessageAttachmentResult[]> {
-    return this.client.body<MessageAttachmentResult[]>(`${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/attachments`, 'GET');
+    return this.client.body<MessageAttachmentResult[]>(
+      `${COMMS_PREFIX}/messages/${encodeURIComponent(id)}/attachments`,
+      'GET',
+    );
   }
 
   setConsent(req: SetConsentRequest): Promise<MessageConsentResult> {
-    return this.client.body<MessageConsentResult>(`${COMMS_PREFIX}/consents`, 'POST', req);
+    return this.client.body<MessageConsentResult>(
+      `${COMMS_PREFIX}/consents`,
+      'POST',
+      req,
+    );
   }
 
   listConsents(clientId?: string): Promise<MessageConsentResult[]> {
     const qs = clientId ? `?clientId=${encodeURIComponent(clientId)}` : '';
-    return this.client.body<MessageConsentResult[]>(`${COMMS_PREFIX}/consents${qs}`, 'GET');
+    return this.client.body<MessageConsentResult[]>(
+      `${COMMS_PREFIX}/consents${qs}`,
+      'GET',
+    );
   }
 }
 
@@ -2515,46 +2768,94 @@ const CALENDAR_PREFIX = '/calendar';
 export class CalendarClient {
   constructor(private readonly client = new ApiClient()) {}
 
-  createConnection(req: CreateConnectionRequest): Promise<CalendarConnectionResult> {
-    return this.client.body<CalendarConnectionResult>(`${CALENDAR_PREFIX}/connections`, 'POST', req);
+  createConnection(
+    req: CreateConnectionRequest,
+  ): Promise<CalendarConnectionResult> {
+    return this.client.body<CalendarConnectionResult>(
+      `${CALENDAR_PREFIX}/connections`,
+      'POST',
+      req,
+    );
   }
 
   listConnections(): Promise<CalendarConnectionResult[]> {
-    return this.client.body<CalendarConnectionResult[]>(`${CALENDAR_PREFIX}/connections`, 'GET');
+    return this.client.body<CalendarConnectionResult[]>(
+      `${CALENDAR_PREFIX}/connections`,
+      'GET',
+    );
   }
 
   enableConnection(id: string): Promise<CalendarConnectionResult> {
-    return this.client.body<CalendarConnectionResult>(`${CALENDAR_PREFIX}/connections/${encodeURIComponent(id)}/enable`, 'POST');
+    return this.client.body<CalendarConnectionResult>(
+      `${CALENDAR_PREFIX}/connections/${encodeURIComponent(id)}/enable`,
+      'POST',
+    );
   }
 
   disableConnection(id: string): Promise<CalendarConnectionResult> {
-    return this.client.body<CalendarConnectionResult>(`${CALENDAR_PREFIX}/connections/${encodeURIComponent(id)}/disable`, 'POST');
+    return this.client.body<CalendarConnectionResult>(
+      `${CALENDAR_PREFIX}/connections/${encodeURIComponent(id)}/disable`,
+      'POST',
+    );
   }
 
   pushEvent(req: PushEventRequest): Promise<CalendarEventMappingResult> {
-    return this.client.body<CalendarEventMappingResult>(`${CALENDAR_PREFIX}/sync/push`, 'POST', req);
+    return this.client.body<CalendarEventMappingResult>(
+      `${CALENDAR_PREFIX}/sync/push`,
+      'POST',
+      req,
+    );
   }
 
-  pullChanges(req: PullChangesRequest): Promise<{ cursor: CalendarSyncCursorResult; providerPending: boolean }> {
-    return this.client.body<{ cursor: CalendarSyncCursorResult; providerPending: boolean }>(`${CALENDAR_PREFIX}/sync/pull`, 'POST', req);
+  pullChanges(
+    req: PullChangesRequest,
+  ): Promise<{ cursor: CalendarSyncCursorResult; providerPending: boolean }> {
+    return this.client.body<{
+      cursor: CalendarSyncCursorResult;
+      providerPending: boolean;
+    }>(`${CALENDAR_PREFIX}/sync/pull`, 'POST', req);
   }
 
   listMappings(connectionId?: string): Promise<CalendarEventMappingResult[]> {
-    const qs = connectionId ? `?connectionId=${encodeURIComponent(connectionId)}` : '';
-    return this.client.body<CalendarEventMappingResult[]>(`${CALENDAR_PREFIX}/mappings${qs}`, 'GET');
+    const qs = connectionId
+      ? `?connectionId=${encodeURIComponent(connectionId)}`
+      : '';
+    return this.client.body<CalendarEventMappingResult[]>(
+      `${CALENDAR_PREFIX}/mappings${qs}`,
+      'GET',
+    );
   }
 
-  receiveWebhook(connectionId: string, req: WebhookReceiptRequest): Promise<CalendarSyncConflictResult> {
-    return this.client.body<CalendarSyncConflictResult>(`${CALENDAR_PREFIX}/webhooks/${encodeURIComponent(connectionId)}`, 'POST', req);
+  receiveWebhook(
+    connectionId: string,
+    req: WebhookReceiptRequest,
+  ): Promise<CalendarSyncConflictResult> {
+    return this.client.body<CalendarSyncConflictResult>(
+      `${CALENDAR_PREFIX}/webhooks/${encodeURIComponent(connectionId)}`,
+      'POST',
+      req,
+    );
   }
 
   listConflicts(connectionId?: string): Promise<CalendarSyncConflictResult[]> {
-    const qs = connectionId ? `?connectionId=${encodeURIComponent(connectionId)}` : '';
-    return this.client.body<CalendarSyncConflictResult[]>(`${CALENDAR_PREFIX}/conflicts${qs}`, 'GET');
+    const qs = connectionId
+      ? `?connectionId=${encodeURIComponent(connectionId)}`
+      : '';
+    return this.client.body<CalendarSyncConflictResult[]>(
+      `${CALENDAR_PREFIX}/conflicts${qs}`,
+      'GET',
+    );
   }
 
-  resolveConflict(id: string, req: ResolveConflictRequest): Promise<CalendarSyncConflictResult> {
-    return this.client.body<CalendarSyncConflictResult>(`${CALENDAR_PREFIX}/conflicts/${encodeURIComponent(id)}/resolve`, 'POST', req);
+  resolveConflict(
+    id: string,
+    req: ResolveConflictRequest,
+  ): Promise<CalendarSyncConflictResult> {
+    return this.client.body<CalendarSyncConflictResult>(
+      `${CALENDAR_PREFIX}/conflicts/${encodeURIComponent(id)}/resolve`,
+      'POST',
+      req,
+    );
   }
 
   readAgenda(from?: string, to?: string): Promise<AgendaItem[]> {
@@ -2562,7 +2863,10 @@ export class CalendarClient {
     if (from) params.append('from', from);
     if (to) params.append('to', to);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<AgendaItem[]>(`${CALENDAR_PREFIX}/agenda${qs}`, 'GET');
+    return this.client.body<AgendaItem[]>(
+      `${CALENDAR_PREFIX}/agenda${qs}`,
+      'GET',
+    );
   }
 }
 
@@ -2642,23 +2946,38 @@ export class PortalClient {
   }
 
   myDocuments(): Promise<PortalDocument[]> {
-    return this.client.body<PortalDocument[]>(`${PORTAL_PREFIX}/documents`, 'GET');
+    return this.client.body<PortalDocument[]>(
+      `${PORTAL_PREFIX}/documents`,
+      'GET',
+    );
   }
 
   myHearings(): Promise<PortalHearing[]> {
-    return this.client.body<PortalHearing[]>(`${PORTAL_PREFIX}/hearings`, 'GET');
+    return this.client.body<PortalHearing[]>(
+      `${PORTAL_PREFIX}/hearings`,
+      'GET',
+    );
   }
 
   myDeadlines(): Promise<PortalDeadline[]> {
-    return this.client.body<PortalDeadline[]>(`${PORTAL_PREFIX}/deadlines`, 'GET');
+    return this.client.body<PortalDeadline[]>(
+      `${PORTAL_PREFIX}/deadlines`,
+      'GET',
+    );
   }
 
   myMessages(): Promise<PortalMessage[]> {
-    return this.client.body<PortalMessage[]>(`${PORTAL_PREFIX}/messages`, 'GET');
+    return this.client.body<PortalMessage[]>(
+      `${PORTAL_PREFIX}/messages`,
+      'GET',
+    );
   }
 
   myInvoices(): Promise<PortalInvoice[]> {
-    return this.client.body<PortalInvoice[]>(`${PORTAL_PREFIX}/invoices`, 'GET');
+    return this.client.body<PortalInvoice[]>(
+      `${PORTAL_PREFIX}/invoices`,
+      'GET',
+    );
   }
 
   myCredits(): Promise<PortalCredit[]> {
@@ -2666,7 +2985,10 @@ export class PortalClient {
   }
 
   agenda(): Promise<PortalAgendaItem[]> {
-    return this.client.body<PortalAgendaItem[]>(`${PORTAL_PREFIX}/agenda`, 'GET');
+    return this.client.body<PortalAgendaItem[]>(
+      `${PORTAL_PREFIX}/agenda`,
+      'GET',
+    );
   }
 }
 
@@ -2674,8 +2996,16 @@ export class PortalClient {
 
 export type TransferEntity = 'CASE' | 'CLIENT' | 'PARTY' | 'TASK';
 export type TransferFormat = 'CSV' | 'XLSX';
-export type ImportStatus = 'DRAFT' | 'VALIDATED' | 'APPROVED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'ROLLED_BACK';
-export type ExportStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'EXPIRED';
+export type ImportStatus =
+  | 'DRAFT'
+  | 'VALIDATED'
+  | 'APPROVED'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'ROLLED_BACK';
+export type ExportStatus =
+  'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'EXPIRED';
 
 export interface ImportJobResult {
   id: string;
@@ -2738,54 +3068,94 @@ export class TransferClient {
   constructor(private readonly client = new ApiClient()) {}
 
   createImport(req: CreateImportRequest): Promise<ImportJobResult> {
-    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports`, 'POST', req);
+    return this.client.body<ImportJobResult>(
+      `${TRANSFER_PREFIX}/imports`,
+      'POST',
+      req,
+    );
   }
 
   listImports(): Promise<ImportJobResult[]> {
-    return this.client.body<ImportJobResult[]>(`${TRANSFER_PREFIX}/imports`, 'GET');
+    return this.client.body<ImportJobResult[]>(
+      `${TRANSFER_PREFIX}/imports`,
+      'GET',
+    );
   }
 
   getImport(id: string): Promise<ImportJobResult> {
-    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}`, 'GET');
+    return this.client.body<ImportJobResult>(
+      `${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}`,
+      'GET',
+    );
   }
 
   validateImport(id: string): Promise<ImportJobResult> {
-    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/validate`, 'POST');
+    return this.client.body<ImportJobResult>(
+      `${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/validate`,
+      'POST',
+    );
   }
 
   approveImport(id: string, idempotencyKey?: string): Promise<ImportJobResult> {
-    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/approve`, 'POST', { idempotencyKey });
+    return this.client.body<ImportJobResult>(
+      `${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/approve`,
+      'POST',
+      { idempotencyKey },
+    );
   }
 
   rollbackImport(id: string): Promise<ImportJobResult> {
-    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/rollback`, 'POST');
+    return this.client.body<ImportJobResult>(
+      `${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/rollback`,
+      'POST',
+    );
   }
 
   listImportErrors(id: string): Promise<ImportRowErrorResult[]> {
-    return this.client.body<ImportRowErrorResult[]>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/errors`, 'GET');
+    return this.client.body<ImportRowErrorResult[]>(
+      `${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/errors`,
+      'GET',
+    );
   }
 
   createExport(req: CreateExportRequest): Promise<ExportJobResult> {
-    return this.client.body<ExportJobResult>(`${TRANSFER_PREFIX}/exports`, 'POST', req);
+    return this.client.body<ExportJobResult>(
+      `${TRANSFER_PREFIX}/exports`,
+      'POST',
+      req,
+    );
   }
 
   listExports(): Promise<ExportJobResult[]> {
-    return this.client.body<ExportJobResult[]>(`${TRANSFER_PREFIX}/exports`, 'GET');
+    return this.client.body<ExportJobResult[]>(
+      `${TRANSFER_PREFIX}/exports`,
+      'GET',
+    );
   }
 
   runExport(id: string): Promise<ExportJobResult> {
-    return this.client.body<ExportJobResult>(`${TRANSFER_PREFIX}/exports/${encodeURIComponent(id)}/run`, 'POST');
+    return this.client.body<ExportJobResult>(
+      `${TRANSFER_PREFIX}/exports/${encodeURIComponent(id)}/run`,
+      'POST',
+    );
   }
 
-  downloadExport(id: string): Promise<{ csv: string; expiresAt: string | null }> {
-    return this.client.body<{ csv: string; expiresAt: string | null }>(`${TRANSFER_PREFIX}/exports/${encodeURIComponent(id)}/download`, 'GET');
+  downloadExport(
+    id: string,
+  ): Promise<{ csv: string; expiresAt: string | null }> {
+    return this.client.body<{ csv: string; expiresAt: string | null }>(
+      `${TRANSFER_PREFIX}/exports/${encodeURIComponent(id)}/download`,
+      'GET',
+    );
   }
 }
 
 // --- Phase 26: Notifications ---
 
-export type NotificationEvent = 'INVOICE_ISSUED' | 'HEARING_SCHEDULED' | 'DEADLINE_CREATED';
-export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS' | 'WHATSAPP' | 'PUSH';
+export type NotificationEvent =
+  'INVOICE_ISSUED' | 'HEARING_SCHEDULED' | 'DEADLINE_CREATED';
+export type NotificationChannel =
+  'IN_APP' | 'EMAIL' | 'SMS' | 'WHATSAPP' | 'PUSH';
 export type NotificationStatus = 'PENDING' | 'SENT' | 'READ' | 'FAILED';
 export type NotificationAudience = 'ASSIGNEES' | 'ALL_MEMBERS';
 
@@ -2857,30 +3227,190 @@ export class NotificationsClient {
   constructor(private readonly client = new ApiClient()) {}
 
   createRule(req: CreateRuleRequest): Promise<NotificationRuleResult> {
-    return this.client.body<NotificationRuleResult>(`${NOTIFICATIONS_PREFIX}/rules`, 'POST', req);
+    return this.client.body<NotificationRuleResult>(
+      `${NOTIFICATIONS_PREFIX}/rules`,
+      'POST',
+      req,
+    );
   }
 
-  updateRule(id: string, req: UpdateRuleRequest): Promise<NotificationRuleResult> {
-    return this.client.body<NotificationRuleResult>(`${NOTIFICATIONS_PREFIX}/rules/${encodeURIComponent(id)}`, 'PATCH', req);
+  updateRule(
+    id: string,
+    req: UpdateRuleRequest,
+  ): Promise<NotificationRuleResult> {
+    return this.client.body<NotificationRuleResult>(
+      `${NOTIFICATIONS_PREFIX}/rules/${encodeURIComponent(id)}`,
+      'PATCH',
+      req,
+    );
   }
 
   listRules(): Promise<NotificationRuleResult[]> {
-    return this.client.body<NotificationRuleResult[]>(`${NOTIFICATIONS_PREFIX}/rules`, 'GET');
+    return this.client.body<NotificationRuleResult[]>(
+      `${NOTIFICATIONS_PREFIX}/rules`,
+      'GET',
+    );
   }
 
   inbox(): Promise<NotificationResult[]> {
-    return this.client.body<NotificationResult[]>(`${NOTIFICATIONS_PREFIX}/inbox`, 'GET');
+    return this.client.body<NotificationResult[]>(
+      `${NOTIFICATIONS_PREFIX}/inbox`,
+      'GET',
+    );
   }
 
   markRead(id: string): Promise<{ count: number }> {
-    return this.client.body<{ count: number }>(`${NOTIFICATIONS_PREFIX}/inbox/${encodeURIComponent(id)}/read`, 'POST');
+    return this.client.body<{ count: number }>(
+      `${NOTIFICATIONS_PREFIX}/inbox/${encodeURIComponent(id)}/read`,
+      'POST',
+    );
   }
 
-  setPreference(req: SetPreferenceRequest): Promise<NotificationPreferenceResult> {
-    return this.client.body<NotificationPreferenceResult>(`${NOTIFICATIONS_PREFIX}/preferences`, 'POST', req);
+  setPreference(
+    req: SetPreferenceRequest,
+  ): Promise<NotificationPreferenceResult> {
+    return this.client.body<NotificationPreferenceResult>(
+      `${NOTIFICATIONS_PREFIX}/preferences`,
+      'POST',
+      req,
+    );
   }
 
   listPreferences(): Promise<NotificationPreferenceResult[]> {
-    return this.client.body<NotificationPreferenceResult[]>(`${NOTIFICATIONS_PREFIX}/preferences`, 'GET');
+    return this.client.body<NotificationPreferenceResult[]>(
+      `${NOTIFICATIONS_PREFIX}/preferences`,
+      'GET',
+    );
+  }
+}
+
+// --- Phase 27: Reporting ---
+
+export type ReportDataSource =
+  | 'CASE'
+  | 'CLIENT'
+  | 'PARTY'
+  | 'TASK'
+  | 'INVOICE'
+  | 'PAYMENT'
+  | 'HEARING'
+  | 'DEADLINE'
+  | 'DOCUMENT';
+export type ReportFrequency = 'DAILY' | 'WEEKLY';
+export type ReportRunStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface ReportDefinitionResult {
+  id: string;
+  tenantId: string;
+  name: string;
+  dataSource: ReportDataSource;
+  columns: string[];
+  filters: Record<string, string> | null;
+  groupBy: string | null;
+  sortBy: string | null;
+  sortDir: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportScheduleResult {
+  id: string;
+  tenantId: string;
+  definitionId: string;
+  frequency: ReportFrequency;
+  runAt: string;
+  enabled: boolean;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportRunResult {
+  id: string;
+  tenantId: string;
+  definitionId: string | null;
+  scheduleId: string | null;
+  status: ReportRunStatus;
+  rowCount: number;
+  error: string | null;
+  triggeredBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportOutput {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  total: number;
+  grouped?: Record<string, Record<string, unknown>[]>;
+}
+
+export interface CreateDefinitionRequest {
+  name: string;
+  dataSource: ReportDataSource;
+  columns: string[];
+  filters?: Record<string, string>;
+  groupBy?: string;
+  sortBy?: string;
+  sortDir?: string;
+}
+
+export interface CreateScheduleRequest {
+  definitionId: string;
+  frequency: ReportFrequency;
+  runAt: string;
+  enabled?: boolean;
+}
+
+const REPORTS_PREFIX = '/reports';
+
+export class ReportsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  createDefinition(
+    req: CreateDefinitionRequest,
+  ): Promise<ReportDefinitionResult> {
+    return this.client.body<ReportDefinitionResult>(
+      `${REPORTS_PREFIX}/definitions`,
+      'POST',
+      req,
+    );
+  }
+
+  listDefinitions(): Promise<ReportDefinitionResult[]> {
+    return this.client.body<ReportDefinitionResult[]>(
+      `${REPORTS_PREFIX}/definitions`,
+      'GET',
+    );
+  }
+
+  runDefinition(id: string): Promise<ReportOutput> {
+    return this.client.body<ReportOutput>(
+      `${REPORTS_PREFIX}/definitions/${encodeURIComponent(id)}/run`,
+      'POST',
+      {},
+    );
+  }
+
+  createSchedule(req: CreateScheduleRequest): Promise<ReportScheduleResult> {
+    return this.client.body<ReportScheduleResult>(
+      `${REPORTS_PREFIX}/schedules`,
+      'POST',
+      req,
+    );
+  }
+
+  listSchedules(): Promise<ReportScheduleResult[]> {
+    return this.client.body<ReportScheduleResult[]>(
+      `${REPORTS_PREFIX}/schedules`,
+      'GET',
+    );
+  }
+
+  listRuns(): Promise<ReportRunResult[]> {
+    return this.client.body<ReportRunResult[]>(`${REPORTS_PREFIX}/runs`, 'GET');
   }
 }

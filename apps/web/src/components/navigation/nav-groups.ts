@@ -41,11 +41,24 @@ export const appNavGroups: AppNavGroup[] = [
     icon: LayoutDashboard,
     items: [
       { href: '/', labelKey: 'navigation.overview', icon: LayoutDashboard },
-      { href: '/operations', labelKey: 'navigation.operations', icon: Activity },
+      {
+        href: '/operations',
+        labelKey: 'navigation.operations',
+        icon: Activity,
+      },
       { href: '/tasks', labelKey: 'navigation.tasks', icon: CheckSquare },
       { href: '/documents', labelKey: 'navigation.documents', icon: FileText },
-      { href: '/secure-links', labelKey: 'navigation.secureLinks', icon: ShieldCheck },
-      { href: '/notifications', labelKey: 'navigation.notifications', icon: Bell },
+      {
+        href: '/secure-links',
+        labelKey: 'navigation.secureLinks',
+        icon: ShieldCheck,
+      },
+      {
+        href: '/notifications',
+        labelKey: 'navigation.notifications',
+        icon: Bell,
+      },
+      { href: '/reports', labelKey: 'navigation.reports', icon: FileText },
     ],
   },
   {
@@ -55,7 +68,11 @@ export const appNavGroups: AppNavGroup[] = [
     items: [
       { href: '/clients', labelKey: 'navigation.clients', icon: Users },
       { href: '/parties', labelKey: 'navigation.parties', icon: Users },
-      { href: '/conflict-checks', labelKey: 'navigation.conflictChecks', icon: ShieldAlert },
+      {
+        href: '/conflict-checks',
+        labelKey: 'navigation.conflictChecks',
+        icon: ShieldAlert,
+      },
       { href: '/portal', labelKey: 'navigation.portal', icon: DoorOpen },
     ],
   },
@@ -68,7 +85,11 @@ export const appNavGroups: AppNavGroup[] = [
       { href: '/hearings', labelKey: 'navigation.hearings', icon: Gavel },
       { href: '/deadlines', labelKey: 'navigation.deadlines', icon: Calendar },
       { href: '/billing', labelKey: 'navigation.billing', icon: ReceiptText },
-      { href: '/communications', labelKey: 'navigation.communications', icon: MessageSquare },
+      {
+        href: '/communications',
+        labelKey: 'navigation.communications',
+        icon: MessageSquare,
+      },
       { href: '/calendar', labelKey: 'navigation.calendar', icon: Calendar },
     ],
   },
@@ -77,11 +98,27 @@ export const appNavGroups: AppNavGroup[] = [
     titleKey: 'navigation.groups.configuration',
     icon: Settings2,
     items: [
-      { href: '/organization', labelKey: 'navigation.organization', icon: Building2 },
-      { href: '/legal-config', labelKey: 'navigation.legalConfig', icon: Scale },
+      {
+        href: '/organization',
+        labelKey: 'navigation.organization',
+        icon: Building2,
+      },
+      {
+        href: '/legal-config',
+        labelKey: 'navigation.legalConfig',
+        icon: Scale,
+      },
       { href: '/workflows', labelKey: 'navigation.workflows', icon: Activity },
-      { href: '/transfer', labelKey: 'navigation.transfer', icon: ArrowLeftRight },
-      { href: '/integrations', labelKey: 'navigation.integrations', icon: ArrowRightLeft },
+      {
+        href: '/transfer',
+        labelKey: 'navigation.transfer',
+        icon: ArrowLeftRight,
+      },
+      {
+        href: '/integrations',
+        labelKey: 'navigation.integrations',
+        icon: ArrowRightLeft,
+      },
       { href: '/settings', labelKey: 'navigation.settings', icon: Settings2 },
     ],
   },

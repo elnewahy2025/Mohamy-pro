@@ -146,6 +146,8 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'denial.revoked': ['denialId'],
   'case.member.assigned': ['membershipId'],
   'case.member.revoked': ['membershipId'],
+  'report.created': ['dataSource'],
+  'report.run.completed': ['rowCount'],
   'notification.rule.created': ['eventType'],
   'notification.rule.updated': [],
   'notification.sent': ['recipientCount'],

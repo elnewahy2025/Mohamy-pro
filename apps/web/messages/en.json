@@ -87,7 +87,8 @@
     "calendar": "Calendar",
     "portal": "Portal",
     "transfer": "Import / Export",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "reports": "Reports"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -1388,6 +1389,54 @@
       "rules": {
         "heading": "Rules",
         "description": "Admin event rules, audiences, and escalations."
+      }
+    }
+  },
+  "reports": {
+    "eyebrow": "Phase 27 · Reporting",
+    "title": "Answers, not raw tables.",
+    "description": "Define allowlisted reports once, run them on demand or on schedule. Every run respects tenant and assignment scope.",
+    "create": "Create",
+    "run": "Run",
+    "load": "Load",
+    "submitting": "Working…",
+    "labels": {
+      "definitionId": "Definition ID",
+      "name": "Name",
+      "dataSource": "Data source",
+      "columns": "Columns",
+      "groupBy": "Group by",
+      "sortBy": "Sort by",
+      "frequency": "Frequency",
+      "runAt": "Run at"
+    },
+    "placeholders": {
+      "definitionId": "00000000-0000-4000-8000-000000000000",
+      "name": "e.g. Open cases by status",
+      "dataSource": "CASE, CLIENT, PARTY, TASK, INVOICE, PAYMENT, HEARING, DEADLINE or DOCUMENT",
+      "columns": "caseNumber, status",
+      "groupBy": "Optional column name",
+      "sortBy": "Optional column name",
+      "frequency": "DAILY or WEEKLY",
+      "runAt": "HH:MM, e.g. 06:00"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "definitions": {
+        "heading": "Definitions",
+        "description": "Allowlisted report definitions."
+      },
+      "run": {
+        "heading": "Run",
+        "description": "Execute a definition with your scope applied."
+      },
+      "schedules": {
+        "heading": "Schedules",
+        "description": "Daily or weekly scheduled runs with summaries."
       }
     }
   }

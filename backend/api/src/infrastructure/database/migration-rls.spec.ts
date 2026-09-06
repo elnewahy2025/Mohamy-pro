@@ -345,6 +345,27 @@ describe('Phase 10-15 migration assertions', () => {
     }
   });
 
+  it('creates all 3 Phase 27 reporting tables with FORCE RLS', () => {
+    const reportingMigration = readMigration(
+      '20260908000010_phase27_reporting_foundation',
+    );
+
+    for (const table of [
+      'ReportDefinition',
+      'ReportSchedule',
+      'ReportRun',
+    ]) {
+      expect(reportingMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(reportingMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(reportingMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(reportingMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

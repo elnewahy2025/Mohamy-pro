@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, BillingsClient, BreakGlassClient, CalendarClient, CommsClient, NotificationsClient, PortalClient, TransferClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
+import {
+  ApiClient,
+  BillingsClient,
+  BreakGlassClient,
+  CalendarClient,
+  CommsClient,
+  NotificationsClient,
+  PortalClient,
+  ReportsClient,
+  TransferClient,
+  CasesClient,
+  ClientsClient,
+  ConflictChecksClient,
+  DeadlinesClient,
+  DocumentsClient,
+  HearingsClient,
+  LegalConfigClient,
+  PartyClient,
+  TasksClient,
+  WorkflowsClient,
+} from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -13,7 +33,11 @@ function enveloped<T>(data: T): unknown {
   return {
     success: true,
     data,
-    meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+    meta: {
+      requestId: 'req-1',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      pagination: null,
+    },
   };
 }
 
@@ -36,7 +60,8 @@ describe('ApiClient', () => {
   });
 
   it('returns null from /auth/me on 401', async () => {
-    const fetchMock = async (): Promise<Response> => new Response(null, { status: 401 });
+    const fetchMock = async (): Promise<Response> =>
+      new Response(null, { status: 401 });
     const client = new ApiClient('http://localhost:3000/api/v1', fetchMock);
 
     expect(await client.me()).toBeNull();
@@ -44,7 +69,10 @@ describe('ApiClient', () => {
 
   it('throws from /auth/me when the 200 envelope data is not a valid AuthUser payload', async () => {
     const fetchMock = async (): Promise<Response> =>
-      okJson({ success: true, data: { success: false, error: { code: 'FORBIDDEN' } } });
+      okJson({
+        success: true,
+        data: { success: false, error: { code: 'FORBIDDEN' } },
+      });
     const client = new ApiClient('http://localhost:3000/api/v1', fetchMock);
 
     await expect(client.me()).rejects.toThrow(
@@ -88,8 +116,13 @@ describe('ApiClient', () => {
 describe('ApiClient business mutations', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function mutatingFetch(handlers?: Record<string, (url: string, init?: RequestInit) => Response>): {
-    fetchMock: (url: string | URL | Request, init?: RequestInit) => Promise<Response>;
+  function mutatingFetch(
+    handlers?: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): {
+    fetchMock: (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
     calls: Array<{ url: string; init?: RequestInit }>;
   } {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
@@ -104,7 +137,8 @@ describe('ApiClient business mutations', () => {
       }
       if (handlers) {
         for (const suffix of Object.keys(handlers)) {
-          if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+          if (urlString.endsWith(suffix))
+            return handlers[suffix](urlString, init);
         }
       }
       return new Response(null, { status: 404 });
@@ -114,7 +148,17 @@ describe('ApiClient business mutations', () => {
 
   it('sends CSRF + Idempotency-Key on POST bootstrap and returns the typed payload', async () => {
     const { fetchMock, calls } = mutatingFetch({
-      '/bootstrap': () => okJson(enveloped({ tenantId: 't1', slug: 'acme', name: 'Acme', organizationId: 'o1', membershipId: 'm1' }), { status: 201 }),
+      '/bootstrap': () =>
+        okJson(
+          enveloped({
+            tenantId: 't1',
+            slug: 'acme',
+            name: 'Acme',
+            organizationId: 'o1',
+            membershipId: 'm1',
+          }),
+          { status: 201 },
+        ),
     });
     const client = new ApiClient(base, fetchMock);
 
@@ -128,12 +172,26 @@ describe('ApiClient business mutations', () => {
     expect(headers['Idempotency-Key']).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
-    expect(result).toEqual({ tenantId: 't1', slug: 'acme', name: 'Acme', organizationId: 'o1', membershipId: 'm1' });
+    expect(result).toEqual({
+      tenantId: 't1',
+      slug: 'acme',
+      name: 'Acme',
+      organizationId: 'o1',
+      membershipId: 'm1',
+    });
   });
 
   it('posts tenant-switch with the tenant id and returns a typed payload', async () => {
     const { fetchMock, calls } = mutatingFetch({
-      '/session/tenant-switch': () => okJson(enveloped({ tenantId: 't2', slug: 'beta', name: 'Beta', membershipId: 'm2' })),
+      '/session/tenant-switch': () =>
+        okJson(
+          enveloped({
+            tenantId: 't2',
+            slug: 'beta',
+            name: 'Beta',
+            membershipId: 'm2',
+          }),
+        ),
     });
     const client = new ApiClient(base, fetchMock);
 
@@ -141,7 +199,12 @@ describe('ApiClient business mutations', () => {
 
     const call = calls.find((c) => c.url.endsWith('/session/tenant-switch'));
     expect(JSON.parse(String(call?.init?.body))).toEqual({ tenantId: 't2' });
-    expect(result).toEqual({ tenantId: 't2', slug: 'beta', name: 'Beta', membershipId: 'm2' });
+    expect(result).toEqual({
+      tenantId: 't2',
+      slug: 'beta',
+      name: 'Beta',
+      membershipId: 'm2',
+    });
   });
 
   it('maps a backend error envelope to an ApiError with code and details', async () => {
@@ -150,7 +213,11 @@ describe('ApiClient business mutations', () => {
         new Response(
           JSON.stringify({
             success: false,
-            error: { code: 'VALIDATION_FAILED', message: 'The provided input is invalid.', details: ['requestedRoleKeys must be an array'] },
+            error: {
+              code: 'VALIDATION_FAILED',
+              message: 'The provided input is invalid.',
+              details: ['requestedRoleKeys must be an array'],
+            },
             meta: { requestId: 'req-x', timestamp: '2026-01-01T00:00:00.000Z' },
           }),
           { status: 400, headers: { 'Content-Type': 'application/json' } },
@@ -158,7 +225,9 @@ describe('ApiClient business mutations', () => {
     });
     const client = new ApiClient(base, fetchMock);
 
-    await expect(client.createInvitation({ requestedRoleKeys: [] })).rejects.toMatchObject({
+    await expect(
+      client.createInvitation({ requestedRoleKeys: [] }),
+    ).rejects.toMatchObject({
       name: 'ApiError',
       code: 'VALIDATION_FAILED',
       details: ['requestedRoleKeys must be an array'],
@@ -169,28 +238,59 @@ describe('ApiClient business mutations', () => {
 
   it('patches membership suspend with CSRF + idempotency', async () => {
     const { fetchMock, calls } = mutatingFetch({
-      '/membership/members/suspend': () => okJson(enveloped({ membershipId: 'm1', tenantId: 't1', status: 'SUSPENDED' })),
+      '/membership/members/suspend': () =>
+        okJson(
+          enveloped({
+            membershipId: 'm1',
+            tenantId: 't1',
+            status: 'SUSPENDED',
+          }),
+        ),
     });
     const client = new ApiClient(base, fetchMock);
 
-    const result = await client.suspendMembership({ membershipId: 'm1', reason: 'abuse' });
+    const result = await client.suspendMembership({
+      membershipId: 'm1',
+      reason: 'abuse',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/membership/members/suspend'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/membership/members/suspend'),
+    );
     expect(call?.init?.method).toBe('PATCH');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ membershipId: 'm1', reason: 'abuse' });
-    expect((call?.init?.headers as Record<string, string>)['X-CSRF-Token']).toBe('csrf-mutation');
-    expect(result).toEqual({ membershipId: 'm1', tenantId: 't1', status: 'SUSPENDED' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      membershipId: 'm1',
+      reason: 'abuse',
+    });
+    expect(
+      (call?.init?.headers as Record<string, string>)['X-CSRF-Token'],
+    ).toBe('csrf-mutation');
+    expect(result).toEqual({
+      membershipId: 'm1',
+      tenantId: 't1',
+      status: 'SUSPENDED',
+    });
   });
 
   it('accepts an invitation by token and returns the accepted membership', async () => {
     const { fetchMock, calls } = mutatingFetch({
-      '/membership/invitations/accept': () => okJson(enveloped({ membershipId: 'm9', tenantId: 't9', status: 'ACTIVE', userId: 'u9' })),
+      '/membership/invitations/accept': () =>
+        okJson(
+          enveloped({
+            membershipId: 'm9',
+            tenantId: 't9',
+            status: 'ACTIVE',
+            userId: 'u9',
+          }),
+        ),
     });
     const client = new ApiClient(base, fetchMock);
 
     const result = await client.acceptInvitation('abc');
 
-    const call = calls.find((c) => c.url.endsWith('/membership/invitations/accept'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/membership/invitations/accept'),
+    );
     expect(JSON.parse(String(call?.init?.body))).toEqual({ token: 'abc' });
     expect(result.status).toBe('ACTIVE');
   });
@@ -199,7 +299,9 @@ describe('ApiClient business mutations', () => {
 describe('ClientsClient (Phase 5)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -212,13 +314,18 @@ describe('ClientsClient (Phase 5)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-clients' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -230,7 +337,11 @@ describe('ClientsClient (Phase 5)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -256,22 +367,37 @@ describe('ClientsClient (Phase 5)', () => {
     });
     const client = new ClientsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createClient({ clientType: 'INDIVIDUAL', name: 'Ahmed Hassan' });
+    const result = await client.createClient({
+      clientType: 'INDIVIDUAL',
+      name: 'Ahmed Hassan',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/clients'));
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ clientType: 'INDIVIDUAL', name: 'Ahmed Hassan' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      clientType: 'INDIVIDUAL',
+      name: 'Ahmed Hassan',
+    });
     expect(result.displayName).toBe('Ahmed Hassan');
   });
 
   it('lists clients with query params on GET /clients', async () => {
     const { fetchMock, calls } = clientWith({
       'clientType=INDIVIDUAL': () =>
-        enveloped({ data: [baseClient], pagination: { page: 1, limit: 20, total: 1 } }),
+        enveloped({
+          data: [baseClient],
+          pagination: { page: 1, limit: 20, total: 1 },
+        }),
     });
     const client = new ClientsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.listClients({ page: 1, limit: 20, search: 'Ahmed', status: 'ACTIVE', clientType: 'INDIVIDUAL' });
+    const result = await client.listClients({
+      page: 1,
+      limit: 20,
+      search: 'Ahmed',
+      status: 'ACTIVE',
+      clientType: 'INDIVIDUAL',
+    });
 
     const call = calls.find((c) => c.url.includes('/clients?'));
     expect(String(call?.url)).toContain('page=1');
@@ -291,7 +417,10 @@ describe('ClientsClient (Phase 5)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/clients/c1'));
     expect(call?.init?.method).toBe('PATCH');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ id: 'c1', name: 'Updated' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      id: 'c1',
+      name: 'Updated',
+    });
     expect(result.name).toBe('Updated');
   });
 
@@ -305,21 +434,41 @@ describe('ClientsClient (Phase 5)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/clients/c1'));
     expect(call?.init?.method).toBe('DELETE');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ reason: 'duplicate' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      reason: 'duplicate',
+    });
   });
 
   it('creates a contact under clients/:clientId/contacts', async () => {
     const { fetchMock, calls } = clientWith({
       '/clients/c1/contacts': () =>
-        enveloped({ id: 'k1', tenantId: 't1', clientId: 'c1', type: 'EMAIL', value: 'a@b.com', label: null, isPrimary: true }),
+        enveloped({
+          id: 'k1',
+          tenantId: 't1',
+          clientId: 'c1',
+          type: 'EMAIL',
+          value: 'a@b.com',
+          label: null,
+          isPrimary: true,
+        }),
     });
     const client = new ClientsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createContact({ clientId: 'c1', type: 'EMAIL', value: 'a@b.com', isPrimary: true });
+    const result = await client.createContact({
+      clientId: 'c1',
+      type: 'EMAIL',
+      value: 'a@b.com',
+      isPrimary: true,
+    });
 
     const call = calls.find((c) => c.url.endsWith('/clients/c1/contacts'));
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ clientId: 'c1', type: 'EMAIL', value: 'a@b.com', isPrimary: true });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      clientId: 'c1',
+      type: 'EMAIL',
+      value: 'a@b.com',
+      isPrimary: true,
+    });
     expect(result.isPrimary).toBe(true);
   });
 
@@ -340,7 +489,9 @@ describe('ClientsClient (Phase 5)', () => {
 describe('ConflictChecksClient (Phase 6)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -353,13 +504,18 @@ describe('ConflictChecksClient (Phase 6)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-conflict' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -371,7 +527,11 @@ describe('ConflictChecksClient (Phase 6)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -476,7 +636,9 @@ describe('ConflictChecksClient (Phase 6)', () => {
 
     const result = await client.startReview({ id: 'x1' });
 
-    const call = calls.find((c) => c.url.endsWith('/conflict-checks/x1/review'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/conflict-checks/x1/review'),
+    );
     expect(call?.init?.method).toBe('POST');
     expect(JSON.parse(String(call?.init?.body))).toEqual({});
     expect(result.status).toBe('IN_REVIEW');
@@ -485,15 +647,29 @@ describe('ConflictChecksClient (Phase 6)', () => {
   it('records a decision via POST /conflict-checks/:id/decide', async () => {
     const { fetchMock, calls } = clientWith({
       '/conflict-checks/x1/decide': () =>
-        enveloped({ ...baseCheck, status: 'COMPLETED', decision: 'ALLOW', reviewerUserId: 'u1' }),
+        enveloped({
+          ...baseCheck,
+          status: 'COMPLETED',
+          decision: 'ALLOW',
+          reviewerUserId: 'u1',
+        }),
     });
     const client = new ConflictChecksClient(new ApiClient(base, fetchMock));
 
-    const result = await client.decide({ id: 'x1', decision: 'ALLOW', reason: 'no overlap' });
+    const result = await client.decide({
+      id: 'x1',
+      decision: 'ALLOW',
+      reason: 'no overlap',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/conflict-checks/x1/decide'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/conflict-checks/x1/decide'),
+    );
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ decision: 'ALLOW', reason: 'no overlap' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      decision: 'ALLOW',
+      reason: 'no overlap',
+    });
     expect(result.decision).toBe('ALLOW');
   });
 });
@@ -501,7 +677,9 @@ describe('ConflictChecksClient (Phase 6)', () => {
 describe('PartyClient (Phase 7)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -514,13 +692,18 @@ describe('PartyClient (Phase 7)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-party' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -532,7 +715,11 @@ describe('PartyClient (Phase 7)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -558,7 +745,11 @@ describe('PartyClient (Phase 7)', () => {
     });
     const client = new PartyClient(new ApiClient(base, fetchMock));
 
-    const result = await client.create({ partyType: 'PERSON', name: 'Ahmed Hassan', displayName: 'Ahmed Hassan' });
+    const result = await client.create({
+      partyType: 'PERSON',
+      name: 'Ahmed Hassan',
+      displayName: 'Ahmed Hassan',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/parties'));
     expect(call?.init?.method).toBe('POST');
@@ -573,11 +764,20 @@ describe('PartyClient (Phase 7)', () => {
   it('lists parties with query params on GET /parties', async () => {
     const { fetchMock, calls } = clientWith({
       'partyType=PERSON': () =>
-        enveloped({ data: [baseParty], pagination: { page: 1, limit: 20, total: 1 } }),
+        enveloped({
+          data: [baseParty],
+          pagination: { page: 1, limit: 20, total: 1 },
+        }),
     });
     const client = new PartyClient(new ApiClient(base, fetchMock));
 
-    const result = await client.list({ page: 1, limit: 20, search: 'Ahmed', status: 'ACTIVE', partyType: 'PERSON' });
+    const result = await client.list({
+      page: 1,
+      limit: 20,
+      search: 'Ahmed',
+      status: 'ACTIVE',
+      partyType: 'PERSON',
+    });
 
     const call = calls.find((c) => c.url.includes('/parties?'));
     expect(String(call?.url)).toContain('page=1');
@@ -610,7 +810,10 @@ describe('PartyClient (Phase 7)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/parties/p1'));
     expect(call?.init?.method).toBe('PATCH');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ id: 'p1', displayName: 'Updated' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      id: 'p1',
+      displayName: 'Updated',
+    });
     expect(result.displayName).toBe('Updated');
   });
 
@@ -624,14 +827,22 @@ describe('PartyClient (Phase 7)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/parties/p1'));
     expect(call?.init?.method).toBe('DELETE');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ reason: 'duplicate' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      reason: 'duplicate',
+    });
   });
 
   it('lists the party role catalog via GET /parties/roles', async () => {
     const { fetchMock, calls } = clientWith({
       '/parties/roles': () =>
         enveloped([
-          { id: 'r1', tenantId: 't1', key: 'plaintiff', label: 'Plaintiff', status: 'ACTIVE' },
+          {
+            id: 'r1',
+            tenantId: 't1',
+            key: 'plaintiff',
+            label: 'Plaintiff',
+            status: 'ACTIVE',
+          },
         ]),
     });
     const client = new PartyClient(new ApiClient(base, fetchMock));
@@ -646,15 +857,32 @@ describe('PartyClient (Phase 7)', () => {
   it('creates a relationship via POST /parties/:id/relationships', async () => {
     const { fetchMock, calls } = clientWith({
       '/parties/p1/relationships': () =>
-        enveloped({ id: 'rel1', tenantId: 't1', fromPartyId: 'p1', toPartyId: 'p2', relationshipType: 'spouse', status: 'ACTIVE' }, 201),
+        enveloped(
+          {
+            id: 'rel1',
+            tenantId: 't1',
+            fromPartyId: 'p1',
+            toPartyId: 'p2',
+            relationshipType: 'spouse',
+            status: 'ACTIVE',
+          },
+          201,
+        ),
     });
     const client = new PartyClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createRelationship({ fromPartyId: 'p1', toPartyId: 'p2', relationshipType: 'spouse' });
+    const result = await client.createRelationship({
+      fromPartyId: 'p1',
+      toPartyId: 'p2',
+      relationshipType: 'spouse',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/parties/p1/relationships'));
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ toPartyId: 'p2', relationshipType: 'spouse' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      toPartyId: 'p2',
+      relationshipType: 'spouse',
+    });
     expect(result.relationshipType).toBe('spouse');
   });
 
@@ -680,7 +908,9 @@ describe('PartyClient (Phase 7)', () => {
 
     const result = await client.listRelationships('p1', { page: 1, limit: 20 });
 
-    const call = calls.find((c) => c.url.includes('/parties/p1/relationships?'));
+    const call = calls.find((c) =>
+      c.url.includes('/parties/p1/relationships?'),
+    );
     expect(String(call?.url)).toContain('page=1');
     expect(String(call?.url)).toContain('limit=20');
     expect(result.data[0].toParty?.displayName).toBe('Fatima');
@@ -690,7 +920,9 @@ describe('PartyClient (Phase 7)', () => {
 describe('CasesClient (Phase 8)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -703,13 +935,18 @@ describe('CasesClient (Phase 8)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-case' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -721,7 +958,11 @@ describe('CasesClient (Phase 8)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -777,7 +1018,9 @@ describe('CasesClient (Phase 8)', () => {
             {
               ...baseCase,
               client: { id: 'c1', displayName: 'Ahmed Hassan' },
-              parties: [{ id: 'cp1', partyId: 'p1', roleId: 'r1', status: 'ACTIVE' }],
+              parties: [
+                { id: 'cp1', partyId: 'p1', roleId: 'r1', status: 'ACTIVE' },
+              ],
             },
           ],
           pagination: { page: 1, limit: 20, total: 1 },
@@ -785,7 +1028,12 @@ describe('CasesClient (Phase 8)', () => {
     });
     const client = new CasesClient(new ApiClient(base, fetchMock));
 
-    const result = await client.list({ page: 1, limit: 20, search: 'C-2026', status: 'OPEN' });
+    const result = await client.list({
+      page: 1,
+      limit: 20,
+      search: 'C-2026',
+      status: 'OPEN',
+    });
 
     const call = calls.find((c) => c.url.includes('/cases?'));
     expect(String(call?.url)).toContain('page=1');
@@ -809,7 +1057,11 @@ describe('CasesClient (Phase 8)', () => {
               status: 'ACTIVE',
               createdAt: '2026-01-01T00:00:00.000Z',
               updatedAt: '2026-01-01T00:00:00.000Z',
-              party: { id: 'p1', displayName: 'Ahmed Hassan', partyType: 'PERSON' },
+              party: {
+                id: 'p1',
+                displayName: 'Ahmed Hassan',
+                partyType: 'PERSON',
+              },
               role: { id: 'r1', key: 'plaintiff', label: 'Plaintiff' },
             },
           ],
@@ -835,7 +1087,10 @@ describe('CasesClient (Phase 8)', () => {
 
     const call = calls.find((c) => c.url.endsWith('/cases/case1'));
     expect(call?.init?.method).toBe('PATCH');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ id: 'case1', status: 'ON_HOLD' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      id: 'case1',
+      status: 'ON_HOLD',
+    });
     expect(result.status).toBe('ON_HOLD');
   });
 
@@ -843,17 +1098,33 @@ describe('CasesClient (Phase 8)', () => {
     const { fetchMock, calls } = clientWith({
       '/cases/case1/parties': () =>
         enveloped(
-          { id: 'cp1', tenantId: 't1', caseId: 'case1', partyId: 'p1', roleId: 'r1', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+          {
+            id: 'cp1',
+            tenantId: 't1',
+            caseId: 'case1',
+            partyId: 'p1',
+            roleId: 'r1',
+            status: 'ACTIVE',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
           201,
         ),
     });
     const client = new CasesClient(new ApiClient(base, fetchMock));
 
-    const result = await client.addParty({ caseId: 'case1', partyId: 'p1', roleId: 'r1' });
+    const result = await client.addParty({
+      caseId: 'case1',
+      partyId: 'p1',
+      roleId: 'r1',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/cases/case1/parties'));
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ partyId: 'p1', roleId: 'r1' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      partyId: 'p1',
+      roleId: 'r1',
+    });
     expect(result.partyId).toBe('p1');
   });
 
@@ -873,7 +1144,9 @@ describe('CasesClient (Phase 8)', () => {
 describe('CasesClient assignments (G5)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -886,13 +1159,18 @@ describe('CasesClient assignments (G5)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-assign' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -904,7 +1182,11 @@ describe('CasesClient assignments (G5)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -912,21 +1194,41 @@ describe('CasesClient assignments (G5)', () => {
 
   it('assigns a member via POST /cases/:id/assignments', async () => {
     const { fetchMock, calls } = clientWith({
-      '/cases/case1/assignments': () => enveloped({ id: 'a1', membershipId: 'm2', assignedAt: '2026-01-01T00:00:00.000Z' }, 201),
+      '/cases/case1/assignments': () =>
+        enveloped(
+          {
+            id: 'a1',
+            membershipId: 'm2',
+            assignedAt: '2026-01-01T00:00:00.000Z',
+          },
+          201,
+        ),
     });
     const client = new CasesClient(new ApiClient(base, fetchMock));
 
-    const result = await client.assignMember({ caseId: 'case1', membershipId: 'm2' });
+    const result = await client.assignMember({
+      caseId: 'case1',
+      membershipId: 'm2',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/cases/case1/assignments'));
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ membershipId: 'm2' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      membershipId: 'm2',
+    });
     expect(result.id).toBe('a1');
   });
 
   it('lists assignees via GET /cases/:id/assignments', async () => {
     const { fetchMock, calls } = clientWith({
-      '/cases/case1/assignments': () => enveloped([{ id: 'a1', membershipId: 'm2', assignedAt: '2026-01-01T00:00:00.000Z' }]),
+      '/cases/case1/assignments': () =>
+        enveloped([
+          {
+            id: 'a1',
+            membershipId: 'm2',
+            assignedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ]),
     });
     const client = new CasesClient(new ApiClient(base, fetchMock));
 
@@ -945,7 +1247,9 @@ describe('CasesClient assignments (G5)', () => {
 
     await client.unassignMember({ caseId: 'case1', membershipId: 'm2' });
 
-    const call = calls.find((c) => c.url.endsWith('/cases/case1/assignments/m2'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/cases/case1/assignments/m2'),
+    );
     expect(call?.init?.method).toBe('DELETE');
   });
 });
@@ -953,7 +1257,9 @@ describe('CasesClient assignments (G5)', () => {
 describe('BreakGlassClient (G7)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -966,13 +1272,18 @@ describe('BreakGlassClient (G7)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-bg' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -984,7 +1295,11 @@ describe('BreakGlassClient (G7)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -996,11 +1311,21 @@ describe('BreakGlassClient (G7)', () => {
     });
     const client = new BreakGlassClient(new ApiClient(base, fetchMock));
 
-    const result = await client.activate({ subjectMembershipId: 'm2', caseId: 'c1', reason: 'triage' });
+    const result = await client.activate({
+      subjectMembershipId: 'm2',
+      caseId: 'c1',
+      reason: 'triage',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/breakglass') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) => c.url.endsWith('/breakglass') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ subjectMembershipId: 'm2', caseId: 'c1', reason: 'triage' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      subjectMembershipId: 'm2',
+      caseId: 'c1',
+      reason: 'triage',
+    });
     expect(result.id).toBe('bg1');
   });
 
@@ -1019,7 +1344,8 @@ describe('BreakGlassClient (G7)', () => {
 
   it('revokes via POST /breakglass/:id/revoke', async () => {
     const { fetchMock, calls } = clientWith({
-      '/breakglass/bg1/revoke': () => enveloped({ id: 'bg1', revokedAt: '2026-01-01T00:00:00.000Z' }),
+      '/breakglass/bg1/revoke': () =>
+        enveloped({ id: 'bg1', revokedAt: '2026-01-01T00:00:00.000Z' }),
     });
     const client = new BreakGlassClient(new ApiClient(base, fetchMock));
 
@@ -1033,7 +1359,9 @@ describe('BreakGlassClient (G7)', () => {
 describe('PortalClient (Phase 24)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -1046,13 +1374,18 @@ describe('PortalClient (Phase 24)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-portal' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1064,7 +1397,11 @@ describe('PortalClient (Phase 24)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1072,7 +1409,16 @@ describe('PortalClient (Phase 24)', () => {
 
   it('lists own cases via GET /portal/cases', async () => {
     const { fetchMock, calls } = clientWith({
-      '/portal/cases': () => enveloped([{ id: 'c1', caseNumber: 'C-1', status: 'OPEN', priority: 'HIGH', openDate: null }]),
+      '/portal/cases': () =>
+        enveloped([
+          {
+            id: 'c1',
+            caseNumber: 'C-1',
+            status: 'OPEN',
+            priority: 'HIGH',
+            openDate: null,
+          },
+        ]),
     });
     const client = new PortalClient(new ApiClient(base, fetchMock));
 
@@ -1086,7 +1432,17 @@ describe('PortalClient (Phase 24)', () => {
 
   it('lists own invoices via GET /portal/invoices', async () => {
     const { fetchMock, calls } = clientWith({
-      '/portal/invoices': () => enveloped([{ id: 'i1', invoiceNumber: 'INV-1', status: 'ISSUED', total: '100.0000', dueDate: null, payments: [] }]),
+      '/portal/invoices': () =>
+        enveloped([
+          {
+            id: 'i1',
+            invoiceNumber: 'INV-1',
+            status: 'ISSUED',
+            total: '100.0000',
+            dueDate: null,
+            payments: [],
+          },
+        ]),
     });
     const client = new PortalClient(new ApiClient(base, fetchMock));
 
@@ -1099,7 +1455,15 @@ describe('PortalClient (Phase 24)', () => {
 
   it('reads the agenda via GET /portal/agenda', async () => {
     const { fetchMock, calls } = clientWith({
-      '/portal/agenda': () => enveloped([{ kind: 'HEARING', id: 'h1', title: 'Hearing SCHEDULED', startsAt: '2026-04-01T10:00:00Z' }]),
+      '/portal/agenda': () =>
+        enveloped([
+          {
+            kind: 'HEARING',
+            id: 'h1',
+            title: 'Hearing SCHEDULED',
+            startsAt: '2026-04-01T10:00:00Z',
+          },
+        ]),
     });
     const client = new PortalClient(new ApiClient(base, fetchMock));
 
@@ -1114,7 +1478,9 @@ describe('PortalClient (Phase 24)', () => {
 describe('TransferClient (Phase 25)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -1127,13 +1493,18 @@ describe('TransferClient (Phase 25)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-transfer' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1145,7 +1516,11 @@ describe('TransferClient (Phase 25)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1157,9 +1532,15 @@ describe('TransferClient (Phase 25)', () => {
     });
     const client = new TransferClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createImport({ entityType: 'CASE', content: 'caseNumber\nC-1', idempotencyKey: 'k1' });
+    const result = await client.createImport({
+      entityType: 'CASE',
+      content: 'caseNumber\nC-1',
+      idempotencyKey: 'k1',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/transfer/imports') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) => c.url.endsWith('/transfer/imports') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
     expect(result.status).toBe('DRAFT');
   });
@@ -1170,9 +1551,14 @@ describe('TransferClient (Phase 25)', () => {
     });
     const client = new TransferClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createExport({ entityType: 'CASE', idempotencyKey: 'k2' });
+    const result = await client.createExport({
+      entityType: 'CASE',
+      idempotencyKey: 'k2',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/transfer/exports') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) => c.url.endsWith('/transfer/exports') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
     expect(String(call?.url)).not.toContain('/v1/v1');
     expect(result.status).toBe('QUEUED');
@@ -1180,13 +1566,16 @@ describe('TransferClient (Phase 25)', () => {
 
   it('downloads an export via GET /transfer/exports/:id/download', async () => {
     const { fetchMock, calls } = clientWith({
-      '/transfer/exports/e1/download': () => enveloped({ csv: 'id\n1', expiresAt: null }),
+      '/transfer/exports/e1/download': () =>
+        enveloped({ csv: 'id\n1', expiresAt: null }),
     });
     const client = new TransferClient(new ApiClient(base, fetchMock));
 
     const result = await client.downloadExport('e1');
 
-    const call = calls.find((c) => c.url.endsWith('/transfer/exports/e1/download'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/transfer/exports/e1/download'),
+    );
     expect(call?.init?.method).toBe('GET');
     expect(result.csv).toContain('id');
   });
@@ -1195,7 +1584,9 @@ describe('TransferClient (Phase 25)', () => {
 describe('NotificationsClient (Phase 26)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+  function clientWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchMock = async (
       url: string | URL | Request,
@@ -1208,13 +1599,18 @@ describe('NotificationsClient (Phase 26)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-notif' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1226,7 +1622,11 @@ describe('NotificationsClient (Phase 26)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1234,20 +1634,28 @@ describe('NotificationsClient (Phase 26)', () => {
 
   it('creates a rule via POST /notifications/rules', async () => {
     const { fetchMock, calls } = clientWith({
-      '/notifications/rules': () => enveloped({ id: 'r1', eventType: 'INVOICE_ISSUED' }, 201),
+      '/notifications/rules': () =>
+        enveloped({ id: 'r1', eventType: 'INVOICE_ISSUED' }, 201),
     });
     const client = new NotificationsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createRule({ eventType: 'INVOICE_ISSUED', channels: ['IN_APP'] });
+    const result = await client.createRule({
+      eventType: 'INVOICE_ISSUED',
+      channels: ['IN_APP'],
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/notifications/rules') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) =>
+        c.url.endsWith('/notifications/rules') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
     expect(result.id).toBe('r1');
   });
 
   it('reads the inbox via GET /notifications/inbox', async () => {
     const { fetchMock, calls } = clientWith({
-      '/notifications/inbox': () => enveloped([{ id: 'n1', title: 'Hi', status: 'SENT' }]),
+      '/notifications/inbox': () =>
+        enveloped([{ id: 'n1', title: 'Hi', status: 'SENT' }]),
     });
     const client = new NotificationsClient(new ApiClient(base, fetchMock));
 
@@ -1261,13 +1669,19 @@ describe('NotificationsClient (Phase 26)', () => {
 
   it('saves preferences via POST /notifications/preferences', async () => {
     const { fetchMock, calls } = clientWith({
-      '/notifications/preferences': () => enveloped({ id: 'p1', channel: 'IN_APP', enabled: false }),
+      '/notifications/preferences': () =>
+        enveloped({ id: 'p1', channel: 'IN_APP', enabled: false }),
     });
     const client = new NotificationsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.setPreference({ channel: 'IN_APP', enabled: false });
+    const result = await client.setPreference({
+      channel: 'IN_APP',
+      enabled: false,
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/notifications/preferences'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/notifications/preferences'),
+    );
     expect(call?.init?.method).toBe('POST');
     expect(result.enabled).toBe(false);
   });
@@ -1299,13 +1713,18 @@ describe('LegalConfigClient (Phase 9)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-legal' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1317,7 +1736,11 @@ describe('LegalConfigClient (Phase 9)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1334,9 +1757,15 @@ describe('LegalConfigClient (Phase 9)', () => {
 
     const result = await client.createCountry({ code: 'AE', name: 'UAE' });
 
-    const call = calls.find((c) => c.url.endsWith('/legal-config/countries') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) =>
+        c.url.endsWith('/legal-config/countries') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ code: 'AE', name: 'UAE' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      code: 'AE',
+      name: 'UAE',
+    });
     expect(result.code).toBe('AE');
   });
 
@@ -1359,27 +1788,45 @@ describe('LegalConfigClient (Phase 9)', () => {
       '/legal-config/jurisdictions?countryId=country1': () =>
         enveloped([
           {
-            id: 'j1', tenantId: 't1', countryId: 'country1', name: 'Dubai',
-            status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+            id: 'j1',
+            tenantId: 't1',
+            countryId: 'country1',
+            name: 'Dubai',
+            status: 'ACTIVE',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
           },
         ]),
       '/legal-config/jurisdictions': (_url, init) =>
         init?.method === 'POST'
           ? enveloped(
-              { id: 'j1', tenantId: 't1', countryId: 'country1', name: 'Dubai', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              {
+                id: 'j1',
+                tenantId: 't1',
+                countryId: 'country1',
+                name: 'Dubai',
+                status: 'ACTIVE',
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+              },
               201,
             )
           : enveloped([]),
     });
     const client = new LegalConfigClient(new ApiClient(base, fetchMock));
 
-    const created = await client.createJurisdiction({ countryId: 'country1', name: 'Dubai' });
+    const created = await client.createJurisdiction({
+      countryId: 'country1',
+      name: 'Dubai',
+    });
     expect(created.countryId).toBe('country1');
 
     const list = await client.listJurisdictions('country1');
     expect(list[0].name).toBe('Dubai');
 
-    const listAll = calls.find((c) => c.url.endsWith('/legal-config/jurisdictions?countryId=country1'));
+    const listAll = calls.find((c) =>
+      c.url.endsWith('/legal-config/jurisdictions?countryId=country1'),
+    );
     expect(String(listAll?.url)).toContain('countryId=country1');
   });
 
@@ -1388,27 +1835,50 @@ describe('LegalConfigClient (Phase 9)', () => {
       '/legal-config/courts?jurisdictionId=j1': () =>
         enveloped([
           {
-            id: 'court1', tenantId: 't1', jurisdictionId: 'j1', name: 'Dubai Courts',
-            courtType: 'Civil', department: null, status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+            id: 'court1',
+            tenantId: 't1',
+            jurisdictionId: 'j1',
+            name: 'Dubai Courts',
+            courtType: 'Civil',
+            department: null,
+            status: 'ACTIVE',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
           },
         ]),
       '/legal-config/courts': (_url, init) =>
         init?.method === 'POST'
           ? enveloped(
-              { id: 'court1', tenantId: 't1', jurisdictionId: 'j1', name: 'Dubai Courts', courtType: 'Civil', department: null, status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              {
+                id: 'court1',
+                tenantId: 't1',
+                jurisdictionId: 'j1',
+                name: 'Dubai Courts',
+                courtType: 'Civil',
+                department: null,
+                status: 'ACTIVE',
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+              },
               201,
             )
           : enveloped([]),
     });
     const client = new LegalConfigClient(new ApiClient(base, fetchMock));
 
-    const created = await client.createCourt({ jurisdictionId: 'j1', name: 'Dubai Courts', courtType: 'Civil' });
+    const created = await client.createCourt({
+      jurisdictionId: 'j1',
+      name: 'Dubai Courts',
+      courtType: 'Civil',
+    });
     expect(created.jurisdictionId).toBe('j1');
 
     const list = await client.listCourts('j1');
     expect(list[0].courtType).toBe('Civil');
 
-    const listAll = calls.find((c) => c.url.endsWith('/legal-config/courts?jurisdictionId=j1'));
+    const listAll = calls.find((c) =>
+      c.url.endsWith('/legal-config/courts?jurisdictionId=j1'),
+    );
     expect(String(listAll?.url)).toContain('jurisdictionId=j1');
   });
 
@@ -1417,8 +1887,15 @@ describe('LegalConfigClient (Phase 9)', () => {
       '/legal-config/court-locations?courtId=court1': () =>
         enveloped([
           {
-            id: 'loc1', tenantId: 't1', courtId: 'court1', name: 'Main Hall',
-            city: 'Dubai', address: 'Somewhere', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+            id: 'loc1',
+            tenantId: 't1',
+            courtId: 'court1',
+            name: 'Main Hall',
+            city: 'Dubai',
+            address: 'Somewhere',
+            status: 'ACTIVE',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
           },
         ]),
     });
@@ -1426,7 +1903,9 @@ describe('LegalConfigClient (Phase 9)', () => {
 
     const result = await client.listCourtLocations('court1');
 
-    const call = calls.find((c) => c.url.includes('/legal-config/court-locations'));
+    const call = calls.find((c) =>
+      c.url.includes('/legal-config/court-locations'),
+    );
     expect(call?.init?.method).toBe('GET');
     expect(String(call?.url)).toContain('courtId=court1');
     expect(result[0].name).toBe('Main Hall');
@@ -1437,18 +1916,40 @@ describe('LegalConfigClient (Phase 9)', () => {
       '/legal-config/court-locations': (_url, init) =>
         init?.method === 'POST'
           ? enveloped(
-              { id: 'loc1', tenantId: 't1', courtId: 'court1', name: 'Main Hall', city: 'Dubai', address: null, status: 'ACTIVE', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              {
+                id: 'loc1',
+                tenantId: 't1',
+                courtId: 'court1',
+                name: 'Main Hall',
+                city: 'Dubai',
+                address: null,
+                status: 'ACTIVE',
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+              },
               201,
             )
           : enveloped([]),
     });
     const client = new LegalConfigClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createCourtLocation({ courtId: 'court1', name: 'Main Hall', city: 'Dubai' });
+    const result = await client.createCourtLocation({
+      courtId: 'court1',
+      name: 'Main Hall',
+      city: 'Dubai',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/legal-config/court-locations') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) =>
+        c.url.endsWith('/legal-config/court-locations') &&
+        c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ courtId: 'court1', name: 'Main Hall', city: 'Dubai' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      courtId: 'court1',
+      name: 'Main Hall',
+      city: 'Dubai',
+    });
     expect(result.courtId).toBe('court1');
   });
 });
@@ -1483,13 +1984,18 @@ describe('CaseTimelineClient (Phase 10)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-timeline' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1501,7 +2007,11 @@ describe('CaseTimelineClient (Phase 10)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1532,7 +2042,10 @@ describe('CaseTimelineClient (Phase 10)', () => {
       '/cases/case1/timeline': (_url, init) =>
         init?.method === 'POST'
           ? enveloped({ ...baseEvent, eventType: 'STATUS_CHANGED' }, 201)
-          : enveloped({ data: [baseEvent], pagination: { page: 1, limit: 20, total: 1 } }),
+          : enveloped({
+              data: [baseEvent],
+              pagination: { page: 1, limit: 20, total: 1 },
+            }),
     });
     const client = new CasesClient(new ApiClient(base, fetchMock));
 
@@ -1542,7 +2055,10 @@ describe('CaseTimelineClient (Phase 10)', () => {
       payload: { oldStatus: 'OPEN', newStatus: 'ON_HOLD' },
     });
 
-    const call = calls.find((c) => c.url.endsWith('/cases/case1/timeline') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) =>
+        c.url.endsWith('/cases/case1/timeline') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
     expect(JSON.parse(String(call?.init?.body))).toEqual({
       eventType: 'STATUS_CHANGED',
@@ -1579,13 +2095,18 @@ describe('WorkflowsClient (Phase 11)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-workflow' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1597,7 +2118,11 @@ describe('WorkflowsClient (Phase 11)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1611,8 +2136,15 @@ describe('WorkflowsClient (Phase 11)', () => {
             ...baseWorkflow,
             versions: [
               {
-                id: 'v1', tenantId: 't1', workflowId: 'wf1', version: 1, status: 'DRAFT',
-                effectiveFrom: null, effectiveTo: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+                id: 'v1',
+                tenantId: 't1',
+                workflowId: 'wf1',
+                version: 1,
+                status: 'DRAFT',
+                effectiveFrom: null,
+                effectiveTo: null,
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
               },
             ],
           },
@@ -1635,11 +2167,19 @@ describe('WorkflowsClient (Phase 11)', () => {
     });
     const client = new WorkflowsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createWorkflow({ name: 'Litigation', caseType: 'Civil' });
+    const result = await client.createWorkflow({
+      name: 'Litigation',
+      caseType: 'Civil',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/workflows') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) => c.url.endsWith('/workflows') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ name: 'Litigation', caseType: 'Civil' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      name: 'Litigation',
+      caseType: 'Civil',
+    });
     expect(result.name).toBe('Litigation');
   });
 
@@ -1648,14 +2188,50 @@ describe('WorkflowsClient (Phase 11)', () => {
       '/workflows/wf1/versions': () =>
         enveloped(
           {
-            id: 'v1', tenantId: 't1', workflowId: 'wf1', version: 1, status: 'DRAFT',
-            effectiveFrom: null, effectiveTo: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+            id: 'v1',
+            tenantId: 't1',
+            workflowId: 'wf1',
+            version: 1,
+            status: 'DRAFT',
+            effectiveFrom: null,
+            effectiveTo: null,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
             states: [
-              { id: 's1', tenantId: 't1', versionId: 'v1', name: 'Open', isInitial: true, isFinal: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
-              { id: 's2', tenantId: 't1', versionId: 'v1', name: 'Closed', isInitial: false, isFinal: true, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              {
+                id: 's1',
+                tenantId: 't1',
+                versionId: 'v1',
+                name: 'Open',
+                isInitial: true,
+                isFinal: false,
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+              },
+              {
+                id: 's2',
+                tenantId: 't1',
+                versionId: 'v1',
+                name: 'Closed',
+                isInitial: false,
+                isFinal: true,
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+              },
             ],
             transitions: [
-              { id: 'tr1', tenantId: 't1', versionId: 'v1', fromStateId: null, toStateId: 's2', conditions: null, actions: null, requiresApproval: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+              {
+                id: 'tr1',
+                tenantId: 't1',
+                versionId: 'v1',
+                fromStateId: null,
+                toStateId: 's2',
+                conditions: null,
+                actions: null,
+                requiresApproval: false,
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+              },
             ],
           },
           201,
@@ -1688,15 +2264,24 @@ describe('WorkflowsClient (Phase 11)', () => {
     const { fetchMock, calls } = clientWith({
       '/workflows/versions/v1/publish': () =>
         enveloped({
-          id: 'v1', tenantId: 't1', workflowId: 'wf1', version: 1, status: 'PUBLISHED',
-          effectiveFrom: '2026-01-01T00:00:00.000Z', effectiveTo: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+          id: 'v1',
+          tenantId: 't1',
+          workflowId: 'wf1',
+          version: 1,
+          status: 'PUBLISHED',
+          effectiveFrom: '2026-01-01T00:00:00.000Z',
+          effectiveTo: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
         }),
     });
     const client = new WorkflowsClient(new ApiClient(base, fetchMock));
 
     const result = await client.publishVersion('v1');
 
-    const call = calls.find((c) => c.url.endsWith('/workflows/versions/v1/publish'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/workflows/versions/v1/publish'),
+    );
     expect(call?.init?.method).toBe('POST');
     expect(result.status).toBe('PUBLISHED');
   });
@@ -1720,13 +2305,18 @@ describe('Client URL prefixes (prefix regression)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-prefix' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1738,14 +2328,20 @@ describe('Client URL prefixes (prefix regression)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
   }
 
   it('hits /api/v1/hearings (no doubled /v1)', async () => {
-    const { fetchMock, calls } = clientWith({ '/hearings': () => enveloped([]) });
+    const { fetchMock, calls } = clientWith({
+      '/hearings': () => enveloped([]),
+    });
     await new HearingsClient(new ApiClient(base, fetchMock)).listHearings();
     const call = calls.find((c) => c.url.includes('/hearings'));
     expect(call?.url).toBe(`${base}/hearings`);
@@ -1753,7 +2349,9 @@ describe('Client URL prefixes (prefix regression)', () => {
   });
 
   it('hits /api/v1/deadlines (no doubled /v1)', async () => {
-    const { fetchMock, calls } = clientWith({ '/deadlines': () => enveloped({ data: [] }) });
+    const { fetchMock, calls } = clientWith({
+      '/deadlines': () => enveloped({ data: [] }),
+    });
     await new DeadlinesClient(new ApiClient(base, fetchMock)).listDeadlines();
     const call = calls.find((c) => c.url.includes('/deadlines'));
     expect(call?.url).toBe(`${base}/deadlines`);
@@ -1761,7 +2359,9 @@ describe('Client URL prefixes (prefix regression)', () => {
   });
 
   it('hits /api/v1/tasks (no doubled /v1)', async () => {
-    const { fetchMock, calls } = clientWith({ '/tasks': () => enveloped({ data: [] }) });
+    const { fetchMock, calls } = clientWith({
+      '/tasks': () => enveloped({ data: [] }),
+    });
     await new TasksClient(new ApiClient(base, fetchMock)).listTasks();
     const call = calls.find((c) => c.url.includes('/tasks'));
     expect(call?.url).toBe(`${base}/tasks`);
@@ -1769,7 +2369,9 @@ describe('Client URL prefixes (prefix regression)', () => {
   });
 
   it('hits /api/v1/documents (no doubled /v1)', async () => {
-    const { fetchMock, calls } = clientWith({ '/documents': () => enveloped({ data: [] }) });
+    const { fetchMock, calls } = clientWith({
+      '/documents': () => enveloped({ data: [] }),
+    });
     await new DocumentsClient(new ApiClient(base, fetchMock)).listDocuments();
     const call = calls.find((c) => c.url.includes('/documents'));
     expect(call?.url).toBe(`${base}/documents`);
@@ -1795,13 +2397,18 @@ describe('HearingsClient (Phase 12)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-hearing' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1813,7 +2420,11 @@ describe('HearingsClient (Phase 12)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1840,7 +2451,10 @@ describe('HearingsClient (Phase 12)', () => {
     });
     const client = new HearingsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.recordOutcome('h1', { outcome: 'Adjourned', status: 'COMPLETED' });
+    const result = await client.recordOutcome('h1', {
+      outcome: 'Adjourned',
+      status: 'COMPLETED',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/hearings/h1/outcome'));
     expect(call?.init?.method).toBe('POST');
@@ -1866,13 +2480,18 @@ describe('DeadlinesClient (Phase 13)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-deadline' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1884,7 +2503,11 @@ describe('DeadlinesClient (Phase 13)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1908,14 +2531,22 @@ describe('DeadlinesClient (Phase 13)', () => {
     const { fetchMock, calls } = clientWith({
       '/deadlines/rules': (_url, init) =>
         init?.method === 'POST'
-          ? enveloped({ id: 'r1', name: 'Filing', effectiveFrom: '2026-01-01' }, 201)
+          ? enveloped(
+              { id: 'r1', name: 'Filing', effectiveFrom: '2026-01-01' },
+              201,
+            )
           : enveloped({ data: [] }),
     });
     const client = new DeadlinesClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createRule({ name: 'Filing', effectiveFrom: '2026-01-01' });
+    const result = await client.createRule({
+      name: 'Filing',
+      effectiveFrom: '2026-01-01',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/deadlines/rules') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) => c.url.endsWith('/deadlines/rules') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
     expect(result.name).toBe('Filing');
   });
@@ -1939,13 +2570,18 @@ describe('TasksClient (Phase 14)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-task' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -1957,7 +2593,11 @@ describe('TasksClient (Phase 14)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -1979,7 +2619,12 @@ describe('TasksClient (Phase 14)', () => {
   it('updates status via PATCH /tasks/:id/status', async () => {
     const { fetchMock, calls } = clientWith({
       '/tasks/t1/status': () =>
-        enveloped({ id: 't1', title: 'Draft', status: 'IN_PROGRESS', priority: 'HIGH' }),
+        enveloped({
+          id: 't1',
+          title: 'Draft',
+          status: 'IN_PROGRESS',
+          priority: 'HIGH',
+        }),
     });
     const client = new TasksClient(new ApiClient(base, fetchMock));
 
@@ -2009,13 +2654,18 @@ describe('DocumentsClient (Phase 15)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-doc' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -2027,7 +2677,11 @@ describe('DocumentsClient (Phase 15)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -2049,7 +2703,9 @@ describe('DocumentsClient (Phase 15)', () => {
       fileSize: 1024,
     });
 
-    const call = calls.find((c) => c.url.endsWith('/documents') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) => c.url.endsWith('/documents') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
     expect(String(call?.url)).not.toContain('/v1/v1');
     expect(result.title).toBe('Contract');
@@ -2057,13 +2713,19 @@ describe('DocumentsClient (Phase 15)', () => {
 
   it('generates an access grant via POST /documents/:id/security/access', async () => {
     const { fetchMock, calls } = clientWith({
-      '/documents/d1/security/access': () => enveloped({ data: { grantId: 'g1' } }, 201),
+      '/documents/d1/security/access': () =>
+        enveloped({ data: { grantId: 'g1' } }, 201),
     });
     const client = new DocumentsClient(new ApiClient(base, fetchMock));
 
-    await client.generateAccessGrant('d1', { documentVersionId: 'v1', purpose: 'DOWNLOAD' });
+    await client.generateAccessGrant('d1', {
+      documentVersionId: 'v1',
+      purpose: 'DOWNLOAD',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/documents/d1/security/access'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/documents/d1/security/access'),
+    );
     expect(call?.init?.method).toBe('POST');
   });
 });
@@ -2086,13 +2748,18 @@ describe('BillingsClient (Phase 21)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-billing' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -2104,7 +2771,11 @@ describe('BillingsClient (Phase 21)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -2114,30 +2785,57 @@ describe('BillingsClient (Phase 21)', () => {
     const { fetchMock, calls } = clientWith({
       '/billing/invoices': (_url, init) =>
         init?.method === 'POST'
-          ? enveloped({ id: 'inv1', invoiceNumber: 'INV-001', status: 'DRAFT', total: '100.0000', lines: [], payments: [] }, 201)
+          ? enveloped(
+              {
+                id: 'inv1',
+                invoiceNumber: 'INV-001',
+                status: 'DRAFT',
+                total: '100.0000',
+                lines: [],
+                payments: [],
+              },
+              201,
+            )
           : enveloped([]),
     });
     const client = new BillingsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createInvoice({ invoiceNumber: 'INV-001', feeIds: ['f1'] });
+    const result = await client.createInvoice({
+      invoiceNumber: 'INV-001',
+      feeIds: ['f1'],
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/billing/invoices') && c.init?.method === 'POST');
+    const call = calls.find(
+      (c) => c.url.endsWith('/billing/invoices') && c.init?.method === 'POST',
+    );
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ invoiceNumber: 'INV-001', feeIds: ['f1'] });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      invoiceNumber: 'INV-001',
+      feeIds: ['f1'],
+    });
     expect(result.status).toBe('DRAFT');
   });
 
   it('records a payment with idempotency key via POST /billing/payments', async () => {
     const { fetchMock, calls } = clientWith({
-      '/billing/payments': () => enveloped({ id: 'p1', status: 'SUCCEEDED', amount: '100.0000' }, 201),
+      '/billing/payments': () =>
+        enveloped({ id: 'p1', status: 'SUCCEEDED', amount: '100.0000' }, 201),
     });
     const client = new BillingsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.recordPayment({ invoiceId: 'inv1', amount: 100, idempotencyKey: 'key-1' });
+    const result = await client.recordPayment({
+      invoiceId: 'inv1',
+      amount: 100,
+      idempotencyKey: 'key-1',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/billing/payments'));
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ invoiceId: 'inv1', amount: 100, idempotencyKey: 'key-1' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      invoiceId: 'inv1',
+      amount: 100,
+      idempotencyKey: 'key-1',
+    });
     expect(result.status).toBe('SUCCEEDED');
   });
 
@@ -2150,7 +2848,9 @@ describe('BillingsClient (Phase 21)', () => {
 
     const result = await client.issueInvoice('inv1');
 
-    const call = calls.find((c) => c.url.endsWith('/billing/invoices/inv1/issue'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/billing/invoices/inv1/issue'),
+    );
     expect(call?.init?.method).toBe('POST');
     expect(result.status).toBe('ISSUED');
   });
@@ -2158,7 +2858,14 @@ describe('BillingsClient (Phase 21)', () => {
   it('reads balances via GET /billing/balances', async () => {
     const { fetchMock, calls } = clientWith({
       '/billing/balances?invoiceId=inv1': () =>
-        enveloped([{ invoiceId: 'inv1', total: '100.0000', paid: '60.0000', outstanding: '40.0000' }]),
+        enveloped([
+          {
+            invoiceId: 'inv1',
+            total: '100.0000',
+            paid: '60.0000',
+            outstanding: '40.0000',
+          },
+        ]),
     });
     const client = new BillingsClient(new ApiClient(base, fetchMock));
 
@@ -2189,13 +2896,18 @@ describe('CommsClient (Phase 22)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-comms' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -2207,7 +2919,11 @@ describe('CommsClient (Phase 22)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -2216,15 +2932,33 @@ describe('CommsClient (Phase 22)', () => {
   it('composes a message via POST /communications/messages', async () => {
     const { fetchMock, calls } = clientWith({
       '/communications/messages': () =>
-        enveloped({ id: 'm1', channel: 'EMAIL', direction: 'OUTBOUND', status: 'QUEUED' }, 201),
+        enveloped(
+          {
+            id: 'm1',
+            channel: 'EMAIL',
+            direction: 'OUTBOUND',
+            status: 'QUEUED',
+          },
+          201,
+        ),
     });
     const client = new CommsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.composeMessage({ channel: 'EMAIL', direction: 'OUTBOUND', body: 'Hello', caseId: 'c1' });
+    const result = await client.composeMessage({
+      channel: 'EMAIL',
+      direction: 'OUTBOUND',
+      body: 'Hello',
+      caseId: 'c1',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/communications/messages'));
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ channel: 'EMAIL', direction: 'OUTBOUND', body: 'Hello', caseId: 'c1' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      channel: 'EMAIL',
+      direction: 'OUTBOUND',
+      body: 'Hello',
+      caseId: 'c1',
+    });
     expect(result.status).toBe('QUEUED');
   });
 
@@ -2250,7 +2984,9 @@ describe('CommsClient (Phase 22)', () => {
 
     const result = await client.recordStatus('m1', { status: 'DELIVERED' });
 
-    const call = calls.find((c) => c.url.endsWith('/communications/messages/m1/status'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/communications/messages/m1/status'),
+    );
     expect(call?.init?.method).toBe('POST');
     expect(result.status).toBe('DELIVERED');
   });
@@ -2258,11 +2994,18 @@ describe('CommsClient (Phase 22)', () => {
   it('sets consent via POST /communications/consents', async () => {
     const { fetchMock, calls } = clientWith({
       '/communications/consents': () =>
-        enveloped({ id: 'cs1', clientId: 'cl1', channel: 'SMS', status: 'OPT_OUT' }, 201),
+        enveloped(
+          { id: 'cs1', clientId: 'cl1', channel: 'SMS', status: 'OPT_OUT' },
+          201,
+        ),
     });
     const client = new CommsClient(new ApiClient(base, fetchMock));
 
-    const result = await client.setConsent({ clientId: 'cl1', channel: 'SMS', status: 'OPT_OUT' });
+    const result = await client.setConsent({
+      clientId: 'cl1',
+      channel: 'SMS',
+      status: 'OPT_OUT',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/communications/consents'));
     expect(call?.init?.method).toBe('POST');
@@ -2288,13 +3031,18 @@ describe('CalendarClient (Phase 23)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-calendar' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       for (const suffix of Object.keys(handlers)) {
-        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
       }
       return new Response(null, { status: 404 });
     };
@@ -2306,7 +3054,11 @@ describe('CalendarClient (Phase 23)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -2315,11 +3067,22 @@ describe('CalendarClient (Phase 23)', () => {
   it('creates a disabled connection via POST /calendar/connections', async () => {
     const { fetchMock, calls } = clientWith({
       '/calendar/connections': () =>
-        enveloped({ id: 'c1', provider: 'GOOGLE', accountRef: 'cal@example.com', status: 'DISABLED' }, 201),
+        enveloped(
+          {
+            id: 'c1',
+            provider: 'GOOGLE',
+            accountRef: 'cal@example.com',
+            status: 'DISABLED',
+          },
+          201,
+        ),
     });
     const client = new CalendarClient(new ApiClient(base, fetchMock));
 
-    const result = await client.createConnection({ provider: 'GOOGLE', accountRef: 'cal@example.com' });
+    const result = await client.createConnection({
+      provider: 'GOOGLE',
+      accountRef: 'cal@example.com',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/calendar/connections'));
     expect(call?.init?.method).toBe('POST');
@@ -2329,15 +3092,26 @@ describe('CalendarClient (Phase 23)', () => {
   it('pushes a mapping via POST /calendar/sync/push', async () => {
     const { fetchMock, calls } = clientWith({
       '/calendar/sync/push': () =>
-        enveloped({ id: 'm1', localType: 'HEARING', localId: 'h1', direction: 'PUSH' }, 201),
+        enveloped(
+          { id: 'm1', localType: 'HEARING', localId: 'h1', direction: 'PUSH' },
+          201,
+        ),
     });
     const client = new CalendarClient(new ApiClient(base, fetchMock));
 
-    const result = await client.pushEvent({ connectionId: 'c1', localType: 'HEARING', localId: 'h1' });
+    const result = await client.pushEvent({
+      connectionId: 'c1',
+      localType: 'HEARING',
+      localId: 'h1',
+    });
 
     const call = calls.find((c) => c.url.endsWith('/calendar/sync/push'));
     expect(call?.init?.method).toBe('POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ connectionId: 'c1', localType: 'HEARING', localId: 'h1' });
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      connectionId: 'c1',
+      localType: 'HEARING',
+      localId: 'h1',
+    });
     expect(result.direction).toBe('PUSH');
   });
 
@@ -2348,9 +3122,13 @@ describe('CalendarClient (Phase 23)', () => {
     });
     const client = new CalendarClient(new ApiClient(base, fetchMock));
 
-    const result = await client.resolveConflict('cf1', { resolution: 'LOCAL_WINS' });
+    const result = await client.resolveConflict('cf1', {
+      resolution: 'LOCAL_WINS',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/calendar/conflicts/cf1/resolve'));
+    const call = calls.find((c) =>
+      c.url.endsWith('/calendar/conflicts/cf1/resolve'),
+    );
     expect(call?.init?.method).toBe('POST');
     expect(result.resolution).toBe('LOCAL_WINS');
   });
@@ -2358,7 +3136,14 @@ describe('CalendarClient (Phase 23)', () => {
   it('reads the agenda via GET /calendar/agenda', async () => {
     const { fetchMock, calls } = clientWith({
       '/calendar/agenda?from=2026-03-01': () =>
-        enveloped([{ kind: 'DEADLINE', id: 'd1', title: 'Filing', startsAt: '2026-03-01T10:00:00Z' }]),
+        enveloped([
+          {
+            kind: 'DEADLINE',
+            id: 'd1',
+            title: 'Filing',
+            startsAt: '2026-03-01T10:00:00Z',
+          },
+        ]),
     });
     const client = new CalendarClient(new ApiClient(base, fetchMock));
 
@@ -2374,8 +3159,13 @@ describe('CalendarClient (Phase 23)', () => {
 describe('ApiClient role administration (G4)', () => {
   const base = 'http://localhost:3000/api/v1';
 
-  function mutatingFetch(handlers?: Record<string, (url: string, init?: RequestInit) => Response>): {
-    fetchMock: (url: string | URL | Request, init?: RequestInit) => Promise<Response>;
+  function mutatingFetch(
+    handlers?: Record<string, (url: string, init?: RequestInit) => Response>,
+  ): {
+    fetchMock: (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
     calls: Array<{ url: string; init?: RequestInit }>;
   } {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
@@ -2390,14 +3180,19 @@ describe('ApiClient role administration (G4)', () => {
           JSON.stringify({
             success: true,
             data: { csrfToken: 'csrf-role' },
-            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
       if (handlers) {
         for (const suffix of Object.keys(handlers)) {
-          if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+          if (urlString.endsWith(suffix))
+            return handlers[suffix](urlString, init);
         }
       }
       return new Response(null, { status: 404 });
@@ -2410,7 +3205,11 @@ describe('ApiClient role administration (G4)', () => {
       JSON.stringify({
         success: true,
         data,
-        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
       }),
       { status, headers: { 'Content-Type': 'application/json' } },
     );
@@ -2418,7 +3217,8 @@ describe('ApiClient role administration (G4)', () => {
 
   it('lists roles via GET /roles', async () => {
     const { fetchMock, calls } = mutatingFetch({
-      '/roles': () => enveloped([{ id: 'r1', key: 'tenant.admin', permissions: [] }]),
+      '/roles': () =>
+        enveloped([{ id: 'r1', key: 'tenant.admin', permissions: [] }]),
     });
     const client = new ApiClient(base, fetchMock);
 
@@ -2432,14 +3232,23 @@ describe('ApiClient role administration (G4)', () => {
 
   it('creates a role via POST /roles', async () => {
     const { fetchMock, calls } = mutatingFetch({
-      '/roles': () => enveloped({ id: 'r2', key: 'support.lead', permissions: [] }, 201),
+      '/roles': () =>
+        enveloped({ id: 'r2', key: 'support.lead', permissions: [] }, 201),
     });
     const client = new ApiClient(base, fetchMock);
 
-    const result = await client.createRole({ key: 'support.lead', name: 'Support Lead' });
+    const result = await client.createRole({
+      key: 'support.lead',
+      name: 'Support Lead',
+    });
 
-    const call = calls.find((c) => c.url.endsWith('/roles') && c.init?.method === 'POST');
-    expect(JSON.parse(String(call?.init?.body))).toEqual({ key: 'support.lead', name: 'Support Lead' });
+    const call = calls.find(
+      (c) => c.url.endsWith('/roles') && c.init?.method === 'POST',
+    );
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      key: 'support.lead',
+      name: 'Support Lead',
+    });
     expect(result.key).toBe('support.lead');
   });
 
@@ -2450,29 +3259,208 @@ describe('ApiClient role administration (G4)', () => {
     });
     const client = new ApiClient(base, fetchMock);
 
-    await client.grantRolePermissions('r1', { permissionKeys: ['CanViewTenant'] });
-    const grant = calls.find((c) => c.url.endsWith('/roles/r1/permissions') && c.init?.method === 'POST');
-    expect(JSON.parse(String(grant?.init?.body))).toEqual({ permissionKeys: ['CanViewTenant'] });
+    await client.grantRolePermissions('r1', {
+      permissionKeys: ['CanViewTenant'],
+    });
+    const grant = calls.find(
+      (c) =>
+        c.url.endsWith('/roles/r1/permissions') && c.init?.method === 'POST',
+    );
+    expect(JSON.parse(String(grant?.init?.body))).toEqual({
+      permissionKeys: ['CanViewTenant'],
+    });
 
-    await client.revokeRolePermissions('r1', { permissionKeys: ['CanViewTenant'] });
-    const revoke = calls.find((c) => c.url.endsWith('/roles/r1/permissions') && c.init?.method === 'DELETE');
-    expect(JSON.parse(String(revoke?.init?.body))).toEqual({ permissionKeys: ['CanViewTenant'] });
+    await client.revokeRolePermissions('r1', {
+      permissionKeys: ['CanViewTenant'],
+    });
+    const revoke = calls.find(
+      (c) =>
+        c.url.endsWith('/roles/r1/permissions') && c.init?.method === 'DELETE',
+    );
+    expect(JSON.parse(String(revoke?.init?.body))).toEqual({
+      permissionKeys: ['CanViewTenant'],
+    });
   });
 
   it('assigns and revokes member roles', async () => {
     const { fetchMock, calls } = mutatingFetch({
-      '/roles/r1/assign': () => enveloped({ id: 'a1', membershipId: 'm2', roleId: 'r1' }, 201),
-      '/roles/r1/revoke': () => enveloped({ id: 'a1', membershipId: 'm2', roleId: 'r1' }),
+      '/roles/r1/assign': () =>
+        enveloped({ id: 'a1', membershipId: 'm2', roleId: 'r1' }, 201),
+      '/roles/r1/revoke': () =>
+        enveloped({ id: 'a1', membershipId: 'm2', roleId: 'r1' }),
     });
     const client = new ApiClient(base, fetchMock);
 
     const assigned = await client.assignRole('r1', { membershipId: 'm2' });
     expect(assigned.membershipId).toBe('m2');
 
-    const revoked = await client.revokeRoleAssignment('r1', { membershipId: 'm2' });
+    const revoked = await client.revokeRoleAssignment('r1', {
+      membershipId: 'm2',
+    });
     expect(revoked.id).toBe('a1');
 
     const assignCall = calls.find((c) => c.url.endsWith('/roles/r1/assign'));
     expect(assignCall?.init?.method).toBe('POST');
+  });
+});
+
+describe('ReportsClient (Phase 27)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function reportsWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-reports' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const baseDefinition = {
+    id: 'd1',
+    tenantId: 't1',
+    name: 'Open cases by status',
+    dataSource: 'CASE',
+    columns: ['caseNumber', 'status'],
+    filters: null,
+    groupBy: null,
+    sortBy: 'caseNumber',
+    sortDir: 'asc',
+    createdBy: 'u1',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  } as const;
+
+  it('creates a definition via POST /reports/definitions', async () => {
+    const { fetchMock, calls } = reportsWith({
+      '/definitions': () => enveloped(baseDefinition, 201),
+    });
+    const client = new ReportsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createDefinition({
+      name: 'Open cases by status',
+      dataSource: 'CASE',
+      columns: ['caseNumber', 'status'],
+    });
+
+    const call = calls.find((c) => c.url.endsWith('/reports/definitions'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      name: 'Open cases by status',
+      dataSource: 'CASE',
+      columns: ['caseNumber', 'status'],
+    });
+    expect(result.id).toBe('d1');
+  });
+
+  it('runs a definition via POST /reports/definitions/:id/run', async () => {
+    const { fetchMock, calls } = reportsWith({
+      '/run': () =>
+        enveloped({
+          columns: ['caseNumber', 'status'],
+          rows: [{ caseNumber: 'C-1', status: 'OPEN' }],
+          total: 1,
+        }),
+    });
+    const client = new ReportsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.runDefinition('d1');
+
+    const call = calls.find((c) =>
+      c.url.endsWith('/reports/definitions/d1/run'),
+    );
+    expect(call?.init?.method).toBe('POST');
+    expect(result.total).toBe(1);
+    expect(result.columns).toEqual(['caseNumber', 'status']);
+  });
+
+  it('creates a schedule via POST /reports/schedules', async () => {
+    const { fetchMock, calls } = reportsWith({
+      '/schedules': () =>
+        enveloped(
+          {
+            id: 's1',
+            tenantId: 't1',
+            definitionId: 'd1',
+            frequency: 'WEEKLY',
+            runAt: '06:00',
+            enabled: true,
+            lastRunAt: null,
+            nextRunAt: '2026-01-08T06:00:00.000Z',
+            createdBy: 'u1',
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+          201,
+        ),
+    });
+    const client = new ReportsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createSchedule({
+      definitionId: 'd1',
+      frequency: 'WEEKLY',
+      runAt: '06:00',
+    });
+
+    const call = calls.find((c) => c.url.endsWith('/reports/schedules'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      definitionId: 'd1',
+      frequency: 'WEEKLY',
+      runAt: '06:00',
+    });
+    expect(result.frequency).toBe('WEEKLY');
+  });
+
+  it('lists runs via GET /reports/runs', async () => {
+    const { fetchMock, calls } = reportsWith({
+      '/runs': () => enveloped([]),
+    });
+    const client = new ReportsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.listRuns();
+
+    const call = calls.find((c) => c.url.endsWith('/reports/runs'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result).toEqual([]);
   });
 });
