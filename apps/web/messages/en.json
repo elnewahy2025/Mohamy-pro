@@ -90,7 +90,8 @@
     "notifications": "Notifications",
     "reports": "Reports",
     "dashboard": "Dashboard",
-    "intake": "Intake"
+    "intake": "Intake",
+    "compliance": "Compliance"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -1525,6 +1526,56 @@
       "triage": {
         "heading": "Triage",
         "description": "Review, approve into a client, or reject."
+      }
+    }
+  },
+  "compliance": {
+    "eyebrow": "Phase 30 · Compliance",
+    "title": "Prove it, hold it, keep it.",
+    "description": "Inspect audit trails, govern retention, and place legal holds. No purge automation ships in v1.",
+    "search": "Search",
+    "export": "Export CSV",
+    "save": "Save policy",
+    "evaluate": "Evaluate",
+    "create": "Place hold",
+    "release": "Release",
+    "load": "Load",
+    "submitting": "Working…",
+    "labels": {
+      "eventType": "Event type",
+      "targetType": "Target type",
+      "retainYears": "Retain years",
+      "name": "Hold name",
+      "reason": "Reason",
+      "holdId": "Hold ID",
+      "targetId": "Target ID"
+    },
+    "placeholders": {
+      "eventType": "e.g. intake.created",
+      "targetType": "AUDIT_EVENT",
+      "retainYears": "1 - 30",
+      "name": "e.g. Matter X litigation",
+      "reason": "Why is this held or released?",
+      "holdId": "00000000-0000-4000-8000-000000000000",
+      "targetId": "Optional target UUID"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "Count",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "audit": {
+        "heading": "Audit trail",
+        "description": "Search and export capped audit events."
+      },
+      "retention": {
+        "heading": "Retention",
+        "description": "Policies and hold-aware eligibility."
+      },
+      "holds": {
+        "heading": "Legal holds",
+        "description": "Place and release litigation holds."
       }
     }
   }

@@ -90,7 +90,8 @@
     "notifications": "التنبيهات",
     "reports": "التقارير",
     "dashboard": "لوحة المتابعة",
-    "intake": "الاستقبال"
+    "intake": "الاستقبال",
+    "compliance": "الامتثال"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -1525,6 +1526,56 @@
       "triage": {
         "heading": "الفرز",
         "description": "راجع، أو اعتمد كعميل، أو ارفض."
+      }
+    }
+  },
+  "compliance": {
+    "eyebrow": "المرحلة 30 · الامتثال",
+    "title": "أثبته واحتفظ به.",
+    "description": "افحص سجلات التدقيق، وأدر الاحتفاظ، وضع التحفظات القانونية. لا توجد أتمتة حذف في الإصدار الأول.",
+    "search": "بحث",
+    "export": "تصدير CSV",
+    "save": "حفظ السياسة",
+    "evaluate": "تقييم",
+    "create": "وضع تحفظ",
+    "release": "رفع التحفظ",
+    "load": "تحميل",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "eventType": "نوع الحدث",
+      "targetType": "نوع الهدف",
+      "retainYears": "سنوات الاحتفاظ",
+      "name": "اسم التحفظ",
+      "reason": "السبب",
+      "holdId": "معرّف التحفظ",
+      "targetId": "معرّف الهدف"
+    },
+    "placeholders": {
+      "eventType": "مثال: intake.created",
+      "targetType": "AUDIT_EVENT",
+      "retainYears": "1 - 30",
+      "name": "مثال: تقاضٍ في القضية X",
+      "reason": "لماذا تم التحفظ أو الرفع؟",
+      "holdId": "00000000-0000-4000-8000-000000000000",
+      "targetId": "UUID هدف اختياري"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "العدد",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "audit": {
+        "heading": "سجل التدقيق",
+        "description": "ابحث وصدّر أحداث التدقيق المحدودة."
+      },
+      "retention": {
+        "heading": "الاحتفاظ",
+        "description": "السياسات والأهلية مع مراعاة التحفظات."
+      },
+      "holds": {
+        "heading": "التحفظات القانونية",
+        "description": "ضع وارفع تحفظات التقاضي."
       }
     }
   }

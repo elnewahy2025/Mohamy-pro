@@ -381,6 +381,23 @@ describe('Phase 10-15 migration assertions', () => {
     expect(intakeMigration).toContain('"IntakeRequest_tenant_isolation"');
   });
 
+  it('creates both Phase 30 compliance tables with FORCE RLS', () => {
+    const complianceMigration = readMigration(
+      '20260908000012_phase30_compliance_foundation',
+    );
+
+    for (const table of ['RetentionPolicy', 'LegalHold']) {
+      expect(complianceMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(complianceMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(complianceMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(complianceMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

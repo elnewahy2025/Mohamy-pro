@@ -1,0 +1,189 @@
+'use client';
+
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import {
+  ComplianceClient,
+  type ApiError,
+  type LegalHoldResult,
+} from '@/lib/api';
+import { useAuth } from '@/auth/auth-provider';
+import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/forms/form-field';
+import { OperationResult } from '@/components/forms/operation-result';
+
+export function HoldsSection() {
+  const t = useTranslations();
+  const { user } = useAuth();
+  const [client] = useState(() => new ComplianceClient());
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
+  const [items, setItems] = useState<LegalHoldResult[]>([]);
+  const [submitError, setSubmitError] = useState<ApiError | null>(null);
+  const [name, setName] = useState('');
+  const [reason, setReason] = useState('');
+  const [targetType, setTargetType] = useState('');
+  const [targetId, setTargetId] = useState('');
+  const [holdId, setHoldId] = useState('');
+  const [resultId, setResultId] = useState<string | null>(null);
+
+  async function runLoad(): Promise<void> {
+    setStatus('submitting');
+    setSubmitError(null);
+    try {
+      setItems(await client.listHolds());
+      setStatus('success');
+    } catch (e) {
+      setStatus('error');
+      setSubmitError(e as ApiError);
+    }
+  }
+
+  async function runCreate(): Promise<void> {
+    setStatus('submitting');
+    setSubmitError(null);
+    try {
+      const created = await client.createHold(
+        name,
+        reason,
+        targetType || undefined,
+        targetId || undefined,
+      );
+      setResultId(created.id);
+      setItems((prev) => [created, ...prev]);
+      setStatus('success');
+    } catch (e) {
+      setStatus('error');
+      setSubmitError(e as ApiError);
+    }
+  }
+
+  async function runRelease(): Promise<void> {
+    setStatus('submitting');
+    setSubmitError(null);
+    try {
+      const released = await client.releaseHold(holdId, reason);
+      setResultId(released.id);
+      setItems((prev) =>
+        prev.map((h) => (h.id === released.id ? released : h)),
+      );
+      setStatus('success');
+    } catch (e) {
+      setStatus('error');
+      setSubmitError(e as ApiError);
+    }
+  }
+
+  if (!user) {
+    return (
+      <div className="section-card">
+        <p>{t('common.signInRequired')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="section-card">
+      <h3>{t('compliance.sections.holds.heading')}</h3>
+      <p>{t('compliance.sections.holds.description')}</p>
+
+      <FormField
+        label={t('compliance.labels.name')}
+        inputProps={{
+          value: name,
+          onChange: (e) => setName(e.target.value),
+          placeholder: t('compliance.placeholders.name'),
+          required: true,
+        }}
+      />
+      <FormField
+        label={t('compliance.labels.reason')}
+        inputProps={{
+          value: reason,
+          onChange: (e) => setReason(e.target.value),
+          placeholder: t('compliance.placeholders.reason'),
+          required: true,
+        }}
+      />
+      <FormField
+        label={t('compliance.labels.targetType')}
+        inputProps={{
+          value: targetType,
+          onChange: (e) => setTargetType(e.target.value),
+          placeholder: t('compliance.placeholders.targetType'),
+        }}
+      />
+      <FormField
+        label={t('compliance.labels.targetId')}
+        inputProps={{
+          value: targetId,
+          onChange: (e) => setTargetId(e.target.value),
+          placeholder: t('compliance.placeholders.targetId'),
+        }}
+      />
+      <FormField
+        label={t('compliance.labels.holdId')}
+        inputProps={{
+          value: holdId,
+          onChange: (e) => setHoldId(e.target.value),
+          placeholder: t('compliance.placeholders.holdId'),
+        }}
+      />
+      <div className="form-actions form-actions-row mt-6">
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void runCreate()}
+          disabled={status === 'submitting'}
+        >
+          {status === 'submitting'
+            ? t('compliance.submitting')
+            : t('compliance.create')}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runRelease()}
+          disabled={status === 'submitting'}
+        >
+          {t('compliance.release')}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runLoad()}
+          disabled={status === 'submitting'}
+        >
+          {t('compliance.load')}
+        </Button>
+      </div>
+
+      {(status === 'success' || status === 'error') && (
+        <OperationResult
+          status={status}
+          successLabel={t('compliance.result.title')}
+          errorTitle={t('compliance.result.errorTitle')}
+          onError={submitError?.message}
+          errorCode={submitError?.code}
+          fields={[
+            {
+              label: t('compliance.result.id'),
+              value: resultId ?? String(items.length),
+            },
+          ]}
+        />
+      )}
+
+      {items.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {items.map((item) => (
+            <li key={item.id} className="text-sm">
+              [{item.status}] {item.name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

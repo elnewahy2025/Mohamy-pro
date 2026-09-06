@@ -116,6 +116,11 @@ export const appNavGroups: AppNavGroup[] = [
       },
       { href: '/workflows', labelKey: 'navigation.workflows', icon: Activity },
       {
+        href: '/compliance',
+        labelKey: 'navigation.compliance',
+        icon: ShieldCheck,
+      },
+      {
         href: '/transfer',
         labelKey: 'navigation.transfer',
         icon: ArrowLeftRight,

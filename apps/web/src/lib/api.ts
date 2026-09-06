@@ -3551,3 +3551,137 @@ export class IntakeClient {
     );
   }
 }
+
+// --- Phase 30: Compliance ---
+
+export interface AuditEventResult {
+  id: string;
+  eventType: string;
+  eventVersion: number;
+  category: string;
+  outcome: string;
+  actorUserId: string | null;
+  actorMembershipId: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  policy: string | null;
+  reasonCode: string | null;
+  correlationId: string;
+  metadata: Record<string, unknown>;
+  occurredAt: string;
+}
+
+export interface RetentionPolicyResult {
+  id: string;
+  tenantId: string;
+  targetType: string;
+  retainYears: number;
+  enabled: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RetentionEvaluation {
+  targetType: string;
+  retainYears: number;
+  enabled: boolean;
+  eligible: number;
+  held: number;
+}
+
+export interface LegalHoldResult {
+  id: string;
+  tenantId: string;
+  name: string;
+  reason: string;
+  targetType: string | null;
+  targetId: string | null;
+  status: string;
+  createdBy: string;
+  releasedBy: string | null;
+  releaseReason: string | null;
+  releasedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const COMPLIANCE_PREFIX = '/compliance';
+
+export class ComplianceClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  searchAudit(params?: Record<string, string>): Promise<AuditEventResult[]> {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return this.client.body<AuditEventResult[]>(
+      `${COMPLIANCE_PREFIX}/audit-events${qs}`,
+      'GET',
+    );
+  }
+
+  exportAudit(params?: Record<string, string>): Promise<{ csv: string }> {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return this.client.body<{ csv: string }>(
+      `${COMPLIANCE_PREFIX}/audit-events/export${qs}`,
+      'GET',
+    );
+  }
+
+  setPolicy(
+    targetType: string,
+    retainYears: number,
+  ): Promise<RetentionPolicyResult> {
+    return this.client.body<RetentionPolicyResult>(
+      `${COMPLIANCE_PREFIX}/retention/policies`,
+      'POST',
+      { targetType, retainYears },
+    );
+  }
+
+  listPolicies(): Promise<RetentionPolicyResult[]> {
+    return this.client.body<RetentionPolicyResult[]>(
+      `${COMPLIANCE_PREFIX}/retention/policies`,
+      'GET',
+    );
+  }
+
+  evaluate(): Promise<RetentionEvaluation[]> {
+    return this.client.body<RetentionEvaluation[]>(
+      `${COMPLIANCE_PREFIX}/retention/evaluate`,
+      'GET',
+    );
+  }
+
+  createHold(
+    name: string,
+    reason: string,
+    targetType?: string,
+    targetId?: string,
+  ): Promise<LegalHoldResult> {
+    return this.client.body<LegalHoldResult>(
+      `${COMPLIANCE_PREFIX}/holds`,
+      'POST',
+      {
+        name,
+        reason,
+        ...(targetType ? { targetType } : {}),
+        ...(targetId ? { targetId } : {}),
+      },
+    );
+  }
+
+  listHolds(): Promise<LegalHoldResult[]> {
+    return this.client.body<LegalHoldResult[]>(
+      `${COMPLIANCE_PREFIX}/holds`,
+      'GET',
+    );
+  }
+
+  releaseHold(id: string, reason: string): Promise<LegalHoldResult> {
+    return this.client.body<LegalHoldResult>(
+      `${COMPLIANCE_PREFIX}/holds/${encodeURIComponent(id)}/release`,
+      'POST',
+      { reason },
+    );
+  }
+}

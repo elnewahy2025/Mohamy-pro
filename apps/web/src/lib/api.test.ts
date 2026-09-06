@@ -5,6 +5,7 @@ import {
   BreakGlassClient,
   CalendarClient,
   CommsClient,
+  ComplianceClient,
   DashboardClient,
   IntakeClient,
   NotificationsClient,
@@ -3683,5 +3684,141 @@ describe('IntakeClient (Phase 29)', () => {
       reason: 'Conflict found',
     });
     expect(result.status).toBe('REJECTED');
+  });
+});
+
+describe('ComplianceClient (Phase 30)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function complianceWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-compliance' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('searches audit events via GET /compliance/audit-events', async () => {
+    const { fetchMock, calls } = complianceWith({
+      '/audit-events?eventType=intake.created': () => enveloped([]),
+    });
+    const client = new ComplianceClient(new ApiClient(base, fetchMock));
+
+    const result = await client.searchAudit({ eventType: 'intake.created' });
+
+    const call = calls.find((c) => c.url.includes('/compliance/audit-events?'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).toContain('eventType=intake.created');
+    expect(result).toEqual([]);
+  });
+
+  it('places and releases holds', async () => {
+    const hold = {
+      id: 'h1',
+      tenantId: 't1',
+      name: 'Matter X',
+      reason: 'Litigation.',
+      targetType: null,
+      targetId: null,
+      status: 'ACTIVE',
+      createdBy: 'u1',
+      releasedBy: null,
+      releaseReason: null,
+      releasedAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const { fetchMock, calls } = complianceWith({
+      '/holds': () => enveloped(hold, 201),
+      '/release': () => enveloped({ ...hold, status: 'RELEASED' }),
+    });
+    const client = new ComplianceClient(new ApiClient(base, fetchMock));
+
+    const created = await client.createHold('Matter X', 'Litigation.');
+    const createCall = calls.find((c) => c.url.endsWith('/compliance/holds'));
+    expect(createCall?.init?.method).toBe('POST');
+    expect(JSON.parse(String(createCall?.init?.body))).toEqual({
+      name: 'Matter X',
+      reason: 'Litigation.',
+    });
+    expect(created.status).toBe('ACTIVE');
+
+    const released = await client.releaseHold('h1', 'Matter closed.');
+    const releaseCall = calls.find((c) =>
+      c.url.endsWith('/compliance/holds/h1/release'),
+    );
+    expect(JSON.parse(String(releaseCall?.init?.body))).toEqual({
+      reason: 'Matter closed.',
+    });
+    expect(released.status).toBe('RELEASED');
+  });
+
+  it('saves retention policies', async () => {
+    const { fetchMock, calls } = complianceWith({
+      '/policies': () =>
+        enveloped({
+          id: 'p1',
+          tenantId: 't1',
+          targetType: 'AUDIT_EVENT',
+          retainYears: 7,
+          enabled: true,
+          createdBy: 'u1',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
+    });
+    const client = new ComplianceClient(new ApiClient(base, fetchMock));
+
+    const policy = await client.setPolicy('AUDIT_EVENT', 7);
+
+    const call = calls.find((c) =>
+      c.url.endsWith('/compliance/retention/policies'),
+    );
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      targetType: 'AUDIT_EVENT',
+      retainYears: 7,
+    });
+    expect(policy.retainYears).toBe(7);
   });
 });

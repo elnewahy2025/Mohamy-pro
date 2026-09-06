@@ -452,6 +452,8 @@ model Tenant {
   messageConsents          MessageConsent[]
 
   intakeRequests IntakeRequest[]
+  retentionPolicies RetentionPolicy[]
+  legalHolds LegalHold[]
   @@index([status, createdAt])
 }
 
@@ -2627,6 +2629,47 @@ model NotificationRule {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, eventType, enabled])
+}
+
+model RetentionPolicy {
+  id          String   @id @default(uuid())
+  tenantId    String
+  targetType  String
+  retainYears Int
+  enabled     Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, targetType])
+  @@index([tenantId])
+}
+
+model LegalHold {
+  id            String     @id @default(uuid())
+  tenantId      String
+  name          String
+  reason        String     @db.Text
+  targetType    String?
+  targetId      String?
+  status        HoldStatus @default(ACTIVE)
+  createdBy     String
+  releasedBy    String?
+  releaseReason String?    @db.Text
+  releasedAt    DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+enum HoldStatus {
+  ACTIVE
+  RELEASED
 }
 
 model IntakeRequest {
