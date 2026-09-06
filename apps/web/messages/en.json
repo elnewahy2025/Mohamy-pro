@@ -85,7 +85,8 @@
     "billing": "Billing",
     "communications": "Communications",
     "calendar": "Calendar",
-    "portal": "Portal"
+    "portal": "Portal",
+    "transfer": "Import / Export"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -1287,6 +1288,55 @@
       "invoices": {
         "heading": "Invoices & credits",
         "description": "Your invoices with payments, plus open credits."
+      }
+    }
+  },
+  "transfer": {
+    "eyebrow": "Phase 25 · Import / Export",
+    "title": "Move data in and out, safely.",
+    "description": "Validate-then-approve CSV imports with duplicate detection and rollback, plus capped, watermarked exports. Excel arrives with its connector.",
+    "create": "Create",
+    "validate": "Validate",
+    "approve": "Approve & run",
+    "rollback": "Roll back",
+    "run": "Run export",
+    "download": "Download",
+    "load": "Load",
+    "submitting": "Working…",
+    "labels": {
+      "jobId": "Job ID",
+      "entityType": "Entity",
+      "content": "CSV content",
+      "storageObjectId": "Storage object ID",
+      "idempotencyKey": "Idempotency key",
+      "maxRows": "Max rows"
+    },
+    "placeholders": {
+      "jobId": "00000000-0000-4000-8000-000000000000",
+      "entityType": "CASE, CLIENT, PARTY or TASK",
+      "content": "caseNumber,clientId\nC-001,…",
+      "storageObjectId": "Optional stored file reference",
+      "idempotencyKey": "Unique key per import/export attempt",
+      "maxRows": "Up to 5000"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "status": "Status",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "import": {
+        "heading": "Import",
+        "description": "Create a job, validate rows, approve with a second person, then run."
+      },
+      "jobs": {
+        "heading": "Import jobs",
+        "description": "Track status, inspect error rows, roll back completed imports."
+      },
+      "export": {
+        "heading": "Export",
+        "description": "Generate capped, watermarked CSV downloads that expire."
       }
     }
   }

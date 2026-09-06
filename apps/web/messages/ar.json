@@ -85,7 +85,8 @@
     "billing": "الفوترة",
     "communications": "الاتصالات",
     "calendar": "التقويم",
-    "portal": "البوابة"
+    "portal": "البوابة",
+    "transfer": "استيراد / تصدير"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -1287,6 +1288,55 @@
       "invoices": {
         "heading": "الفواتير والأرصدة",
         "description": "فواتيرك مع المدفوعات، إضافة إلى الأرصدة المفتوحة."
+      }
+    }
+  },
+  "transfer": {
+    "eyebrow": "المرحلة 25 · الاستيراد والتصدير",
+    "title": "انقل البيانات بأمان.",
+    "description": "استيراد CSV بالتحقق ثم الاعتماد مع كشف التكرار والتراجع، وتصدير محدود وموقّع. يصل Excel مع موصله.",
+    "create": "إنشاء",
+    "validate": "تحقق",
+    "approve": "اعتماد وتشغيل",
+    "rollback": "تراجع",
+    "run": "تشغيل التصدير",
+    "download": "تنزيل",
+    "load": "تحميل",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "jobId": "معرّف المهمة",
+      "entityType": "الكيان",
+      "content": "محتوى CSV",
+      "storageObjectId": "معرّف الكائن المخزن",
+      "idempotencyKey": "مفتاح عدم التكرار",
+      "maxRows": "الحد الأقصى للصفوف"
+    },
+    "placeholders": {
+      "jobId": "00000000-0000-4000-8000-000000000000",
+      "entityType": "CASE أو CLIENT أو PARTY أو TASK",
+      "content": "caseNumber,clientId\nC-001,…",
+      "storageObjectId": "مرجع ملف مخزن اختياري",
+      "idempotencyKey": "مفتاح فريد لكل محاولة",
+      "maxRows": "حتى 5000"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرّف",
+      "status": "الحالة",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "import": {
+        "heading": "الاستيراد",
+        "description": "أنشئ مهمة وتحقق من الصفوف واعتمد بشخص ثانٍ ثم شغّل."
+      },
+      "jobs": {
+        "heading": "مهام الاستيراد",
+        "description": "تابع الحالة وافحص صفوف الأخطاء وتراجع عن المكتمل."
+      },
+      "export": {
+        "heading": "التصدير",
+        "description": "أنشئ تنزيلات CSV محدودة وموقعة تنتهي صلاحيتها."
       }
     }
   }

@@ -433,6 +433,9 @@ model Tenant {
   refunds                  Refund[]
   ledgerEntries            LedgerEntry[]
   taxRules                 TaxRule[]
+  importJobs               ImportJob[]
+  importRowErrors          ImportRowError[]
+  exportJobs               ExportJob[]
   calendarConnections      CalendarConnection[]
   calendarSyncCursors      CalendarSyncCursor[]
   calendarEventMappings    CalendarEventMapping[]
@@ -2188,6 +2191,36 @@ enum ConflictResolution {
   REMOTE_WINS
 }
 
+enum TransferEntity {
+  CASE
+  CLIENT
+  PARTY
+  TASK
+}
+
+enum TransferFormat {
+  CSV
+  XLSX
+}
+
+enum ImportStatus {
+  DRAFT
+  VALIDATED
+  APPROVED
+  RUNNING
+  COMPLETED
+  FAILED
+  ROLLED_BACK
+}
+
+enum ExportStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
 enum FeeKind {
   FIXED
   HOURLY
@@ -2451,6 +2484,70 @@ model CalendarSyncConflict {
   connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, connectionId, resolution])
+}
+
+
+model ImportJob {
+  id             String       @id @default(uuid())
+  tenantId       String
+  entityType     TransferEntity
+  format         TransferFormat @default(CSV)
+  storageObjectId String?
+  content        String?      @db.Text
+  mapping        Json?
+  status         ImportStatus @default(DRAFT)
+  totalRows      Int          @default(0)
+  validRows      Int          @default(0)
+  errorRows      Int          @default(0)
+  requestedBy    String
+  approvedBy     String?
+  idempotencyKey String
+  resultSummary  Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  errors ImportRowError[]
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, status])
+}
+
+model ImportRowError {
+  id        String   @id @default(uuid())
+  tenantId  String
+  jobId     String
+  rowNumber Int
+  raw       Json?
+  errors    Json
+  createdAt DateTime @default(now())
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  job    ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, jobId])
+}
+
+model ExportJob {
+  id             String       @id @default(uuid())
+  tenantId       String
+  entityType     TransferEntity
+  filters        Json?
+  format         TransferFormat @default(CSV)
+  status         ExportStatus   @default(QUEUED)
+  storageObjectId String?
+  rowCount       Int          @default(0)
+  maxRows        Int          @default(5000)
+  expiresAt      DateTime?
+  requestedBy    String
+  idempotencyKey String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, status])
 }
 
 model Fee {

@@ -40,6 +40,7 @@ import { BillingModule } from './billing/billing.module';
 import { CommunicationsModule } from './communications/communications.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { PortalModule } from './portal/portal.module';
+import { TransferModule } from './transfer/transfer.module';
 import { DenialsModule } from './denials/denials.module';
 import { BreakGlassModule } from './breakglass/breakglass.module';
 import { RolesModule } from './roles/roles.module';
@@ -81,6 +82,7 @@ import { RolesModule } from './roles/roles.module';
     CommunicationsModule,
     CalendarModule,
     PortalModule,
+    TransferModule,
     DenialsModule,
     RolesModule,
     BreakGlassModule,

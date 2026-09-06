@@ -295,7 +295,7 @@ describe('Phase 10-15 migration assertions', () => {
 
   it('adds portal client linkage columns without new RLS surface (Phase 24)', () => {
     const portalMigration = readMigration(
-      '20260908000004_phase24_portal_linkage',
+      '20260908000007_phase24_portal_linkage',
     );
 
     expect(portalMigration).toContain(
@@ -305,6 +305,23 @@ describe('Phase 10-15 migration assertions', () => {
       'ALTER TABLE "Invitation" ADD COLUMN "clientId" TEXT',
     );
     expect(portalMigration).not.toContain('CREATE TABLE');
+  });
+
+  it('creates all 3 Phase 25 transfer tables with FORCE RLS', () => {
+    const transferMigration = readMigration(
+      '20260908000008_phase25_transfer_foundation',
+    );
+
+    for (const table of ['ImportJob', 'ImportRowError', 'ExportJob']) {
+      expect(transferMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(transferMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(transferMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(transferMigration).toContain(`"${table}_tenant_isolation"`);
+    }
   });
 
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {

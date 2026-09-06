@@ -34,6 +34,8 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_COMMUNICATIONS: 'CanManageCommunications',
   CAN_MANAGE_CALENDAR: 'CanManageCalendar',
   CAN_ACCESS_PORTAL: 'CanAccessPortal',
+  CAN_MANAGE_IMPORTS: 'CanManageImports',
+  CAN_MANAGE_EXPORTS: 'CanManageExports',
   CAN_ACCESS_ASSIGNED_CASES: 'CanAccessAssignedCases',
 } as const;
 
@@ -184,6 +186,14 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     key: PERMISSION_KEYS.CAN_ACCESS_PORTAL,
     description: 'Read own linked client records through the client portal.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_IMPORTS,
+    description: 'Validate, approve, run, and roll back data imports.',
+  },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_EXPORTS,
+    description: 'Generate and download capped data exports.',
+  },
 ];
 /**
  * Default permission set granted to each built-in role. Keyed by stable role
@@ -217,6 +227,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_COMMUNICATIONS,
     PERMISSION_KEYS.CAN_MANAGE_CALENDAR,
     PERMISSION_KEYS.CAN_ACCESS_ASSIGNED_CASES,
+    PERMISSION_KEYS.CAN_MANAGE_IMPORTS,
+    PERMISSION_KEYS.CAN_MANAGE_EXPORTS,
   ],
   [ROLE_KEY_TENANT_MANAGER]: [
     PERMISSION_KEYS.CAN_VIEW_TENANT,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, BillingsClient, BreakGlassClient, CalendarClient, CommsClient, PortalClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
+import { ApiClient, BillingsClient, BreakGlassClient, CalendarClient, CommsClient, PortalClient, TransferClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -1108,6 +1108,87 @@ describe('PortalClient (Phase 24)', () => {
     const call = calls.find((c) => c.url.endsWith('/portal/agenda'));
     expect(call?.init?.method).toBe('GET');
     expect(result[0].kind).toBe('HEARING');
+  });
+});
+
+describe('TransferClient (Phase 25)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-transfer' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('creates an import via POST /transfer/imports', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/transfer/imports': () => enveloped({ id: 'j1', status: 'DRAFT' }, 201),
+    });
+    const client = new TransferClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createImport({ entityType: 'CASE', content: 'caseNumber\nC-1', idempotencyKey: 'k1' });
+
+    const call = calls.find((c) => c.url.endsWith('/transfer/imports') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('DRAFT');
+  });
+
+  it('creates an export via POST /transfer/exports', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/transfer/exports': () => enveloped({ id: 'e1', status: 'QUEUED' }, 201),
+    });
+    const client = new TransferClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createExport({ entityType: 'CASE', idempotencyKey: 'k2' });
+
+    const call = calls.find((c) => c.url.endsWith('/transfer/exports') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+    expect(result.status).toBe('QUEUED');
+  });
+
+  it('downloads an export via GET /transfer/exports/:id/download', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/transfer/exports/e1/download': () => enveloped({ csv: 'id\n1', expiresAt: null }),
+    });
+    const client = new TransferClient(new ApiClient(base, fetchMock));
+
+    const result = await client.downloadExport('e1');
+
+    const call = calls.find((c) => c.url.endsWith('/transfer/exports/e1/download'));
+    expect(call?.init?.method).toBe('GET');
+    expect(result.csv).toContain('id');
   });
 });
 

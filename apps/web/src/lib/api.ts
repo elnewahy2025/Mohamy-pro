@@ -2669,3 +2669,115 @@ export class PortalClient {
     return this.client.body<PortalAgendaItem[]>(`${PORTAL_PREFIX}/agenda`, 'GET');
   }
 }
+
+// --- Phase 25: Import / Export ---
+
+export type TransferEntity = 'CASE' | 'CLIENT' | 'PARTY' | 'TASK';
+export type TransferFormat = 'CSV' | 'XLSX';
+export type ImportStatus = 'DRAFT' | 'VALIDATED' | 'APPROVED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'ROLLED_BACK';
+export type ExportStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'EXPIRED';
+
+export interface ImportJobResult {
+  id: string;
+  tenantId: string;
+  entityType: TransferEntity;
+  format: TransferFormat;
+  storageObjectId: string | null;
+  status: ImportStatus;
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  requestedBy: string;
+  approvedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ImportRowErrorResult {
+  id: string;
+  jobId: string;
+  rowNumber: number;
+  raw: unknown;
+  errors: string[];
+}
+
+export interface ExportJobResult {
+  id: string;
+  tenantId: string;
+  entityType: TransferEntity;
+  format: TransferFormat;
+  status: ExportStatus;
+  rowCount: number;
+  maxRows: number;
+  expiresAt: string | null;
+  requestedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateImportRequest {
+  entityType: TransferEntity;
+  format?: TransferFormat;
+  storageObjectId?: string;
+  content?: string;
+  mapping?: Record<string, string>;
+  idempotencyKey: string;
+}
+
+export interface CreateExportRequest {
+  entityType: TransferEntity;
+  format?: TransferFormat;
+  filters?: Record<string, string>;
+  maxRows?: number;
+  idempotencyKey: string;
+}
+
+const TRANSFER_PREFIX = '/transfer';
+
+export class TransferClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  createImport(req: CreateImportRequest): Promise<ImportJobResult> {
+    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports`, 'POST', req);
+  }
+
+  listImports(): Promise<ImportJobResult[]> {
+    return this.client.body<ImportJobResult[]>(`${TRANSFER_PREFIX}/imports`, 'GET');
+  }
+
+  getImport(id: string): Promise<ImportJobResult> {
+    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}`, 'GET');
+  }
+
+  validateImport(id: string): Promise<ImportJobResult> {
+    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/validate`, 'POST');
+  }
+
+  approveImport(id: string, idempotencyKey?: string): Promise<ImportJobResult> {
+    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/approve`, 'POST', { idempotencyKey });
+  }
+
+  rollbackImport(id: string): Promise<ImportJobResult> {
+    return this.client.body<ImportJobResult>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/rollback`, 'POST');
+  }
+
+  listImportErrors(id: string): Promise<ImportRowErrorResult[]> {
+    return this.client.body<ImportRowErrorResult[]>(`${TRANSFER_PREFIX}/imports/${encodeURIComponent(id)}/errors`, 'GET');
+  }
+
+  createExport(req: CreateExportRequest): Promise<ExportJobResult> {
+    return this.client.body<ExportJobResult>(`${TRANSFER_PREFIX}/exports`, 'POST', req);
+  }
+
+  listExports(): Promise<ExportJobResult[]> {
+    return this.client.body<ExportJobResult[]>(`${TRANSFER_PREFIX}/exports`, 'GET');
+  }
+
+  runExport(id: string): Promise<ExportJobResult> {
+    return this.client.body<ExportJobResult>(`${TRANSFER_PREFIX}/exports/${encodeURIComponent(id)}/run`, 'POST');
+  }
+
+  downloadExport(id: string): Promise<{ csv: string; expiresAt: string | null }> {
+    return this.client.body<{ csv: string; expiresAt: string | null }>(`${TRANSFER_PREFIX}/exports/${encodeURIComponent(id)}/download`, 'GET');
+  }
+}
