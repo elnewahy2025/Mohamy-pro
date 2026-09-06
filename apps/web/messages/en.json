@@ -138,31 +138,45 @@
     }
   },
   "integrations": {
-    "eyebrow": "Integrations",
-    "title": "Services with clear boundaries.",
-    "description": "Integrations pass through independent layers, keeping secrets and private links outside the client.",
-    "tableLabel": "Service status",
-    "headers": {
-      "service": "Service",
-      "role": "Role",
-      "status": "Status",
-      "port": "Port"
+    "eyebrow": "Phase 31 · Integration Hub",
+    "title": "Every outside system, one registry.",
+    "description": "Configure provider connections and webhook endpoints. Secrets are shown once and stored hashed; live provider calls stay deferred by design.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "register": "Register",
+    "rotate": "Rotate secret",
+    "load": "Load",
+    "submitting": "Working…",
+    "labels": {
+      "key": "Integration key",
+      "url": "Endpoint URL",
+      "events": "Events",
+      "webhookId": "Webhook ID",
+      "secret": "One-time secret"
     },
-    "services": {
-      "postgres": {
-        "role": "Primary relational data",
-        "status": "Ready",
-        "port": "55432"
+    "placeholders": {
+      "key": "e.g. EMAIL",
+      "url": "https://example.com/hook",
+      "events": "case.created, invoice.issued",
+      "webhookId": "00000000-0000-4000-8000-000000000000"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "Count",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "connections": {
+        "heading": "Connections",
+        "description": "Enable provider connections and inspect health."
       },
-      "redis": {
-        "role": "Cache and queue transport",
-        "status": "Ready",
-        "port": "56379"
+      "webhooks": {
+        "heading": "Webhooks",
+        "description": "Register endpoints; the secret is shown once, never again."
       },
-      "minio": {
-        "role": "Private object storage",
-        "status": "Ready",
-        "port": "59000"
+      "catalog": {
+        "heading": "Event catalog",
+        "description": "Subscribable webhook events."
       }
     }
   },

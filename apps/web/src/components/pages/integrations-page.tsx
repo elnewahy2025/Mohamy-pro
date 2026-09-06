@@ -1,14 +1,27 @@
-import { ShieldCheck } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+'use client';
 
-const services = [
-  ['PostgreSQL', 'postgres'],
-  ['Redis', 'redis'],
-  ['MinIO', 'minio'],
-] as const;
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { ConnectionsSection } from '@/components/pages/integrations/connections-section';
+import { WebhooksSection } from '@/components/pages/integrations/webhooks-section';
+import { CatalogSection } from '@/components/pages/integrations/catalog-section';
+import { Button } from '@/components/ui/button';
+
+type Tab = 'connections' | 'webhooks' | 'catalog';
 
 export function IntegrationsPage(): React.ReactNode {
   const t = useTranslations();
+  const [activeTab, setActiveTab] = useState<Tab>('connections');
+
+  const tabs: { key: Tab; label: string }[] = [
+    {
+      key: 'connections',
+      label: t('integrations.sections.connections.heading'),
+    },
+    { key: 'webhooks', label: t('integrations.sections.webhooks.heading') },
+    { key: 'catalog', label: t('integrations.sections.catalog.heading') },
+  ];
+
   return (
     <section className="page-section content-page">
       <div className="page-heading">
@@ -16,23 +29,24 @@ export function IntegrationsPage(): React.ReactNode {
         <h1>{t('integrations.title')}</h1>
         <p>{t('integrations.description')}</p>
       </div>
-      <div className="service-table" role="table" aria-label={t('integrations.tableLabel')}>
-        <div className="service-table-header" role="row">
-          <span>{t('integrations.headers.service')}</span>
-          <span>{t('integrations.headers.role')}</span>
-          <span>{t('integrations.headers.status')}</span>
-          <span>{t('integrations.headers.port')}</span>
-        </div>
-        {services.map(([name, key]) => (
-          <div className="service-table-row" role="row" key={name}>
-            <strong>{name}</strong>
-            <span>{t(`integrations.services.${key}.role`)}</span>
-            <span className="service-status"><i />{t(`integrations.services.${key}.status`)}</span>
-            <code>{t(`integrations.services.${key}.port`)}</code>
-          </div>
+
+      <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2 flex-wrap">
+        {tabs.map((tab) => (
+          <Button
+            key={tab.key}
+            variant={activeTab === tab.key ? 'default' : 'ghost'}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </Button>
         ))}
       </div>
-      <p className="security-note"><ShieldCheck aria-hidden="true" size={16} />{t('common.secureDocuments')}</p>
+
+      <div className="tab-content">
+        {activeTab === 'connections' && <ConnectionsSection />}
+        {activeTab === 'webhooks' && <WebhooksSection />}
+        {activeTab === 'catalog' && <CatalogSection />}
+      </div>
     </section>
   );
 }

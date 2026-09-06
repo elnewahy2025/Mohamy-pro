@@ -7,6 +7,7 @@ import {
   CommsClient,
   ComplianceClient,
   DashboardClient,
+  IntegrationsClient,
   IntakeClient,
   NotificationsClient,
   PortalClient,
@@ -3820,5 +3821,142 @@ describe('ComplianceClient (Phase 30)', () => {
       retainYears: 7,
     });
     expect(policy.retainYears).toBe(7);
+  });
+});
+
+describe('IntegrationsClient (Phase 31)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function integrationsWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-integrations' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('configures an integration via PUT /integrations/:key', async () => {
+    const { fetchMock, calls } = integrationsWith({
+      '/integrations/EMAIL': () =>
+        enveloped({
+          id: 'g1',
+          tenantId: 't1',
+          key: 'EMAIL',
+          enabled: true,
+          config: {},
+          status: 'ENABLED',
+          errorMessage: null,
+          enabledBy: 'u1',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
+    });
+    const client = new IntegrationsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.set('EMAIL', true);
+
+    const call = calls.find((c) => c.url.endsWith('/integrations/EMAIL'));
+    expect(call?.init?.method).toBe('PUT');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({ enabled: true });
+    expect(result.status).toBe('ENABLED');
+  });
+
+  it('registers a webhook and receives a one-time secret', async () => {
+    const { fetchMock, calls } = integrationsWith({
+      '/webhooks': () =>
+        enveloped(
+          {
+            endpoint: {
+              id: 'w1',
+              url: 'https://example.com/hook',
+              events: ['case.created'],
+              status: 'ENABLED',
+              hasSecret: true,
+            },
+            secret: 'one-time-secret',
+          },
+          201,
+        ),
+    });
+    const client = new IntegrationsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.registerWebhook('https://example.com/hook', [
+      'case.created',
+    ]);
+
+    const call = calls.find((c) => c.url.endsWith('/integrations/webhooks'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      url: 'https://example.com/hook',
+      events: ['case.created'],
+    });
+    expect(result.secret).toBe('one-time-secret');
+    expect(result.endpoint).not.toHaveProperty('secretHash');
+  });
+
+  it('reads health and the event catalog', async () => {
+    const { fetchMock, calls } = integrationsWith({
+      '/health': () =>
+        enveloped([
+          {
+            key: 'EMAIL',
+            enabled: false,
+            status: 'DISABLED',
+            errorMessage: null,
+            updatedAt: null,
+          },
+        ]),
+      '/events': () => enveloped(['case.created']),
+    });
+    const client = new IntegrationsClient(new ApiClient(base, fetchMock));
+
+    const health = await client.health();
+    const events = await client.events();
+
+    expect(
+      calls.find((c) => c.url.endsWith('/integrations/health'))?.init?.method,
+    ).toBe('GET');
+    expect(health[0].key).toBe('EMAIL');
+    expect(events).toEqual(['case.created']);
   });
 });

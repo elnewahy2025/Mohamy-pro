@@ -45,6 +45,7 @@ import { ReportingModule } from './reporting/reporting.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { IntakeModule } from './intake/intake.module';
 import { ComplianceModule } from './compliance/compliance.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 import { DenialsModule } from './denials/denials.module';
 import { BreakGlassModule } from './breakglass/breakglass.module';
 import { RolesModule } from './roles/roles.module';
@@ -91,6 +92,7 @@ import { RolesModule } from './roles/roles.module';
     DashboardModule,
     IntakeModule,
     ComplianceModule,
+    IntegrationsModule,
     DenialsModule,
     RolesModule,
     BreakGlassModule,

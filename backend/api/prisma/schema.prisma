@@ -454,6 +454,8 @@ model Tenant {
   intakeRequests IntakeRequest[]
   retentionPolicies RetentionPolicy[]
   legalHolds LegalHold[]
+  integrations Integration[]
+  webhookEndpoints WebhookEndpoint[]
   @@index([status, createdAt])
 }
 
@@ -2629,6 +2631,51 @@ model NotificationRule {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, eventType, enabled])
+}
+
+model Integration {
+  id           String            @id @default(uuid())
+  tenantId     String
+  key          String
+  enabled      Boolean           @default(false)
+  config       Json              @default("{}")
+  status       IntegrationStatus @default(DISABLED)
+  errorMessage String?           @db.Text
+  enabledBy    String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, key])
+  @@index([tenantId])
+}
+
+model WebhookEndpoint {
+  id         String        @id @default(uuid())
+  tenantId   String
+  url        String
+  events     Json          @default("[]")
+  secretHash String
+  status     WebhookStatus @default(ENABLED)
+  createdBy  String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+enum IntegrationStatus {
+  DISABLED
+  ENABLED
+  ERROR
+}
+
+enum WebhookStatus {
+  ENABLED
+  DISABLED
 }
 
 model RetentionPolicy {

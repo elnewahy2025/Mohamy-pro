@@ -39,6 +39,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_REPORTS: 'CanManageReports',
   CAN_MANAGE_INTAKE: 'CanManageIntake',
   CAN_MANAGE_COMPLIANCE: 'CanManageCompliance',
+  CAN_MANAGE_INTEGRATIONS: 'CanManageIntegrations',
   CAN_MANAGE_NOTIFICATIONS: 'CanManageNotifications',
   CAN_ACCESS_ASSIGNED_CASES: 'CanAccessAssignedCases',
 } as const;
@@ -213,6 +214,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Inspect audit trails and govern retention and legal holds within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_INTEGRATIONS,
+    description:
+      'Configure integrations and webhook endpoints within the active tenant.',
+  },
 ];
 /**
  * Default permission set granted to each built-in role. Keyed by stable role
@@ -252,6 +258,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_REPORTS,
     PERMISSION_KEYS.CAN_MANAGE_INTAKE,
     PERMISSION_KEYS.CAN_MANAGE_COMPLIANCE,
+    PERMISSION_KEYS.CAN_MANAGE_INTEGRATIONS,
   ],
   [ROLE_KEY_TENANT_MANAGER]: [
     PERMISSION_KEYS.CAN_VIEW_TENANT,

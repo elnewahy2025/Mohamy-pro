@@ -398,6 +398,23 @@ describe('Phase 10-15 migration assertions', () => {
     }
   });
 
+  it('creates both Phase 31 integration tables with FORCE RLS', () => {
+    const integrationsMigration = readMigration(
+      '20260908000013_phase31_integrations_foundation',
+    );
+
+    for (const table of ['Integration', 'WebhookEndpoint']) {
+      expect(integrationsMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(integrationsMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(integrationsMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(integrationsMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

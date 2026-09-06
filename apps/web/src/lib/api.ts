@@ -3685,3 +3685,110 @@ export class ComplianceClient {
     );
   }
 }
+
+// --- Phase 31: Integrations ---
+
+export interface IntegrationResult {
+  id: string;
+  tenantId: string;
+  key: string;
+  enabled: boolean;
+  config: Record<string, string>;
+  status: string;
+  errorMessage: string | null;
+  enabledBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IntegrationHealth {
+  key: string;
+  enabled: boolean;
+  status: string;
+  errorMessage: string | null;
+  updatedAt: string | null;
+}
+
+export interface WebhookEndpointResult {
+  id: string;
+  tenantId: string;
+  url: string;
+  events: string[];
+  status: string;
+  hasSecret: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebhookWithSecret {
+  endpoint: WebhookEndpointResult;
+  secret: string;
+}
+
+const INTEGRATIONS_PREFIX = '/integrations';
+
+export class IntegrationsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  list(): Promise<IntegrationResult[]> {
+    return this.client.body<IntegrationResult[]>(
+      `${INTEGRATIONS_PREFIX}`,
+      'GET',
+    );
+  }
+
+  health(): Promise<IntegrationHealth[]> {
+    return this.client.body<IntegrationHealth[]>(
+      `${INTEGRATIONS_PREFIX}/health`,
+      'GET',
+    );
+  }
+
+  events(): Promise<string[]> {
+    return this.client.body<string[]>(`${INTEGRATIONS_PREFIX}/events`, 'GET');
+  }
+
+  set(
+    key: string,
+    enabled: boolean,
+    config?: Record<string, string>,
+  ): Promise<IntegrationResult> {
+    return this.client.body<IntegrationResult>(
+      `${INTEGRATIONS_PREFIX}/${encodeURIComponent(key)}`,
+      'PUT',
+      { enabled, ...(config ? { config } : {}) },
+    );
+  }
+
+  registerWebhook(url: string, events: string[]): Promise<WebhookWithSecret> {
+    return this.client.body<WebhookWithSecret>(
+      `${INTEGRATIONS_PREFIX}/webhooks`,
+      'POST',
+      { url, events },
+    );
+  }
+
+  listWebhooks(): Promise<WebhookEndpointResult[]> {
+    return this.client.body<WebhookEndpointResult[]>(
+      `${INTEGRATIONS_PREFIX}/webhooks`,
+      'GET',
+    );
+  }
+
+  rotateWebhook(id: string): Promise<WebhookWithSecret> {
+    return this.client.body<WebhookWithSecret>(
+      `${INTEGRATIONS_PREFIX}/webhooks/${encodeURIComponent(id)}/rotate`,
+      'POST',
+      {},
+    );
+  }
+
+  disableWebhook(id: string): Promise<WebhookEndpointResult> {
+    return this.client.body<WebhookEndpointResult>(
+      `${INTEGRATIONS_PREFIX}/webhooks/${encodeURIComponent(id)}/disable`,
+      'POST',
+      {},
+    );
+  }
+}
