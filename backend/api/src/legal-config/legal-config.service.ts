@@ -1,4 +1,5 @@
-import { Injectable, Scope } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import type { Request } from 'express';
 import { LegalConfigOperations } from './legal-config.operations';
 import {
   CreateCountryDto,
@@ -9,27 +10,29 @@ import {
 import { AUDIT_EVENT_TYPES } from '../audit/audit-constants';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class LegalConfigService {
   constructor(private readonly ops: LegalConfigOperations) {}
 
   // --- Countries ---
-  async listCountries() {
+  async listCountries(request: Request) {
     const ctx = await this.ops.assertPermission(
+      request,
       PERMISSION_KEYS.CAN_VIEW_TENANT,
     );
-    return this.ops.run(ctx, 'listCountries', async (tx) => {
+    return this.ops.run(request, ctx, 'listCountries', async (tx) => {
       return tx.country.findMany({
         orderBy: { name: 'asc' },
       });
     });
   }
 
-  async createCountry(dto: CreateCountryDto) {
+  async createCountry(request: Request, dto: CreateCountryDto) {
     const ctx = await this.ops.assertPermission(
+      request,
       PERMISSION_KEYS.CAN_MANAGE_GLOBAL_LEGAL_CONFIG,
     );
-    return this.ops.run(ctx, 'createCountry', async (tx) => {
+    return this.ops.run(request, ctx, 'createCountry', async (tx) => {
       const country = await tx.country.create({
         data: {
           code: dto.code,
@@ -37,6 +40,7 @@ export class LegalConfigService {
         },
       });
       await this.ops.auditChange(
+        request,
         ctx,
         AUDIT_EVENT_TYPES.COUNTRY_CREATED,
         'Country',
@@ -47,11 +51,12 @@ export class LegalConfigService {
   }
 
   // --- Jurisdictions ---
-  async listJurisdictions(countryId?: string) {
+  async listJurisdictions(request: Request, countryId?: string) {
     const ctx = await this.ops.assertPermission(
+      request,
       PERMISSION_KEYS.CAN_VIEW_TENANT,
     );
-    return this.ops.run(ctx, 'listJurisdictions', async (tx) => {
+    return this.ops.run(request, ctx, 'listJurisdictions', async (tx) => {
       return tx.jurisdiction.findMany({
         where: {
           ...this.ops.hybridReadWhere(ctx),
@@ -62,11 +67,12 @@ export class LegalConfigService {
     });
   }
 
-  async createJurisdiction(dto: CreateJurisdictionDto) {
+  async createJurisdiction(request: Request, dto: CreateJurisdictionDto) {
     const ctx = await this.ops.assertPermission(
+      request,
       PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
     );
-    return this.ops.run(ctx, 'createJurisdiction', async (tx) => {
+    return this.ops.run(request, ctx, 'createJurisdiction', async (tx) => {
       await this.ops.requireParentVisible(
         tx,
         ctx,
@@ -82,6 +88,7 @@ export class LegalConfigService {
         },
       });
       await this.ops.auditChange(
+        request,
         ctx,
         AUDIT_EVENT_TYPES.JURISDICTION_CREATED,
         'Jurisdiction',
@@ -92,11 +99,12 @@ export class LegalConfigService {
   }
 
   // --- Courts ---
-  async listCourts(jurisdictionId?: string) {
+  async listCourts(request: Request, jurisdictionId?: string) {
     const ctx = await this.ops.assertPermission(
+      request,
       PERMISSION_KEYS.CAN_VIEW_TENANT,
     );
-    return this.ops.run(ctx, 'listCourts', async (tx) => {
+    return this.ops.run(request, ctx, 'listCourts', async (tx) => {
       return tx.court.findMany({
         where: {
           ...this.ops.hybridReadWhere(ctx),
@@ -107,11 +115,12 @@ export class LegalConfigService {
     });
   }
 
-  async createCourt(dto: CreateCourtDto) {
+  async createCourt(request: Request, dto: CreateCourtDto) {
     const ctx = await this.ops.assertPermission(
+      request,
       PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
     );
-    return this.ops.run(ctx, 'createCourt', async (tx) => {
+    return this.ops.run(request, ctx, 'createCourt', async (tx) => {
       await this.ops.requireParentVisible(
         tx,
         ctx,
@@ -129,6 +138,7 @@ export class LegalConfigService {
         },
       });
       await this.ops.auditChange(
+        request,
         ctx,
         AUDIT_EVENT_TYPES.COURT_CREATED,
         'Court',
@@ -139,11 +149,12 @@ export class LegalConfigService {
   }
 
   // --- Court Locations ---
-  async listCourtLocations(courtId: string) {
+  async listCourtLocations(request: Request, courtId: string) {
     const ctx = await this.ops.assertPermission(
+      request,
       PERMISSION_KEYS.CAN_VIEW_TENANT,
     );
-    return this.ops.run(ctx, 'listCourtLocations', async (tx) => {
+    return this.ops.run(request, ctx, 'listCourtLocations', async (tx) => {
       return tx.courtLocation.findMany({
         where: {
           courtId,
@@ -154,11 +165,12 @@ export class LegalConfigService {
     });
   }
 
-  async createCourtLocation(dto: CreateCourtLocationDto) {
+  async createCourtLocation(request: Request, dto: CreateCourtLocationDto) {
     const ctx = await this.ops.assertPermission(
+      request,
       PERMISSION_KEYS.CAN_MANAGE_LEGAL_CONFIG,
     );
-    return this.ops.run(ctx, 'createCourtLocation', async (tx) => {
+    return this.ops.run(request, ctx, 'createCourtLocation', async (tx) => {
       await this.ops.requireParentVisible(
         tx,
         ctx,
@@ -176,6 +188,7 @@ export class LegalConfigService {
         },
       });
       await this.ops.auditChange(
+        request,
         ctx,
         AUDIT_EVENT_TYPES.COURT_LOCATION_CREATED,
         'CourtLocation',

@@ -15,12 +15,14 @@ describe('LegalConfigService', () => {
     actorMembershipId: 'member-1',
   };
 
+  const mockRequest = { auth: { userId: 'user-1' } } as never;
+
   const mockOps = {
     hybridReadWhere: jest
       .fn()
       .mockReturnValue({ OR: [{ tenantId: 'tenant-1' }, { tenantId: null }] }),
     assertPermission: jest.fn().mockResolvedValue(mockCtx),
-    run: jest.fn().mockImplementation((ctx, name, cb) => {
+    run: jest.fn().mockImplementation((req, ctx, name, cb) => {
       return cb({
         country: {
           create: jest.fn().mockResolvedValue({ id: 'country-1', name: 'UAE' }),
@@ -76,9 +78,13 @@ describe('LegalConfigService', () => {
 
   describe('createCountry', () => {
     it('should create a country and audit it', async () => {
-      const result = await service.createCountry({ code: 'AE', name: 'UAE' });
+      const result = await service.createCountry(mockRequest, {
+        code: 'AE',
+        name: 'UAE',
+      });
       expect(result).toEqual({ id: 'country-1', name: 'UAE' });
       expect(ops.auditChange).toHaveBeenCalledWith(
+        mockRequest,
         mockCtx,
         AUDIT_EVENT_TYPES.COUNTRY_CREATED,
         'Country',
@@ -87,8 +93,9 @@ describe('LegalConfigService', () => {
     });
 
     it('should require the global legal-config permission', async () => {
-      await service.createCountry({ code: 'AE', name: 'UAE' });
+      await service.createCountry(mockRequest, { code: 'AE', name: 'UAE' });
       expect(ops.assertPermission).toHaveBeenCalledWith(
+        mockRequest,
         PERMISSION_KEYS.CAN_MANAGE_GLOBAL_LEGAL_CONFIG,
       );
     });
@@ -96,12 +103,13 @@ describe('LegalConfigService', () => {
 
   describe('createJurisdiction', () => {
     it('should create a jurisdiction and audit it', async () => {
-      const result = await service.createJurisdiction({
+      const result = await service.createJurisdiction(mockRequest, {
         countryId: 'country-1',
         name: 'Dubai',
       });
       expect(result).toEqual({ id: 'jur-1', name: 'Dubai' });
       expect(ops.auditChange).toHaveBeenCalledWith(
+        mockRequest,
         mockCtx,
         AUDIT_EVENT_TYPES.JURISDICTION_CREATED,
         'Jurisdiction',
@@ -112,12 +120,13 @@ describe('LegalConfigService', () => {
 
   describe('createCourt', () => {
     it('should create a court and audit it', async () => {
-      const result = await service.createCourt({
+      const result = await service.createCourt(mockRequest, {
         jurisdictionId: 'jur-1',
         name: 'Dubai Courts',
       });
       expect(result).toEqual({ id: 'court-1', name: 'Dubai Courts' });
       expect(ops.auditChange).toHaveBeenCalledWith(
+        mockRequest,
         mockCtx,
         AUDIT_EVENT_TYPES.COURT_CREATED,
         'Court',
@@ -130,19 +139,23 @@ describe('LegalConfigService', () => {
         new Error('Jurisdiction not found in tenant scope'),
       );
       await expect(
-        service.createCourt({ jurisdictionId: 'jur-b', name: 'Foreign' }),
+        service.createCourt(mockRequest, {
+          jurisdictionId: 'jur-b',
+          name: 'Foreign',
+        }),
       ).rejects.toThrow('Jurisdiction not found in tenant scope');
     });
   });
 
   describe('createCourtLocation', () => {
     it('should create a court location and audit it', async () => {
-      const result = await service.createCourtLocation({
+      const result = await service.createCourtLocation(mockRequest, {
         courtId: 'court-1',
         name: 'Main Hall',
       });
       expect(result).toEqual({ id: 'loc-1', name: 'Main Hall' });
       expect(ops.auditChange).toHaveBeenCalledWith(
+        mockRequest,
         mockCtx,
         AUDIT_EVENT_TYPES.COURT_LOCATION_CREATED,
         'CourtLocation',
@@ -153,14 +166,14 @@ describe('LegalConfigService', () => {
 
   describe('listCountries', () => {
     it('should return global countries', async () => {
-      const result = await service.listCountries();
+      const result = await service.listCountries(mockRequest);
       expect(result).toEqual([{ id: 'country-1', name: 'UAE' }]);
     });
   });
 
   describe('listJurisdictions', () => {
     it('should return jurisdictions for the tenant scope and a country filter', async () => {
-      const result = await service.listJurisdictions('country-1');
+      const result = await service.listJurisdictions(mockRequest, 'country-1');
       expect(result).toEqual([{ id: 'jur-1', name: 'Dubai' }]);
     });
   });

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { LegalConfigService } from './legal-config.service';
 import {
   CreateCountryDto,
@@ -15,42 +24,57 @@ export class LegalConfigController {
   constructor(private readonly legalConfigService: LegalConfigService) {}
 
   @Get('countries')
-  listCountries() {
-    return this.legalConfigService.listCountries();
+  listCountries(@Req() request: Request) {
+    return this.legalConfigService.listCountries(request);
   }
 
   @Post('countries')
-  createCountry(@Body() dto: CreateCountryDto) {
-    return this.legalConfigService.createCountry(dto);
+  createCountry(@Req() request: Request, @Body() dto: CreateCountryDto) {
+    return this.legalConfigService.createCountry(request, dto);
   }
 
   @Get('jurisdictions')
-  listJurisdictions(@Query('countryId') countryId?: string) {
-    return this.legalConfigService.listJurisdictions(countryId);
+  listJurisdictions(
+    @Req() request: Request,
+    @Query('countryId') countryId?: string,
+  ) {
+    return this.legalConfigService.listJurisdictions(request, countryId);
   }
 
   @Post('jurisdictions')
-  createJurisdiction(@Body() dto: CreateJurisdictionDto) {
-    return this.legalConfigService.createJurisdiction(dto);
+  createJurisdiction(
+    @Req() request: Request,
+    @Body() dto: CreateJurisdictionDto,
+  ) {
+    return this.legalConfigService.createJurisdiction(request, dto);
   }
 
   @Get('courts')
-  listCourts(@Query('jurisdictionId') jurisdictionId?: string) {
-    return this.legalConfigService.listCourts(jurisdictionId);
+  listCourts(
+    @Req() request: Request,
+    @Query('jurisdictionId') jurisdictionId?: string,
+  ) {
+    return this.legalConfigService.listCourts(request, jurisdictionId);
   }
 
   @Post('courts')
-  createCourt(@Body() dto: CreateCourtDto) {
-    return this.legalConfigService.createCourt(dto);
+  createCourt(@Req() request: Request, @Body() dto: CreateCourtDto) {
+    return this.legalConfigService.createCourt(request, dto);
   }
 
   @Get('court-locations')
-  listCourtLocations(@Query('courtId') courtId: string) {
-    return this.legalConfigService.listCourtLocations(courtId);
+  listCourtLocations(
+    @Req() request: Request,
+    @Query('courtId') courtId: string,
+  ) {
+    return this.legalConfigService.listCourtLocations(request, courtId);
   }
 
   @Post('court-locations')
-  createCourtLocation(@Body() dto: CreateCourtLocationDto) {
-    return this.legalConfigService.createCourtLocation(dto);
+  createCourtLocation(
+    @Req() request: Request,
+    @Body() dto: CreateCourtLocationDto,
+  ) {
+    return this.legalConfigService.createCourtLocation(request, dto);
   }
 }

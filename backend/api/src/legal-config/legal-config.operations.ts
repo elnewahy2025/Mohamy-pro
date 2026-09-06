@@ -1,5 +1,4 @@
-import { Injectable, Scope, Inject, NotFoundException } from '@nestjs/common';
-import { REQUEST } from '@nestjs/core';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Request } from 'express';
 import { type Prisma } from '@prisma/client';
 import { PrismaService } from '../infrastructure/database/prisma.service';
@@ -17,26 +16,26 @@ export interface LegalConfigContext {
   actorMembershipId: string;
 }
 
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class LegalConfigOperations {
   constructor(
-    @Inject(REQUEST) private readonly request: Request,
     private readonly prisma: PrismaService,
     private readonly audit: AuditEventService,
     private readonly permissions: PermissionsService,
   ) {}
 
   async assertPermission(
+    request: Request,
     permissionKey: PermissionKey,
   ): Promise<LegalConfigContext> {
-    const auth = this.request.auth;
+    const auth = request.auth;
     if (!auth) throw new LegalConfigAccessDeniedError('UNAUTHENTICATED');
     if (!auth.activeTenantId)
       throw new LegalConfigAccessDeniedError('TENANT_CONTEXT_REQUIRED');
 
     const { membershipId: actorMembershipId } =
       await this.permissions.assertTenantPermission({
-        request: this.request,
+        request,
         userId: auth.userId,
         tenantId: auth.activeTenantId,
         permissionKey,
@@ -55,6 +54,7 @@ export class LegalConfigOperations {
    * Helper for auditing configuration changes.
    */
   async auditChange(
+    request: Request,
     ctx: LegalConfigContext,
     eventType: AuditEventType,
     targetType: string,
@@ -70,7 +70,7 @@ export class LegalConfigOperations {
       actorUserId: ctx.userId,
       actorMembershipId: ctx.actorMembershipId,
       tenantId: ctx.tenantId,
-      correlationId: getCorrelationId(this.request) || '',
+      correlationId: getCorrelationId(request) || '',
       ipHash: null,
       userAgentHash: null,
       metadata,
@@ -126,6 +126,7 @@ export class LegalConfigOperations {
    * Execute Prisma queries within RLS bounds.
    */
   async run<T>(
+    request: Request,
     ctx: LegalConfigContext,
     operationName: string,
     queryFn: Parameters<PrismaService['withTenantContext']>[1],
