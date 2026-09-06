@@ -3466,3 +3466,88 @@ export class DashboardClient {
     );
   }
 }
+
+// --- Phase 29: Intake ---
+
+export type IntakeStatus = 'NEW' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED';
+
+export interface IntakeRequestResult {
+  id: string;
+  tenantId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  clientType: string;
+  matterSummary: string;
+  source: string | null;
+  status: IntakeStatus;
+  conflictCheckId: string | null;
+  reviewerMembershipId: string | null;
+  reviewNotes: string | null;
+  rejectionReason: string | null;
+  createdClientId: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateIntakeRequest {
+  fullName: string;
+  clientType: string;
+  matterSummary: string;
+  email?: string;
+  phone?: string;
+  source?: string;
+  conflictCheckId?: string;
+}
+
+const INTAKE_PREFIX = '/intake';
+
+export class IntakeClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  createRequest(req: CreateIntakeRequest): Promise<IntakeRequestResult> {
+    return this.client.body<IntakeRequestResult>(
+      `${INTAKE_PREFIX}/requests`,
+      'POST',
+      req,
+    );
+  }
+
+  listRequests(): Promise<IntakeRequestResult[]> {
+    return this.client.body<IntakeRequestResult[]>(
+      `${INTAKE_PREFIX}/requests`,
+      'GET',
+    );
+  }
+
+  reviewRequest(
+    id: string,
+    reviewNotes?: string,
+  ): Promise<IntakeRequestResult> {
+    return this.client.body<IntakeRequestResult>(
+      `${INTAKE_PREFIX}/requests/${encodeURIComponent(id)}/review`,
+      'POST',
+      { reviewNotes },
+    );
+  }
+
+  approveRequest(
+    id: string,
+    reviewNotes?: string,
+  ): Promise<IntakeRequestResult> {
+    return this.client.body<IntakeRequestResult>(
+      `${INTAKE_PREFIX}/requests/${encodeURIComponent(id)}/approve`,
+      'POST',
+      { reviewNotes },
+    );
+  }
+
+  rejectRequest(id: string, reason: string): Promise<IntakeRequestResult> {
+    return this.client.body<IntakeRequestResult>(
+      `${INTAKE_PREFIX}/requests/${encodeURIComponent(id)}/reject`,
+      'POST',
+      { reason },
+    );
+  }
+}

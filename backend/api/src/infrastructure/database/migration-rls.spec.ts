@@ -366,6 +366,21 @@ describe('Phase 10-15 migration assertions', () => {
     }
   });
 
+  it('creates the Phase 29 intake table with FORCE RLS', () => {
+    const intakeMigration = readMigration(
+      '20260908000011_phase29_intake_foundation',
+    );
+
+    expect(intakeMigration).toContain('CREATE TABLE "IntakeRequest"');
+    expect(intakeMigration).toContain(
+      'ALTER TABLE "IntakeRequest" ENABLE ROW LEVEL SECURITY',
+    );
+    expect(intakeMigration).toContain(
+      'ALTER TABLE "IntakeRequest" FORCE ROW LEVEL SECURITY',
+    );
+    expect(intakeMigration).toContain('"IntakeRequest_tenant_isolation"');
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

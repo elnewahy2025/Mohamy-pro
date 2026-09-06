@@ -42,6 +42,7 @@ describe('localized frontend messages', () => {
       notifications: 'Notifications',
       reports: 'Reports',
       dashboard: 'Dashboard',
+      intake: 'Intake',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -74,6 +75,7 @@ describe('localized frontend messages', () => {
       notifications: 'التنبيهات',
       reports: 'التقارير',
       dashboard: 'لوحة المتابعة',
+      intake: 'الاستقبال',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {

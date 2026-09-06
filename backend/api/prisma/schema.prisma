@@ -451,6 +451,7 @@ model Tenant {
   messageAttachments       MessageAttachment[]
   messageConsents          MessageConsent[]
 
+  intakeRequests IntakeRequest[]
   @@index([status, createdAt])
 }
 
@@ -967,6 +968,7 @@ model Client {
   portalMemberships      Membership[]
   portalInvitations      Invitation[]
 
+  intakeConversions IntakeRequest[]
   @@unique([id, tenantId])
   @@unique([tenantId, name])
   @@index([tenantId, status])
@@ -1043,6 +1045,7 @@ model ConflictCheck {
 
   @@unique([id, tenantId])
   @@index([tenantId, status])
+  intakeRequests IntakeRequest[]
 }
 
 // Phase 6: normalized party inputs for a ConflictCheck. Each party has a
@@ -2624,6 +2627,39 @@ model NotificationRule {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, eventType, enabled])
+}
+
+model IntakeRequest {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  fullName             String
+  email                String?
+  phone                String?
+  clientType           ClientType
+  matterSummary        String       @db.Text
+  source               String?
+  status               IntakeStatus @default(NEW)
+  conflictCheckId      String?
+  reviewerMembershipId String?
+  reviewNotes          String?      @db.Text
+  rejectionReason      String?      @db.Text
+  createdClientId      String?
+  createdBy            String
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  tenant               Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  conflictCheck        ConflictCheck? @relation(fields: [conflictCheckId], references: [id], onDelete: SetNull)
+  createdClient        Client?      @relation(fields: [createdClientId], references: [id], onDelete: SetNull)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+enum IntakeStatus {
+  NEW
+  IN_REVIEW
+  APPROVED
+  REJECTED
 }
 
 model Notification {

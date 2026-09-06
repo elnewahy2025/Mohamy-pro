@@ -89,7 +89,8 @@
     "transfer": "استيراد / تصدير",
     "notifications": "التنبيهات",
     "reports": "التقارير",
-    "dashboard": "لوحة المتابعة"
+    "dashboard": "لوحة المتابعة",
+    "intake": "الاستقبال"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -1474,6 +1475,56 @@
       "activity": {
         "heading": "النشاط الأخير",
         "description": "أحدث أحداث القضايا ضمن نطاقك."
+      }
+    }
+  },
+  "intake": {
+    "eyebrow": "المرحلة 29 · استقبال العملاء",
+    "title": "من أول اتصال إلى عميل.",
+    "description": "سجّل العملاء المحتملين، وفرزهم، واربط فحص التضارب، ثم اعتمدهم كعملاء أو ارفضهم بسبب.",
+    "create": "تقديم",
+    "load": "تحميل",
+    "review": "بدء المراجعة",
+    "approve": "اعتماد",
+    "reject": "رفض",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "requestId": "معرّف الطلب",
+      "fullName": "الاسم الكامل",
+      "clientType": "نوع العميل",
+      "matterSummary": "ملخص القضية",
+      "email": "البريد",
+      "phone": "الهاتف",
+      "source": "المصدر",
+      "conflictCheckId": "معرّف فحص التضارب",
+      "reviewNotes": "ملاحظات المراجعة",
+      "reason": "سبب الرفض"
+    },
+    "placeholders": {
+      "requestId": "00000000-0000-4000-8000-000000000000",
+      "fullName": "مثال: ليلى حداد",
+      "clientType": "INDIVIDUAL أو ORGANIZATION",
+      "matterSummary": "ما الذي يحتاجه العميل المحتمل؟",
+      "email": "بريد اختياري",
+      "phone": "هاتف اختياري",
+      "source": "مصدر اختياري، مثال: إحالة",
+      "conflictCheckId": "معرّف فحص تضارب اختياري",
+      "reviewNotes": "ملاحظات اختيارية",
+      "reason": "لماذا تم الرفض؟"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرّف",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "submit": {
+        "heading": "طلب جديد",
+        "description": "سجّل طلب استقبال لعميل محتمل."
+      },
+      "triage": {
+        "heading": "الفرز",
+        "description": "راجع، أو اعتمد كعميل، أو ارفض."
       }
     }
   }

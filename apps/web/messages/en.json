@@ -89,7 +89,8 @@
     "transfer": "Import / Export",
     "notifications": "Notifications",
     "reports": "Reports",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "intake": "Intake"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -1474,6 +1475,56 @@
       "activity": {
         "heading": "Recent activity",
         "description": "Latest case timeline events in scope."
+      }
+    }
+  },
+  "intake": {
+    "eyebrow": "Phase 29 · Client Intake",
+    "title": "From first call to client.",
+    "description": "Register prospects, triage them, link conflict checks, then approve into clients or reject with a reason.",
+    "create": "Submit",
+    "load": "Load",
+    "review": "Start review",
+    "approve": "Approve",
+    "reject": "Reject",
+    "submitting": "Working…",
+    "labels": {
+      "requestId": "Request ID",
+      "fullName": "Full name",
+      "clientType": "Client type",
+      "matterSummary": "Matter summary",
+      "email": "Email",
+      "phone": "Phone",
+      "source": "Source",
+      "conflictCheckId": "Conflict check ID",
+      "reviewNotes": "Review notes",
+      "reason": "Rejection reason"
+    },
+    "placeholders": {
+      "requestId": "00000000-0000-4000-8000-000000000000",
+      "fullName": "e.g. Layla Haddad",
+      "clientType": "INDIVIDUAL or ORGANIZATION",
+      "matterSummary": "What does the prospect need?",
+      "email": "Optional email",
+      "phone": "Optional phone",
+      "source": "Optional source, e.g. referral",
+      "conflictCheckId": "Optional conflict check ID",
+      "reviewNotes": "Optional notes",
+      "reason": "Why is this rejected?"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "submit": {
+        "heading": "New request",
+        "description": "Register a prospect intake request."
+      },
+      "triage": {
+        "heading": "Triage",
+        "description": "Review, approve into a client, or reject."
       }
     }
   }

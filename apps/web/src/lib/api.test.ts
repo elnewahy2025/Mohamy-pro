@@ -6,6 +6,7 @@ import {
   CalendarClient,
   CommsClient,
   DashboardClient,
+  IntakeClient,
   NotificationsClient,
   PortalClient,
   ReportsClient,
@@ -3544,5 +3545,143 @@ describe('DashboardClient (Phase 28)', () => {
     expect(result.cases.open).toBe(2);
     expect(result.billing.unpaidTotals).toEqual({ SAR: '125.75' });
     expect(result.notifications.unread).toBe(4);
+  });
+});
+
+describe('IntakeClient (Phase 29)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function intakeWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-intake' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const baseRequest = {
+    id: 'i1',
+    tenantId: 't1',
+    fullName: 'Layla Haddad',
+    email: null,
+    phone: null,
+    clientType: 'INDIVIDUAL',
+    matterSummary: 'Contract dispute.',
+    source: null,
+    status: 'NEW',
+    conflictCheckId: null,
+    reviewerMembershipId: null,
+    reviewNotes: null,
+    rejectionReason: null,
+    createdClientId: null,
+    createdBy: 'u1',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  } as const;
+
+  it('submits a request via POST /intake/requests', async () => {
+    const { fetchMock, calls } = intakeWith({
+      '/requests': () => enveloped(baseRequest, 201),
+    });
+    const client = new IntakeClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createRequest({
+      fullName: 'Layla Haddad',
+      clientType: 'INDIVIDUAL',
+      matterSummary: 'Contract dispute.',
+    });
+
+    const call = calls.find((c) => c.url.endsWith('/intake/requests'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      fullName: 'Layla Haddad',
+      clientType: 'INDIVIDUAL',
+      matterSummary: 'Contract dispute.',
+    });
+    expect(result.status).toBe('NEW');
+  });
+
+  it('approves via POST /intake/requests/:id/approve', async () => {
+    const { fetchMock, calls } = intakeWith({
+      '/approve': () =>
+        enveloped({
+          ...baseRequest,
+          status: 'APPROVED',
+          createdClientId: 'c1',
+        }),
+    });
+    const client = new IntakeClient(new ApiClient(base, fetchMock));
+
+    const result = await client.approveRequest('i1');
+
+    const call = calls.find((c) =>
+      c.url.endsWith('/intake/requests/i1/approve'),
+    );
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('APPROVED');
+    expect(result.createdClientId).toBe('c1');
+  });
+
+  it('rejects via POST /intake/requests/:id/reject with a reason', async () => {
+    const { fetchMock, calls } = intakeWith({
+      '/reject': () =>
+        enveloped({
+          ...baseRequest,
+          status: 'REJECTED',
+          rejectionReason: 'Conflict found',
+        }),
+    });
+    const client = new IntakeClient(new ApiClient(base, fetchMock));
+
+    const result = await client.rejectRequest('i1', 'Conflict found');
+
+    const call = calls.find((c) =>
+      c.url.endsWith('/intake/requests/i1/reject'),
+    );
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      reason: 'Conflict found',
+    });
+    expect(result.status).toBe('REJECTED');
   });
 });
