@@ -436,6 +436,9 @@ model Tenant {
   importJobs               ImportJob[]
   importRowErrors          ImportRowError[]
   exportJobs               ExportJob[]
+  notificationRules        NotificationRule[]
+  notifications            Notification[]
+  notificationPreferences  NotificationPreference[]
   calendarConnections      CalendarConnection[]
   calendarSyncCursors      CalendarSyncCursor[]
   calendarEventMappings    CalendarEventMapping[]
@@ -540,6 +543,8 @@ model Membership {
   invitationsSent   Invitation[]       @relation("InvitationInviterMembership")
   denialsCreated    AccessDenial[]     @relation("DenialCreatedByMembership")
   caseAssignments   CaseAssignment[]
+  notifications     Notification[]
+  notificationPreferences NotificationPreference[]
   breakGlassSubjects  BreakGlassActivation[] @relation("BreakGlassSubject")
   breakGlassCreated   BreakGlassActivation[] @relation("BreakGlassCreator")
   directGrants        DirectPermissionGrant[] @relation("DirectGrantMembership")
@@ -2221,6 +2226,32 @@ enum ExportStatus {
   EXPIRED
 }
 
+enum NotificationEvent {
+  INVOICE_ISSUED
+  HEARING_SCHEDULED
+  DEADLINE_CREATED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  READ
+  FAILED
+}
+
+enum NotificationAudience {
+  ASSIGNEES
+  ALL_MEMBERS
+}
+
 enum FeeKind {
   FIXED
   HOURLY
@@ -2548,6 +2579,66 @@ model ExportJob {
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, status])
+}
+
+
+model NotificationRule {
+  id                      String              @id @default(uuid())
+  tenantId                String
+  eventType               NotificationEvent
+  channels                String[]            @default(["IN_APP"])
+  audience                NotificationAudience @default(ASSIGNEES)
+  enabled                 Boolean             @default(true)
+  escalationHours         Int?
+  escalateToMembershipId  String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, eventType, enabled])
+}
+
+model Notification {
+  id           String             @id @default(uuid())
+  tenantId     String
+  membershipId String
+  title        String
+  body         String             @db.Text
+  channel      NotificationChannel @default(IN_APP)
+  status       NotificationStatus @default(PENDING)
+  relatedType  String?
+  relatedId    String?
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  readAt       DateTime?
+  escalated    Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([tenantId, membershipId, status])
+  @@index([tenantId, status, scheduledFor])
+}
+
+model NotificationPreference {
+  id           String              @id @default(uuid())
+  tenantId     String
+  membershipId String
+  channel      NotificationChannel
+  enabled      Boolean             @default(true)
+  quietStart   String?
+  quietEnd     String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, membershipId, channel])
+  @@index([tenantId, membershipId])
 }
 
 model Fee {

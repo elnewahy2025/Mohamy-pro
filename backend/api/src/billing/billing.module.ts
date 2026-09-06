@@ -14,6 +14,7 @@ import { DatabaseModule } from '../infrastructure/database/database.module';
 import { AuditModule } from '../audit/audit.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationModule } from '../notifications/notification.module';
 import { CaseTimelineModule } from '../case-timeline/case-timeline.module';
 
 @Module({

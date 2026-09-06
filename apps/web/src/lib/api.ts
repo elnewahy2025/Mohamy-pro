@@ -2781,3 +2781,106 @@ export class TransferClient {
     return this.client.body<{ csv: string; expiresAt: string | null }>(`${TRANSFER_PREFIX}/exports/${encodeURIComponent(id)}/download`, 'GET');
   }
 }
+
+// --- Phase 26: Notifications ---
+
+export type NotificationEvent = 'INVOICE_ISSUED' | 'HEARING_SCHEDULED' | 'DEADLINE_CREATED';
+export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS' | 'WHATSAPP' | 'PUSH';
+export type NotificationStatus = 'PENDING' | 'SENT' | 'READ' | 'FAILED';
+export type NotificationAudience = 'ASSIGNEES' | 'ALL_MEMBERS';
+
+export interface NotificationRuleResult {
+  id: string;
+  tenantId: string;
+  eventType: NotificationEvent;
+  channels: NotificationChannel[];
+  audience: NotificationAudience;
+  enabled: boolean;
+  escalationHours: number | null;
+  escalateToMembershipId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationResult {
+  id: string;
+  tenantId: string;
+  membershipId: string;
+  title: string;
+  body: string;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  relatedType: string | null;
+  relatedId: string | null;
+  scheduledFor: string | null;
+  sentAt: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationPreferenceResult {
+  id: string;
+  tenantId: string;
+  membershipId: string;
+  channel: NotificationChannel;
+  enabled: boolean;
+  quietStart: string | null;
+  quietEnd: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRuleRequest {
+  eventType: NotificationEvent;
+  channels: NotificationChannel[];
+  audience?: NotificationAudience;
+  enabled?: boolean;
+  escalationHours?: number;
+  escalateToMembershipId?: string;
+}
+
+export interface UpdateRuleRequest {
+  enabled?: boolean;
+  escalationHours?: number;
+}
+
+export interface SetPreferenceRequest {
+  channel: NotificationChannel;
+  enabled: boolean;
+  quietStart?: string;
+  quietEnd?: string;
+}
+
+const NOTIFICATIONS_PREFIX = '/notifications';
+
+export class NotificationsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  createRule(req: CreateRuleRequest): Promise<NotificationRuleResult> {
+    return this.client.body<NotificationRuleResult>(`${NOTIFICATIONS_PREFIX}/rules`, 'POST', req);
+  }
+
+  updateRule(id: string, req: UpdateRuleRequest): Promise<NotificationRuleResult> {
+    return this.client.body<NotificationRuleResult>(`${NOTIFICATIONS_PREFIX}/rules/${encodeURIComponent(id)}`, 'PATCH', req);
+  }
+
+  listRules(): Promise<NotificationRuleResult[]> {
+    return this.client.body<NotificationRuleResult[]>(`${NOTIFICATIONS_PREFIX}/rules`, 'GET');
+  }
+
+  inbox(): Promise<NotificationResult[]> {
+    return this.client.body<NotificationResult[]>(`${NOTIFICATIONS_PREFIX}/inbox`, 'GET');
+  }
+
+  markRead(id: string): Promise<{ count: number }> {
+    return this.client.body<{ count: number }>(`${NOTIFICATIONS_PREFIX}/inbox/${encodeURIComponent(id)}/read`, 'POST');
+  }
+
+  setPreference(req: SetPreferenceRequest): Promise<NotificationPreferenceResult> {
+    return this.client.body<NotificationPreferenceResult>(`${NOTIFICATIONS_PREFIX}/preferences`, 'POST', req);
+  }
+
+  listPreferences(): Promise<NotificationPreferenceResult[]> {
+    return this.client.body<NotificationPreferenceResult[]>(`${NOTIFICATIONS_PREFIX}/preferences`, 'GET');
+  }
+}

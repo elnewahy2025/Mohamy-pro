@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiClient, BillingsClient, BreakGlassClient, CalendarClient, CommsClient, PortalClient, TransferClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
+import { ApiClient, BillingsClient, BreakGlassClient, CalendarClient, CommsClient, NotificationsClient, PortalClient, TransferClient, CasesClient, ClientsClient, ConflictChecksClient, DeadlinesClient, DocumentsClient, HearingsClient, LegalConfigClient, PartyClient, TasksClient, WorkflowsClient } from './api';
 
 function okJson(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -1189,6 +1189,87 @@ describe('TransferClient (Phase 25)', () => {
     const call = calls.find((c) => c.url.endsWith('/transfer/exports/e1/download'));
     expect(call?.init?.method).toBe('GET');
     expect(result.csv).toContain('id');
+  });
+});
+
+describe('NotificationsClient (Phase 26)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function clientWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-notif' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('creates a rule via POST /notifications/rules', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/notifications/rules': () => enveloped({ id: 'r1', eventType: 'INVOICE_ISSUED' }, 201),
+    });
+    const client = new NotificationsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createRule({ eventType: 'INVOICE_ISSUED', channels: ['IN_APP'] });
+
+    const call = calls.find((c) => c.url.endsWith('/notifications/rules') && c.init?.method === 'POST');
+    expect(call?.init?.method).toBe('POST');
+    expect(result.id).toBe('r1');
+  });
+
+  it('reads the inbox via GET /notifications/inbox', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/notifications/inbox': () => enveloped([{ id: 'n1', title: 'Hi', status: 'SENT' }]),
+    });
+    const client = new NotificationsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.inbox();
+
+    const call = calls.find((c) => c.url.endsWith('/notifications/inbox'));
+    expect(call?.init?.method).toBe('GET');
+    expect(String(call?.url)).not.toContain('/v1/v1');
+    expect(result).toHaveLength(1);
+  });
+
+  it('saves preferences via POST /notifications/preferences', async () => {
+    const { fetchMock, calls } = clientWith({
+      '/notifications/preferences': () => enveloped({ id: 'p1', channel: 'IN_APP', enabled: false }),
+    });
+    const client = new NotificationsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.setPreference({ channel: 'IN_APP', enabled: false });
+
+    const call = calls.find((c) => c.url.endsWith('/notifications/preferences'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.enabled).toBe(false);
   });
 });
 

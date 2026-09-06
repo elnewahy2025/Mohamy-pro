@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CaseTimelineService } from '../case-timeline/case-timeline.service';
+import { DispatchService } from '../notifications/dispatch.service';
 import {
   BillingInvalidStateError,
   BillingNotFoundError,
@@ -14,9 +15,12 @@ function dec(value: Prisma.Decimal | number | string): Prisma.Decimal {
 
 @Injectable()
 export class InvoiceService {
+  private readonly logger = new Logger(InvoiceService.name);
+
   constructor(
     private readonly ledger: LedgerService,
     private readonly timeline: CaseTimelineService,
+    private readonly dispatch: DispatchService,
   ) {}
 
   async create(
@@ -245,6 +249,19 @@ export class InvoiceService {
           },
         },
       );
+    }
+    try {
+      await this.dispatch.dispatch(tx, tenantId, {
+        eventType: 'INVOICE_ISSUED',
+        caseId: issued.caseId ?? undefined,
+        title: `Invoice ${issued.invoiceNumber} issued`,
+        body: `Total ${total.toString()} ${issued.currency}`,
+      });
+    } catch (error) {
+      this.logger.warn({
+        message: 'Invoice notification dispatch failed',
+        reason: error instanceof Error ? error.message : String(error),
+      });
     }
     return issued;
   }

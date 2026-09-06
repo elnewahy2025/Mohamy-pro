@@ -10,6 +10,7 @@ import {
   MessageSquare,
   DoorOpen,
   ArrowLeftRight,
+  Bell,
   LayoutDashboard,
   ReceiptText,
   Scale,
@@ -44,6 +45,7 @@ export const appNavGroups: AppNavGroup[] = [
       { href: '/tasks', labelKey: 'navigation.tasks', icon: CheckSquare },
       { href: '/documents', labelKey: 'navigation.documents', icon: FileText },
       { href: '/secure-links', labelKey: 'navigation.secureLinks', icon: ShieldCheck },
+      { href: '/notifications', labelKey: 'navigation.notifications', icon: Bell },
     ],
   },
   {

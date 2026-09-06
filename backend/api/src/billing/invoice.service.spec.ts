@@ -5,10 +5,12 @@ import { BillingInvalidStateError } from './billing.errors';
 function service() {
   const ledger = { postBalanced: jest.fn() };
   const timeline = { recordEvent: jest.fn() };
+  const dispatch = { dispatch: jest.fn().mockResolvedValue(0) };
   return {
     ledger,
     timeline,
-    svc: new InvoiceService(ledger as any, timeline as any),
+    dispatch,
+    svc: new InvoiceService(ledger as any, timeline as any, dispatch as any),
   };
 }
 
@@ -132,6 +134,44 @@ describe('InvoiceService', () => {
       'm1',
       expect.objectContaining({ caseId: 'c1', eventType: 'INVOICE_CREATED' }),
     );
+  });
+
+  it('dispatches invoice notifications best-effort without failing issue', async () => {
+    const tx = {
+      invoice: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'inv1',
+          status: 'DRAFT',
+          total: '100.0000',
+          currency: 'EGP',
+          caseId: 'c1',
+        }),
+        update: jest.fn().mockImplementation(({ data }: any) => ({
+          id: 'inv1',
+          caseId: 'c1',
+          invoiceNumber: 'INV-001',
+          currency: 'EGP',
+          total: '100.0000',
+          ...data,
+        })),
+      },
+    };
+    const { svc, dispatch } = service();
+
+    await svc.issue(tx as any, 't1', 'u1', 'm1', 'inv1');
+
+    expect(dispatch.dispatch).toHaveBeenCalledWith(
+      tx,
+      't1',
+      expect.objectContaining({ eventType: 'INVOICE_ISSUED', caseId: 'c1' }),
+    );
+
+    (dispatch.dispatch as jest.Mock).mockRejectedValueOnce(
+      new Error('queue down'),
+    );
+    await expect(
+      svc.issue(tx as any, 't1', 'u1', 'm1', 'inv1'),
+    ).resolves.toBeDefined();
   });
 
   it('refuses to issue non-draft and void paid invoices', async () => {

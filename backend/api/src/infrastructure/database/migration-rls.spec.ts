@@ -324,6 +324,27 @@ describe('Phase 10-15 migration assertions', () => {
     }
   });
 
+  it('creates all 3 Phase 26 notification tables with FORCE RLS', () => {
+    const notificationsMigration = readMigration(
+      '20260908000009_phase26_notifications_foundation',
+    );
+
+    for (const table of [
+      'NotificationRule',
+      'Notification',
+      'NotificationPreference',
+    ]) {
+      expect(notificationsMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(notificationsMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(notificationsMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(notificationsMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

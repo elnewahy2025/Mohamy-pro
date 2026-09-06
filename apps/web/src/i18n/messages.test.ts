@@ -37,6 +37,7 @@ describe('localized frontend messages', () => {
       calendar: 'Calendar',
       portal: 'Portal',
       transfer: 'Import / Export',
+      notifications: 'Notifications',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -66,6 +67,7 @@ describe('localized frontend messages', () => {
       calendar: 'التقويم',
       portal: 'البوابة',
       transfer: 'استيراد / تصدير',
+      notifications: 'التنبيهات',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {

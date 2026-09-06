@@ -36,6 +36,7 @@ export const PERMISSION_KEYS = {
   CAN_ACCESS_PORTAL: 'CanAccessPortal',
   CAN_MANAGE_IMPORTS: 'CanManageImports',
   CAN_MANAGE_EXPORTS: 'CanManageExports',
+  CAN_MANAGE_NOTIFICATIONS: 'CanManageNotifications',
   CAN_ACCESS_ASSIGNED_CASES: 'CanAccessAssignedCases',
 } as const;
 
@@ -194,6 +195,10 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     key: PERMISSION_KEYS.CAN_MANAGE_EXPORTS,
     description: 'Generate and download capped data exports.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_NOTIFICATIONS,
+    description: 'Manage notification rules within the active tenant.',
+  },
 ];
 /**
  * Default permission set granted to each built-in role. Keyed by stable role
@@ -229,6 +234,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_ACCESS_ASSIGNED_CASES,
     PERMISSION_KEYS.CAN_MANAGE_IMPORTS,
     PERMISSION_KEYS.CAN_MANAGE_EXPORTS,
+    PERMISSION_KEYS.CAN_MANAGE_NOTIFICATIONS,
   ],
   [ROLE_KEY_TENANT_MANAGER]: [
     PERMISSION_KEYS.CAN_VIEW_TENANT,

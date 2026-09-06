@@ -86,7 +86,8 @@
     "communications": "Communications",
     "calendar": "Calendar",
     "portal": "Portal",
-    "transfer": "Import / Export"
+    "transfer": "Import / Export",
+    "notifications": "Notifications"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -1337,6 +1338,56 @@
       "export": {
         "heading": "Export",
         "description": "Generate capped, watermarked CSV downloads that expire."
+      }
+    }
+  },
+  "notifications": {
+    "eyebrow": "Phase 26 · Notifications",
+    "title": "Never miss what matters.",
+    "description": "Event-driven in-app notifications with per-channel preferences, quiet hours, and escalations. Other channels arrive with their providers.",
+    "create": "Create rule",
+    "save": "Save preferences",
+    "markRead": "Mark read",
+    "load": "Load",
+    "submitting": "Working…",
+    "labels": {
+      "eventType": "Event",
+      "channels": "Channels",
+      "audience": "Audience",
+      "enabled": "Enabled",
+      "escalationHours": "Escalate after (hours)",
+      "escalateTo": "Escalate to membership",
+      "channel": "Channel",
+      "quietStart": "Quiet from",
+      "quietEnd": "Quiet until"
+    },
+    "placeholders": {
+      "eventType": "INVOICE_ISSUED, HEARING_SCHEDULED or DEADLINE_CREATED",
+      "channels": "IN_APP only until providers land",
+      "audience": "ASSIGNEES or ALL_MEMBERS",
+      "escalationHours": "e.g. 24",
+      "escalateTo": "00000000-0000-4000-8000-000000000000",
+      "channel": "IN_APP",
+      "quietStart": "HH:MM, e.g. 22:00",
+      "quietEnd": "HH:MM, e.g. 07:00"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "inbox": {
+        "heading": "Inbox",
+        "description": "Your notifications, newest first."
+      },
+      "preferences": {
+        "heading": "Preferences",
+        "description": "Per-channel switches and quiet hours. Disabled wins."
+      },
+      "rules": {
+        "heading": "Rules",
+        "description": "Admin event rules, audiences, and escalations."
       }
     }
   }

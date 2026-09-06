@@ -10,6 +10,7 @@ import {
   ResourceAccessService,
   type CaseAccessScope,
 } from '../permissions/resource-access.service';
+import { DispatchService } from '../notifications/dispatch.service';
 
 export interface CaseScope {
   scope: CaseAccessScope;
@@ -20,7 +21,10 @@ export interface CaseScope {
 export class HearingService {
   private readonly logger = new Logger(HearingService.name);
 
-  constructor(private readonly resourceAccess: ResourceAccessService) {}
+  constructor(
+    private readonly resourceAccess: ResourceAccessService,
+    private readonly dispatch: DispatchService,
+  ) {}
 
   async createHearing(
     tx: Prisma.TransactionClient,
@@ -61,7 +65,7 @@ export class HearingService {
       }),
     );
 
-    return tx.hearing.create({
+    const hearing = await tx.hearing.create({
       data: {
         tenantId,
         caseId: dto.caseId,
@@ -75,6 +79,20 @@ export class HearingService {
         nextHearingId: dto.nextHearingId,
       },
     });
+    try {
+      await this.dispatch.dispatch(tx, tenantId, {
+        eventType: 'HEARING_SCHEDULED',
+        caseId: dto.caseId,
+        title: `Hearing scheduled for ${dto.date}`,
+        body: dto.hearingType ?? 'Hearing',
+      });
+    } catch (error) {
+      this.logger.warn({
+        message: 'Hearing notification dispatch failed',
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return hearing;
   }
 
   private async requireVisible(

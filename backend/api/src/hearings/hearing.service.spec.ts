@@ -10,7 +10,7 @@ describe('HearingService', () => {
   let service: HearingService;
 
   beforeEach(() => {
-    service = new HearingService({} as any);
+    service = new HearingService({} as any, { dispatch: jest.fn() } as any);
   });
 
   describe('createHearing', () => {
@@ -155,7 +155,10 @@ describe('HearingService assigned scoping (G6)', () => {
   const scoped = { scope: 'ASSIGNED', membershipId: 'mem-1' } as const;
 
   function serviceWith(resourceAccess: unknown) {
-    return new HearingService(resourceAccess as never);
+    return new HearingService(
+      resourceAccess as never,
+      { dispatch: jest.fn() } as never,
+    );
   }
 
   it('requires assignment for a scoped caseId and filters otherwise', async () => {

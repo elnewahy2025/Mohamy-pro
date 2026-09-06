@@ -86,7 +86,8 @@
     "communications": "الاتصالات",
     "calendar": "التقويم",
     "portal": "البوابة",
-    "transfer": "استيراد / تصدير"
+    "transfer": "استيراد / تصدير",
+    "notifications": "التنبيهات"
   },
   "overview": {
     "eyebrow": "أساس المرحلة الأولى",
@@ -1337,6 +1338,56 @@
       "export": {
         "heading": "التصدير",
         "description": "أنشئ تنزيلات CSV محدودة وموقعة تنتهي صلاحيتها."
+      }
+    }
+  },
+  "notifications": {
+    "eyebrow": "المرحلة 26 · التنبيهات",
+    "title": "لا يفوتك ما يهم.",
+    "description": "تنبيهات داخل التطبيق مدفوعة بالأحداث مع تفضيلات لكل قناة وساعات هدوء وتصعيد. تصل القنوات الأخرى مع مزوديها.",
+    "create": "إنشاء قاعدة",
+    "save": "حفظ التفضيلات",
+    "markRead": "تعليم كمقروء",
+    "load": "تحميل",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "eventType": "الحدث",
+      "channels": "القنوات",
+      "audience": "الجمهور",
+      "enabled": "مفعّلة",
+      "escalationHours": "التصعيد بعد (ساعات)",
+      "escalateTo": "التصعيد إلى عضوية",
+      "channel": "القناة",
+      "quietStart": "الهدوء من",
+      "quietEnd": "الهدوء حتى"
+    },
+    "placeholders": {
+      "eventType": "INVOICE_ISSUED أو HEARING_SCHEDULED أو DEADLINE_CREATED",
+      "channels": "IN_APP فقط حتى تصل المزودات",
+      "audience": "ASSIGNEES أو ALL_MEMBERS",
+      "escalationHours": "مثال: 24",
+      "escalateTo": "00000000-0000-4000-8000-000000000000",
+      "channel": "IN_APP",
+      "quietStart": "HH:MM مثال: 22:00",
+      "quietEnd": "HH:MM مثال: 07:00"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "id": "المعرّف",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "sections": {
+      "inbox": {
+        "heading": "الوارد",
+        "description": "تنبيهاتك، الأحدث أولاً."
+      },
+      "preferences": {
+        "heading": "التفضيلات",
+        "description": "مفاتيح لكل قناة وساعات هدوء. التعطيل يغلُب."
+      },
+      "rules": {
+        "heading": "القواعد",
+        "description": "قواعد الأحداث والجمهور والتصعيد للإدارة."
       }
     }
   }
