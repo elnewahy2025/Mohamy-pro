@@ -148,16 +148,47 @@ export class SessionService {
       throw new SessionNotAuthenticatedError('Account is not active');
     }
 
+    let activeTenantId = session.activeTenantId;
+    let activeMembershipId = session.activeMembershipId;
+
     if (now.getTime() - session.lastUsedAt.getTime() >= LAST_USED_THROTTLE_MS) {
       // Sliding idle window: push the idle deadline forward (while keeping the
       // fixed absolute ceiling) together with the throttled lastUsedAt refresh,
       // so an actively-used session does not expire on its creation-time idle TTL.
+      // Piggyback membership re-validation on the same throttled tick so a
+      // suspended/expired/removed membership loses its tenant context within
+      // minutes instead of surviving until session expiry. The session itself
+      // stays valid for identity-only flows; tenant-gated calls fail closed
+      // and the user can switch to a remaining active membership.
+      if (activeTenantId) {
+        const membership = await this.prisma.membership.findFirst({
+          where: { userId: session.userId, tenantId: activeTenantId },
+          select: {
+            id: true,
+            status: true,
+            activeFrom: true,
+            activeUntil: true,
+          },
+        });
+        const usable =
+          membership !== null &&
+          membership.status === 'ACTIVE' &&
+          !(membership.activeFrom && membership.activeFrom > now) &&
+          !(membership.activeUntil && membership.activeUntil <= now);
+        if (!usable) {
+          activeTenantId = null;
+          activeMembershipId = null;
+        }
+      }
       const idleTtl = this.idleTtlSeconds();
       await this.prisma.appSession.update({
         where: { id: session.id },
         data: {
           lastUsedAt: now,
           idleExpiresAt: new Date(now.getTime() + idleTtl * 1000),
+          activeTenantId,
+          activeMembershipId,
+          contextVersion: { increment: 1 },
         },
       });
     }
@@ -167,7 +198,7 @@ export class SessionService {
       userId: session.userId,
       provider: session.provider,
       providerSubject: session.providerSubject,
-      activeTenantId: session.activeTenantId,
+      activeTenantId,
     };
   }
 

@@ -17,6 +17,7 @@ function prismaMock() {
     },
     membership: {
       findMany: jest.fn(),
+      findFirst: jest.fn(),
     },
   };
 }
@@ -251,6 +252,97 @@ describe('SessionService', () => {
       await service.validateSession('the-token');
 
       expect(prisma.appSession.update).not.toHaveBeenCalled();
+    });
+
+    it('clears tenant context when the membership is suspended (G10)', async () => {
+      const rec = sessionRecord({
+        lastUsedAt: new Date(Date.now() - 10 * 60 * 1000),
+        activeTenantId: 'tenant-1',
+        activeMembershipId: 'member-1',
+      });
+      prisma.appSession.findUnique.mockResolvedValue(rec);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        status: UserStatus.ACTIVE,
+      });
+      prisma.membership.findFirst.mockResolvedValue({
+        id: 'member-1',
+        status: 'SUSPENDED',
+        activeFrom: null,
+        activeUntil: null,
+      });
+
+      const details = await service.validateSession('the-token');
+
+      expect(details.activeTenantId).toBeNull();
+      const data = prisma.appSession.update.mock.calls[0][0].data;
+      expect(data.activeTenantId).toBeNull();
+      expect(data.activeMembershipId).toBeNull();
+      expect(data.contextVersion).toEqual({ increment: 1 });
+    });
+
+    it('clears tenant context when the membership window lapsed (G10)', async () => {
+      const rec = sessionRecord({
+        lastUsedAt: new Date(Date.now() - 10 * 60 * 1000),
+        activeTenantId: 'tenant-1',
+        activeMembershipId: 'member-1',
+      });
+      prisma.appSession.findUnique.mockResolvedValue(rec);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        status: UserStatus.ACTIVE,
+      });
+      prisma.membership.findFirst.mockResolvedValue({
+        id: 'member-1',
+        status: 'ACTIVE',
+        activeFrom: null,
+        activeUntil: new Date(Date.now() - 1000),
+      });
+
+      const details = await service.validateSession('the-token');
+
+      expect(details.activeTenantId).toBeNull();
+    });
+
+    it('keeps tenant context for an active in-window membership (G10)', async () => {
+      const rec = sessionRecord({
+        lastUsedAt: new Date(Date.now() - 10 * 60 * 1000),
+        activeTenantId: 'tenant-1',
+        activeMembershipId: 'member-1',
+      });
+      prisma.appSession.findUnique.mockResolvedValue(rec);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        status: UserStatus.ACTIVE,
+      });
+      prisma.membership.findFirst.mockResolvedValue({
+        id: 'member-1',
+        status: 'ACTIVE',
+        activeFrom: null,
+        activeUntil: null,
+      });
+
+      const details = await service.validateSession('the-token');
+
+      expect(details.activeTenantId).toBe('tenant-1');
+      const data = prisma.appSession.update.mock.calls[0][0].data;
+      expect(data.activeTenantId).toBe('tenant-1');
+    });
+
+    it('skips membership lookup for identity-only sessions (G10)', async () => {
+      const rec = sessionRecord({
+        lastUsedAt: new Date(Date.now() - 10 * 60 * 1000),
+      });
+      prisma.appSession.findUnique.mockResolvedValue(rec);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        status: UserStatus.PENDING,
+      });
+
+      const details = await service.validateSession('the-token');
+
+      expect(details.activeTenantId).toBeNull();
+      expect(prisma.membership.findFirst).not.toHaveBeenCalled();
     });
 
     it('throws SessionNotFoundError for an unknown token', async () => {
