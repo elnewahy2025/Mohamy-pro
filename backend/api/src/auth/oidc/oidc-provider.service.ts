@@ -229,6 +229,11 @@ export class OidcProviderService implements OnModuleInit {
       familyName: claims.family_name,
       locale: claims.locale,
       providerSessionId: claims.sid,
+      amr: Array.isArray(claims.amr)
+        ? claims.amr.filter(
+            (method: unknown): method is string => typeof method === 'string',
+          )
+        : undefined,
     };
   }
 }

@@ -19,6 +19,22 @@ import {
 
 const LAST_USED_THROTTLE_MS = 5 * 60 * 1_000;
 
+const SECOND_FACTORS = new Set([
+  'otp',
+  'totp',
+  'hotp',
+  'sms',
+  'mfa',
+  'webauthn',
+  'fido2',
+  'hwk',
+]);
+
+function hasSecondFactor(amr: string[] | undefined): boolean {
+  if (!amr) return false;
+  return amr.some((method) => SECOND_FACTORS.has(method.toLowerCase()));
+}
+
 export interface SessionDetails {
   sessionId: string;
   userId: string;
@@ -84,12 +100,14 @@ export class SessionService {
     const defaultMembership =
       activeMemberships.length === 1 ? activeMemberships[0] : null;
 
+    const mfaVerifiedAt = hasSecondFactor(profile.amr) ? now : null;
     const session = await this.prisma.appSession.create({
       data: {
         userId: user.id,
         tokenHash: hashToken(token),
         csrfTokenHash: hashToken(csrfToken),
         status: SessionStatus.ACTIVE,
+        mfaVerifiedAt,
         provider: AUTH_PROVIDER,
         providerSubject: profile.subject,
         providerSessionId: profile.providerSessionId ?? null,

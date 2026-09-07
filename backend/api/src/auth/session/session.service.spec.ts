@@ -534,3 +534,39 @@ describe('SessionService', () => {
     });
   });
 });
+
+describe('SessionService MFA marking', () => {
+  it('stamps mfaVerifiedAt when the provider reports a second factor', async () => {
+    const prisma = prismaMock();
+    const config = configMock();
+    const service = new SessionService(prisma as any, config as any);
+    prisma.appSession.create.mockResolvedValue(sessionRecord());
+    prisma.membership.findMany.mockResolvedValue([]);
+
+    await service.createSession({
+      user: { id: 'user-1', status: UserStatus.ACTIVE },
+      profile: { ...profile, amr: ['pwd', 'otp'] },
+      tokens,
+    });
+
+    const data = prisma.appSession.create.mock.calls[0][0].data;
+    expect(data.mfaVerifiedAt).toBeInstanceOf(Date);
+  });
+
+  it('leaves mfaVerifiedAt null for password-only logins', async () => {
+    const prisma = prismaMock();
+    const config = configMock();
+    const service = new SessionService(prisma as any, config as any);
+    prisma.appSession.create.mockResolvedValue(sessionRecord());
+    prisma.membership.findMany.mockResolvedValue([]);
+
+    await service.createSession({
+      user: { id: 'user-1', status: UserStatus.ACTIVE },
+      profile: { ...profile, amr: ['pwd'] },
+      tokens,
+    });
+
+    const data = prisma.appSession.create.mock.calls[0][0].data;
+    expect(data.mfaVerifiedAt).toBeNull();
+  });
+});

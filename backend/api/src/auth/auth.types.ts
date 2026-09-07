@@ -15,6 +15,7 @@ export interface OidcProfile {
   familyName?: string;
   locale?: string;
   providerSessionId?: string;
+  amr?: string[];
 }
 
 export interface AuthUrl {
