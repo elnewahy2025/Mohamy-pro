@@ -166,6 +166,7 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'backup.policy.set': ['rpoHours', 'rtoHours'],
   'restore.drill.started': [],
   'restore.drill.finished': [],
+  'user.provisioned': ['roleKeysCount'],
   'notification.rule.created': ['eventType'],
   'notification.rule.updated': [],
   'notification.sent': ['recipientCount'],

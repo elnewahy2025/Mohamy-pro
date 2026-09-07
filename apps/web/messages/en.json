@@ -376,6 +376,32 @@
         "create": "Create and grant",
         "assign": "Assign and revoke"
       }
+    },
+    "provision": {
+      "createTitle": "Create a user",
+      "createDescription": "Create the identity-provider account, set a temporary password, invite the user to this tenant, and grant roles — all from here.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "user@example.com",
+      "invalidEmail": "Enter a valid email address.",
+      "usernameLabel": "Username (optional)",
+      "usernamePlaceholder": "Defaults to the email local part",
+      "invalidUsername": "3-64 chars: letters, digits, dot, underscore, dash.",
+      "firstNameLabel": "First name (optional)",
+      "firstNamePlaceholder": "Given name",
+      "lastNameLabel": "Last name (optional)",
+      "lastNamePlaceholder": "Family name",
+      "passwordLabel": "Temporary password",
+      "passwordPlaceholder": "At least 12 characters",
+      "passwordTooShort": "Password must be at least 12 characters.",
+      "roleKeysLabel": "Role keys (comma separated)",
+      "roleKeysPlaceholder": "tenant.admin, tenant.lawyer",
+      "atLeastOneRole": "Grant at least one role.",
+      "submit": "Create user",
+      "submitting": "Creating…",
+      "successTitle": "User created and invited",
+      "invitation": "Invitation",
+      "expires": "Expires",
+      "invalidRoleKeys": "Enter 1-20 role keys, each at most 80 characters."
     }
   },
   "orgConfig": {

@@ -376,6 +376,32 @@
         "create": "الإنشاء والمنح",
         "assign": "الإسناد والسحب"
       }
+    },
+    "provision": {
+      "createTitle": "إنشاء مستخدم",
+      "createDescription": "أنشئ حساب موفر الهوية، وعيّن كلمة مرور مؤقتة، وادعُ المستخدم إلى هذا المستأجر، وامنح الأدوار — كل ذلك من هنا.",
+      "emailLabel": "البريد",
+      "emailPlaceholder": "user@example.com",
+      "invalidEmail": "أدخل بريداً صحيحاً.",
+      "usernameLabel": "اسم المستخدم (اختياري)",
+      "usernamePlaceholder": "افتراضياً الجزء المحلي من البريد",
+      "invalidUsername": "3-64 حرفاً: أحرف وأرقام ونقطة وشرطة.",
+      "firstNameLabel": "الاسم الأول (اختياري)",
+      "firstNamePlaceholder": "الاسم المعطى",
+      "lastNameLabel": "اسم العائلة (اختياري)",
+      "lastNamePlaceholder": "اسم العائلة",
+      "passwordLabel": "كلمة مرور مؤقتة",
+      "passwordPlaceholder": "12 حرفاً على الأقل",
+      "passwordTooShort": "يجب أن تكون كلمة المرور 12 حرفاً على الأقل.",
+      "roleKeysLabel": "مفاتيح الأدوار (مفصولة بفواصل)",
+      "roleKeysPlaceholder": "tenant.admin, tenant.lawyer",
+      "atLeastOneRole": "امنح دوراً واحداً على الأقل.",
+      "submit": "إنشاء المستخدم",
+      "submitting": "جارٍ الإنشاء…",
+      "successTitle": "تم إنشاء المستخدم ودعوته",
+      "invitation": "الدعوة",
+      "expires": "تنتهي",
+      "invalidRoleKeys": "أدخل 1-20 مفتاح دور، كل منها 80 حرفاً كحد أقصى."
     }
   },
   "orgConfig": {

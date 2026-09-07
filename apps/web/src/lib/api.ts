@@ -302,6 +302,12 @@ export class ApiClient {
     );
   }
 
+  async provisionUser(
+    request: ProvisionUserRequest,
+  ): Promise<ProvisionUserResult> {
+    return this.body<ProvisionUserResult>('/identity/users', 'POST', request);
+  }
+
   async acceptInvitation(token: string): Promise<InvitationAcceptResult> {
     return this.body<InvitationAcceptResult>(
       '/membership/invitations/accept',
@@ -3968,4 +3974,20 @@ export class OpsClient {
       { passed, checks, ...(note ? { note } : {}) },
     );
   }
+}
+
+export interface ProvisionUserRequest {
+  email: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  password: string;
+  temporaryPassword?: boolean;
+  roleKeys: string[];
+}
+
+export interface ProvisionUserResult {
+  providerSubject: string;
+  invitationId: string;
+  expiresAt: string;
 }

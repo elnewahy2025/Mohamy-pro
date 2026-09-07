@@ -33,6 +33,8 @@ export interface ValidatedEnvironment extends Record<string, unknown> {
   OIDC_REDIRECT_URI?: string;
   OIDC_POST_LOGOUT_REDIRECT_URI?: string;
   OIDC_SCOPE: string;
+  KEYCLOAK_ADMIN_CLIENT_ID?: string;
+  KEYCLOAK_ADMIN_CLIENT_SECRET?: string;
   SESSION_COOKIE_NAME: string;
   SESSION_SECRET: string;
   SESSION_IDLE_TTL_SECONDS: number;
@@ -518,6 +520,16 @@ export function validateEnvironment(
         }
       : {}),
     OIDC_SCOPE: oidcScope,
+    ...(readString(raw.KEYCLOAK_ADMIN_CLIENT_ID)
+      ? { KEYCLOAK_ADMIN_CLIENT_ID: readString(raw.KEYCLOAK_ADMIN_CLIENT_ID) }
+      : {}),
+    ...(readString(raw.KEYCLOAK_ADMIN_CLIENT_SECRET)
+      ? {
+          KEYCLOAK_ADMIN_CLIENT_SECRET: readString(
+            raw.KEYCLOAK_ADMIN_CLIENT_SECRET,
+          ),
+        }
+      : {}),
     SESSION_COOKIE_NAME: sessionCookieName,
     SESSION_SECRET: requiredValue(
       'SESSION_SECRET',

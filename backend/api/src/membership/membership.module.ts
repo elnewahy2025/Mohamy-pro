@@ -10,5 +10,6 @@ import { InvitationService } from './invitation/invitation.service';
   imports: [AuthModule, AbuseModule],
   controllers: [InvitationController, MembershipAdminController],
   providers: [InvitationService, MembershipAdminService],
+  exports: [InvitationService],
 })
 export class MembershipModule {}

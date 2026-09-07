@@ -4205,3 +4205,85 @@ describe('OpsClient (Phase 33)', () => {
     expect(drill.status).toBe('PASSED');
   });
 });
+
+describe('ApiClient.provisionUser', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function provisionWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-provision' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('provisions a user via POST /identity/users', async () => {
+    const { fetchMock, calls } = provisionWith({
+      '/identity/users': () =>
+        enveloped(
+          {
+            providerSubject: 'sub-9',
+            invitationId: 'i1',
+            expiresAt: '2026-01-02T00:00:00.000Z',
+          },
+          201,
+        ),
+    });
+    const client = new ApiClient(base, fetchMock);
+
+    const result = await client.provisionUser({
+      email: 'a@example.com',
+      password: 'long-enough-password',
+      roleKeys: ['tenant.admin'],
+    });
+
+    const call = calls.find((c) => c.url.endsWith('/identity/users'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      email: 'a@example.com',
+      password: 'long-enough-password',
+      roleKeys: ['tenant.admin'],
+    });
+    expect(result.invitationId).toBe('i1');
+  });
+});
