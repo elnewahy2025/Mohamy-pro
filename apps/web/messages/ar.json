@@ -229,6 +229,15 @@
       "checking": "جارٍ التحقق من جلستك…",
       "authenticatedAs": "تم تسجيل الدخول باسم",
       "notAuthenticated": "أنت غير مسجّل الدخول."
+    },
+    "adminLogin": {
+      "eyebrow": "مقيّد",
+      "title": "دخول المسؤول",
+      "description": "يُصادق المسؤولون عبر نطاق Keycloak المؤمّن. هذا المدخل مراقب ومدقق.",
+      "checking": "جارٍ التحقق من الجلسة…",
+      "authenticatedAs": "تم الدخول باسم",
+      "continue": "المتابعة إلى اللوحة",
+      "signIn": "الدخول عبر Keycloak"
     }
   },
   "settings": {

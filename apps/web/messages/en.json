@@ -229,6 +229,15 @@
       "checking": "Checking your session…",
       "authenticatedAs": "Authenticated as",
       "notAuthenticated": "You are not signed in."
+    },
+    "adminLogin": {
+      "eyebrow": "Restricted",
+      "title": "Administrator sign in",
+      "description": "Administrators authenticate through the secured Keycloak realm. This entrance is monitored and audited.",
+      "checking": "Checking your session…",
+      "authenticatedAs": "Signed in as",
+      "continue": "Continue to console",
+      "signIn": "Sign in with Keycloak"
     }
   },
   "settings": {
