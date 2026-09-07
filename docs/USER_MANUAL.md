@@ -405,4 +405,136 @@ exist on the underlying pages.
 - **Settings** (`/settings`): press **English** or **Arabic** to switch the
   interface language and direction. No prerequisite.
 
+## Appendix A. Worked examples — valid values for every input
+
+Copy-ready realistic values. IDs below are well-formed UUIDs; replace them
+with IDs your own pages return.
+
+**Identity.** Users: email `sara.nasser@example.com`, username `sara.nasser`,
+first/last `Sara`/`Nasser`, password `ChangeMe-2026-Secure!` (≥12 chars),
+roleKeys `tenant.lawyer, tenant.paralegal`. Invitation: email
+`omar.farouk@example.com`, roleKeys `tenant.lawyer`. Accept: token from the
+invitation result. Members: membershipId `3fa85f64-5717-4562-b3fc-2c963f66afa6`,
+reason `Left the firm`. Roles: key `tenant.paralegal`, name `Paralegal`,
+permissionKeys `CanViewTenant, CanAccessAssignedCases`; assign needs a role ID
+and membership ID (both UUIDs). Tenant switch: tenantId
+`3fa85f64-5717-4562-b3fc-2c963f66afa6`. Bootstrap: the server-issued secret.
+
+**Organization.** Organization: slug `riyadh-hq`, name `Riyadh HQ`. Branch:
+organizationId `<org id>`, slug `jeddah-branch`, name `Jeddah Branch`.
+Department: branchId `<branch id>`, slug `litigation`, name `Litigation`.
+Team: slug `appeals-squad`, name `Appeals Squad`, description `Appeals team`.
+Settings: key `working.days`, value `["Sun","Mon","Tue","Wed","Thu"]`.
+
+**Legal config.** Country: code `SA`, name `Saudi Arabia` → jurisdiction:
+countryId `<country id>`, name `Riyadh General` → court: jurisdictionId
+`<jurisdiction id>`, name `Commercial Court Riyadh`, courtType `COMMERCIAL`,
+department `Third Circuit` → location: courtId `<court id>`, name
+`Main Building`, city `Riyadh`, address `King Fahd Rd`.
+
+**Clients.** Client: clientType `ORGANIZATION`, name `Al Noor Trading Co.`,
+legalName `Al Noor Trading Company LLC`, source `referral`, notes `VIP`.
+Contact: clientId `<client id>`, type `MOBILE`, value `+966501234567`, label
+`Office`, isPrimary `true`. Address: type `REGISTERED`, line1 `King Fahd Rd,
+Tower A, Floor 12`, city `Riyadh`, country `SA`, postalCode `12213`.
+List: search `Noor`, status `ACTIVE`.
+
+**Parties.** Party: partyType `ORGANIZATION`, displayName `Al Noor Trading`,
+clientId `<client id>`. Relationship: fromPartyId `<id A>`, toPartyId
+`<id B>`, relationshipType `subsidiary of`.
+
+**Conflict checks.** Request parties row: kind `PARTY`, name `Al Noor
+Trading`, email `legal@alnoor.example.com`; clientId `<client id>` (optional).
+Decide block: reason `Direct adverse interest in case C-2026-0143`.
+
+**Intake.** Submit: fullName `Layla Haddad`, clientType `INDIVIDUAL`,
+matterSummary `Contractor failed to deliver the villa by March; claiming
+delay penalties.` → Triage: requestId `<request id>`; reject reason
+`Outside practice areas`.
+
+**Cases.** Create: caseNumber `C-2026-0143`, clientId `<client id>`,
+internalNumber `INT-9921`, practiceArea `Commercial`, caseType `COMMERCIAL`,
+status `OPEN`, priority `HIGH`, openDate `2026-09-01`, partyIds
+`<party id 1>, <party id 2>`. Parties tab: caseId + partyId + roleId (e.g.
+`claimant`). Timeline append: caseId, eventType `NOTE_ADDED`, payload
+`{"note":"Client confirmed hearing date"}`. Assignments: caseId +
+membershipId. Break-glass: member ID + case ID + reason `Urgent filing, assignee
+on leave`, endsAt `2026-09-08T18:00`.
+
+**Hearings.** Schedule: caseId `<case id>`, courtId `<court id>`, date
+`2026-10-05`, time `09:30`, hearingType `First hearing`, notes `Bring original
+contracts`. Outcome: hearingId `<id>`, status `POSTPONED`, outcome
+`Rescheduled at defendant's request`.
+
+**Deadlines.** Schedule: caseId, title `Submit statement of claim`,
+deadlineType `FIXED`, dueDate `2026-09-30`, description `30-page limit`.
+Rule: name `Appeal 30 days`, effectiveFrom `2026-01-01`, effectiveTo
+`2026-12-31`.
+
+**Tasks.** Create: title `Translate exhibit B`, priority `HIGH`, caseId
+`<case id>`, description `Certified translation, 12 pages`, dueDate
+`2026-09-20`, parentTaskId `<parent id>` (optional).
+
+**Documents.** Create: title `Exhibit B — signed contract`, caseId `<case
+id>`, description `Arabic original + translation`, documentType `CONTRACT`.
+
+**Secure links.** documentId `<document id>` (pick from list), purpose
+`EXTERNAL_REVIEW`.
+
+**Workflows.** Workflow: name `Litigation standard`, caseType `CIVIL`, status
+`ACTIVE`. Version: workflowId `<id>`; state `Filing` (initial ✓); state
+`Judgment` (final ✓); transition toStateName `Judgment`, requiresApproval
+checked. Publish: versionId `<draft id>`.
+
+**Billing.** Fee: kind `HOURLY`, description `Hearing attendance 2h`, amount
+`1500`, caseId `<id>`. Expense: description `Court fees`, amount `350`.
+Tax: name `VAT 15%`, rate `15`. Invoice: invoiceNumber `INV-2026-0087`,
+clientId `<id>`, caseId `<id>`, discountAmount `0`, taxRuleId `<tax id>`,
+dueDate `2026-10-15`, feeIds `<fee id>`. Lifecycle: invoiceId + Issue.
+Payment: invoiceId, amount `1725`, idempotencyKey
+`pay-2026-0087-attempt-1`. Credit create: clientId, amount `500`; apply:
+creditId + invoiceId + amount `500`.
+
+**Communications.** Thread: subject `C-2026-0143 hearing prep`, caseId.
+Compose: channel `EMAIL`, direction `OUTBOUND`, body `Reminder: hearing on
+Oct 5 at 09:30.`, subject optional. Delivery record: messageId, status
+`DELIVERED`. Attachment: messageId + storageObjectId `<id>` + mimeType
+`application/pdf` + fileSize `1048576`. Consent: clientId + channel `SMS` +
+status `OPT_IN`.
+
+**Calendar.** Connection: provider `GOOGLE`, accountRef
+`firm.calendar@gmail.com`. Sync: connectionId + localType `HEARING` + localId
+`<hearing id>`. Conflicts: resolution `LOCAL_WINS`. Agenda: from
+`2026-09-07`, to `2026-09-30`.
+
+**Transfer.** Import: entityType `CLIENT`, idempotencyKey `imp-clients-001`,
+content (CSV with headers `displayName,clientType` + rows). Jobs: jobId from
+create → Validate → Approve. Export: entityType `CASE`, maxRows `500`,
+idempotencyKey `exp-cases-001` → Run → Download.
+
+**Notifications.** Preferences: channel `EMAIL`, enabled `true`, quietStart
+`22:00`, quietEnd `07:00`. Rule: eventType `INVOICE_ISSUED`, channels
+`EMAIL, IN_APP`, audience `ASSIGNEES`, escalationHours `24`.
+
+**Reports.** Definition: name `Open cases by status`, dataSource `CASE`,
+columns `caseNumber, status, priority`. Run: definitionId. Schedule:
+definitionId + frequency `WEEKLY` + runAt `06:00`.
+
+**AI.** Request: taskType `CASE_BRIEF`, refs `CASE:<case id>`, promptHint
+`Focus on upcoming deadlines`. Review: requestId; reject reason `Wrong matter`.
+
+**Compliance.** Audit search: eventType `intake.created`. Retention:
+targetType `AUDIT_EVENT`, retainYears `7`. Hold: name `Matter X litigation`,
+reason `Litigation anticipated`; scoped: targetType `CASE` + targetId
+`<case id>`; release: holdId + reason `Matter closed`.
+
+**Integrations.** Connection key `EMAIL` → Enable. Webhook: url
+`https://example.com/hook`, events `case.created, invoice.issued` → copy the
+one-time secret immediately. Rotate: webhookId.
+
+**Operations.** Policy: rpoHours `24`, rtoHours `4`, scheduleCron
+`0 2 * * *`, retentionDays `90` → Save. Drill: name `Q3 restore drill`,
+targetRef `restore-branch-2026-q3` → Start → drillId + checkName `restore` +
+evidence `Branch verified, 44 migrations applied` → Finish passed.
+
 

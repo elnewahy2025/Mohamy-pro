@@ -412,3 +412,133 @@
 - **الإعدادات** (`/settings`): اضغط **الإنجليزية** أو **العربية** لتبديل
   لغة الواجهة واتجاهها. بلا متطلب.
 
+## الملحق أ. أمثلة عملية — قيم صالحة لكل إدخال
+
+قيم واقعية جاهزة للنسخ. المعرّفات أدناه بصيغة UUID سليمة؛ استبدلها
+بمعرّفات تُرجعها صفحاتك.
+
+**الهوية.** المستخدمون: البريد `sara.nasser@example.com`، اسم المستخدم
+`sara.nasser`، الاسم `Sara`/`Nasser`، كلمة المرور `ChangeMe-2026-Secure!`
+(12 حرفاً فأكثر)، مفاتيح الأدوار `tenant.lawyer, tenant.paralegal`.
+الدعوة: البريد `omar.farouk@example.com`، مفاتيح الأدوار `tenant.lawyer`.
+القبول: الرمز من نتيجة الدعوة. الأعضاء: معرّف العضوية
+`3fa85f64-5717-4562-b3fc-2c963f66afa6`، السبب `Left the firm`. الأدوار:
+المفتاح `tenant.paralegal`، الاسم `Paralegal`، مفاتيح الصلاحيات
+`CanViewTenant, CanAccessAssignedCases`؛ والإسناد يحتاج معرّف الدور ومعرّف
+العضوية (كلاهما UUID). تبديل المساحة: معرّف المستأجر
+`3fa85f64-5717-4562-b3fc-2c963f66afa6`. التهيئة: السر الصادر من الخادم.
+
+**المنظمة.** المنظمة: الرمز `riyadh-hq`، الاسم `Riyadh HQ`. الفرع: معرّف
+المنظمة `<org id>`، الرمز `jeddah-branch`، الاسم `Jeddah Branch`. القسم:
+معرّف الفرع `<branch id>`، الرمز `litigation`، الاسم `Litigation`. الفريق:
+الرمز `appeals-squad`، الاسم `Appeals Squad`، الوصف `Appeals team`.
+الإعدادات: المفتاح `working.days`، القيمة `["Sun","Mon","Tue","Wed","Thu"]`.
+
+**الإعداد القانوني.** الدولة: الرمز `SA`، الاسم `Saudi Arabia` ← الولاية:
+معرّف الدولة `<country id>`، الاسم `Riyadh General` ← المحكمة: معرّف
+الولاية `<jurisdiction id>`، الاسم `Commercial Court Riyadh`، النوع
+`COMMERCIAL`، الدائرة `Third Circuit` ← الموقع: معرّف المحكمة `<court
+id>`، الاسم `Main Building`، المدينة `Riyadh`، العنوان `King Fahd Rd`.
+
+**العملاء.** العميل: النوع `ORGANIZATION`، الاسم `Al Noor Trading Co.`،
+الاسم القانوني `Al Noor Trading Company LLC`، المصدر `referral`، الملاحظات
+`VIP`. جهة الاتصال: معرّف العميل `<client id>`، النوع `MOBILE`، القيمة
+`+966501234567`، التسمية `Office`، أساسي `true`. العنوان: النوع
+`REGISTERED`، السطر 1 `King Fahd Rd, Tower A, Floor 12`، المدينة `Riyadh`،
+الدولة `SA`، البريدي `12213`. العرض: بحث `Noor`، الحالة `ACTIVE`.
+
+**الأطراف.** الطرف: النوع `ORGANIZATION`، الاسم المعروض `Al Noor Trading`،
+معرّف العميل `<client id>`. العلاقة: من الطرف `<id A>`، إلى الطرف `<id
+B>`، النوع `subsidiary of`.
+
+**فحوص التعارض.** صف الطلب: النوع `PARTY`، الاسم `Al Noor Trading`، البريد
+`legal@alnoor.example.com`؛ ومعرّف العميل `<client id>` (اختياري). قرار
+المنع: السبب `Direct adverse interest in case C-2026-0143`.
+
+**الاستقبال.** التقديم: الاسم `Layla Haddad`، النوع `INDIVIDUAL`، الملخص
+`Contractor failed to deliver the villa by March; claiming delay
+penalties.` ← الفرز: معرّف الطلب `<request id>`؛ وسبب الرفض `Outside
+practice areas`.
+
+**القضايا.** الإنشاء: الرقم `C-2026-0143`، معرّف العميل `<client id>`،
+الداخلي `INT-9921`، المجال `Commercial`، النوع `COMMERCIAL`، الحالة `OPEN`،
+الأولوية `HIGH`، الفتح `2026-09-01`، الأطراف `<party id 1>, <party id 2>`.
+تبويب الأطراف: القضية + الطرف + الدور (مثل `claimant`). إضافة حدث زمني:
+القضية + النوع `NOTE_ADDED` + الحمولة
+`{"note":"Client confirmed hearing date"}`. الإسنادات: القضية + العضوية.
+الطوارئ: العضو + القضية + السبب `Urgent filing, assignee on leave`، وينتهي
+في `2026-09-08T18:00`.
+
+**الجلسات.** الجدولة: القضية `<case id>`، المحكمة `<court id>`، التاريخ
+`2026-10-05`، الوقت `09:30`، النوع `First hearing`، الملاحظات `Bring
+original contracts`. النتيجة: الجلسة `<id>`، الحالة `POSTPONED`، النتيجة
+`Rescheduled at defendant's request`.
+
+**المواعيد.** الجدولة: القضية، العنوان `Submit statement of claim`، النوع
+`FIXED`، الاستحقاق `2026-09-30`، الوصف `30-page limit`. القاعدة: الاسم
+`Appeal 30 days`، ساري من `2026-01-01`، ساري إلى `2026-12-31`.
+
+**المهام.** الإنشاء: العنوان `Translate exhibit B`، الأولوية `HIGH`،
+القضية `<case id>`، الوصف `Certified translation, 12 pages`، الاستحقاق
+`2026-09-20`، الأب `<parent id>` (اختياري).
+
+**المستندات.** الإنشاء: العنوان `Exhibit B — signed contract`، القضية
+`<case id>`، الوصف `Arabic original + translation`، النوع `CONTRACT`.
+
+**الروابط الآمنة.** معرّف المستند `<document id>` (من القائمة)، الغرض
+`EXTERNAL_REVIEW`.
+
+**سير العمل.** السير: الاسم `Litigation standard`، نوع القضية `CIVIL`،
+الحالة `ACTIVE`. الإصدار: معرّف السير `<id>`؛ الحالة `Filing` (ابتدائية
+✓)؛ والحالة `Judgment` (نهائية ✓)؛ والتحول إلى `Judgment` مع الموافقة.
+النشر: معرّف إصدار **مسودة**.
+
+**الفوترة.** الرسم: النوع `HOURLY`، الوصف `Hearing attendance 2h`، المبلغ
+`1500`، القضية `<id>`. المصروف: الوصف `Court fees`، المبلغ `350`.
+الضريبة: الاسم `VAT 15%`، النسبة `15`. الفاتورة: الرقم `INV-2026-0087`،
+العميل `<id>`، القضية `<id>`، الخصم `0`، القاعدة `<tax id>`، الاستحقاق
+`2026-10-15`، الرسوم `<fee id>`. الدورة: معرّف الفاتورة + إصدار. الدفعة:
+الفاتورة + المبلغ `1725` + مفتاح عدم التكرار `pay-2026-0087-attempt-1`.
+الائتمان: العميل + المبلغ `500`؛ والتطبيق: الائتمان + الفاتورة + المبلغ.
+
+**الاتصالات.** الخيط: الموضوع `C-2026-0143 hearing prep` + القضية. الإنشاء:
+القناة `EMAIL`، الاتجاه `OUTBOUND`، المتن `Reminder: hearing on Oct 5 at
+09:30.` التسليم: الرسالة + الحالة `DELIVERED`. المرفق: الرسالة + كائن
+التخزين `<id>` + النوع `application/pdf` + الحجم `1048576`. الموافقة:
+العميل + القناة `SMS` + الحالة `OPT_IN`.
+
+**التقويم.** الاتصال: المزوّد `GOOGLE`، الحساب `firm.calendar@gmail.com`.
+المزامنة: الاتصال + النوع `HEARING` + المعرف `<hearing id>`. التعارض: الحل
+`LOCAL_WINS`. الأجندة: من `2026-09-07` إلى `2026-09-30`.
+
+**النقل.** الاستيراد: النوع `CLIENT`، مفتاح عدم التكرار `imp-clients-001`،
+المحتوى (CSV برأس `displayName,clientType` وصفوف). المهام: معرّف المهمة من
+الإنشاء ← تحقق ← اعتماد. التصدير: النوع `CASE`، الأقصى `500`، المفتاح
+`exp-cases-001` ← تشغيل ← تنزيل.
+
+**التنبيهات.** التفضيلات: القناة `EMAIL`، مفعّل `true`، الهدوء `22:00` إلى
+`07:00`. القاعدة: الحدث `INVOICE_ISSUED`، القنوات `EMAIL, IN_APP`، الجمهور
+`ASSIGNEES`، التصعيد `24`.
+
+**التقارير.** التعريف: الاسم `Open cases by status`، المصدر `CASE`،
+الأعمدة `caseNumber, status, priority`. التشغيل: معرّف التعريف. الجدولة:
+التعريف + التكرار `WEEKLY` + الوقت `06:00`.
+
+**الذكاء.** الطلب: النوع `CASE_BRIEF`، المراجع `CASE:<case id>`، التلميح
+`Focus on upcoming deadlines`. المراجعة: معرّف الطلب؛ وسبب الرفض `Wrong
+matter`.
+
+**الامتثال.** البحث: نوع الحدث `intake.created`. الاحتفاظ: الهدف
+`AUDIT_EVENT`، السنوات `7`. التحفظ: الاسم `Matter X litigation`، السبب
+`Litigation anticipated`؛ والنطاق: النوع `CASE` + المعرف `<case id>`؛
+والرفع: المعرف + السبب `Matter closed`.
+
+**التكاملات.** مفتاح الاتصال `EMAIL` ← تفعيل. الويب هوك: الرابط
+`https://example.com/hook`، الأحداث `case.created, invoice.issued` ← انسخ
+السر المعروض مرة واحدة فوراً. التدوير: معرّف الويب هوك.
+
+**التشغيل.** السياسة: RPO `24`، RTO `4`، الجدول `0 2 * * *`، الاحتفاظ `90`
+← حفظ. التدريب: الاسم `Q3 restore drill`، المرجع
+`restore-branch-2026-q3` ← بدء ← المعرف + الفحص `restore` + الدليل `Branch
+verified, 44 migrations applied` ← إنهاء ناجح.
+
