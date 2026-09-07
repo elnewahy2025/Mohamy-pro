@@ -24,6 +24,7 @@ import { CaseTimelineModule } from '../case-timeline/case-timeline.module';
     PermissionsModule,
     AuthModule,
     CaseTimelineModule,
+    NotificationModule,
   ],
   controllers: [BillingController],
   providers: [
