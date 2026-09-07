@@ -14,8 +14,12 @@
  */
 import { randomUUID } from 'crypto';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg(process.env.DATABASE_URL!, { schema: 'public' });
+const prisma = new PrismaClient({ adapter });
 const slug = process.env.TENANT_SLUG ?? 'mohamy';
 
 async function ctx(
@@ -172,23 +176,23 @@ async function main() {
       },
     });
 
-    const check = await tx.conflictCheck.create({
-      data: {
-        tenantId: T,
-        requesterUserId: membership.userId,
-        clientId: client.id,
-      },
-    });
-    await tx.conflictParty.create({
-      data: {
-        tenantId: T,
-        conflictCheckId: check.id,
-        kind: 'PARTY',
-        name: 'Al Noor Trading',
-        normalizedName: 'al noor trading',
-        email: 'legal@alnoor.example.com',
-      },
-    });
+    // const check = await tx.conflictCheck.create({
+    //   data: {
+    //     tenantId: T,
+    //     requesterUserId: membership.userId,
+    //     clientId: client.id,
+    //   },
+    // });
+    // await tx.conflictParty.create({
+    //   data: {
+    //     tenantId: T,
+    //     conflictCheckId: check.id,
+    //     kind: 'PARTY',
+    //     name: 'Al Noor Trading',
+    //     normalizedName: 'al noor trading',
+    //     email: 'legal@alnoor.example.com',
+    //   },
+    // });
 
     const prospect = await tx.client.create({
       data: {
@@ -447,7 +451,7 @@ async function main() {
         requestedBy: membership.userId,
       },
     });
-  });
+  }, { maxWait: 20000, timeout: 60000 });
 
   console.log(JSON.stringify({ tenant: slug, ...out }, null, 2));
 }
