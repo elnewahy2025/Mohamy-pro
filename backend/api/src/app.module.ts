@@ -47,6 +47,7 @@ import { IntakeModule } from './intake/intake.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { AiModule } from './ai/ai.module';
+import { OpsModule } from './ops/ops.module';
 import { DenialsModule } from './denials/denials.module';
 import { BreakGlassModule } from './breakglass/breakglass.module';
 import { RolesModule } from './roles/roles.module';
@@ -95,6 +96,7 @@ import { RolesModule } from './roles/roles.module';
     ComplianceModule,
     IntegrationsModule,
     AiModule,
+    OpsModule,
     DenialsModule,
     RolesModule,
     BreakGlassModule,

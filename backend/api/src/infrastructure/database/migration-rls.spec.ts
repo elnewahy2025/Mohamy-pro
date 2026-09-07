@@ -430,6 +430,23 @@ describe('Phase 10-15 migration assertions', () => {
     expect(aiMigration).toContain('"AiRequest_tenant_isolation"');
   });
 
+  it('creates both Phase 33 ops tables with FORCE RLS', () => {
+    const opsMigration = readMigration(
+      '20260908000015_phase33_ops_foundation',
+    );
+
+    for (const table of ['BackupPolicy', 'RestoreDrill']) {
+      expect(opsMigration).toContain(`CREATE TABLE "${table}"`);
+      expect(opsMigration).toContain(
+        `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
+      );
+      expect(opsMigration).toContain(
+        `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
+      );
+      expect(opsMigration).toContain(`"${table}_tenant_isolation"`);
+    }
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

@@ -457,6 +457,8 @@ model Tenant {
   integrations Integration[]
   webhookEndpoints WebhookEndpoint[]
   aiRequests AiRequest[]
+  backupPolicies BackupPolicy[]
+  restoreDrills RestoreDrill[]
   @@index([status, createdAt])
 }
 
@@ -2632,6 +2634,48 @@ model NotificationRule {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, eventType, enabled])
+}
+
+model BackupPolicy {
+  id            String   @id @default(uuid())
+  tenantId      String
+  rpoHours      Int
+  rtoHours      Int
+  scheduleCron  String
+  retentionDays Int
+  enabled       Boolean  @default(true)
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@unique([tenantId])
+}
+
+model RestoreDrill {
+  id         String      @id @default(uuid())
+  tenantId   String
+  name       String
+  targetRef  String
+  status     DrillStatus @default(PLANNED)
+  checks     Json        @default("[]")
+  note       String?     @db.Text
+  startedBy  String
+  finishedBy String?
+  finishedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+enum DrillStatus {
+  PLANNED
+  PASSED
+  FAILED
 }
 
 model AiRequest {

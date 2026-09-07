@@ -120,21 +120,61 @@
     "nextStepNumber": "02"
   },
   "operations": {
-    "eyebrow": "Operations",
-    "title": "An operational foundation you can trust.",
-    "description": "Every core capability has an explicit contract, a checkable state, and a safe path to scale.",
-    "items": {
-      "health": {
-        "title": "Health and observability",
-        "description": "Clear readiness checks for every required service."
+    "eyebrow": "Phase 33 · Operations",
+    "title": "Run it like production.",
+    "description": "Live status, backup policy governance, and operator-attested restore drills. Snapshots stay platform-side.",
+    "load": "Refresh",
+    "save": "Save policy",
+    "start": "Start drill",
+    "finishPassed": "Finish passed",
+    "finishFailed": "Finish failed",
+    "submitting": "Working…",
+    "labels": {
+      "rpoHours": "RPO hours",
+      "rtoHours": "RTO hours",
+      "scheduleCron": "Schedule (cron)",
+      "retentionDays": "Retention days",
+      "name": "Drill name",
+      "targetRef": "Target reference",
+      "drillId": "Drill ID",
+      "checkName": "Check name",
+      "evidence": "Evidence"
+    },
+    "placeholders": {
+      "rpoHours": "e.g. 24",
+      "rtoHours": "e.g. 4",
+      "scheduleCron": "0 2 * * *",
+      "retentionDays": "e.g. 90",
+      "name": "e.g. Q3 restore drill",
+      "targetRef": "e.g. restore branch or point",
+      "drillId": "00000000-0000-4000-8000-000000000000",
+      "checkName": "e.g. restore",
+      "evidence": "What did you verify?"
+    },
+    "result": {
+      "title": "Operation completed",
+      "errorTitle": "Something went wrong"
+    },
+    "status": {
+      "health": "Health",
+      "outbox": "Outbox",
+      "policy": "Backup policy",
+      "drill": "Latest drill",
+      "configured": "configured",
+      "missing": "missing"
+    },
+    "sections": {
+      "status": {
+        "heading": "Status",
+        "description": "Live readiness, outbox, policy, and drills."
       },
-      "async": {
-        "title": "Asynchronous processing",
-        "description": "A queue foundation with bounded retries and durable handoff."
+      "policy": {
+        "heading": "Backup policy",
+        "description": "RPO/RTO targets, schedule, and retention."
       },
-      "events": {
-        "title": "Event safety",
-        "description": "Outbox and idempotency foundations to prevent duplication and loss."
+      "drills": {
+        "heading": "Restore drills",
+        "description": "Start drills and finish them with evidence."
       }
     }
   },

@@ -1,5 +1,5 @@
-import { OperationsPage } from '@/components/pages/operations-page';
+import { OperationsConsolePage } from '@/components/pages/operations/operations-console-page';
 
 export default function Page(): React.ReactNode {
-  return <OperationsPage />;
+  return <OperationsConsolePage />;
 }

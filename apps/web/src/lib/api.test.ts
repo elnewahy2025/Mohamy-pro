@@ -10,6 +10,7 @@ import {
   AiClient,
   IntegrationsClient,
   IntakeClient,
+  OpsClient,
   NotificationsClient,
   PortalClient,
   ReportsClient,
@@ -4066,5 +4067,141 @@ describe('AiClient (Phase 32)', () => {
     const call = calls.find((c) => c.url.endsWith('/ai/requests/a1/approve'));
     expect(call?.init?.method).toBe('POST');
     expect(result.status).toBe('APPROVED');
+  });
+});
+
+describe('OpsClient (Phase 33)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function opsWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-ops' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('reads live status via GET /ops/status', async () => {
+    const { fetchMock, calls } = opsWith({
+      '/ops/status': () =>
+        enveloped({
+          health: { status: 'ok' },
+          outbox: { mine: {}, globalPool: {} },
+          backupPolicy: { configured: false, enabled: null },
+          latestDrill: null,
+        }),
+    });
+    const client = new OpsClient(new ApiClient(base, fetchMock));
+
+    const result = await client.status();
+
+    expect(calls.find((c) => c.url.endsWith('/ops/status'))?.init?.method).toBe(
+      'GET',
+    );
+    expect(result.backupPolicy.configured).toBe(false);
+  });
+
+  it('saves the backup policy via PUT /ops/backup-policy', async () => {
+    const { fetchMock, calls } = opsWith({
+      '/backup-policy': () =>
+        enveloped({
+          id: 'p1',
+          tenantId: 't1',
+          rpoHours: 24,
+          rtoHours: 4,
+          scheduleCron: '0 2 * * *',
+          retentionDays: 90,
+          enabled: true,
+          createdBy: 'u1',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
+    });
+    const client = new OpsClient(new ApiClient(base, fetchMock));
+
+    const policy = await client.setPolicy(24, 4, '0 2 * * *', 90);
+
+    const call = calls.find((c) => c.url.endsWith('/ops/backup-policy'));
+    expect(call?.init?.method).toBe('PUT');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      rpoHours: 24,
+      rtoHours: 4,
+      scheduleCron: '0 2 * * *',
+      retentionDays: 90,
+    });
+    expect(policy.retentionDays).toBe(90);
+  });
+
+  it('finishes drills with recorded checks', async () => {
+    const { fetchMock, calls } = opsWith({
+      '/finish': () =>
+        enveloped({
+          id: 'd1',
+          tenantId: 't1',
+          name: 'Q1',
+          targetRef: 'branch-x',
+          status: 'PASSED',
+          checks: [{ name: 'restore', passed: true, evidence: 'ok' }],
+          note: null,
+          startedBy: 'u1',
+          finishedBy: 'm1',
+          finishedAt: '2026-01-02T00:00:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-02T00:00:00.000Z',
+        }),
+    });
+    const client = new OpsClient(new ApiClient(base, fetchMock));
+
+    const drill = await client.finishDrill('d1', true, [
+      { name: 'restore', passed: true, evidence: 'ok' },
+    ]);
+
+    const call = calls.find((c) => c.url.endsWith('/ops/drills/d1/finish'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      passed: true,
+      checks: [{ name: 'restore', passed: true, evidence: 'ok' }],
+    });
+    expect(drill.status).toBe('PASSED');
   });
 });

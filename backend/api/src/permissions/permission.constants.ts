@@ -41,6 +41,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_COMPLIANCE: 'CanManageCompliance',
   CAN_MANAGE_INTEGRATIONS: 'CanManageIntegrations',
   CAN_MANAGE_AI: 'CanManageAi',
+  CAN_MANAGE_OPERATIONS: 'CanManageOperations',
   CAN_MANAGE_NOTIFICATIONS: 'CanManageNotifications',
   CAN_ACCESS_ASSIGNED_CASES: 'CanAccessAssignedCases',
 } as const;
@@ -225,6 +226,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Request AI assistance and review AI outputs within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_OPERATIONS,
+    description:
+      'View operational status and govern backup policy and restore drills within the active tenant.',
+  },
 ];
 /**
  * Default permission set granted to each built-in role. Keyed by stable role
@@ -266,6 +272,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_COMPLIANCE,
     PERMISSION_KEYS.CAN_MANAGE_INTEGRATIONS,
     PERMISSION_KEYS.CAN_MANAGE_AI,
+    PERMISSION_KEYS.CAN_MANAGE_OPERATIONS,
   ],
   [ROLE_KEY_TENANT_MANAGER]: [
     PERMISSION_KEYS.CAN_VIEW_TENANT,

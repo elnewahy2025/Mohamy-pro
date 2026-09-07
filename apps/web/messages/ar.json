@@ -120,21 +120,61 @@
     "nextStepNumber": "02"
   },
   "operations": {
-    "eyebrow": "العمليات",
-    "title": "أساس تشغيلي يمكن الوثوق به.",
-    "description": "كل مكوّن أساسي له عقد واضح، حالة قابلة للفحص، ومسار آمن للتوسع.",
-    "items": {
-      "health": {
-        "title": "الصحة والمراقبة",
-        "description": "نقاط فحص جاهزية واضحة لكل خدمة مطلوبة."
+    "eyebrow": "المرحلة 33 · التشغيل",
+    "title": "شغّلها كبيئة إنتاج.",
+    "description": "حالة حية، وحوكمة سياسة النسخ، وتدريبات استعادة موثقة. اللقطات تبقى لدى المنصة.",
+    "load": "تحديث",
+    "save": "حفظ السياسة",
+    "start": "بدء تدريب",
+    "finishPassed": "إنهاء ناجح",
+    "finishFailed": "إنهاء فاشل",
+    "submitting": "جارٍ العمل…",
+    "labels": {
+      "rpoHours": "ساعات RPO",
+      "rtoHours": "ساعات RTO",
+      "scheduleCron": "الجدول (cron)",
+      "retentionDays": "أيام الاحتفاظ",
+      "name": "اسم التدريب",
+      "targetRef": "مرجع الهدف",
+      "drillId": "معرّف التدريب",
+      "checkName": "اسم الفحص",
+      "evidence": "الدليل"
+    },
+    "placeholders": {
+      "rpoHours": "مثال: 24",
+      "rtoHours": "مثال: 4",
+      "scheduleCron": "0 2 * * *",
+      "retentionDays": "مثال: 90",
+      "name": "مثال: تدريب الاستعادة Q3",
+      "targetRef": "مثال: فرع أو نقطة استعادة",
+      "drillId": "00000000-0000-4000-8000-000000000000",
+      "checkName": "مثال: restore",
+      "evidence": "ما الذي تحققت منه؟"
+    },
+    "result": {
+      "title": "اكتملت العملية",
+      "errorTitle": "حدث خطأ ما"
+    },
+    "status": {
+      "health": "الصحة",
+      "outbox": "الصندوق",
+      "policy": "سياسة النسخ",
+      "drill": "آخر تدريب",
+      "configured": "مضبوطة",
+      "missing": "مفقودة"
+    },
+    "sections": {
+      "status": {
+        "heading": "الحالة",
+        "description": "الجاهزية والصندوق والسياسة والتدريبات."
       },
-      "async": {
-        "title": "المعالجة غير المتزامنة",
-        "description": "أساس طوابير مع إعادة محاولة محدودة وتسليم دائم."
+      "policy": {
+        "heading": "سياسة النسخ",
+        "description": "أهداف RPO/RTO والجدول والاحتفاظ."
       },
-      "events": {
-        "title": "سلامة الأحداث",
-        "description": "أساس Outbox وIdempotency لمنع التكرار والفقدان."
+      "drills": {
+        "heading": "تدريبات الاستعادة",
+        "description": "ابدأ التدريبات وأنهها بالأدلة."
       }
     }
   },

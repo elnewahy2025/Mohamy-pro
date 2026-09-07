@@ -3863,3 +3863,109 @@ export class AiClient {
     );
   }
 }
+
+// --- Phase 33: Operations ---
+
+export interface OpsStatus {
+  health: Record<string, unknown>;
+  outbox: { mine: Record<string, number>; globalPool: Record<string, number> };
+  backupPolicy: { configured: boolean; enabled: boolean | null };
+  latestDrill: {
+    id: string;
+    name: string;
+    status: string;
+    finishedAt: string | null;
+  } | null;
+}
+
+export interface BackupPolicyResult {
+  id: string;
+  tenantId: string;
+  rpoHours: number;
+  rtoHours: number;
+  scheduleCron: string;
+  retentionDays: number;
+  enabled: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DrillCheck {
+  name: string;
+  passed: boolean;
+  evidence: string;
+}
+
+export interface RestoreDrillResult {
+  id: string;
+  tenantId: string;
+  name: string;
+  targetRef: string;
+  status: string;
+  checks: DrillCheck[];
+  note: string | null;
+  startedBy: string;
+  finishedBy: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const OPS_PREFIX = '/ops';
+
+export class OpsClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  status(): Promise<OpsStatus> {
+    return this.client.body<OpsStatus>(`${OPS_PREFIX}/status`, 'GET');
+  }
+
+  setPolicy(
+    rpoHours: number,
+    rtoHours: number,
+    scheduleCron: string,
+    retentionDays: number,
+  ): Promise<BackupPolicyResult> {
+    return this.client.body<BackupPolicyResult>(
+      `${OPS_PREFIX}/backup-policy`,
+      'PUT',
+      { rpoHours, rtoHours, scheduleCron, retentionDays },
+    );
+  }
+
+  getPolicy(): Promise<BackupPolicyResult | null> {
+    return this.client.body<BackupPolicyResult | null>(
+      `${OPS_PREFIX}/backup-policy`,
+      'GET',
+    );
+  }
+
+  startDrill(name: string, targetRef: string): Promise<RestoreDrillResult> {
+    return this.client.body<RestoreDrillResult>(
+      `${OPS_PREFIX}/drills`,
+      'POST',
+      { name, targetRef },
+    );
+  }
+
+  listDrills(): Promise<RestoreDrillResult[]> {
+    return this.client.body<RestoreDrillResult[]>(
+      `${OPS_PREFIX}/drills`,
+      'GET',
+    );
+  }
+
+  finishDrill(
+    id: string,
+    passed: boolean,
+    checks: DrillCheck[],
+    note?: string,
+  ): Promise<RestoreDrillResult> {
+    return this.client.body<RestoreDrillResult>(
+      `${OPS_PREFIX}/drills/${encodeURIComponent(id)}/finish`,
+      'POST',
+      { passed, checks, ...(note ? { note } : {}) },
+    );
+  }
+}
