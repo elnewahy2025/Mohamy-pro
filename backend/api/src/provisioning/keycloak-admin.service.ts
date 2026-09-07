@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ValidatedEnvironment } from '../config/env.validation';
 import {
@@ -23,7 +23,7 @@ export class KeycloakAdminService {
 
   constructor(
     private readonly configService: ConfigService<ValidatedEnvironment, true>,
-    private readonly http: FetchImpl = fetch,
+    @Optional() private readonly http: FetchImpl = fetch,
   ) {}
 
   private settings(): {
