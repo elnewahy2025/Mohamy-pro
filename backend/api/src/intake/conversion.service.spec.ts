@@ -9,7 +9,10 @@ function service(request: Record<string, unknown>, claimed = 1) {
       updateMany: jest.fn().mockResolvedValue({ count: claimed }),
       update: jest
         .fn()
-        .mockImplementation(({ data }: any) => ({ status: 'APPROVED', ...data })),
+        .mockImplementation(({ data }: any) => ({
+          status: 'APPROVED',
+          ...data,
+        })),
     },
     client: {
       create: jest

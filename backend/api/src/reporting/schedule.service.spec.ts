@@ -55,19 +55,17 @@ describe('ScheduleService sweep claim', () => {
     };
     const prisma = {
       reportSchedule: {
-        findMany: jest
-          .fn()
-          .mockResolvedValue([
-            {
-              id: 's1',
-              tenantId: 't1',
-              definitionId: 'd1',
-              frequency: 'DAILY',
-              runAt: '09:00',
-              enabled: true,
-              nextRunAt: new Date('2026-01-01T09:00:00Z'),
-            },
-          ]),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 's1',
+            tenantId: 't1',
+            definitionId: 'd1',
+            frequency: 'DAILY',
+            runAt: '09:00',
+            enabled: true,
+            nextRunAt: new Date('2026-01-01T09:00:00Z'),
+          },
+        ]),
       },
       withWorkerTenantContext: jest
         .fn()
@@ -93,19 +91,17 @@ describe('ScheduleService sweep claim', () => {
     };
     const prisma = {
       reportSchedule: {
-        findMany: jest
-          .fn()
-          .mockResolvedValue([
-            {
-              id: 's1',
-              tenantId: 't1',
-              definitionId: 'd1',
-              frequency: 'DAILY',
-              runAt: '09:00',
-              enabled: true,
-              nextRunAt: new Date('2026-01-01T09:00:00Z'),
-            },
-          ]),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 's1',
+            tenantId: 't1',
+            definitionId: 'd1',
+            frequency: 'DAILY',
+            runAt: '09:00',
+            enabled: true,
+            nextRunAt: new Date('2026-01-01T09:00:00Z'),
+          },
+        ]),
       },
       withWorkerTenantContext: jest
         .fn()

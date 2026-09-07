@@ -3,10 +3,7 @@ import { IntakeStatus, Prisma } from '@prisma/client';
 import { IntakeInvalidStateError } from './intake.errors';
 import { IntakeService } from './intake.service';
 
-const REVIEWABLE: IntakeStatus[] = [
-  IntakeStatus.NEW,
-  IntakeStatus.IN_REVIEW,
-];
+const REVIEWABLE: IntakeStatus[] = [IntakeStatus.NEW, IntakeStatus.IN_REVIEW];
 
 @Injectable()
 export class ConversionService {

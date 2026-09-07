@@ -350,11 +350,7 @@ describe('Phase 10-15 migration assertions', () => {
       '20260908000010_phase27_reporting_foundation',
     );
 
-    for (const table of [
-      'ReportDefinition',
-      'ReportSchedule',
-      'ReportRun',
-    ]) {
+    for (const table of ['ReportDefinition', 'ReportSchedule', 'ReportRun']) {
       expect(reportingMigration).toContain(`CREATE TABLE "${table}"`);
       expect(reportingMigration).toContain(
         `ALTER TABLE "${table}" ENABLE ROW LEVEL SECURITY`,
@@ -416,9 +412,7 @@ describe('Phase 10-15 migration assertions', () => {
   });
 
   it('creates the Phase 32 AI table with FORCE RLS', () => {
-    const aiMigration = readMigration(
-      '20260908000014_phase32_ai_foundation',
-    );
+    const aiMigration = readMigration('20260908000014_phase32_ai_foundation');
 
     expect(aiMigration).toContain('CREATE TABLE "AiRequest"');
     expect(aiMigration).toContain(
@@ -431,9 +425,7 @@ describe('Phase 10-15 migration assertions', () => {
   });
 
   it('creates both Phase 33 ops tables with FORCE RLS', () => {
-    const opsMigration = readMigration(
-      '20260908000015_phase33_ops_foundation',
-    );
+    const opsMigration = readMigration('20260908000015_phase33_ops_foundation');
 
     for (const table of ['BackupPolicy', 'RestoreDrill']) {
       expect(opsMigration).toContain(`CREATE TABLE "${table}"`);

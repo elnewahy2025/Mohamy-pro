@@ -175,7 +175,7 @@ describe('DocumentService assigned scoping (G6)', () => {
   const scoped = { scope: 'ASSIGNED', membershipId: 'mem-1' } as const;
 
   it('requires assignment for a scoped caseId and filters otherwise', async () => {
-            const resourceAccess = {
+    const resourceAccess = {
       requireAssignedCase: jest.fn().mockResolvedValue(undefined),
       assignedCaseIds: jest.fn().mockResolvedValue(['case-9']),
     };
@@ -185,7 +185,10 @@ describe('DocumentService assigned scoping (G6)', () => {
 
     await service.listDocuments(tx as any, 't1', 'case-9', undefined, scoped);
     expect(resourceAccess.requireAssignedCase).toHaveBeenCalledWith(
-      tx, 't1', 'mem-1', 'case-9',
+      tx,
+      't1',
+      'mem-1',
+      'case-9',
     );
 
     await service.listDocuments(tx as any, 't1', undefined, undefined, scoped);
