@@ -7,6 +7,7 @@ import {
   CommsClient,
   ComplianceClient,
   DashboardClient,
+  AiClient,
   IntegrationsClient,
   IntakeClient,
   NotificationsClient,
@@ -3958,5 +3959,112 @@ describe('IntegrationsClient (Phase 31)', () => {
     ).toBe('GET');
     expect(health[0].key).toBe('EMAIL');
     expect(events).toEqual(['case.created']);
+  });
+});
+
+describe('AiClient (Phase 32)', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function aiWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-ai' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const baseRequest = {
+    id: 'a1',
+    tenantId: 't1',
+    taskType: 'CASE_BRIEF',
+    refs: [{ kind: 'CASE', id: 'c1' }],
+    promptHint: null,
+    status: 'QUEUED',
+    outputText: null,
+    outputMeta: {},
+    requestedBy: 'u1',
+    reviewedBy: null,
+    reviewNotes: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  } as const;
+
+  it('creates a request via POST /ai/requests', async () => {
+    const { fetchMock, calls } = aiWith({
+      '/requests': () => enveloped(baseRequest, 201),
+    });
+    const client = new AiClient(new ApiClient(base, fetchMock));
+
+    const result = await client.createRequest('CASE_BRIEF', [
+      { kind: 'CASE', id: 'c1' },
+    ]);
+
+    const call = calls.find((c) => c.url.endsWith('/ai/requests'));
+    expect(call?.init?.method).toBe('POST');
+    expect(JSON.parse(String(call?.init?.body))).toEqual({
+      taskType: 'CASE_BRIEF',
+      refs: [{ kind: 'CASE', id: 'c1' }],
+    });
+    expect(result.status).toBe('QUEUED');
+    expect(result.outputText).toBeNull();
+  });
+
+  it('approves via POST /ai/requests/:id/approve', async () => {
+    const { fetchMock, calls } = aiWith({
+      '/approve': () =>
+        enveloped({
+          ...baseRequest,
+          status: 'APPROVED',
+          outputText: 'Brief here.',
+          reviewedBy: 'm1',
+        }),
+    });
+    const client = new AiClient(new ApiClient(base, fetchMock));
+
+    const result = await client.approveRequest('a1');
+
+    const call = calls.find((c) => c.url.endsWith('/ai/requests/a1/approve'));
+    expect(call?.init?.method).toBe('POST');
+    expect(result.status).toBe('APPROVED');
   });
 });

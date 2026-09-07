@@ -3792,3 +3792,74 @@ export class IntegrationsClient {
     );
   }
 }
+
+// --- Phase 32: AI ---
+
+export type AiRequestStatus =
+  'QUEUED' | 'READY' | 'FAILED' | 'APPROVED' | 'REJECTED';
+
+export interface AiRef {
+  kind: string;
+  id: string;
+}
+
+export interface AiRequestResult {
+  id: string;
+  tenantId: string;
+  taskType: string;
+  refs: AiRef[];
+  promptHint: string | null;
+  status: AiRequestStatus;
+  outputText: string | null;
+  outputMeta: Record<string, unknown>;
+  requestedBy: string;
+  reviewedBy: string | null;
+  reviewNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const AI_PREFIX = '/ai';
+
+export class AiClient {
+  constructor(private readonly client = new ApiClient()) {}
+
+  createRequest(
+    taskType: string,
+    refs: AiRef[],
+    promptHint?: string,
+  ): Promise<AiRequestResult> {
+    return this.client.body<AiRequestResult>(`${AI_PREFIX}/requests`, 'POST', {
+      taskType,
+      refs,
+      ...(promptHint ? { promptHint } : {}),
+    });
+  }
+
+  listRequests(): Promise<AiRequestResult[]> {
+    return this.client.body<AiRequestResult[]>(`${AI_PREFIX}/requests`, 'GET');
+  }
+
+  getRequest(id: string): Promise<AiRequestResult> {
+    return this.client.body<AiRequestResult>(
+      `${AI_PREFIX}/requests/${encodeURIComponent(id)}`,
+      'GET',
+    );
+  }
+
+  approveRequest(id: string, reviewNotes?: string): Promise<AiRequestResult> {
+    return this.client.body<AiRequestResult>(
+      `${AI_PREFIX}/requests/${encodeURIComponent(id)}/approve`,
+      'POST',
+      { reviewNotes },
+    );
+  }
+
+  rejectRequest(id: string, reason: string): Promise<AiRequestResult> {
+    return this.client.body<AiRequestResult>(
+      `${AI_PREFIX}/requests/${encodeURIComponent(id)}/reject`,
+      'POST',
+      { reason },
+    );
+  }
+}

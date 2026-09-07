@@ -44,6 +44,7 @@ describe('localized frontend messages', () => {
       dashboard: 'Dashboard',
       intake: 'Intake',
       compliance: 'Compliance',
+      ai: 'AI Assist',
       integrations: 'Integrations',
       settings: 'Settings',
       groups: {
@@ -78,6 +79,7 @@ describe('localized frontend messages', () => {
       dashboard: 'لوحة المتابعة',
       intake: 'الاستقبال',
       compliance: 'الامتثال',
+      ai: 'المساعدة الذكية',
       integrations: 'التكاملات',
       settings: 'الإعدادات',
       groups: {

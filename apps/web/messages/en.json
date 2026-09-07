@@ -91,7 +91,8 @@
     "reports": "Reports",
     "dashboard": "Dashboard",
     "intake": "Intake",
-    "compliance": "Compliance"
+    "compliance": "Compliance",
+    "ai": "AI Assist"
   },
   "overview": {
     "eyebrow": "Phase 1 foundation",
@@ -1590,6 +1591,46 @@
       "holds": {
         "heading": "Legal holds",
         "description": "Place and release litigation holds."
+      }
+    }
+  },
+  "ai": {
+    "eyebrow": "Phase 32 · AI Assistance",
+    "title": "Optional intelligence, human approved.",
+    "description": "Request scoped AI assistance; outputs need your approval before they count. No provider is wired yet — requests queue honestly.",
+    "create": "Request",
+    "load": "Load",
+    "approve": "Approve",
+    "reject": "Reject",
+    "submitting": "Working…",
+    "labels": {
+      "taskType": "Task type",
+      "refs": "References",
+      "promptHint": "Hint",
+      "requestId": "Request ID",
+      "reason": "Rejection reason"
+    },
+    "placeholders": {
+      "taskType": "e.g. CASE_BRIEF",
+      "refs": "KIND:id, e.g. CASE:00000000-0000-4000-8000-000000000000",
+      "promptHint": "Optional hint for the provider",
+      "requestId": "00000000-0000-4000-8000-000000000000",
+      "reason": "Why is this rejected?"
+    },
+    "result": {
+      "title": "Operation completed",
+      "id": "ID",
+      "emptyOutput": "No provider output yet — approval is blocked server-side.",
+      "errorTitle": "Something went wrong"
+    },
+    "sections": {
+      "request": {
+        "heading": "New request",
+        "description": "Scope refs are validated against your assignments."
+      },
+      "review": {
+        "heading": "Review",
+        "description": "Approve outputs or reject queued work."
       }
     }
   }

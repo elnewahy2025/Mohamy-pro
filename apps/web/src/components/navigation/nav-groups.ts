@@ -46,6 +46,7 @@ export const appNavGroups: AppNavGroup[] = [
         labelKey: 'navigation.dashboard',
         icon: LayoutDashboard,
       },
+      { href: '/ai', labelKey: 'navigation.ai', icon: LayoutDashboard },
       {
         href: '/operations',
         labelKey: 'navigation.operations',

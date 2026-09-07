@@ -415,6 +415,21 @@ describe('Phase 10-15 migration assertions', () => {
     }
   });
 
+  it('creates the Phase 32 AI table with FORCE RLS', () => {
+    const aiMigration = readMigration(
+      '20260908000014_phase32_ai_foundation',
+    );
+
+    expect(aiMigration).toContain('CREATE TABLE "AiRequest"');
+    expect(aiMigration).toContain(
+      'ALTER TABLE "AiRequest" ENABLE ROW LEVEL SECURITY',
+    );
+    expect(aiMigration).toContain(
+      'ALTER TABLE "AiRequest" FORCE ROW LEVEL SECURITY',
+    );
+    expect(aiMigration).toContain('"AiRequest_tenant_isolation"');
+  });
+
   it('no longer re-creates duplicate or destructive statements in the workflow migration', () => {
     const workflowMigration = readMigration(
       '20260905100000_workflow_engine_foundation',

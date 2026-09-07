@@ -40,6 +40,7 @@ export const PERMISSION_KEYS = {
   CAN_MANAGE_INTAKE: 'CanManageIntake',
   CAN_MANAGE_COMPLIANCE: 'CanManageCompliance',
   CAN_MANAGE_INTEGRATIONS: 'CanManageIntegrations',
+  CAN_MANAGE_AI: 'CanManageAi',
   CAN_MANAGE_NOTIFICATIONS: 'CanManageNotifications',
   CAN_ACCESS_ASSIGNED_CASES: 'CanAccessAssignedCases',
 } as const;
@@ -219,6 +220,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description:
       'Configure integrations and webhook endpoints within the active tenant.',
   },
+  {
+    key: PERMISSION_KEYS.CAN_MANAGE_AI,
+    description:
+      'Request AI assistance and review AI outputs within the active tenant.',
+  },
 ];
 /**
  * Default permission set granted to each built-in role. Keyed by stable role
@@ -259,6 +265,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly PermissionKey[]> = {
     PERMISSION_KEYS.CAN_MANAGE_INTAKE,
     PERMISSION_KEYS.CAN_MANAGE_COMPLIANCE,
     PERMISSION_KEYS.CAN_MANAGE_INTEGRATIONS,
+    PERMISSION_KEYS.CAN_MANAGE_AI,
   ],
   [ROLE_KEY_TENANT_MANAGER]: [
     PERMISSION_KEYS.CAN_VIEW_TENANT,

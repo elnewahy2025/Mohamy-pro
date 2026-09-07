@@ -456,6 +456,7 @@ model Tenant {
   legalHolds LegalHold[]
   integrations Integration[]
   webhookEndpoints WebhookEndpoint[]
+  aiRequests AiRequest[]
   @@index([status, createdAt])
 }
 
@@ -2631,6 +2632,34 @@ model NotificationRule {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, eventType, enabled])
+}
+
+model AiRequest {
+  id         String          @id @default(uuid())
+  tenantId   String
+  taskType   String
+  refs       Json            @default("[]")
+  promptHint String?         @db.Text
+  status     AiRequestStatus @default(QUEUED)
+  outputText String?         @db.Text
+  outputMeta Json            @default("{}")
+  requestedBy String
+  reviewedBy String?
+  reviewNotes String?        @db.Text
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+}
+
+enum AiRequestStatus {
+  QUEUED
+  READY
+  FAILED
+  APPROVED
+  REJECTED
 }
 
 model Integration {
