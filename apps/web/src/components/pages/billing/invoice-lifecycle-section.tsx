@@ -11,6 +11,7 @@ import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const lifecycleSchema = z.object({
   invoiceId: z.string().min(1, 'invalid'),
@@ -21,11 +22,16 @@ export function InvoiceLifecycleSection() {
   const t = useTranslations();
   const { user } = useAuth();
 
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
+  const [billingsClient] = useState(() => new BillingsClient());
   const [result, setResult] = useState<InvoiceResult | null>(null);
 
   const {
     register,
+    setValue,
+    watch,
     handleSubmit,
     getValues,
     formState: { errors },
@@ -67,28 +73,63 @@ export function InvoiceLifecycleSection() {
       <h3>{t('billing.sections.lifecycle.heading')}</h3>
       <p>{t('billing.sections.lifecycle.description')}</p>
 
-      <form onSubmit={handleSubmit(() => run('issue'))} className="space-y-6 mt-6">
+      <form
+        onSubmit={handleSubmit(() => run('issue'))}
+        className="space-y-6 mt-6"
+      >
         <div className="form-grid">
-          <FormField
+          <EntityPicker
             label={t('billing.labels.invoiceId')}
-            error={errors.invoiceId ? t(`form.errors.${errors.invoiceId.message}`) : undefined}
-            inputProps={{
-              type: 'text',
-              placeholder: t('billing.placeholders.invoiceId'),
-              ...register('invoiceId'),
-            }}
+            placeholder={t('billing.placeholders.invoiceId')}
+            required
+            error={
+              errors.invoiceId
+                ? t(`form.errors.${errors.invoiceId.message}`)
+                : undefined
+            }
+            value={watch('invoiceId') ?? ''}
+            onChange={(id) =>
+              setValue('invoiceId', id, { shouldValidate: true })
+            }
+            load={async () =>
+              (await billingsClient.listInvoices()).map((i) => ({
+                id: i.id,
+                label: i.invoiceNumber,
+                sub: i.status,
+              }))
+            }
           />
         </div>
 
         <div className="form-actions form-actions-row">
-          <Button type="button" disabled={status === 'submitting'} onClick={() => run('issue')}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.issue')}
+          <Button
+            type="button"
+            disabled={status === 'submitting'}
+            onClick={() => run('issue')}
+          >
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.issue')}
           </Button>
-          <Button type="button" variant="outline" disabled={status === 'submitting'} onClick={() => run('void')}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.void')}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={status === 'submitting'}
+            onClick={() => run('void')}
+          >
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.void')}
           </Button>
-          <Button type="button" variant="outline" disabled={status === 'submitting'} onClick={() => run('newVersion')}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.newVersion')}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={status === 'submitting'}
+            onClick={() => run('newVersion')}
+          >
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.newVersion')}
           </Button>
         </div>
 
@@ -97,10 +138,14 @@ export function InvoiceLifecycleSection() {
             status={status}
             successLabel={t('billing.result.title')}
             errorTitle={t('billing.result.errorTitle')}
-            fields={result ? [
-              { label: t('billing.result.id'), value: result.id },
-              { label: t('billing.result.status'), value: result.status },
-            ] : undefined}
+            fields={
+              result
+                ? [
+                    { label: t('billing.result.id'), value: result.id },
+                    { label: t('billing.result.status'), value: result.status },
+                  ]
+                : undefined
+            }
           />
         )}
       </form>

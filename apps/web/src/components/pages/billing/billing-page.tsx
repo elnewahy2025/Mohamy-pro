@@ -13,7 +13,16 @@ import { BalanceSection } from '@/components/pages/billing/balance-section';
 import { TaxSection } from '@/components/pages/billing/tax-section';
 import { Button } from '@/components/ui/button';
 
-type Tab = 'fee' | 'expense' | 'invoice' | 'lifecycle' | 'payment' | 'credit' | 'ledger' | 'balance' | 'tax';
+type Tab =
+  | 'fee'
+  | 'expense'
+  | 'invoice'
+  | 'lifecycle'
+  | 'payment'
+  | 'credit'
+  | 'ledger'
+  | 'balance'
+  | 'tax';
 
 export function BillingPage(): React.ReactNode {
   const t = useTranslations();

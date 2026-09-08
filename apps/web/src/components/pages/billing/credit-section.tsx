@@ -6,7 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTranslations } from 'next-intl';
 
-import { BillingsClient, type CreditResult, type RefundResult } from '@/lib/api';
+import {
+  BillingsClient,
+  type CreditResult,
+  type RefundResult,
+} from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
@@ -29,7 +33,9 @@ export function CreditSection() {
   const t = useTranslations();
   const { user } = useAuth();
 
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [credit, setCredit] = useState<CreditResult | null>(null);
   const [refund, setRefund] = useState<RefundResult | null>(null);
 
@@ -40,7 +46,17 @@ export function CreditSection() {
     formState: { errors },
   } = useRHForm<CreditForm>({
     resolver: zodResolver(creditSchema),
-    defaultValues: { clientId: '', caseId: '', amount: '', applyCreditId: '', applyInvoiceId: '', applyAmount: '', refundPaymentId: '', refundAmount: '', refundReason: '' },
+    defaultValues: {
+      clientId: '',
+      caseId: '',
+      amount: '',
+      applyCreditId: '',
+      applyInvoiceId: '',
+      applyAmount: '',
+      refundPaymentId: '',
+      refundAmount: '',
+      refundReason: '',
+    },
   });
 
   async function runCreate(form: CreditForm): Promise<void> {
@@ -63,7 +79,8 @@ export function CreditSection() {
 
   async function runApply(): Promise<void> {
     const form = getValues();
-    if (!form.applyCreditId || !form.applyInvoiceId || !form.applyAmount) return;
+    if (!form.applyCreditId || !form.applyInvoiceId || !form.applyAmount)
+      return;
     try {
       const client = new BillingsClient();
       setStatus('submitting');
@@ -117,7 +134,11 @@ export function CreditSection() {
         <div className="form-grid">
           <FormField
             label={t('billing.labels.clientId')}
-            error={errors.clientId ? t(`form.errors.${errors.clientId.message}`) : undefined}
+            error={
+              errors.clientId
+                ? t(`form.errors.${errors.clientId.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.clientId'),
@@ -126,7 +147,11 @@ export function CreditSection() {
           />
           <FormField
             label={t('billing.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
+            error={
+              errors.caseId
+                ? t(`form.errors.${errors.caseId.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.caseId'),
@@ -135,7 +160,11 @@ export function CreditSection() {
           />
           <FormField
             label={t('billing.labels.amount')}
-            error={errors.amount ? t(`form.errors.${errors.amount.message}`) : undefined}
+            error={
+              errors.amount
+                ? t(`form.errors.${errors.amount.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.amount'),
@@ -193,13 +222,29 @@ export function CreditSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.create')}
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.create')}
           </Button>
-          <Button type="button" variant="outline" disabled={status === 'submitting'} onClick={() => runApply()}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.applyCredit')}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={status === 'submitting'}
+            onClick={() => runApply()}
+          >
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.applyCredit')}
           </Button>
-          <Button type="button" variant="outline" disabled={status === 'submitting'} onClick={() => runRefund()}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.issueRefund')}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={status === 'submitting'}
+            onClick={() => runRefund()}
+          >
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.issueRefund')}
           </Button>
         </div>
 
@@ -208,9 +253,13 @@ export function CreditSection() {
             status={status}
             successLabel={t('billing.result.title')}
             errorTitle={t('billing.result.errorTitle')}
-            fields={credit ? [{ label: t('billing.result.id'), value: credit.id }]
-              : refund ? [{ label: t('billing.result.id'), value: refund.id }]
-              : undefined}
+            fields={
+              credit
+                ? [{ label: t('billing.result.id'), value: credit.id }]
+                : refund
+                  ? [{ label: t('billing.result.id'), value: refund.id }]
+                  : undefined
+            }
           />
         )}
       </form>

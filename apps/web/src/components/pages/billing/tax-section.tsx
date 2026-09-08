@@ -22,7 +22,9 @@ export function TaxSection() {
   const t = useTranslations();
   const { user } = useAuth();
 
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [created, setCreated] = useState<TaxRuleResult | null>(null);
 
   const {
@@ -67,7 +69,9 @@ export function TaxSection() {
         <div className="form-grid">
           <FormField
             label={t('billing.labels.name')}
-            error={errors.name ? t(`form.errors.${errors.name.message}`) : undefined}
+            error={
+              errors.name ? t(`form.errors.${errors.name.message}`) : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.name'),
@@ -76,7 +80,9 @@ export function TaxSection() {
           />
           <FormField
             label={t('billing.labels.rate')}
-            error={errors.rate ? t(`form.errors.${errors.rate.message}`) : undefined}
+            error={
+              errors.rate ? t(`form.errors.${errors.rate.message}`) : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.rate'),
@@ -87,7 +93,9 @@ export function TaxSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.create')}
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.create')}
           </Button>
         </div>
 
@@ -96,7 +104,11 @@ export function TaxSection() {
             status={status}
             successLabel={t('billing.result.title')}
             errorTitle={t('billing.result.errorTitle')}
-            fields={created ? [{ label: t('billing.result.id'), value: created.id }] : undefined}
+            fields={
+              created
+                ? [{ label: t('billing.result.id'), value: created.id }]
+                : undefined
+            }
           />
         )}
       </form>

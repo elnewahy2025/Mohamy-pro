@@ -21,7 +21,9 @@ export function LedgerSection() {
   const t = useTranslations();
   const { user } = useAuth();
 
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [entries, setEntries] = useState<LedgerEntryResult[]>([]);
 
   const {
@@ -63,7 +65,11 @@ export function LedgerSection() {
         <div className="form-grid">
           <FormField
             label={t('billing.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
+            error={
+              errors.caseId
+                ? t(`form.errors.${errors.caseId.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.caseId'),
@@ -74,7 +80,9 @@ export function LedgerSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.load')}
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.load')}
           </Button>
         </div>
 
@@ -83,7 +91,12 @@ export function LedgerSection() {
             status={status}
             successLabel={t('billing.result.title')}
             errorTitle={t('billing.result.errorTitle')}
-            fields={[{ label: t('billing.result.total'), value: String(entries.length) }]}
+            fields={[
+              {
+                label: t('billing.result.total'),
+                value: String(entries.length),
+              },
+            ]}
           />
         )}
 

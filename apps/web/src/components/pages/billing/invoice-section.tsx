@@ -27,7 +27,10 @@ type InvoiceForm = z.infer<typeof invoiceSchema>;
 
 function splitIds(raw: string | undefined): string[] | undefined {
   if (!raw) return undefined;
-  const ids = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const ids = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   return ids.length > 0 ? ids : undefined;
 }
 
@@ -35,7 +38,9 @@ export function InvoiceSection() {
   const t = useTranslations();
   const { user } = useAuth();
 
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [created, setCreated] = useState<InvoiceDetail | null>(null);
 
   const {
@@ -44,7 +49,17 @@ export function InvoiceSection() {
     formState: { errors },
   } = useRHForm<InvoiceForm>({
     resolver: zodResolver(invoiceSchema),
-    defaultValues: { caseId: '', clientId: '', invoiceNumber: '', discountAmount: '', taxRuleId: '', dueDate: '', timeEntryIds: '', feeIds: '', expenseIds: '' },
+    defaultValues: {
+      caseId: '',
+      clientId: '',
+      invoiceNumber: '',
+      discountAmount: '',
+      taxRuleId: '',
+      dueDate: '',
+      timeEntryIds: '',
+      feeIds: '',
+      expenseIds: '',
+    },
   });
 
   async function runCreate(form: InvoiceForm): Promise<void> {
@@ -56,9 +71,13 @@ export function InvoiceSection() {
         caseId: form.caseId || undefined,
         clientId: form.clientId || undefined,
         invoiceNumber: form.invoiceNumber,
-        discountAmount: form.discountAmount ? Number(form.discountAmount) : undefined,
+        discountAmount: form.discountAmount
+          ? Number(form.discountAmount)
+          : undefined,
         taxRuleId: form.taxRuleId || undefined,
-        dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : undefined,
+        dueDate: form.dueDate
+          ? new Date(form.dueDate).toISOString()
+          : undefined,
         timeEntryIds: splitIds(form.timeEntryIds),
         feeIds: splitIds(form.feeIds),
         expenseIds: splitIds(form.expenseIds),
@@ -87,7 +106,11 @@ export function InvoiceSection() {
         <div className="form-grid">
           <FormField
             label={t('billing.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
+            error={
+              errors.caseId
+                ? t(`form.errors.${errors.caseId.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.caseId'),
@@ -96,7 +119,11 @@ export function InvoiceSection() {
           />
           <FormField
             label={t('billing.labels.clientId')}
-            error={errors.clientId ? t(`form.errors.${errors.clientId.message}`) : undefined}
+            error={
+              errors.clientId
+                ? t(`form.errors.${errors.clientId.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.clientId'),
@@ -105,7 +132,11 @@ export function InvoiceSection() {
           />
           <FormField
             label={t('billing.labels.invoiceNumber')}
-            error={errors.invoiceNumber ? t(`form.errors.${errors.invoiceNumber.message}`) : undefined}
+            error={
+              errors.invoiceNumber
+                ? t(`form.errors.${errors.invoiceNumber.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.invoiceNumber'),
@@ -114,7 +145,11 @@ export function InvoiceSection() {
           />
           <FormField
             label={t('billing.labels.discountAmount')}
-            error={errors.discountAmount ? t(`form.errors.${errors.discountAmount.message}`) : undefined}
+            error={
+              errors.discountAmount
+                ? t(`form.errors.${errors.discountAmount.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.amount'),
@@ -123,7 +158,11 @@ export function InvoiceSection() {
           />
           <FormField
             label={t('billing.labels.taxRuleId')}
-            error={errors.taxRuleId ? t(`form.errors.${errors.taxRuleId.message}`) : undefined}
+            error={
+              errors.taxRuleId
+                ? t(`form.errors.${errors.taxRuleId.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.invoiceId'),
@@ -132,7 +171,11 @@ export function InvoiceSection() {
           />
           <FormField
             label={t('billing.labels.dueDate')}
-            error={errors.dueDate ? t(`form.errors.${errors.dueDate.message}`) : undefined}
+            error={
+              errors.dueDate
+                ? t(`form.errors.${errors.dueDate.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'date',
               ...register('dueDate'),
@@ -140,7 +183,11 @@ export function InvoiceSection() {
           />
           <FormField
             label={t('billing.labels.timeEntryIds')}
-            error={errors.timeEntryIds ? t(`form.errors.${errors.timeEntryIds.message}`) : undefined}
+            error={
+              errors.timeEntryIds
+                ? t(`form.errors.${errors.timeEntryIds.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.invoiceId'),
@@ -149,7 +196,11 @@ export function InvoiceSection() {
           />
           <FormField
             label={t('billing.labels.feeIds')}
-            error={errors.feeIds ? t(`form.errors.${errors.feeIds.message}`) : undefined}
+            error={
+              errors.feeIds
+                ? t(`form.errors.${errors.feeIds.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.invoiceId'),
@@ -158,7 +209,11 @@ export function InvoiceSection() {
           />
           <FormField
             label={t('billing.labels.expenseIds')}
-            error={errors.expenseIds ? t(`form.errors.${errors.expenseIds.message}`) : undefined}
+            error={
+              errors.expenseIds
+                ? t(`form.errors.${errors.expenseIds.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.invoiceId'),
@@ -169,7 +224,9 @@ export function InvoiceSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.create')}
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.create')}
           </Button>
         </div>
 
@@ -178,11 +235,18 @@ export function InvoiceSection() {
             status={status}
             successLabel={t('billing.result.title')}
             errorTitle={t('billing.result.errorTitle')}
-            fields={created ? [
-              { label: t('billing.result.id'), value: created.id },
-              { label: t('billing.result.total'), value: created.total },
-              { label: t('billing.result.status'), value: created.status },
-            ] : undefined}
+            fields={
+              created
+                ? [
+                    { label: t('billing.result.id'), value: created.id },
+                    { label: t('billing.result.total'), value: created.total },
+                    {
+                      label: t('billing.result.status'),
+                      value: created.status,
+                    },
+                  ]
+                : undefined
+            }
           />
         )}
       </form>

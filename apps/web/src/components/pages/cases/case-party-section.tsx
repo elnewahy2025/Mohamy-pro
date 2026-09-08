@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
+  ApiClient,
   ApiError,
   CasesClient,
   PartyClient,
@@ -35,6 +36,7 @@ export function CasePartySection(): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new CasesClient());
+  const [apiClient] = useState(() => new ApiClient());
   const [partiesClient] = useState(() => new PartyClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [added, setAdded] = useState<CasePartyResult | null>(null);
@@ -48,6 +50,7 @@ export function CasePartySection(): React.ReactNode {
   });
   const watchedCaseId = addForm.watch('caseId');
   const watchedPartyId = addForm.watch('partyId');
+  const watchedRoleId = addForm.watch('roleId');
   const removeForm = useForm<RemoveForm>({
     resolver: zodResolver(removeSchema),
     defaultValues: { caseId: '', partyId: '' },
@@ -167,19 +170,26 @@ export function CasePartySection(): React.ReactNode {
             )
           }
         />
-        <FormField
+        <EntityPicker
           label={t('cases.labels.roleId')}
+          placeholder={t('cases.placeholders.roleId')}
+          required
           error={
             addForm.formState.errors.roleId
               ? t(`form.errors.${addForm.formState.errors.roleId.message}`)
               : undefined
           }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.roleId'),
-            ...addForm.register('roleId'),
-          }}
+          value={watchedRoleId ?? ''}
+          onChange={(id) =>
+            addForm.setValue('roleId', id, { shouldValidate: true })
+          }
+          load={async () =>
+            (await apiClient.listRoles()).map((r) => ({
+              id: r.id,
+              label: r.key,
+              sub: r.name,
+            }))
+          }
         />
       </div>
       <div className="form-actions form-actions-row">
@@ -219,23 +229,39 @@ export function CasePartySection(): React.ReactNode {
         }
       />
       <div className="form-grid" style={{ marginTop: '1rem' }}>
-        <FormField
+        <EntityPicker
           label={t('cases.labels.id')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.id'),
-            ...removeForm.register('caseId'),
-          }}
+          placeholder={t('cases.placeholders.id')}
+          required
+          value={removeForm.watch('caseId') ?? ''}
+          onChange={(id) =>
+            removeForm.setValue('caseId', id, { shouldValidate: true })
+          }
+          load={async (search) =>
+            (await client.list(search ? { search } : {})).data.map((c) => ({
+              id: c.id,
+              label: c.caseNumber,
+              sub: c.status,
+            }))
+          }
         />
-        <FormField
+        <EntityPicker
           label={t('cases.labels.partyId')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.partyId'),
-            ...removeForm.register('partyId'),
-          }}
+          placeholder={t('cases.placeholders.partyId')}
+          required
+          value={removeForm.watch('partyId') ?? ''}
+          onChange={(id) =>
+            removeForm.setValue('partyId', id, { shouldValidate: true })
+          }
+          load={async (search) =>
+            (await partiesClient.list(search ? { search } : {})).data.map(
+              (p) => ({
+                id: p.id,
+                label: p.displayName,
+                sub: p.partyType,
+              }),
+            )
+          }
         />
       </div>
       <div className="form-actions form-actions-row">

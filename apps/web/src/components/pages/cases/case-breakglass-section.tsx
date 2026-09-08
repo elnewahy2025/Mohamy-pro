@@ -9,12 +9,14 @@ import { z } from 'zod';
 import {
   ApiError,
   BreakGlassClient,
+  CasesClient,
   type BreakGlassActivationResult,
 } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const activateSchema = z.object({
   subjectMembershipId: z.string().min(1, 'invalid').max(100, 'tooLong'),
@@ -28,8 +30,11 @@ export function CaseBreakGlassSection(): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new BreakGlassClient());
+  const [casesClient] = useState(() => new CasesClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [activated, setActivated] = useState<BreakGlassActivationResult | null>(null);
+  const [activated, setActivated] = useState<BreakGlassActivationResult | null>(
+    null,
+  );
   const [grants, setGrants] = useState<BreakGlassActivationResult[]>([]);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -38,10 +43,17 @@ export function CaseBreakGlassSection(): React.ReactNode {
     register,
     handleSubmit,
     getValues,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<ActivateForm>({
     resolver: zodResolver(activateSchema),
-    defaultValues: { subjectMembershipId: '', caseId: '', reason: '', endsAt: '' },
+    defaultValues: {
+      subjectMembershipId: '',
+      caseId: '',
+      reason: '',
+      endsAt: '',
+    },
   });
 
   async function fail(error: unknown): Promise<void> {
@@ -49,7 +61,12 @@ export function CaseBreakGlassSection(): React.ReactNode {
     setSubmitError(
       error instanceof ApiError
         ? error
-        : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+        : new ApiError(
+            error instanceof Error ? error.message : 'Unknown error',
+            'INTERNAL',
+            [],
+            0,
+          ),
     );
   }
 
@@ -106,7 +123,9 @@ export function CaseBreakGlassSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Siren size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Siren size={18} />
+        </span>
         <div>
           <h2>{t('cases.sections.breakglass')}</h2>
           <p>{t('cases.entity.breakglass.description')}</p>
@@ -115,7 +134,11 @@ export function CaseBreakGlassSection(): React.ReactNode {
       <div className="form-grid">
         <FormField
           label={t('cases.labels.subjectMembershipId')}
-          error={errors.subjectMembershipId ? t(`form.errors.${errors.subjectMembershipId.message}`) : undefined}
+          error={
+            errors.subjectMembershipId
+              ? t(`form.errors.${errors.subjectMembershipId.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -123,19 +146,34 @@ export function CaseBreakGlassSection(): React.ReactNode {
             ...register('subjectMembershipId'),
           }}
         />
-        <FormField
+        <EntityPicker
           label={t('cases.labels.id')}
-          error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.id'),
-            ...register('caseId'),
-          }}
+          placeholder={t('cases.placeholders.id')}
+          required
+          error={
+            errors.caseId
+              ? t(`form.errors.${errors.caseId.message}`)
+              : undefined
+          }
+          value={watch('caseId') ?? ''}
+          onChange={(id) => setValue('caseId', id, { shouldValidate: true })}
+          load={async (search) =>
+            (await casesClient.list(search ? { search } : {})).data.map(
+              (c) => ({
+                id: c.id,
+                label: c.caseNumber,
+                sub: c.status,
+              }),
+            )
+          }
         />
         <FormField
           label={t('cases.labels.reason')}
-          error={errors.reason ? t(`form.errors.${errors.reason.message}`) : undefined}
+          error={
+            errors.reason
+              ? t(`form.errors.${errors.reason.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -152,10 +190,20 @@ export function CaseBreakGlassSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void handleSubmit(runActivate)()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void handleSubmit(runActivate)()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('cases.submitting') : t('cases.activate')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void runList()} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runList()}
+          disabled={submitting}
+        >
           {submitting ? t('cases.submitting') : t('cases.result.list')}
         </Button>
       </div>
@@ -168,17 +216,34 @@ export function CaseBreakGlassSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={activated ? [
-          { label: t('cases.result.id'), value: activated.id },
-        ] : undefined}
+        fields={
+          activated
+            ? [{ label: t('cases.result.id'), value: activated.id }]
+            : undefined
+        }
       />
       {grants.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
           {grants.map((grant) => (
-            <div key={grant.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-              <span><code>{grant.subjectMembershipId}</code> — {grant.reason.slice(0, 60)}</span>
+            <div
+              key={grant.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+              }}
+            >
               <span>
-                <Button type="button" variant="outline" onClick={() => void runRevoke(grant.id)} disabled={submitting}>
+                <code>{grant.subjectMembershipId}</code> —{' '}
+                {grant.reason.slice(0, 60)}
+              </span>
+              <span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void runRevoke(grant.id)}
+                  disabled={submitting}
+                >
                   {t('cases.revokeGrant')}
                 </Button>
               </span>

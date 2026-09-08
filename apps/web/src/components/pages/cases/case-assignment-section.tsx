@@ -6,15 +6,12 @@ import { Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import {
-  ApiError,
-  CasesClient,
-  type CaseAssignmentResult,
-} from '@/lib/api';
+import { ApiError, CasesClient, type CaseAssignmentResult } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const assignSchema = z.object({
   caseId: z.string().min(1, 'invalid').max(100, 'tooLong'),
@@ -54,7 +51,12 @@ export function CaseAssignmentSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -75,7 +77,12 @@ export function CaseAssignmentSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -90,14 +97,21 @@ export function CaseAssignmentSection(): React.ReactNode {
     setSubmitError(null);
     try {
       await client.unassignMember({ caseId, membershipId });
-      setAssignees((prev) => prev.filter((a) => a.membershipId !== membershipId));
+      setAssignees((prev) =>
+        prev.filter((a) => a.membershipId !== membershipId),
+      );
       setStatus('success');
     } catch (error) {
       setStatus('error');
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -107,26 +121,45 @@ export function CaseAssignmentSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Users size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Users size={18} />
+        </span>
         <div>
           <h2>{t('cases.sections.assignments')}</h2>
           <p>{t('cases.entity.assignments.description')}</p>
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <EntityPicker
           label={t('cases.labels.id')}
-          error={assignForm.formState.errors.caseId ? t(`form.errors.${assignForm.formState.errors.caseId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.id'),
-            ...assignForm.register('caseId'),
-          }}
+          placeholder={t('cases.placeholders.id')}
+          required
+          error={
+            assignForm.formState.errors.caseId
+              ? t(`form.errors.${assignForm.formState.errors.caseId.message}`)
+              : undefined
+          }
+          value={assignForm.watch('caseId') ?? ''}
+          onChange={(id) =>
+            assignForm.setValue('caseId', id, { shouldValidate: true })
+          }
+          load={async (search) =>
+            (await client.list(search ? { search } : {})).data.map((c) => ({
+              id: c.id,
+              label: c.caseNumber,
+              sub: c.status,
+            }))
+          }
         />
         <FormField
           label={t('cases.labels.membershipId')}
-          error={assignForm.formState.errors.membershipId ? t(`form.errors.${assignForm.formState.errors.membershipId.message}`) : undefined}
+          error={
+            assignForm.formState.errors.membershipId
+              ? t(
+                  `form.errors.${assignForm.formState.errors.membershipId.message}`,
+                )
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -136,10 +169,20 @@ export function CaseAssignmentSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void assignForm.handleSubmit(runAssign)()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void assignForm.handleSubmit(runAssign)()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('cases.submitting') : t('cases.assign')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void runList()} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runList()}
+          disabled={submitting}
+        >
           {submitting ? t('cases.submitting') : t('cases.result.list')}
         </Button>
       </div>
@@ -152,17 +195,33 @@ export function CaseAssignmentSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={assigned ? [
-          { label: t('cases.result.id'), value: assigned.id },
-        ] : undefined}
+        fields={
+          assigned
+            ? [{ label: t('cases.result.id'), value: assigned.id }]
+            : undefined
+        }
       />
       {assignees.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
           {assignees.map((entry) => (
-            <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-              <span><code>{entry.membershipId}</code></span>
+            <div
+              key={entry.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+              }}
+            >
               <span>
-                <Button type="button" variant="outline" onClick={() => void runUnassign(entry.membershipId)} disabled={submitting}>
+                <code>{entry.membershipId}</code>
+              </span>
+              <span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void runUnassign(entry.membershipId)}
+                  disabled={submitting}
+                >
                   {t('cases.unassign')}
                 </Button>
               </span>

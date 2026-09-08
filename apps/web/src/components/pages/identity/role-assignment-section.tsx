@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const assignmentSchema = z.object({
   roleId: z.string().min(1, 'invalid'),
@@ -29,6 +30,8 @@ export function RoleAssignmentSection(): React.ReactNode {
   const {
     register,
     getValues,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<AssignmentForm>({
     resolver: zodResolver(assignmentSchema),
@@ -42,14 +45,23 @@ export function RoleAssignmentSection(): React.ReactNode {
     setStatus('idle');
     setSubmitError(null);
     try {
-      setResult(await client.assignRole(form.roleId, { membershipId: form.membershipId }));
+      setResult(
+        await client.assignRole(form.roleId, {
+          membershipId: form.membershipId,
+        }),
+      );
       setStatus('success');
     } catch (error) {
       setStatus('error');
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -63,14 +75,23 @@ export function RoleAssignmentSection(): React.ReactNode {
     setStatus('idle');
     setSubmitError(null);
     try {
-      setResult(await client.revokeRoleAssignment(form.roleId, { membershipId: form.membershipId }));
+      setResult(
+        await client.revokeRoleAssignment(form.roleId, {
+          membershipId: form.membershipId,
+        }),
+      );
       setStatus('success');
     } catch (error) {
       setStatus('error');
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -86,23 +107,60 @@ export function RoleAssignmentSection(): React.ReactNode {
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <EntityPicker
           label={t('identity.roles.roleIdLabel')}
-          error={errors.roleId ? t(`form.errors.${errors.roleId.message}`) : undefined}
-          inputProps={{ type: 'text', autoComplete: 'off', placeholder: t('identity.roles.roleIdPlaceholder'), ...register('roleId') }}
+          placeholder={t('identity.roles.roleIdPlaceholder')}
+          required
+          error={
+            errors.roleId
+              ? t(`form.errors.${errors.roleId.message}`)
+              : undefined
+          }
+          value={watch('roleId') ?? ''}
+          onChange={(id) => setValue('roleId', id, { shouldValidate: true })}
+          load={async () =>
+            (await client.listRoles()).map((r) => ({
+              id: r.id,
+              label: r.key,
+              sub: r.name,
+            }))
+          }
         />
         <FormField
           label={t('identity.roles.membershipIdLabel')}
-          error={errors.membershipId ? t(`form.errors.${errors.membershipId.message}`) : undefined}
-          inputProps={{ type: 'text', autoComplete: 'off', placeholder: t('identity.roles.membershipIdPlaceholder'), ...register('membershipId') }}
+          error={
+            errors.membershipId
+              ? t(`form.errors.${errors.membershipId.message}`)
+              : undefined
+          }
+          inputProps={{
+            type: 'text',
+            autoComplete: 'off',
+            placeholder: t('identity.roles.membershipIdPlaceholder'),
+            ...register('membershipId'),
+          }}
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void runAssign()} disabled={submitting || authLoading || !user}>
-          {submitting ? t('identity.roles.submitting') : t('identity.roles.assign')}
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void runAssign()}
+          disabled={submitting || authLoading || !user}
+        >
+          {submitting
+            ? t('identity.roles.submitting')
+            : t('identity.roles.assign')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void runRevoke()} disabled={submitting}>
-          {submitting ? t('identity.roles.submitting') : t('identity.roles.revokeAssignment')}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runRevoke()}
+          disabled={submitting}
+        >
+          {submitting
+            ? t('identity.roles.submitting')
+            : t('identity.roles.revokeAssignment')}
         </Button>
       </div>
       <OperationResult
@@ -114,7 +172,16 @@ export function RoleAssignmentSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={result ? [{ label: t('identity.roles.membershipIdLabel'), value: result.membershipId }] : undefined}
+        fields={
+          result
+            ? [
+                {
+                  label: t('identity.roles.membershipIdLabel'),
+                  value: result.membershipId,
+                },
+              ]
+            : undefined
+        }
       />
     </form>
   );

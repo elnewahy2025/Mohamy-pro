@@ -6,11 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTranslations } from 'next-intl';
 
-import { BillingsClient, type InvoiceBalance } from '@/lib/api';
+import { BillingsClient, CasesClient, type InvoiceBalance } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const balanceSchema = z.object({
   invoiceId: z.string().optional().or(z.literal('')),
@@ -22,11 +23,17 @@ export function BalanceSection() {
   const t = useTranslations();
   const { user } = useAuth();
 
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
+  const [billingsClient] = useState(() => new BillingsClient());
+  const [casesClient] = useState(() => new CasesClient());
   const [balances, setBalances] = useState<InvoiceBalance[]>([]);
 
   const {
     register,
+    setValue,
+    watch,
     handleSubmit,
     formState: { errors },
   } = useRHForm<BalanceForm>({
@@ -39,7 +46,10 @@ export function BalanceSection() {
       const client = new BillingsClient();
       setStatus('submitting');
       setBalances([]);
-      const result = await client.readBalances(form.invoiceId || undefined, form.caseId || undefined);
+      const result = await client.readBalances(
+        form.invoiceId || undefined,
+        form.caseId || undefined,
+      );
       setBalances(result);
       setStatus('success');
     } catch (e) {
@@ -62,29 +72,54 @@ export function BalanceSection() {
 
       <form onSubmit={handleSubmit(runLoad)} className="space-y-6 mt-6">
         <div className="form-grid">
-          <FormField
+          <EntityPicker
             label={t('billing.labels.invoiceId')}
-            error={errors.invoiceId ? t(`form.errors.${errors.invoiceId.message}`) : undefined}
-            inputProps={{
-              type: 'text',
-              placeholder: t('billing.placeholders.invoiceId'),
-              ...register('invoiceId'),
-            }}
+            placeholder={t('billing.placeholders.invoiceId')}
+            required
+            error={
+              errors.invoiceId
+                ? t(`form.errors.${errors.invoiceId.message}`)
+                : undefined
+            }
+            value={watch('invoiceId') ?? ''}
+            onChange={(id) =>
+              setValue('invoiceId', id, { shouldValidate: true })
+            }
+            load={async () =>
+              (await billingsClient.listInvoices()).map((i) => ({
+                id: i.id,
+                label: i.invoiceNumber,
+                sub: i.status,
+              }))
+            }
           />
-          <FormField
+          <EntityPicker
             label={t('billing.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
-            inputProps={{
-              type: 'text',
-              placeholder: t('billing.placeholders.caseId'),
-              ...register('caseId'),
-            }}
+            placeholder={t('billing.placeholders.caseId')}
+            error={
+              errors.caseId
+                ? t(`form.errors.${errors.caseId.message}`)
+                : undefined
+            }
+            value={watch('caseId') ?? ''}
+            onChange={(id) => setValue('caseId', id, { shouldValidate: true })}
+            load={async (search) =>
+              (await casesClient.list(search ? { search } : {})).data.map(
+                (c) => ({
+                  id: c.id,
+                  label: c.caseNumber,
+                  sub: c.status,
+                }),
+              )
+            }
           />
         </div>
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.load')}
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.load')}
           </Button>
         </div>
 
@@ -93,7 +128,12 @@ export function BalanceSection() {
             status={status}
             successLabel={t('billing.result.title')}
             errorTitle={t('billing.result.errorTitle')}
-            fields={[{ label: t('billing.result.total'), value: String(balances.length) }]}
+            fields={[
+              {
+                label: t('billing.result.total'),
+                value: String(balances.length),
+              },
+            ]}
           />
         )}
 
@@ -101,7 +141,8 @@ export function BalanceSection() {
           <ul className="mt-4 space-y-2">
             {balances.map((balance) => (
               <li key={balance.invoiceId} className="text-sm">
-                {t('billing.result.total')}: {balance.total} — {t('billing.result.outstanding')}: {balance.outstanding}
+                {t('billing.result.total')}: {balance.total} —{' '}
+                {t('billing.result.outstanding')}: {balance.outstanding}
               </li>
             ))}
           </ul>

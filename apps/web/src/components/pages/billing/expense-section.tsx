@@ -23,7 +23,9 @@ export function ExpenseSection() {
   const t = useTranslations();
   const { user } = useAuth();
 
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [created, setCreated] = useState<ExpenseResult | null>(null);
 
   const {
@@ -69,7 +71,11 @@ export function ExpenseSection() {
         <div className="form-grid">
           <FormField
             label={t('billing.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
+            error={
+              errors.caseId
+                ? t(`form.errors.${errors.caseId.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.caseId'),
@@ -78,7 +84,11 @@ export function ExpenseSection() {
           />
           <FormField
             label={t('billing.labels.description')}
-            error={errors.description ? t(`form.errors.${errors.description.message}`) : undefined}
+            error={
+              errors.description
+                ? t(`form.errors.${errors.description.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.description'),
@@ -87,7 +97,11 @@ export function ExpenseSection() {
           />
           <FormField
             label={t('billing.labels.amount')}
-            error={errors.amount ? t(`form.errors.${errors.amount.message}`) : undefined}
+            error={
+              errors.amount
+                ? t(`form.errors.${errors.amount.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('billing.placeholders.amount'),
@@ -98,7 +112,9 @@ export function ExpenseSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('billing.submitting') : t('billing.create')}
+            {status === 'submitting'
+              ? t('billing.submitting')
+              : t('billing.create')}
           </Button>
         </div>
 
@@ -107,7 +123,11 @@ export function ExpenseSection() {
             status={status}
             successLabel={t('billing.result.title')}
             errorTitle={t('billing.result.errorTitle')}
-            fields={created ? [{ label: t('billing.result.id'), value: created.id }] : undefined}
+            fields={
+              created
+                ? [{ label: t('billing.result.id'), value: created.id }]
+                : undefined
+            }
           />
         )}
       </form>
