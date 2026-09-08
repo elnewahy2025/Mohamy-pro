@@ -9,6 +9,7 @@ import { z } from 'zod';
 import {
   ApiError,
   CasesClient,
+  ClientsClient,
   type CasePriority,
   type CaseResult,
   type CaseStatus,
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const caseSchema = z.object({
   id: z.string().optional(),
@@ -40,6 +42,7 @@ export function CaseSection(): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new CasesClient());
+  const [clientsClient] = useState(() => new ClientsClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<CaseResult | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
@@ -49,6 +52,8 @@ export function CaseSection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<CaseForm>({
     resolver: zodResolver(caseSchema),
@@ -126,7 +131,12 @@ export function CaseSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -140,7 +150,9 @@ export function CaseSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Briefcase size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Briefcase size={18} />
+        </span>
         <div>
           <h2>{t('cases.sections.case')}</h2>
           <p>{t('cases.entity.case.description')}</p>
@@ -158,7 +170,11 @@ export function CaseSection(): React.ReactNode {
         />
         <FormField
           label={t('cases.labels.caseNumber')}
-          error={errors.caseNumber ? t(`form.errors.${errors.caseNumber.message}`) : undefined}
+          error={
+            errors.caseNumber
+              ? t(`form.errors.${errors.caseNumber.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -168,7 +184,11 @@ export function CaseSection(): React.ReactNode {
         />
         <FormField
           label={t('cases.labels.internalNumber')}
-          error={errors.internalNumber ? t(`form.errors.${errors.internalNumber.message}`) : undefined}
+          error={
+            errors.internalNumber
+              ? t(`form.errors.${errors.internalNumber.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -176,19 +196,34 @@ export function CaseSection(): React.ReactNode {
             ...register('internalNumber'),
           }}
         />
-        <FormField
+        <EntityPicker
           label={t('cases.labels.clientId')}
-          error={errors.clientId ? t(`form.errors.${errors.clientId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.clientId'),
-            ...register('clientId'),
-          }}
+          placeholder={t('cases.placeholders.clientId')}
+          required
+          error={
+            errors.clientId
+              ? t(`form.errors.${errors.clientId.message}`)
+              : undefined
+          }
+          value={watch('clientId') ?? ''}
+          onChange={(id) => setValue('clientId', id, { shouldValidate: true })}
+          load={async (search) =>
+            (
+              await clientsClient.listClients(search ? { search } : {})
+            ).data.map((c) => ({
+              id: c.id,
+              label: c.displayName,
+              sub: c.clientType,
+            }))
+          }
         />
         <FormField
           label={t('cases.labels.practiceArea')}
-          error={errors.practiceArea ? t(`form.errors.${errors.practiceArea.message}`) : undefined}
+          error={
+            errors.practiceArea
+              ? t(`form.errors.${errors.practiceArea.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -198,7 +233,11 @@ export function CaseSection(): React.ReactNode {
         />
         <FormField
           label={t('cases.labels.caseType')}
-          error={errors.caseType ? t(`form.errors.${errors.caseType.message}`) : undefined}
+          error={
+            errors.caseType
+              ? t(`form.errors.${errors.caseType.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -253,10 +292,20 @@ export function CaseSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void trigger('create')} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void trigger('create')}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('cases.submitting') : t('cases.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('update')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('update')}
+          disabled={submitting}
+        >
           {submitting ? t('cases.submitting') : t('cases.update')}
         </Button>
       </div>
@@ -269,11 +318,18 @@ export function CaseSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={result ? [
-          { label: t('cases.result.id'), value: result.id },
-          { label: t('cases.result.caseNumber'), value: result.caseNumber },
-          { label: t('cases.result.status'), value: result.status },
-        ] : undefined}
+        fields={
+          result
+            ? [
+                { label: t('cases.result.id'), value: result.id },
+                {
+                  label: t('cases.result.caseNumber'),
+                  value: result.caseNumber,
+                },
+                { label: t('cases.result.status'), value: result.status },
+              ]
+            : undefined
+        }
       />
     </form>
   );

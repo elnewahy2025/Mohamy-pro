@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const contactSchema = z.object({
   clientId: z.string().min(1, 'invalid').max(64, 'tooLong'),
@@ -44,10 +45,20 @@ export function ContactSection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<ContactForm>({
     resolver: zodResolver(contactSchema),
-    defaultValues: { clientId: '', id: '', type: 'EMAIL', value: '', label: '', isPrimary: 'false', reason: '' },
+    defaultValues: {
+      clientId: '',
+      id: '',
+      type: 'EMAIL',
+      value: '',
+      label: '',
+      isPrimary: 'false',
+      reason: '',
+    },
   });
 
   async function run(action: ActionKey, form: ContactForm): Promise<void> {
@@ -82,14 +93,27 @@ export function ContactSection(): React.ReactNode {
       setResult(next);
       setStatus('success');
       if (action === 'create') {
-        reset({ clientId: '', id: '', type: 'EMAIL', value: '', label: '', isPrimary: 'false', reason: '' });
+        reset({
+          clientId: '',
+          id: '',
+          type: 'EMAIL',
+          value: '',
+          label: '',
+          isPrimary: 'false',
+          reason: '',
+        });
       }
     } catch (error) {
       setStatus('error');
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -103,22 +127,35 @@ export function ContactSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Contact size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Contact size={18} />
+        </span>
         <div>
           <h2>{t('clients.sections.contact')}</h2>
           <p>{t('clients.entity.contact.description')}</p>
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <EntityPicker
           label={t('clients.labels.clientId')}
-          error={errors.clientId ? t(`form.errors.${errors.clientId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('clients.placeholders.clientId'),
-            ...register('clientId'),
-          }}
+          placeholder={t('clients.placeholders.clientId')}
+          required
+          error={
+            errors.clientId
+              ? t(`form.errors.${errors.clientId.message}`)
+              : undefined
+          }
+          value={watch('clientId') ?? ''}
+          onChange={(id) => setValue('clientId', id, { shouldValidate: true })}
+          load={async (search) =>
+            (await client.listClients(search ? { search } : {})).data.map(
+              (c) => ({
+                id: c.id,
+                label: c.displayName,
+                sub: c.clientType,
+              }),
+            )
+          }
         />
         <FormField
           label={t('clients.labels.entityId')}
@@ -142,7 +179,9 @@ export function ContactSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.contactValue')}
-          error={errors.value ? t(`form.errors.${errors.value.message}`) : undefined}
+          error={
+            errors.value ? t(`form.errors.${errors.value.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -152,7 +191,9 @@ export function ContactSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.contactLabel')}
-          error={errors.label ? t(`form.errors.${errors.label.message}`) : undefined}
+          error={
+            errors.label ? t(`form.errors.${errors.label.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -171,7 +212,11 @@ export function ContactSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.reason')}
-          error={errors.reason ? t(`form.errors.${errors.reason.message}`) : undefined}
+          error={
+            errors.reason
+              ? t(`form.errors.${errors.reason.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -181,13 +226,28 @@ export function ContactSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void trigger('create')} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void trigger('create')}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('clients.submitting') : t('clients.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('update')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('update')}
+          disabled={submitting}
+        >
           {submitting ? t('clients.submitting') : t('clients.update')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('remove')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('remove')}
+          disabled={submitting}
+        >
           {submitting ? t('clients.submitting') : t('clients.remove')}
         </Button>
       </div>
@@ -200,11 +260,18 @@ export function ContactSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={result ? [
-          { label: t('clients.result.id'), value: result.id },
-          { label: t('clients.result.type'), value: result.type },
-          { label: t('clients.result.status'), value: String(result.isPrimary) },
-        ] : undefined}
+        fields={
+          result
+            ? [
+                { label: t('clients.result.id'), value: result.id },
+                { label: t('clients.result.type'), value: result.type },
+                {
+                  label: t('clients.result.status'),
+                  value: String(result.isPrimary),
+                },
+              ]
+            : undefined
+        }
       />
     </form>
   );

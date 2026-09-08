@@ -8,6 +8,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
   ApiError,
+  ClientsClient,
   ConflictChecksClient,
   type ConflictCheckResult,
 } from '@/lib/api';
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const conflictCheckSchema = z.object({
   id: z.string().optional(),
@@ -39,6 +41,7 @@ export function ConflictCheckSection(): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new ConflictChecksClient());
+  const [clientsClient] = useState(() => new ClientsClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<ConflictCheckResult | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
@@ -49,6 +52,8 @@ export function ConflictCheckSection(): React.ReactNode {
     handleSubmit,
     reset,
     control,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<ConflictCheckForm>({
     resolver: zodResolver(conflictCheckSchema),
@@ -65,7 +70,10 @@ export function ConflictCheckSection(): React.ReactNode {
     name: 'parties',
   });
 
-  async function run(action: ActionKey, form: ConflictCheckForm): Promise<void> {
+  async function run(
+    action: ActionKey,
+    form: ConflictCheckForm,
+  ): Promise<void> {
     setSubmitting(true);
     setStatus('idle');
     setSubmitError(null);
@@ -83,7 +91,8 @@ export function ConflictCheckSection(): React.ReactNode {
       } else if (action === 'startReview') {
         next = await client.startReview({ id: form.id as string });
       } else {
-        const decision: 'ALLOW' | 'BLOCK' = action === 'decideAllow' ? 'ALLOW' : 'BLOCK';
+        const decision: 'ALLOW' | 'BLOCK' =
+          action === 'decideAllow' ? 'ALLOW' : 'BLOCK';
         next = await client.decide({
           id: form.id as string,
           decision,
@@ -105,7 +114,12 @@ export function ConflictCheckSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -119,7 +133,9 @@ export function ConflictCheckSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><ShieldAlert size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <ShieldAlert size={18} />
+        </span>
         <div>
           <h2>{t('conflictChecks.sections.check')}</h2>
           <p>{t('conflictChecks.entity.check.description')}</p>
@@ -135,18 +151,28 @@ export function ConflictCheckSection(): React.ReactNode {
             ...register('id'),
           }}
         />
-        <FormField
+        <EntityPicker
           label={t('conflictChecks.labels.clientId')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('conflictChecks.placeholders.clientId'),
-            ...register('clientId'),
-          }}
+          placeholder={t('conflictChecks.placeholders.clientId')}
+          value={watch('clientId') ?? ''}
+          onChange={(id) => setValue('clientId', id, { shouldValidate: true })}
+          load={async (search) =>
+            (
+              await clientsClient.listClients(search ? { search } : {})
+            ).data.map((c) => ({
+              id: c.id,
+              label: c.displayName,
+              sub: c.clientType,
+            }))
+          }
         />
         <FormField
           label={t('conflictChecks.labels.reason')}
-          error={errors.reason ? t(`form.errors.${errors.reason.message}`) : undefined}
+          error={
+            errors.reason
+              ? t(`form.errors.${errors.reason.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -162,12 +188,19 @@ export function ConflictCheckSection(): React.ReactNode {
             selectProps={register(`parties.${index}.kind` as const)}
             options={[
               { label: t('common.enums.PARTY'), value: 'PARTY' },
-              { label: t('common.enums.RELATED_ENTITY'), value: 'RELATED_ENTITY' },
+              {
+                label: t('common.enums.RELATED_ENTITY'),
+                value: 'RELATED_ENTITY',
+              },
             ]}
           />
           <FormField
             label={`${t('conflictChecks.labels.partyName')} ${index + 1}`}
-            error={errors.parties?.[index]?.name ? t(`form.errors.${errors.parties[index]?.name?.message}`) : undefined}
+            error={
+              errors.parties?.[index]?.name
+                ? t(`form.errors.${errors.parties[index]?.name?.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               autoComplete: 'off',
@@ -177,7 +210,11 @@ export function ConflictCheckSection(): React.ReactNode {
           />
           <FormField
             label={`${t('conflictChecks.labels.partyEmail')} ${index + 1}`}
-            error={errors.parties?.[index]?.email ? t(`form.errors.${errors.parties[index]?.email?.message}`) : undefined}
+            error={
+              errors.parties?.[index]?.email
+                ? t(`form.errors.${errors.parties[index]?.email?.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               autoComplete: 'off',
@@ -186,7 +223,12 @@ export function ConflictCheckSection(): React.ReactNode {
             }}
           />
           {fields.length > 1 ? (
-            <Button type="button" variant="ghost" onClick={() => remove(index)} disabled={submitting}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => remove(index)}
+              disabled={submitting}
+            >
               {t('conflictChecks.remove')}
             </Button>
           ) : null}
@@ -198,22 +240,58 @@ export function ConflictCheckSection(): React.ReactNode {
         </p>
       ) : null}
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void trigger('request')} disabled={submitting || authLoading || !user}>
-          {submitting ? t('conflictChecks.submitting') : t('conflictChecks.request')}
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void trigger('request')}
+          disabled={submitting || authLoading || !user}
+        >
+          {submitting
+            ? t('conflictChecks.submitting')
+            : t('conflictChecks.request')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => append({ kind: 'PARTY', name: '', email: '' })} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => append({ kind: 'PARTY', name: '', email: '' })}
+          disabled={submitting}
+        >
           {t('conflictChecks.addParty')}
         </Button>
       </div>
-      <div className="form-actions form-actions-row" style={{ marginTop: '0.5rem' }}>
-        <Button type="button" variant="outline" onClick={() => void trigger('startReview')} disabled={submitting}>
-          {submitting ? t('conflictChecks.submitting') : t('conflictChecks.startReview')}
+      <div
+        className="form-actions form-actions-row"
+        style={{ marginTop: '0.5rem' }}
+      >
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('startReview')}
+          disabled={submitting}
+        >
+          {submitting
+            ? t('conflictChecks.submitting')
+            : t('conflictChecks.startReview')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('decideAllow')} disabled={submitting}>
-          {submitting ? t('conflictChecks.submitting') : t('conflictChecks.decideAllow')}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('decideAllow')}
+          disabled={submitting}
+        >
+          {submitting
+            ? t('conflictChecks.submitting')
+            : t('conflictChecks.decideAllow')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('decideBlock')} disabled={submitting}>
-          {submitting ? t('conflictChecks.submitting') : t('conflictChecks.decideBlock')}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('decideBlock')}
+          disabled={submitting}
+        >
+          {submitting
+            ? t('conflictChecks.submitting')
+            : t('conflictChecks.decideBlock')}
         </Button>
       </div>
       <OperationResult
@@ -225,12 +303,25 @@ export function ConflictCheckSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={result ? [
-          { label: t('conflictChecks.result.id'), value: result.id },
-          { label: t('conflictChecks.result.status'), value: result.status },
-          { label: t('conflictChecks.result.decision'), value: result.decision },
-          { label: t('conflictChecks.result.parties'), value: String(result.parties.length) },
-        ] : undefined}
+        fields={
+          result
+            ? [
+                { label: t('conflictChecks.result.id'), value: result.id },
+                {
+                  label: t('conflictChecks.result.status'),
+                  value: result.status,
+                },
+                {
+                  label: t('conflictChecks.result.decision'),
+                  value: result.decision,
+                },
+                {
+                  label: t('conflictChecks.result.parties'),
+                  value: String(result.parties.length),
+                },
+              ]
+            : undefined
+        }
       />
     </form>
   );

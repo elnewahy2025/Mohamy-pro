@@ -9,12 +9,14 @@ import { z } from 'zod';
 import {
   ApiError,
   CasesClient,
+  PartyClient,
   type CasePartyResult,
 } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const addSchema = z.object({
   caseId: z.string().min(1, 'invalid').max(100, 'tooLong'),
@@ -33,6 +35,7 @@ export function CasePartySection(): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new CasesClient());
+  const [partiesClient] = useState(() => new PartyClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [added, setAdded] = useState<CasePartyResult | null>(null);
   const [removed, setRemoved] = useState(false);
@@ -43,6 +46,8 @@ export function CasePartySection(): React.ReactNode {
     resolver: zodResolver(addSchema),
     defaultValues: { caseId: '', partyId: '', roleId: '' },
   });
+  const watchedCaseId = addForm.watch('caseId');
+  const watchedPartyId = addForm.watch('partyId');
   const removeForm = useForm<RemoveForm>({
     resolver: zodResolver(removeSchema),
     defaultValues: { caseId: '', partyId: '' },
@@ -67,7 +72,12 @@ export function CasePartySection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -89,7 +99,12 @@ export function CasePartySection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -99,36 +114,66 @@ export function CasePartySection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><LinkIcon size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <LinkIcon size={18} />
+        </span>
         <div>
           <h2>{t('cases.sections.party')}</h2>
           <p>{t('cases.entity.party.description')}</p>
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <EntityPicker
           label={t('cases.labels.id')}
-          error={addForm.formState.errors.caseId ? t(`form.errors.${addForm.formState.errors.caseId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.id'),
-            ...addForm.register('caseId'),
-          }}
+          placeholder={t('cases.placeholders.id')}
+          required
+          error={
+            addForm.formState.errors.caseId
+              ? t(`form.errors.${addForm.formState.errors.caseId.message}`)
+              : undefined
+          }
+          value={watchedCaseId ?? ''}
+          onChange={(id) =>
+            addForm.setValue('caseId', id, { shouldValidate: true })
+          }
+          load={async (search) =>
+            (await client.list(search ? { search } : {})).data.map((c) => ({
+              id: c.id,
+              label: c.caseNumber,
+              sub: c.status,
+            }))
+          }
         />
-        <FormField
+        <EntityPicker
           label={t('cases.labels.partyId')}
-          error={addForm.formState.errors.partyId ? t(`form.errors.${addForm.formState.errors.partyId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.partyId'),
-            ...addForm.register('partyId'),
-          }}
+          placeholder={t('cases.placeholders.partyId')}
+          required
+          error={
+            addForm.formState.errors.partyId
+              ? t(`form.errors.${addForm.formState.errors.partyId.message}`)
+              : undefined
+          }
+          value={watchedPartyId ?? ''}
+          onChange={(id) =>
+            addForm.setValue('partyId', id, { shouldValidate: true })
+          }
+          load={async (search) =>
+            (await partiesClient.list(search ? { search } : {})).data.map(
+              (p) => ({
+                id: p.id,
+                label: p.displayName,
+                sub: p.partyType,
+              }),
+            )
+          }
         />
         <FormField
           label={t('cases.labels.roleId')}
-          error={addForm.formState.errors.roleId ? t(`form.errors.${addForm.formState.errors.roleId.message}`) : undefined}
+          error={
+            addForm.formState.errors.roleId
+              ? t(`form.errors.${addForm.formState.errors.roleId.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -138,7 +183,12 @@ export function CasePartySection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void addForm.handleSubmit(runAdd)()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void addForm.handleSubmit(runAdd)()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('cases.submitting') : t('cases.addParty')}
         </Button>
       </div>
@@ -151,13 +201,22 @@ export function CasePartySection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={added ? [
-          { label: t('cases.result.id'), value: added.id },
-          { label: t('cases.labels.partyId'), value: added.partyId },
-          { label: t('cases.labels.roleId'), value: added.roleId },
-        ] : removed ? [
-          { label: t('cases.result.title'), value: t('cases.removeParty') },
-        ] : undefined}
+        fields={
+          added
+            ? [
+                { label: t('cases.result.id'), value: added.id },
+                { label: t('cases.labels.partyId'), value: added.partyId },
+                { label: t('cases.labels.roleId'), value: added.roleId },
+              ]
+            : removed
+              ? [
+                  {
+                    label: t('cases.result.title'),
+                    value: t('cases.removeParty'),
+                  },
+                ]
+              : undefined
+        }
       />
       <div className="form-grid" style={{ marginTop: '1rem' }}>
         <FormField
@@ -180,7 +239,12 @@ export function CasePartySection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="outline" onClick={() => void removeForm.handleSubmit(runRemove)()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void removeForm.handleSubmit(runRemove)()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('cases.submitting') : t('cases.removeParty')}
         </Button>
       </div>

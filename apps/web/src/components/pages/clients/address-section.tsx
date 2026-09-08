@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const addressSchema = z.object({
   clientId: z.string().min(1, 'invalid').max(64, 'tooLong'),
@@ -48,6 +49,8 @@ export function AddressSection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<AddressForm>({
     resolver: zodResolver(addressSchema),
@@ -125,7 +128,12 @@ export function AddressSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -139,22 +147,35 @@ export function AddressSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><MapPin size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <MapPin size={18} />
+        </span>
         <div>
           <h2>{t('clients.sections.address')}</h2>
           <p>{t('clients.entity.address.description')}</p>
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <EntityPicker
           label={t('clients.labels.clientId')}
-          error={errors.clientId ? t(`form.errors.${errors.clientId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('clients.placeholders.clientId'),
-            ...register('clientId'),
-          }}
+          placeholder={t('clients.placeholders.clientId')}
+          required
+          error={
+            errors.clientId
+              ? t(`form.errors.${errors.clientId.message}`)
+              : undefined
+          }
+          value={watch('clientId') ?? ''}
+          onChange={(id) => setValue('clientId', id, { shouldValidate: true })}
+          load={async (search) =>
+            (await client.listClients(search ? { search } : {})).data.map(
+              (c) => ({
+                id: c.id,
+                label: c.displayName,
+                sub: c.clientType,
+              }),
+            )
+          }
         />
         <FormField
           label={t('clients.labels.entityId')}
@@ -177,7 +198,9 @@ export function AddressSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.line1')}
-          error={errors.line1 ? t(`form.errors.${errors.line1.message}`) : undefined}
+          error={
+            errors.line1 ? t(`form.errors.${errors.line1.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -187,7 +210,9 @@ export function AddressSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.line2')}
-          error={errors.line2 ? t(`form.errors.${errors.line2.message}`) : undefined}
+          error={
+            errors.line2 ? t(`form.errors.${errors.line2.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -197,7 +222,9 @@ export function AddressSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.city')}
-          error={errors.city ? t(`form.errors.${errors.city.message}`) : undefined}
+          error={
+            errors.city ? t(`form.errors.${errors.city.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -207,7 +234,11 @@ export function AddressSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.region')}
-          error={errors.region ? t(`form.errors.${errors.region.message}`) : undefined}
+          error={
+            errors.region
+              ? t(`form.errors.${errors.region.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -217,7 +248,11 @@ export function AddressSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.postalCode')}
-          error={errors.postalCode ? t(`form.errors.${errors.postalCode.message}`) : undefined}
+          error={
+            errors.postalCode
+              ? t(`form.errors.${errors.postalCode.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -227,7 +262,11 @@ export function AddressSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.country')}
-          error={errors.country ? t(`form.errors.${errors.country.message}`) : undefined}
+          error={
+            errors.country
+              ? t(`form.errors.${errors.country.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -246,7 +285,11 @@ export function AddressSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.reason')}
-          error={errors.reason ? t(`form.errors.${errors.reason.message}`) : undefined}
+          error={
+            errors.reason
+              ? t(`form.errors.${errors.reason.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -256,13 +299,28 @@ export function AddressSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void trigger('create')} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void trigger('create')}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('clients.submitting') : t('clients.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('update')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('update')}
+          disabled={submitting}
+        >
           {submitting ? t('clients.submitting') : t('clients.update')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('remove')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('remove')}
+          disabled={submitting}
+        >
           {submitting ? t('clients.submitting') : t('clients.remove')}
         </Button>
       </div>
@@ -275,11 +333,18 @@ export function AddressSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={result ? [
-          { label: t('clients.result.id'), value: result.id },
-          { label: t('clients.result.type'), value: result.type },
-          { label: t('clients.result.status'), value: String(result.isPrimary) },
-        ] : undefined}
+        fields={
+          result
+            ? [
+                { label: t('clients.result.id'), value: result.id },
+                { label: t('clients.result.type'), value: result.type },
+                {
+                  label: t('clients.result.status'),
+                  value: String(result.isPrimary),
+                },
+              ]
+            : undefined
+        }
       />
     </form>
   );

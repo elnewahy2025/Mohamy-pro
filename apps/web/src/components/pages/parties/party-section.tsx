@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
   ApiError,
+  ClientsClient,
   PartyClient,
   type PartyResult,
   type PartyType,
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const partySchema = z.object({
   id: z.string().optional(),
@@ -36,6 +38,7 @@ export function PartySection(): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new PartyClient());
+  const [clientsClient] = useState(() => new ClientsClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<PartyResult | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
@@ -45,6 +48,8 @@ export function PartySection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<PartyForm>({
     resolver: zodResolver(partySchema),
@@ -108,7 +113,12 @@ export function PartySection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -122,7 +132,9 @@ export function PartySection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Users size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Users size={18} />
+        </span>
         <div>
           <h2>{t('parties.sections.party')}</h2>
           <p>{t('parties.entity.party.description')}</p>
@@ -148,7 +160,9 @@ export function PartySection(): React.ReactNode {
         />
         <FormField
           label={t('parties.labels.name')}
-          error={errors.name ? t(`form.errors.${errors.name.message}`) : undefined}
+          error={
+            errors.name ? t(`form.errors.${errors.name.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -158,7 +172,11 @@ export function PartySection(): React.ReactNode {
         />
         <FormField
           label={t('parties.labels.legalName')}
-          error={errors.legalName ? t(`form.errors.${errors.legalName.message}`) : undefined}
+          error={
+            errors.legalName
+              ? t(`form.errors.${errors.legalName.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -168,7 +186,11 @@ export function PartySection(): React.ReactNode {
         />
         <FormField
           label={t('parties.labels.displayName')}
-          error={errors.displayName ? t(`form.errors.${errors.displayName.message}`) : undefined}
+          error={
+            errors.displayName
+              ? t(`form.errors.${errors.displayName.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -176,18 +198,31 @@ export function PartySection(): React.ReactNode {
             ...register('displayName'),
           }}
         />
-        <FormField
+        <EntityPicker
           label={t('parties.labels.clientId')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('parties.placeholders.clientId'),
-            ...register('clientId'),
-          }}
+          placeholder={t('parties.placeholders.clientId')}
+          error={
+            errors.clientId
+              ? t(`form.errors.${errors.clientId.message}`)
+              : undefined
+          }
+          value={watch('clientId') ?? ''}
+          onChange={(id) => setValue('clientId', id, { shouldValidate: true })}
+          load={async (search) =>
+            (
+              await clientsClient.listClients(search ? { search } : {})
+            ).data.map((c) => ({
+              id: c.id,
+              label: c.displayName,
+              sub: c.clientType,
+            }))
+          }
         />
         <FormField
           label={t('parties.labels.notes')}
-          error={errors.notes ? t(`form.errors.${errors.notes.message}`) : undefined}
+          error={
+            errors.notes ? t(`form.errors.${errors.notes.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -197,7 +232,11 @@ export function PartySection(): React.ReactNode {
         />
         <FormField
           label={t('parties.labels.reason')}
-          error={errors.reason ? t(`form.errors.${errors.reason.message}`) : undefined}
+          error={
+            errors.reason
+              ? t(`form.errors.${errors.reason.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -207,13 +246,28 @@ export function PartySection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void trigger('create')} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void trigger('create')}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('parties.submitting') : t('parties.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('update')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('update')}
+          disabled={submitting}
+        >
           {submitting ? t('parties.submitting') : t('parties.update')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('archive')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('archive')}
+          disabled={submitting}
+        >
           {submitting ? t('parties.submitting') : t('parties.archive')}
         </Button>
       </div>
@@ -226,11 +280,15 @@ export function PartySection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={result ? [
-          { label: t('parties.result.id'), value: result.id },
-          { label: t('parties.result.name'), value: result.displayName },
-          { label: t('parties.result.status'), value: result.status },
-        ] : undefined}
+        fields={
+          result
+            ? [
+                { label: t('parties.result.id'), value: result.id },
+                { label: t('parties.result.name'), value: result.displayName },
+                { label: t('parties.result.status'), value: result.status },
+              ]
+            : undefined
+        }
       />
     </form>
   );
