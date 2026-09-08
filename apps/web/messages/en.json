@@ -477,7 +477,8 @@
       "department": "Departments",
       "team": "Teams",
       "settings": "Settings"
-    }
+    },
+    "load": "Load list"
   },
   "clients": {
     "navLabel": "Clients",

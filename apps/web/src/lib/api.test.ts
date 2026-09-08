@@ -22,6 +22,7 @@ import {
   DocumentsClient,
   HearingsClient,
   LegalConfigClient,
+  OrgConfigClient,
   PartyClient,
   TasksClient,
   WorkflowsClient,
@@ -4326,5 +4327,88 @@ describe('ApiClient paginated lists', () => {
 
     expect(result.pagination.total).toBe(1);
     expect(result.data).toHaveLength(1);
+  });
+});
+
+describe('OrgConfigClient lists', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function orgWith(
+    handlers: Record<string, (url: string, init?: RequestInit) => Response>,
+  ) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-org' },
+            meta: {
+              requestId: 'req-1',
+              timestamp: '2026-01-01T00:00:00.000Z',
+              pagination: null,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix))
+          return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: {
+          requestId: 'req-1',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          pagination: null,
+        },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('lists organizations, branches, departments, and teams via GET', async () => {
+    const org = {
+      id: 'o1',
+      tenantId: 't1',
+      slug: 'riyadh-hq',
+      name: 'Riyadh HQ',
+      status: 'ACTIVE',
+    };
+    const { fetchMock, calls } = orgWith({
+      '/organizations': () => enveloped([org]),
+      '/branches': () => enveloped([]),
+      '/departments': () => enveloped([]),
+      '/teams': () => enveloped([]),
+    });
+    const client = new OrgConfigClient(new ApiClient(base, fetchMock));
+
+    const orgs = await client.listOrganizations();
+    const branches = await client.listBranches();
+    const departments = await client.listDepartments();
+    const teams = await client.listTeams();
+
+    expect(
+      calls.find((c) => c.url.endsWith('/organizations'))?.init?.method,
+    ).toBe('GET');
+    expect(orgs).toHaveLength(1);
+    expect(orgs[0].slug).toBe('riyadh-hq');
+    expect(branches).toEqual([]);
+    expect(departments).toEqual([]);
+    expect(teams).toEqual([]);
   });
 });

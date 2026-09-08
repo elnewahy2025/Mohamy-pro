@@ -594,6 +594,12 @@ export class OrgConfigClient {
       req,
     );
   }
+  listOrganizations(): Promise<OrganizationResult[]> {
+    return this.client.body<OrganizationResult[]>(
+      `${ORG_PREFIX}/organizations`,
+      'GET',
+    );
+  }
 
   // Branches
   createBranch(req: CreateBranchRequest): Promise<BranchResult> {
@@ -616,6 +622,9 @@ export class OrgConfigClient {
       'PATCH',
       req,
     );
+  }
+  listBranches(): Promise<BranchResult[]> {
+    return this.client.body<BranchResult[]>(`${ORG_PREFIX}/branches`, 'GET');
   }
 
   // Departments
@@ -640,6 +649,12 @@ export class OrgConfigClient {
       req,
     );
   }
+  listDepartments(): Promise<DepartmentResult[]> {
+    return this.client.body<DepartmentResult[]>(
+      `${ORG_PREFIX}/departments`,
+      'GET',
+    );
+  }
 
   // Teams
   createTeam(req: CreateTeamRequest): Promise<TeamResult> {
@@ -654,6 +669,9 @@ export class OrgConfigClient {
       'PATCH',
       req,
     );
+  }
+  listTeams(): Promise<TeamResult[]> {
+    return this.client.body<TeamResult[]>(`${ORG_PREFIX}/teams`, 'GET');
   }
 
   // Settings
@@ -1913,10 +1931,7 @@ export class DeadlinesClient {
 
   listDeadlines(caseId?: string): Promise<DeadlineResult[]> {
     const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
-    return this.client.body<DeadlineResult[]>(
-      DEADLINES_PREFIX + qs,
-      'GET',
-    );
+    return this.client.body<DeadlineResult[]>(DEADLINES_PREFIX + qs, 'GET');
   }
 
   createDeadline(req: CreateDeadlineRequest): Promise<DeadlineResult> {
@@ -2056,10 +2071,7 @@ export class DocumentsClient {
     if (caseId) params.append('caseId', caseId);
     if (clientId) params.append('clientId', clientId);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<DocumentResult[]>(
-      DOCUMENTS_PREFIX + qs,
-      'GET',
-    );
+    return this.client.body<DocumentResult[]>(DOCUMENTS_PREFIX + qs, 'GET');
   }
 
   createDocument(req: CreateDocumentRequest): Promise<DocumentResult> {

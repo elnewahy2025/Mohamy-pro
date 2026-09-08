@@ -6,11 +6,7 @@ import { Building2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import {
-  ApiError,
-  OrgConfigClient,
-  type OrganizationResult,
-} from '@/lib/api';
+import { ApiError, OrgConfigClient, type OrganizationResult } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
@@ -32,6 +28,7 @@ export function OrganizationSection(): React.ReactNode {
   const [client] = useState(() => new OrgConfigClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<OrganizationResult | null>(null);
+  const [items, setItems] = useState<OrganizationResult[]>([]);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,6 +36,7 @@ export function OrganizationSection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<OrganizationForm>({
     resolver: zodResolver(organizationSchema),
@@ -70,13 +68,19 @@ export function OrganizationSection(): React.ReactNode {
       }
       setResult(next);
       setStatus('success');
-      if (action === 'create') reset({ id: '', slug: '', name: '', reason: '' });
+      if (action === 'create')
+        reset({ id: '', slug: '', name: '', reason: '' });
     } catch (error) {
       setStatus('error');
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -87,10 +91,36 @@ export function OrganizationSection(): React.ReactNode {
     await handleSubmit((form) => run(action, form))();
   }
 
+  async function runList(): Promise<void> {
+    setSubmitting(true);
+    setStatus('idle');
+    setSubmitError(null);
+    try {
+      setItems(await client.listOrganizations());
+      setStatus('success');
+    } catch (error) {
+      setStatus('error');
+      setSubmitError(
+        error instanceof ApiError
+          ? error
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Building2 size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Building2 size={18} />
+        </span>
         <div>
           <h2>{t('orgConfig.sections.organization')}</h2>
           <p>{t('orgConfig.entity.organization.description')}</p>
@@ -109,7 +139,9 @@ export function OrganizationSection(): React.ReactNode {
         />
         <FormField
           label={t('orgConfig.labels.slug')}
-          error={errors.slug ? t(`form.errors.${errors.slug.message}`) : undefined}
+          error={
+            errors.slug ? t(`form.errors.${errors.slug.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -119,7 +151,9 @@ export function OrganizationSection(): React.ReactNode {
         />
         <FormField
           label={t('orgConfig.labels.name')}
-          error={errors.name ? t(`form.errors.${errors.name.message}`) : undefined}
+          error={
+            errors.name ? t(`form.errors.${errors.name.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -129,7 +163,11 @@ export function OrganizationSection(): React.ReactNode {
         />
         <FormField
           label={t('orgConfig.labels.reason')}
-          error={errors.reason ? t(`form.errors.${errors.reason.message}`) : undefined}
+          error={
+            errors.reason
+              ? t(`form.errors.${errors.reason.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -139,14 +177,37 @@ export function OrganizationSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void trigger('create')} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void trigger('create')}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('update')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('update')}
+          disabled={submitting}
+        >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.update')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('archive')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('archive')}
+          disabled={submitting}
+        >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runList()}
+          disabled={submitting}
+        >
+          {submitting ? t('orgConfig.submitting') : t('orgConfig.load')}
         </Button>
       </div>
       <OperationResult
@@ -158,11 +219,30 @@ export function OrganizationSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={result ? [
-          { label: t('orgConfig.result.id'), value: result.id },
-          { label: t('orgConfig.result.status'), value: result.status },
-        ] : undefined}
+        fields={
+          result
+            ? [
+                { label: t('orgConfig.result.id'), value: result.id },
+                { label: t('orgConfig.result.status'), value: result.status },
+              ]
+            : undefined
+        }
       />
+      {items.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {items.map((item) => (
+            <li key={item.id} className="text-sm">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setValue('id', item.id)}
+              >
+                {item.slug} — {item.name} [{item.status}]
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
     </form>
   );
 }

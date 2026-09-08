@@ -59,7 +59,12 @@ export function SettingsSection(): React.ReactNode {
       if (action === 'get') {
         const setting = await client.getSetting(form.key);
         if (!setting) {
-          throw new ApiError(t('orgConfig.result.notFound'), 'NOT_FOUND', [], 404);
+          throw new ApiError(
+            t('orgConfig.result.notFound'),
+            'NOT_FOUND',
+            [],
+            404,
+          );
         }
         next = { kind: 'get', setting };
       } else {
@@ -80,7 +85,12 @@ export function SettingsSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -100,7 +110,12 @@ export function SettingsSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -116,25 +131,39 @@ export function SettingsSection(): React.ReactNode {
     if (success.kind === 'get') {
       return [
         { label: t('orgConfig.result.id'), value: success.setting.key },
-        { label: t('orgConfig.result.version'), value: String(success.setting.version) },
+        {
+          label: t('orgConfig.result.version'),
+          value: String(success.setting.version),
+        },
       ];
     }
     if (success.kind === 'put') {
       return [
         { label: t('orgConfig.result.id'), value: success.result.id },
-        { label: t('orgConfig.result.version'), value: String(success.result.version) },
-        { label: t('orgConfig.result.created'), value: String(success.result.created) },
+        {
+          label: t('orgConfig.result.version'),
+          value: String(success.result.version),
+        },
+        {
+          label: t('orgConfig.result.created'),
+          value: String(success.result.created),
+        },
       ];
     }
     return [
-      { label: t('orgConfig.result.total'), value: String(success.list.pagination.total) },
+      {
+        label: t('orgConfig.result.total'),
+        value: String(success.list.pagination.total),
+      },
     ];
   })();
 
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Settings2 size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Settings2 size={18} />
+        </span>
         <div>
           <h2>{t('orgConfig.sections.settings')}</h2>
           <p>{t('orgConfig.entity.settings.description')}</p>
@@ -143,7 +172,9 @@ export function SettingsSection(): React.ReactNode {
       <div className="form-grid">
         <FormField
           label={t('orgConfig.labels.key')}
-          error={errors.key ? t(`form.errors.${errors.key.message}`) : undefined}
+          error={
+            errors.key ? t(`form.errors.${errors.key.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -163,13 +194,28 @@ export function SettingsSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void listSettings()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void listSettings()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.result.list')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('get')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('get')}
+          disabled={submitting}
+        >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.result.get')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('put')} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void trigger('put')}
+          disabled={submitting}
+        >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.result.put')}
         </Button>
       </div>

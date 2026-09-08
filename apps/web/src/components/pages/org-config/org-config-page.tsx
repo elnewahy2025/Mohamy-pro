@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/button';
 
 export function OrgConfigPage(): React.ReactNode {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<'organization' | 'branch' | 'department' | 'team' | 'settings'>('organization');
+  const [activeTab, setActiveTab] = useState<
+    'organization' | 'branch' | 'department' | 'team' | 'settings'
+  >('organization');
 
   return (
     <section className="page-section content-page">
@@ -22,32 +24,32 @@ export function OrgConfigPage(): React.ReactNode {
       </div>
 
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
-        <Button 
-          variant={activeTab === 'organization' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'organization' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('organization')}
         >
           {t('orgConfig.sections.organization')}
         </Button>
-        <Button 
-          variant={activeTab === 'branch' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'branch' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('branch')}
         >
           {t('orgConfig.sections.branch')}
         </Button>
-        <Button 
-          variant={activeTab === 'department' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'department' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('department')}
         >
           {t('orgConfig.sections.department')}
         </Button>
-        <Button 
-          variant={activeTab === 'team' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'team' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('team')}
         >
           {t('orgConfig.sections.team')}
         </Button>
-        <Button 
-          variant={activeTab === 'settings' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'settings' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('settings')}
         >
           {t('orgConfig.sections.settings')}
