@@ -2182,7 +2182,28 @@ responsibility (`profile.service.ts`, `hierarchy.service.ts`), never a
 god-module. This restates the repo's single-responsibility-file rule
 explicitly for this feature so every agent honors it.
 
-## 31.5 Implementation batches (when approved)
+## 31.5 Required new endpoints (amended)
+
+Pre-implementation review found two reads/writes the plan assumed but the
+codebase lacks. Both are additive, tenant-scoped, capped, and guarded by
+existing permissions:
+
+1. Logo upload: `POST organization-config/organizations/logo` (multipart
+   file → existing S3 storage service → returns object ID stored as the
+   org's `logoObjectId`). No other upload-over-HTTP path exists today.
+2. Members list: `GET membership/members` (tenant-scoped, capped at 100,
+   `CanManageMembership` read) feeding the employees directory. Member
+   admin today is actions-only with no list route.
+
+## 31.6 Reuse for other pages (standing direction)
+
+The UX patterns established here — profile cards with inherited headers,
+searchable EntityPicker instead of raw UUID inputs, click-to-fill ID lists,
+cap-first list UIs — are the house standard for ALL remaining page UI work.
+Agents redesigning any other page must apply these same patterns and cite
+this section in their delivery review.
+
+## 31.7 Implementation batches (when approved)
 
 - Batch A (backend): one additive migration (org/branch profile fields,
   team→department link, membership branch/department links, CurrencyCode
