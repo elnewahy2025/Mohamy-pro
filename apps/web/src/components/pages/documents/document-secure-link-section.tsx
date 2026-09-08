@@ -6,11 +6,7 @@ import { ShieldCheck, Copy, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import {
-  ApiError,
-  DocumentsClient,
-  type DocumentResult,
-} from '@/lib/api';
+import { ApiError, DocumentsClient, type DocumentResult } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
@@ -32,8 +28,11 @@ export function DocumentSecureLinkSection(): React.ReactNode {
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [documents, setDocuments] = useState<DocumentResult[]>([]);
-  
-  const [generatedLink, setGeneratedLink] = useState<{ url: string; expiresAt: Date } | null>(null);
+
+  const [generatedLink, setGeneratedLink] = useState<{
+    url: string;
+    expiresAt: Date;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
 
   const {
@@ -47,7 +46,10 @@ export function DocumentSecureLinkSection(): React.ReactNode {
 
   useEffect(() => {
     if (user) {
-      client.listDocuments().then(res => setDocuments(res.data)).catch(() => {});
+      client
+        .listDocuments()
+        .then(setDocuments)
+        .catch(() => {});
     }
   }, [user, client]);
 
@@ -60,28 +62,33 @@ export function DocumentSecureLinkSection(): React.ReactNode {
 
     try {
       // Find the document to get its primary version id
-      const doc = documents.find(d => d.id === form.documentId);
+      const doc = documents.find((d) => d.id === form.documentId);
       const versionId = doc?.versions?.[0]?.id || 'v-default';
 
-      const result = await client.generateAccessGrant(form.documentId, { 
-        documentVersionId: versionId, 
-        purpose: form.purpose 
+      const result = await client.generateAccessGrant(form.documentId, {
+        documentVersionId: versionId,
+        purpose: form.purpose,
       });
 
       // Usually it returns relative path to web proxy or full url
       const fullUrl = `${window.location.origin}${result.data.signedUrl}`;
       setGeneratedLink({
         url: fullUrl,
-        expiresAt: new Date(result.data.expiresAt)
+        expiresAt: new Date(result.data.expiresAt),
       });
-      
+
       setStatus('success');
     } catch (error) {
       setStatus('error');
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -97,9 +104,15 @@ export function DocumentSecureLinkSection(): React.ReactNode {
   };
 
   return (
-    <form className="settings-card" onSubmit={handleSubmit(generateLink)} noValidate>
+    <form
+      className="settings-card"
+      onSubmit={handleSubmit(generateLink)}
+      noValidate
+    >
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><ShieldCheck size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <ShieldCheck size={18} />
+        </span>
         <div>
           <h2>{t('documents.secureLinks.title')}</h2>
           <p>{t('documents.secureLinks.description')}</p>
@@ -109,16 +122,22 @@ export function DocumentSecureLinkSection(): React.ReactNode {
       <div className="form-grid">
         <FormSelect
           label={t('documents.secureLinks.form.documentId')}
-          error={errors.documentId?.message ? String(errors.documentId.message) : undefined}
+          error={
+            errors.documentId?.message
+              ? String(errors.documentId.message)
+              : undefined
+          }
           selectProps={register('documentId')}
           options={[
             { label: 'Select a document...', value: '' },
-            ...documents.map(d => ({ label: d.title, value: d.id }))
+            ...documents.map((d) => ({ label: d.title, value: d.id })),
           ]}
         />
         <FormField
           label={t('documents.secureLinks.form.purpose')}
-          error={errors.purpose?.message ? String(errors.purpose.message) : undefined}
+          error={
+            errors.purpose?.message ? String(errors.purpose.message) : undefined
+          }
           inputProps={{
             ...register('purpose'),
             placeholder: 'e.g., EXTERNAL_REVIEW',
@@ -127,7 +146,11 @@ export function DocumentSecureLinkSection(): React.ReactNode {
       </div>
 
       <div className="form-actions form-actions-row mt-4">
-        <Button type="submit" variant="default" disabled={submitting || authLoading || !user}>
+        <Button
+          type="submit"
+          variant="default"
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? '...' : t('documents.secureLinks.form.generate')}
         </Button>
       </div>
@@ -146,25 +169,35 @@ export function DocumentSecureLinkSection(): React.ReactNode {
         <div className="mt-6 p-4 bg-green-50/50 border border-green-100 rounded-lg animate-in fade-in slide-in-from-bottom-2">
           <div className="flex flex-col gap-3">
             <div>
-              <span className="text-sm font-medium text-green-800">{t('documents.secureLinks.form.url')}</span>
+              <span className="text-sm font-medium text-green-800">
+                {t('documents.secureLinks.form.url')}
+              </span>
               <div className="flex items-center gap-2 mt-1">
                 <code className="flex-1 bg-white p-2 rounded border border-green-200 text-sm overflow-x-auto text-green-900">
                   {generatedLink.url}
                 </code>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={copyToClipboard}
                   className="shrink-0 bg-white"
                 >
-                  {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  {copied ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
             </div>
             <div>
-              <span className="text-sm font-medium text-green-800">{t('documents.secureLinks.form.expiresAt')}: </span>
-              <span className="text-sm text-green-700">{generatedLink.expiresAt.toLocaleString()}</span>
+              <span className="text-sm font-medium text-green-800">
+                {t('documents.secureLinks.form.expiresAt')}:{' '}
+              </span>
+              <span className="text-sm text-green-700">
+                {generatedLink.expiresAt.toLocaleString()}
+              </span>
             </div>
           </div>
         </div>

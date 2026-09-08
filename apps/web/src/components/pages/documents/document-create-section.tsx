@@ -29,16 +29,21 @@ type DocumentForm = z.infer<typeof documentSchema>;
 export function DocumentCreateSection() {
   const t = useTranslations();
   const { user } = useAuth();
-  
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [created, setCreated] = useState<DocumentResult | null>(null);
-  
+
   const [cases, setCases] = useState<CaseListRow[]>([]);
 
   useEffect(() => {
     if (user) {
       const casesClient = new CasesClient();
-      casesClient.list().then(res => setCases(res.data)).catch(() => {});
+      casesClient
+        .list()
+        .then((res) => setCases(res.data))
+        .catch(() => {});
     }
   }, [user]);
 
@@ -56,12 +61,12 @@ export function DocumentCreateSection() {
       const client = new DocumentsClient();
       setStatus('submitting');
       setCreated(null);
-      
+
       // Mocking storage object fields since physical storage is deferred
       const mockStorageId = crypto.randomUUID();
       const mockMimeType = 'application/pdf';
       const mockFileSize = 1024 * 1024; // 1 MB
-      
+
       const result = await client.createDocument({
         caseId: form.caseId || undefined,
         title: form.title,
@@ -87,15 +92,26 @@ export function DocumentCreateSection() {
         <div className="form-grid">
           <FormSelect
             label={t('documents.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
-            options={[{ label: 'None', value: '' }, ...cases.map(c => ({ label: c.caseNumber, value: c.id }))]}
+            error={
+              errors.caseId
+                ? t(`form.errors.${errors.caseId.message}`)
+                : undefined
+            }
+            options={[
+              { label: 'None', value: '' },
+              ...cases.map((c) => ({ label: c.caseNumber, value: c.id })),
+            ]}
             selectProps={{
               ...register('caseId'),
             }}
           />
           <FormField
             label={t('documents.labels.title')}
-            error={errors.title ? t(`form.errors.${errors.title.message}`) : undefined}
+            error={
+              errors.title
+                ? t(`form.errors.${errors.title.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('documents.placeholders.title'),
@@ -104,7 +120,11 @@ export function DocumentCreateSection() {
           />
           <FormField
             label={t('documents.labels.description')}
-            error={errors.description ? t(`form.errors.${errors.description.message}`) : undefined}
+            error={
+              errors.description
+                ? t(`form.errors.${errors.description.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('documents.placeholders.description'),
@@ -113,7 +133,11 @@ export function DocumentCreateSection() {
           />
           <FormField
             label={t('documents.labels.documentType')}
-            error={errors.documentType ? t(`form.errors.${errors.documentType.message}`) : undefined}
+            error={
+              errors.documentType
+                ? t(`form.errors.${errors.documentType.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('documents.placeholders.documentType'),
@@ -124,7 +148,9 @@ export function DocumentCreateSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('documents.submitting') : t('documents.create')}
+            {status === 'submitting'
+              ? t('documents.submitting')
+              : t('documents.create')}
           </Button>
         </div>
 
@@ -133,7 +159,11 @@ export function DocumentCreateSection() {
             status={status}
             successLabel={t('documents.result.title')}
             errorTitle={t('documents.result.errorTitle')}
-            fields={created ? [{ label: t('documents.result.id'), value: created.id }] : undefined}
+            fields={
+              created
+                ? [{ label: t('documents.result.id'), value: created.id }]
+                : undefined
+            }
           />
         )}
       </form>

@@ -32,10 +32,12 @@ type TaskForm = z.infer<typeof taskSchema>;
 export function TaskSection() {
   const t = useTranslations();
   const { user } = useAuth();
-  
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [created, setCreated] = useState<TaskResult | null>(null);
-  
+
   const [cases, setCases] = useState<CaseListRow[]>([]);
   const [tasks, setTasks] = useState<TaskResult[]>([]);
 
@@ -43,8 +45,14 @@ export function TaskSection() {
     if (user) {
       const casesClient = new CasesClient();
       const tasksClient = new TasksClient();
-      casesClient.list().then(res => setCases(res.data)).catch(() => {});
-      tasksClient.listTasks().then(res => setTasks(res.data)).catch(() => {});
+      casesClient
+        .list()
+        .then((res) => setCases(res.data))
+        .catch(() => {});
+      tasksClient
+        .listTasks()
+        .then(setTasks)
+        .catch(() => {});
     }
   }, [user]);
 
@@ -54,7 +62,15 @@ export function TaskSection() {
     formState: { errors },
   } = useRHForm<TaskForm>({
     resolver: zodResolver(taskSchema),
-    defaultValues: { caseId: '', title: '', description: '', priority: 'MEDIUM', dueDate: '', assignedUserId: '', parentTaskId: '' },
+    defaultValues: {
+      caseId: '',
+      title: '',
+      description: '',
+      priority: 'MEDIUM',
+      dueDate: '',
+      assignedUserId: '',
+      parentTaskId: '',
+    },
   });
 
   async function runCreate(form: TaskForm): Promise<void> {
@@ -67,7 +83,9 @@ export function TaskSection() {
         title: form.title,
         description: form.description || undefined,
         priority: form.priority,
-        dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : undefined,
+        dueDate: form.dueDate
+          ? new Date(form.dueDate).toISOString()
+          : undefined,
         assignedUserId: form.assignedUserId || undefined,
         parentTaskId: form.parentTaskId || undefined,
       });
@@ -87,15 +105,26 @@ export function TaskSection() {
         <div className="form-grid">
           <FormSelect
             label={t('tasks.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
-            options={[{ label: 'None', value: '' }, ...cases.map(c => ({ label: c.caseNumber, value: c.id }))]}
+            error={
+              errors.caseId
+                ? t(`form.errors.${errors.caseId.message}`)
+                : undefined
+            }
+            options={[
+              { label: 'None', value: '' },
+              ...cases.map((c) => ({ label: c.caseNumber, value: c.id })),
+            ]}
             selectProps={{
               ...register('caseId'),
             }}
           />
           <FormField
             label={t('tasks.labels.title')}
-            error={errors.title ? t(`form.errors.${errors.title.message}`) : undefined}
+            error={
+              errors.title
+                ? t(`form.errors.${errors.title.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('tasks.placeholders.title'),
@@ -104,7 +133,11 @@ export function TaskSection() {
           />
           <FormField
             label={t('tasks.labels.description')}
-            error={errors.description ? t(`form.errors.${errors.description.message}`) : undefined}
+            error={
+              errors.description
+                ? t(`form.errors.${errors.description.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('tasks.placeholders.description'),
@@ -113,12 +146,19 @@ export function TaskSection() {
           />
           <FormSelect
             label={t('tasks.labels.priority')}
-            error={errors.priority ? t(`form.errors.${errors.priority.message}`) : undefined}
+            error={
+              errors.priority
+                ? t(`form.errors.${errors.priority.message}`)
+                : undefined
+            }
             options={[
               { label: t('common.enums.LOW') || 'Low', value: 'LOW' },
               { label: t('common.enums.MEDIUM') || 'Medium', value: 'MEDIUM' },
               { label: t('common.enums.HIGH') || 'High', value: 'HIGH' },
-              { label: t('common.enums.CRITICAL') || 'Critical', value: 'CRITICAL' },
+              {
+                label: t('common.enums.CRITICAL') || 'Critical',
+                value: 'CRITICAL',
+              },
             ]}
             selectProps={{
               ...register('priority'),
@@ -126,7 +166,11 @@ export function TaskSection() {
           />
           <FormField
             label={t('tasks.labels.dueDate')}
-            error={errors.dueDate ? t(`form.errors.${errors.dueDate.message}`) : undefined}
+            error={
+              errors.dueDate
+                ? t(`form.errors.${errors.dueDate.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'date',
               ...register('dueDate'),
@@ -134,8 +178,15 @@ export function TaskSection() {
           />
           <FormSelect
             label={t('tasks.labels.parentTaskId')}
-            error={errors.parentTaskId ? t(`form.errors.${errors.parentTaskId.message}`) : undefined}
-            options={[{ label: 'None', value: '' }, ...tasks.map(t => ({ label: t.title, value: t.id }))]}
+            error={
+              errors.parentTaskId
+                ? t(`form.errors.${errors.parentTaskId.message}`)
+                : undefined
+            }
+            options={[
+              { label: 'None', value: '' },
+              ...tasks.map((t) => ({ label: t.title, value: t.id })),
+            ]}
             selectProps={{
               ...register('parentTaskId'),
             }}
@@ -144,7 +195,9 @@ export function TaskSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('tasks.submitting') : t('tasks.create')}
+            {status === 'submitting'
+              ? t('tasks.submitting')
+              : t('tasks.create')}
           </Button>
         </div>
 
@@ -153,7 +206,11 @@ export function TaskSection() {
             status={status}
             successLabel={t('tasks.result.title')}
             errorTitle={t('tasks.result.errorTitle')}
-            fields={created ? [{ label: t('tasks.result.id'), value: created.id }] : undefined}
+            fields={
+              created
+                ? [{ label: t('tasks.result.id'), value: created.id }]
+                : undefined
+            }
           />
         )}
       </form>

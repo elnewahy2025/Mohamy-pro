@@ -6,10 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTranslations } from 'next-intl';
 
-import {
-  DeadlinesClient,
-  type DeadlineRuleResult,
-} from '@/lib/api';
+import { DeadlinesClient, type DeadlineRuleResult } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
@@ -26,16 +23,21 @@ type RuleForm = z.infer<typeof ruleSchema>;
 export function DeadlineRuleSection() {
   const t = useTranslations();
   const { user } = useAuth();
-  
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [created, setCreated] = useState<DeadlineRuleResult | null>(null);
-  
+
   const [rules, setRules] = useState<DeadlineRuleResult[]>([]);
 
   const fetchRules = () => {
     if (user) {
       const client = new DeadlinesClient();
-      client.listRules().then(res => setRules(res.data)).catch(() => {});
+      client
+        .listRules()
+        .then(setRules)
+        .catch(() => {});
     }
   };
 
@@ -49,7 +51,12 @@ export function DeadlineRuleSection() {
     formState: { errors },
   } = useRHForm<RuleForm>({
     resolver: zodResolver(ruleSchema),
-    defaultValues: { name: '', description: '', effectiveFrom: '', effectiveTo: '' },
+    defaultValues: {
+      name: '',
+      description: '',
+      effectiveFrom: '',
+      effectiveTo: '',
+    },
   });
 
   async function runCreate(form: RuleForm): Promise<void> {
@@ -61,7 +68,9 @@ export function DeadlineRuleSection() {
         name: form.name,
         description: form.description || undefined,
         effectiveFrom: new Date(form.effectiveFrom).toISOString(),
-        effectiveTo: form.effectiveTo ? new Date(form.effectiveTo).toISOString() : undefined,
+        effectiveTo: form.effectiveTo
+          ? new Date(form.effectiveTo).toISOString()
+          : undefined,
       });
       setCreated(result);
       setStatus('success');
@@ -80,7 +89,9 @@ export function DeadlineRuleSection() {
         <div className="form-grid">
           <FormField
             label={t('deadlines.labels.name')}
-            error={errors.name ? t(`form.errors.${errors.name.message}`) : undefined}
+            error={
+              errors.name ? t(`form.errors.${errors.name.message}`) : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('deadlines.placeholders.name'),
@@ -89,7 +100,11 @@ export function DeadlineRuleSection() {
           />
           <FormField
             label={t('deadlines.labels.description')}
-            error={errors.description ? t(`form.errors.${errors.description.message}`) : undefined}
+            error={
+              errors.description
+                ? t(`form.errors.${errors.description.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('deadlines.placeholders.description'),
@@ -98,7 +113,11 @@ export function DeadlineRuleSection() {
           />
           <FormField
             label={t('deadlines.labels.effectiveFrom')}
-            error={errors.effectiveFrom ? t(`form.errors.${errors.effectiveFrom.message}`) : undefined}
+            error={
+              errors.effectiveFrom
+                ? t(`form.errors.${errors.effectiveFrom.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'date',
               ...register('effectiveFrom'),
@@ -106,7 +125,11 @@ export function DeadlineRuleSection() {
           />
           <FormField
             label={t('deadlines.labels.effectiveTo')}
-            error={errors.effectiveTo ? t(`form.errors.${errors.effectiveTo.message}`) : undefined}
+            error={
+              errors.effectiveTo
+                ? t(`form.errors.${errors.effectiveTo.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'date',
               ...register('effectiveTo'),
@@ -116,7 +139,9 @@ export function DeadlineRuleSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('deadlines.submitting') : t('deadlines.createRule')}
+            {status === 'submitting'
+              ? t('deadlines.submitting')
+              : t('deadlines.createRule')}
           </Button>
         </div>
 
@@ -125,7 +150,11 @@ export function DeadlineRuleSection() {
             status={status}
             successLabel={t('deadlines.result.title')}
             errorTitle={t('deadlines.result.errorTitle')}
-            fields={created ? [{ label: t('deadlines.result.id'), value: created.id }] : undefined}
+            fields={
+              created
+                ? [{ label: t('deadlines.result.id'), value: created.id }]
+                : undefined
+            }
           />
         )}
       </form>
@@ -139,10 +168,14 @@ export function DeadlineRuleSection() {
             rules.map((r) => (
               <div key={r.id} className="p-4 border rounded-md">
                 <h5 className="font-medium text-gray-900">{r.name}</h5>
-                {r.description && <p className="text-sm text-gray-500">{r.description}</p>}
+                {r.description && (
+                  <p className="text-sm text-gray-500">{r.description}</p>
+                )}
                 <div className="mt-2 text-xs text-gray-400">
                   Effective: {new Date(r.effectiveFrom).toLocaleDateString()}
-                  {r.effectiveTo ? ` - ${new Date(r.effectiveTo).toLocaleDateString()}` : ' onwards'}
+                  {r.effectiveTo
+                    ? ` - ${new Date(r.effectiveTo).toLocaleDateString()}`
+                    : ' onwards'}
                 </div>
               </div>
             ))

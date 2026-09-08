@@ -23,7 +23,13 @@ const deadlineSchema = z.object({
   caseId: z.string().uuid('invalid'),
   title: z.string().min(1, 'invalid'),
   description: z.string().optional(),
-  deadlineType: z.enum(['FIXED', 'RELATIVE', 'RULE_BASED', 'MANUAL', 'RECURRING']),
+  deadlineType: z.enum([
+    'FIXED',
+    'RELATIVE',
+    'RULE_BASED',
+    'MANUAL',
+    'RECURRING',
+  ]),
   dueDate: z.string().min(1, 'invalid'),
   ruleId: z.string().optional().or(z.literal('')),
 });
@@ -32,10 +38,12 @@ type DeadlineForm = z.infer<typeof deadlineSchema>;
 export function DeadlineSection() {
   const t = useTranslations();
   const { user } = useAuth();
-  
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [created, setCreated] = useState<DeadlineResult | null>(null);
-  
+
   const [cases, setCases] = useState<CaseListRow[]>([]);
   const [rules, setRules] = useState<DeadlineRuleResult[]>([]);
 
@@ -43,8 +51,14 @@ export function DeadlineSection() {
     if (user) {
       const casesClient = new CasesClient();
       const deadlinesClient = new DeadlinesClient();
-      casesClient.list().then(res => setCases(res.data)).catch(() => {});
-      deadlinesClient.listRules().then(res => setRules(res.data)).catch(() => {});
+      casesClient
+        .list()
+        .then((res) => setCases(res.data))
+        .catch(() => {});
+      deadlinesClient
+        .listRules()
+        .then(setRules)
+        .catch(() => {});
     }
   }, [user]);
 
@@ -54,7 +68,14 @@ export function DeadlineSection() {
     formState: { errors },
   } = useRHForm<DeadlineForm>({
     resolver: zodResolver(deadlineSchema),
-    defaultValues: { caseId: '', title: '', description: '', deadlineType: 'FIXED', dueDate: '', ruleId: '' },
+    defaultValues: {
+      caseId: '',
+      title: '',
+      description: '',
+      deadlineType: 'FIXED',
+      dueDate: '',
+      ruleId: '',
+    },
   });
 
   async function runCreate(form: DeadlineForm): Promise<void> {
@@ -86,15 +107,23 @@ export function DeadlineSection() {
         <div className="form-grid">
           <FormSelect
             label={t('deadlines.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
-            options={cases.map(c => ({ label: c.caseNumber, value: c.id }))}
+            error={
+              errors.caseId
+                ? t(`form.errors.${errors.caseId.message}`)
+                : undefined
+            }
+            options={cases.map((c) => ({ label: c.caseNumber, value: c.id }))}
             selectProps={{
               ...register('caseId'),
             }}
           />
           <FormField
             label={t('deadlines.labels.title')}
-            error={errors.title ? t(`form.errors.${errors.title.message}`) : undefined}
+            error={
+              errors.title
+                ? t(`form.errors.${errors.title.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('deadlines.placeholders.title'),
@@ -103,7 +132,11 @@ export function DeadlineSection() {
           />
           <FormField
             label={t('deadlines.labels.description')}
-            error={errors.description ? t(`form.errors.${errors.description.message}`) : undefined}
+            error={
+              errors.description
+                ? t(`form.errors.${errors.description.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('deadlines.placeholders.description'),
@@ -112,13 +145,26 @@ export function DeadlineSection() {
           />
           <FormSelect
             label={t('deadlines.labels.deadlineType')}
-            error={errors.deadlineType ? t(`form.errors.${errors.deadlineType.message}`) : undefined}
+            error={
+              errors.deadlineType
+                ? t(`form.errors.${errors.deadlineType.message}`)
+                : undefined
+            }
             options={[
               { label: t('common.enums.FIXED') || 'Fixed', value: 'FIXED' },
-              { label: t('common.enums.RELATIVE') || 'Relative', value: 'RELATIVE' },
-              { label: t('common.enums.RULE_BASED') || 'Rule Based', value: 'RULE_BASED' },
+              {
+                label: t('common.enums.RELATIVE') || 'Relative',
+                value: 'RELATIVE',
+              },
+              {
+                label: t('common.enums.RULE_BASED') || 'Rule Based',
+                value: 'RULE_BASED',
+              },
               { label: t('common.enums.MANUAL') || 'Manual', value: 'MANUAL' },
-              { label: t('common.enums.RECURRING') || 'Recurring', value: 'RECURRING' },
+              {
+                label: t('common.enums.RECURRING') || 'Recurring',
+                value: 'RECURRING',
+              },
             ]}
             selectProps={{
               ...register('deadlineType'),
@@ -126,7 +172,11 @@ export function DeadlineSection() {
           />
           <FormField
             label={t('deadlines.labels.dueDate')}
-            error={errors.dueDate ? t(`form.errors.${errors.dueDate.message}`) : undefined}
+            error={
+              errors.dueDate
+                ? t(`form.errors.${errors.dueDate.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'date',
               ...register('dueDate'),
@@ -134,8 +184,15 @@ export function DeadlineSection() {
           />
           <FormSelect
             label={t('deadlines.labels.ruleId')}
-            error={errors.ruleId ? t(`form.errors.${errors.ruleId.message}`) : undefined}
-            options={[{ label: 'No Rule', value: '' }, ...rules.map(r => ({ label: r.name, value: r.id }))]}
+            error={
+              errors.ruleId
+                ? t(`form.errors.${errors.ruleId.message}`)
+                : undefined
+            }
+            options={[
+              { label: 'No Rule', value: '' },
+              ...rules.map((r) => ({ label: r.name, value: r.id })),
+            ]}
             selectProps={{
               ...register('ruleId'),
             }}
@@ -144,7 +201,9 @@ export function DeadlineSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('deadlines.submitting') : t('deadlines.create')}
+            {status === 'submitting'
+              ? t('deadlines.submitting')
+              : t('deadlines.create')}
           </Button>
         </div>
 
@@ -153,7 +212,11 @@ export function DeadlineSection() {
             status={status}
             successLabel={t('deadlines.result.title')}
             errorTitle={t('deadlines.result.errorTitle')}
-            fields={created ? [{ label: t('deadlines.result.id'), value: created.id }] : undefined}
+            fields={
+              created
+                ? [{ label: t('deadlines.result.id'), value: created.id }]
+                : undefined
+            }
           />
         )}
       </form>

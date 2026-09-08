@@ -1911,9 +1911,9 @@ const DEADLINES_PREFIX = '/deadlines';
 export class DeadlinesClient {
   constructor(private readonly client = new ApiClient()) {}
 
-  listDeadlines(caseId?: string): Promise<{ data: DeadlineResult[] }> {
+  listDeadlines(caseId?: string): Promise<DeadlineResult[]> {
     const qs = caseId ? `?caseId=${encodeURIComponent(caseId)}` : '';
-    return this.client.body<{ data: DeadlineResult[] }>(
+    return this.client.body<DeadlineResult[]>(
       DEADLINES_PREFIX + qs,
       'GET',
     );
@@ -1923,8 +1923,8 @@ export class DeadlinesClient {
     return this.client.body<DeadlineResult>(DEADLINES_PREFIX, 'POST', req);
   }
 
-  listRules(): Promise<{ data: DeadlineRuleResult[] }> {
-    return this.client.body<{ data: DeadlineRuleResult[] }>(
+  listRules(): Promise<DeadlineRuleResult[]> {
+    return this.client.body<DeadlineRuleResult[]>(
       DEADLINES_PREFIX + '/rules',
       'GET',
     );
@@ -1976,15 +1976,12 @@ const TASKS_PREFIX = '/tasks';
 export class TasksClient {
   constructor(private readonly client = new ApiClient()) {}
 
-  listTasks(
-    caseId?: string,
-    assignedUserId?: string,
-  ): Promise<{ data: TaskResult[] }> {
+  listTasks(caseId?: string, assignedUserId?: string): Promise<TaskResult[]> {
     const params = new URLSearchParams();
     if (caseId) params.append('caseId', caseId);
     if (assignedUserId) params.append('assignedUserId', assignedUserId);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<{ data: TaskResult[] }>(TASKS_PREFIX + qs, 'GET');
+    return this.client.body<TaskResult[]>(TASKS_PREFIX + qs, 'GET');
   }
 
   createTask(req: CreateTaskRequest): Promise<TaskResult> {
@@ -2054,15 +2051,12 @@ const DOCUMENTS_PREFIX = '/documents';
 export class DocumentsClient {
   constructor(private readonly client = new ApiClient()) {}
 
-  listDocuments(
-    caseId?: string,
-    clientId?: string,
-  ): Promise<{ data: DocumentResult[] }> {
+  listDocuments(caseId?: string, clientId?: string): Promise<DocumentResult[]> {
     const params = new URLSearchParams();
     if (caseId) params.append('caseId', caseId);
     if (clientId) params.append('clientId', clientId);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return this.client.body<{ data: DocumentResult[] }>(
+    return this.client.body<DocumentResult[]>(
       DOCUMENTS_PREFIX + qs,
       'GET',
     );

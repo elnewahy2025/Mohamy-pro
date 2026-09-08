@@ -17,16 +17,16 @@ export function DocumentsPage(): React.ReactNode {
         <h1>{t('documents.title')}</h1>
         <p>{t('documents.description')}</p>
       </div>
-      
+
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
-        <Button 
-          variant={activeTab === 'list' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'list' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('list')}
         >
           {t('documents.sections.list')}
         </Button>
-        <Button 
-          variant={activeTab === 'create' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'create' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('create')}
         >
           {t('documents.sections.create')}

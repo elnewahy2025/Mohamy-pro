@@ -2356,7 +2356,7 @@ describe('Client URL prefixes (prefix regression)', () => {
 
   it('hits /api/v1/deadlines (no doubled /v1)', async () => {
     const { fetchMock, calls } = clientWith({
-      '/deadlines': () => enveloped({ data: [] }),
+      '/deadlines': () => enveloped([]),
     });
     await new DeadlinesClient(new ApiClient(base, fetchMock)).listDeadlines();
     const call = calls.find((c) => c.url.includes('/deadlines'));
@@ -2366,7 +2366,7 @@ describe('Client URL prefixes (prefix regression)', () => {
 
   it('hits /api/v1/tasks (no doubled /v1)', async () => {
     const { fetchMock, calls } = clientWith({
-      '/tasks': () => enveloped({ data: [] }),
+      '/tasks': () => enveloped([]),
     });
     await new TasksClient(new ApiClient(base, fetchMock)).listTasks();
     const call = calls.find((c) => c.url.includes('/tasks'));
@@ -2376,7 +2376,7 @@ describe('Client URL prefixes (prefix regression)', () => {
 
   it('hits /api/v1/documents (no doubled /v1)', async () => {
     const { fetchMock, calls } = clientWith({
-      '/documents': () => enveloped({ data: [] }),
+      '/documents': () => enveloped([]),
     });
     await new DocumentsClient(new ApiClient(base, fetchMock)).listDocuments();
     const call = calls.find((c) => c.url.includes('/documents'));
@@ -2521,7 +2521,7 @@ describe('DeadlinesClient (Phase 13)', () => {
 
   it('lists deadlines scoped by caseId via GET /deadlines', async () => {
     const { fetchMock, calls } = clientWith({
-      '/deadlines?caseId=case1': () => enveloped({ data: [] }),
+      '/deadlines?caseId=case1': () => enveloped([]),
     });
     const client = new DeadlinesClient(new ApiClient(base, fetchMock));
 
@@ -2530,7 +2530,7 @@ describe('DeadlinesClient (Phase 13)', () => {
     const call = calls.find((c) => c.url.includes('/deadlines'));
     expect(call?.init?.method).toBe('GET');
     expect(String(call?.url)).not.toContain('/v1/v1');
-    expect(result.data).toHaveLength(0);
+    expect(result).toHaveLength(0);
   });
 
   it('creates a rule via POST /deadlines/rules', async () => {
@@ -2541,7 +2541,7 @@ describe('DeadlinesClient (Phase 13)', () => {
               { id: 'r1', name: 'Filing', effectiveFrom: '2026-01-01' },
               201,
             )
-          : enveloped({ data: [] }),
+          : enveloped([]),
     });
     const client = new DeadlinesClient(new ApiClient(base, fetchMock));
 
@@ -2611,7 +2611,7 @@ describe('TasksClient (Phase 14)', () => {
 
   it('lists tasks with filters via GET /tasks', async () => {
     const { fetchMock, calls } = clientWith({
-      '/tasks?caseId=case1': () => enveloped({ data: [] }),
+      '/tasks?caseId=case1': () => enveloped([]),
     });
     const client = new TasksClient(new ApiClient(base, fetchMock));
 
@@ -2698,7 +2698,7 @@ describe('DocumentsClient (Phase 15)', () => {
       '/documents': (_url, init) =>
         init?.method === 'POST'
           ? enveloped({ id: 'd1', title: 'Contract', status: 'DRAFT' }, 201)
-          : enveloped({ data: [] }),
+          : enveloped([]),
     });
     const client = new DocumentsClient(new ApiClient(base, fetchMock));
 
