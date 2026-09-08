@@ -279,6 +279,14 @@ export class ApiClient {
         res.status,
       );
     }
+    if (
+      Array.isArray(envelope.data) &&
+      envelope.meta &&
+      envelope.meta.pagination !== null &&
+      envelope.meta.pagination !== undefined
+    ) {
+      return { data: envelope.data, pagination: envelope.meta.pagination } as T;
+    }
     return envelope.data as T;
   }
 

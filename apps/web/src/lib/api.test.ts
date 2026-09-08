@@ -4287,3 +4287,44 @@ describe('ApiClient.provisionUser', () => {
     expect(result.invitationId).toBe('i1');
   });
 });
+
+describe('ApiClient paginated lists', () => {
+  it('reattaches meta.pagination for array payloads', async () => {
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const urlString = String(url);
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf' },
+            meta: { requestId: 'r', timestamp: 't', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: [{ id: 'c1' }],
+          meta: {
+            requestId: 'r',
+            timestamp: 't',
+            pagination: { page: 1, limit: 20, total: 1 },
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+    const client = new ClientsClient(
+      new ApiClient('http://localhost:3000/api/v1', fetchMock as never),
+    );
+
+    const result = await client.listClients();
+
+    expect(result.pagination.total).toBe(1);
+    expect(result.data).toHaveLength(1);
+  });
+});
