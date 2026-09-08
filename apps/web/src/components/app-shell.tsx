@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/auth-provider';
 import { Sidebar } from '@/components/navigation/sidebar';
 
-export function AppShell({ children }: Readonly<{ children: React.ReactNode }>): React.ReactNode {
+export function AppShell({
+  children,
+}: Readonly<{ children: React.ReactNode }>): React.ReactNode {
   const locale = useLocale();
   const t = useTranslations();
   const pathname = usePathname();
@@ -19,7 +21,8 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>):
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 959px)');
-    const onChange = (event: MediaQueryListEvent): void => setIsMobile(event.matches);
+    const onChange = (event: MediaQueryListEvent): void =>
+      setIsMobile(event.matches);
     setIsMobile(query.matches);
     query.addEventListener('change', onChange);
     return () => query.removeEventListener('change', onChange);
@@ -34,6 +37,33 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>):
   }
 
   const sidebarHidden = isMobile && !menuOpen;
+
+  const publicPaths = [
+    '/auth/login',
+    '/admin/login',
+    '/identity/invitations/accept',
+  ];
+  const isPublicPath = publicPaths.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+
+  useEffect(() => {
+    if (!isLoading && !user && !isPublicPath) {
+      router.replace('/admin/login');
+    }
+  }, [isLoading, user, isPublicPath, router]);
+
+  if (!isLoading && !user && !isPublicPath) {
+    return (
+      <div className="app-shell">
+        <div className="app-main">
+          <main className="main-content">
+            <p aria-live="polite">{t('auth.login.checking')}</p>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -64,8 +94,15 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>):
           >
             {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
           </Button>
-          <Link className="brand" href="/" onClick={closeMenu} aria-label={t('brand')}>
-            <span className="brand-mark" aria-hidden="true">M</span>
+          <Link
+            className="brand"
+            href="/"
+            onClick={closeMenu}
+            aria-label={t('brand')}
+          >
+            <span className="brand-mark" aria-hidden="true">
+              M
+            </span>
             <span>
               <strong>{t('brand')}</strong>
               <small>{t('productTagline')}</small>
@@ -73,7 +110,11 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>):
           </Link>
           <div className="topbar-actions">
             <span className="language-label">{t('common.language')}</span>
-            <div className="language-switcher" role="group" aria-label={t('common.language')}>
+            <div
+              className="language-switcher"
+              role="group"
+              aria-label={t('common.language')}
+            >
               <Button
                 className={`language-button${locale === 'en' ? ' is-selected' : ''}`}
                 variant="ghost"
@@ -95,13 +136,20 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>):
             </div>
             <div className="profile-actions">
               {isLoading ? (
-                <span className="profile-chip" aria-hidden="true">…</span>
+                <span className="profile-chip" aria-hidden="true">
+                  …
+                </span>
               ) : user ? (
                 <>
-                  <span className="profile-chip" aria-label={t('common.authenticatedAs')}>
+                  <span
+                    className="profile-chip"
+                    aria-label={t('common.authenticatedAs')}
+                  >
                     {user.userId.slice(0, 1).toUpperCase()}
                   </span>
-                  <span className="profile-name">{user.username ?? user.userId}</span>
+                  <span className="profile-name">
+                    {user.username ?? user.userId}
+                  </span>
                   <Button
                     variant="ghost"
                     size="sm"
