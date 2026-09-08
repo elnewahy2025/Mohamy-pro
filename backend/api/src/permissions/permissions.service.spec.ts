@@ -124,8 +124,21 @@ function makeService(input: {
     ),
     tenant: { findMany: jest.fn().mockResolvedValue([]) },
     role: { findFirst: jest.fn().mockResolvedValue(null) },
-    permission: { findUnique: jest.fn().mockResolvedValue({ id: 'perm-1' }) },
-    rolePermission: { upsert: jest.fn().mockResolvedValue({}) },
+    permission: {
+      findUnique: jest.fn().mockResolvedValue({ id: 'perm-1' }),
+      findMany: jest
+        .fn()
+        .mockImplementation(({ where }: any) =>
+          Promise.resolve(
+            where.key.in.map((key: string) => ({ id: `perm-${key}`, key })),
+          ),
+        ),
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    rolePermission: {
+      upsert: jest.fn().mockResolvedValue({}),
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
   } as unknown as PrismaService;
 
   const service = new PermissionsService(prisma, audit);
@@ -392,8 +405,21 @@ describe('PermissionsService', () => {
     const roleCreate = jest.fn().mockResolvedValue({ id: 'manager-role' });
     const tenantTx = {
       role: { findFirst: roleFindFirst, create: roleCreate },
-      permission: { findUnique: jest.fn().mockResolvedValue({ id: 'perm' }) },
-      rolePermission: { upsert: jest.fn().mockResolvedValue({}) },
+      permission: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'perm' }),
+        findMany: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            Promise.resolve(
+              where.key.in.map((key: string) => ({ id: `perm-${key}`, key })),
+            ),
+          ),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      rolePermission: {
+        upsert: jest.fn().mockResolvedValue({}),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
     };
     const prisma = {
       tenant: { findMany: jest.fn().mockResolvedValue([{ id: 't1' }]) },
@@ -417,13 +443,14 @@ describe('PermissionsService', () => {
         }),
       }),
     );
-    const grantedKeys = (
-      tenantTx.rolePermission.upsert as jest.Mock
-    ).mock.calls.map(
+    const grantedRows = (
+      tenantTx.rolePermission.createMany as jest.Mock
+    ).mock.calls.flatMap(
       (call: unknown[]) =>
-        call[0] as { create: { roleId: string; permissionId: string } },
+        (call[0] as { data: Array<{ roleId: string; permissionId: string }> })
+          .data,
     );
-    expect(grantedKeys.length).toBeGreaterThan(0);
+    expect(grantedRows.length).toBeGreaterThan(0);
   });
 
   it('reuses the existing manager role instead of duplicating it (G3)', async () => {
@@ -437,8 +464,21 @@ describe('PermissionsService', () => {
           .mockResolvedValueOnce({ id: 'client-role' }),
         create: jest.fn(),
       },
-      permission: { findUnique: jest.fn().mockResolvedValue({ id: 'perm' }) },
-      rolePermission: { upsert: jest.fn().mockResolvedValue({}) },
+      permission: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'perm' }),
+        findMany: jest
+          .fn()
+          .mockImplementation(({ where }: any) =>
+            Promise.resolve(
+              where.key.in.map((key: string) => ({ id: `perm-${key}`, key })),
+            ),
+          ),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      rolePermission: {
+        upsert: jest.fn().mockResolvedValue({}),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
     };
     const prisma = {
       tenant: { findMany: jest.fn().mockResolvedValue([{ id: 't1' }]) },

@@ -65,7 +65,7 @@ export class PermissionsService {
       );
     } catch (error) {
       const detail =
-        error instanceof Error ? error.stack ?? error.message : String(error);
+        error instanceof Error ? (error.stack ?? error.message) : String(error);
       this.logger.error(
         `Failed to reconcile built-in role permissions at startup: ${detail}`,
       );
@@ -160,6 +160,7 @@ export class PermissionsService {
           );
           return true;
         },
+        { timeout: 60000 },
       );
       if (wired) tenantRolesWired += 1;
     }
@@ -227,40 +228,42 @@ export class PermissionsService {
    * Idempotently grants the built-in role→permission mapping for a given role.
    * Runs inside the caller's transaction (bootstrap or reconciliation) so the
    * RolePermission FORCE-RLS policy is satisfied by the surrounding context.
+   * Batched (3 round trips regardless of key count) so cold-start latency
+   * against serverless Postgres cannot exhaust the transaction timeout.
    */
   async grantRolePermissions(
     transaction: Prisma.TransactionClient,
     roleId: string,
     keys: readonly PermissionKey[],
   ): Promise<void> {
-    for (const key of keys) {
-      const permissionId = await this.ensurePermissionId(transaction, key);
-      await transaction.rolePermission.upsert({
-        where: {
-          roleId_permissionId: { roleId, permissionId },
-        },
-        create: { roleId, permissionId },
-        update: {},
+    const unique = [...new Set(keys)];
+    if (unique.length === 0) return;
+    const existing = await transaction.permission.findMany({
+      where: { key: { in: unique } },
+      select: { id: true, key: true },
+    });
+    const ids = new Map(existing.map((row) => [row.key, row.id]));
+    const missing = unique.filter((key) => !ids.has(key));
+    if (missing.length > 0) {
+      await transaction.permission.createMany({
+        data: missing.map((key) => ({
+          key,
+          description:
+            PERMISSION_CATALOG.find((item) => item.key === key)?.description ??
+            key,
+        })),
+        skipDuplicates: true,
       });
+      const fresh = await transaction.permission.findMany({
+        where: { key: { in: missing } },
+        select: { id: true, key: true },
+      });
+      for (const row of fresh) ids.set(row.key, row.id);
     }
-  }
-
-  private async ensurePermissionId(
-    transaction: Prisma.TransactionClient,
-    key: PermissionKey,
-  ): Promise<string> {
-    const existing = await transaction.permission.findUnique({
-      where: { key },
-      select: { id: true },
+    await transaction.rolePermission.createMany({
+      data: unique.map((key) => ({ roleId, permissionId: ids.get(key)! })),
+      skipDuplicates: true,
     });
-    if (existing) return existing.id;
-    const description =
-      PERMISSION_CATALOG.find((item) => item.key === key)?.description ?? key;
-    const created = await transaction.permission.create({
-      data: { key, description },
-      select: { id: true },
-    });
-    return created.id;
   }
 
   private async resolveMembership(
