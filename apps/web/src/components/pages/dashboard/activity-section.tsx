@@ -12,14 +12,20 @@ export function ActivitySection({ summary }: { summary: DashboardSummary }) {
       <p>{t('dashboard.sections.activity.description')}</p>
 
       {summary.activity.length > 0 ? (
-        <ul className="mt-4 space-y-2">
+        <div
+          className="service-table mt-4"
+          role="table"
+          aria-label={t('dashboard.sections.activity.heading')}
+        >
           {summary.activity.map((event) => (
-            <li key={event.id} className="text-sm">
-              {event.occurredAt.slice(0, 10)} — {event.eventType} (
-              {event.caseId.slice(0, 8)})
-            </li>
+            <div className="service-table-row" role="row" key={event.id}>
+              <strong>{event.occurredAt.slice(0, 10)}</strong>
+              <span>{event.eventType}</span>
+              <span>{event.caseId.slice(0, 8)}</span>
+              <span className="status-dot" aria-hidden="true" />
+            </div>
           ))}
-        </ul>
+        </div>
       ) : (
         <p className="mt-4 text-sm">—</p>
       )}

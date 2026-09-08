@@ -12,14 +12,27 @@ export function BillingSection({ summary }: { summary: DashboardSummary }) {
       <h3>{t('dashboard.sections.billing.heading')}</h3>
       <p>{t('dashboard.sections.billing.description')}</p>
 
-      <ul className="mt-4 space-y-2">
-        {totals.map(([currency, total]) => (
-          <li key={currency} className="text-sm">
-            {currency}: {total}
-          </li>
-        ))}
-        {totals.length === 0 && <li className="text-sm">—</li>}
-      </ul>
+      {totals.length > 0 ? (
+        <div
+          className="service-table mt-4"
+          role="table"
+          aria-label={t('dashboard.sections.billing.heading')}
+        >
+          {totals.map(([currency, total]) => (
+            <div className="service-table-row" role="row" key={currency}>
+              <strong>{currency}</strong>
+              <span>{total}</span>
+              <span>
+                {summary.billing.unpaidInvoices} /{' '}
+                {summary.billing.overdueInvoices}
+              </span>
+              <span className="status-dot" aria-hidden="true" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm">—</p>
+      )}
     </div>
   );
 }

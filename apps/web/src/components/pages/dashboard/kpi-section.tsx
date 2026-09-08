@@ -28,10 +28,14 @@ export function KpiSection({ summary }: { summary: DashboardSummary }) {
       <h3>{t('dashboard.sections.kpis.heading')}</h3>
       <p>{t('dashboard.sections.kpis.description')}</p>
       <div className="metrics-grid mt-4">
-        {kpis.map((kpi) => (
-          <article key={kpi.label} className="metric-card">
+        {kpis.map((kpi, index) => (
+          <article
+            key={kpi.label}
+            className={`metric-card${index === 0 ? ' metric-card-accent' : ''}`}
+          >
             <div className="metric-card-top">
               <span>{kpi.label}</span>
+              <span className="status-dot" aria-hidden="true" />
             </div>
             <strong>{kpi.value}</strong>
           </article>

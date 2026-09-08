@@ -931,7 +931,8 @@
         "heading": "Court locations",
         "description": "Add branches and physical locations to a court."
       }
-    }
+    },
+    "listFilterRequired": "Enter a court ID in the form or the list filter first."
   },
   "workflows": {
     "navLabel": "Workflows",

@@ -39,6 +39,7 @@ export function CourtLocationSection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    getValues,
     formState: { errors },
   } = useForm<CourtLocationForm>({
     resolver: zodResolver(courtLocationSchema),
@@ -64,7 +65,12 @@ export function CourtLocationSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -72,16 +78,19 @@ export function CourtLocationSection(): React.ReactNode {
   }
 
   async function runList(): Promise<void> {
-    if (!listCourtId) {
+    const effectiveCourtId = listCourtId.trim() || getValues('courtId').trim();
+    if (!effectiveCourtId) {
       setStatus('error');
-      setSubmitError(new ApiError('legalConfig.labels.courtId is required', 'VALIDATION', [], 0));
+      setSubmitError(
+        new ApiError(t('legalConfig.listFilterRequired'), 'VALIDATION', [], 0),
+      );
       return;
     }
     setSubmitting(true);
     setStatus('idle');
     setSubmitError(null);
     try {
-      const result = await client.listCourtLocations(listCourtId);
+      const result = await client.listCourtLocations(effectiveCourtId);
       setList(result);
       setStatus('success');
     } catch (error) {
@@ -89,7 +98,12 @@ export function CourtLocationSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -99,7 +113,9 @@ export function CourtLocationSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><MapPin size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <MapPin size={18} />
+        </span>
         <div>
           <h2>{t('legalConfig.sections.courtLocation.heading')}</h2>
           <p>{t('legalConfig.sections.courtLocation.description')}</p>
@@ -108,7 +124,11 @@ export function CourtLocationSection(): React.ReactNode {
       <div className="form-grid">
         <FormField
           label={t('legalConfig.labels.courtId')}
-          error={errors.courtId ? t(`form.errors.${errors.courtId.message}`) : undefined}
+          error={
+            errors.courtId
+              ? t(`form.errors.${errors.courtId.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -118,7 +138,9 @@ export function CourtLocationSection(): React.ReactNode {
         />
         <FormField
           label={t('legalConfig.labels.name')}
-          error={errors.name ? t(`form.errors.${errors.name.message}`) : undefined}
+          error={
+            errors.name ? t(`form.errors.${errors.name.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -128,7 +150,9 @@ export function CourtLocationSection(): React.ReactNode {
         />
         <FormField
           label={t('legalConfig.labels.city')}
-          error={errors.city ? t(`form.errors.${errors.city.message}`) : undefined}
+          error={
+            errors.city ? t(`form.errors.${errors.city.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -138,7 +162,11 @@ export function CourtLocationSection(): React.ReactNode {
         />
         <FormField
           label={t('legalConfig.labels.address')}
-          error={errors.address ? t(`form.errors.${errors.address.message}`) : undefined}
+          error={
+            errors.address
+              ? t(`form.errors.${errors.address.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -148,10 +176,20 @@ export function CourtLocationSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void handleSubmit(runCreate)()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void handleSubmit(runCreate)()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('legalConfig.submitting') : t('legalConfig.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void runList()} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runList()}
+          disabled={submitting}
+        >
           {submitting ? t('legalConfig.submitting') : t('legalConfig.list')}
         </Button>
       </div>
@@ -174,10 +212,14 @@ export function CourtLocationSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={created ? [
-          { label: t('legalConfig.result.id'), value: created.id },
-          { label: t('legalConfig.result.name'), value: created.name },
-        ] : undefined}
+        fields={
+          created
+            ? [
+                { label: t('legalConfig.result.id'), value: created.id },
+                { label: t('legalConfig.result.name'), value: created.name },
+              ]
+            : undefined
+        }
       />
       {list && list.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
@@ -185,8 +227,18 @@ export function CourtLocationSection(): React.ReactNode {
             {t('legalConfig.result.count')}: {list.length}
           </div>
           {list.map((item: CourtLocationResult) => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-              <span>{item.name}{item.city ? ` — ${item.city}` : ''}</span>
+            <div
+              key={item.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+              }}
+            >
+              <span>
+                {item.name}
+                {item.city ? ` — ${item.city}` : ''}
+              </span>
               <span>
                 {item.status} · <code>{item.id}</code>
               </span>
