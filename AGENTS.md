@@ -2171,7 +2171,18 @@ verification → independent re-audit → explicit commit/push approval).
 - Map embeds, coordinates, working-hours scheduling logic.
 - Live provider status lights (integrations registry stays intent-based).
 
-## 31.4 Implementation batches (when approved)
+## 31.4 File structure rule (mandatory)
+
+No page is built as one big file. Each tab/section is its own focused file
+under `apps/web/src/components/pages/org-config/` (e.g.
+`organization-profile-section.tsx`, `branch-list.tsx`, `branch-form.tsx`,
+`logo-upload-field.tsx`, `employees-directory.tsx`), imported and composed
+by the thin page orchestrator. Same backend-side: one service file per
+responsibility (`profile.service.ts`, `hierarchy.service.ts`), never a
+god-module. This restates the repo's single-responsibility-file rule
+explicitly for this feature so every agent honors it.
+
+## 31.5 Implementation batches (when approved)
 
 - Batch A (backend): one additive migration (org/branch profile fields,
   team→department link, membership branch/department links, CurrencyCode
