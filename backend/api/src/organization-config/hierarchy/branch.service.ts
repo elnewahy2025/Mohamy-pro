@@ -138,6 +138,25 @@ export class BranchService {
     );
   }
 
+  async list(request: Request): Promise<BranchResult[]> {
+    const ctx = await this.ops.authorize(request);
+    return this.ops.read(request, ctx, (transaction) =>
+      transaction.branch.findMany({
+        where: { tenantId: ctx.tenantId },
+        orderBy: { name: 'asc' },
+        take: 100,
+        select: {
+          id: true,
+          tenantId: true,
+          organizationId: true,
+          slug: true,
+          name: true,
+          status: true,
+        },
+      }),
+    );
+  }
+
   private async requireBranch(
     transaction: Prisma.TransactionClient,
     ctx: HierarchyContext,

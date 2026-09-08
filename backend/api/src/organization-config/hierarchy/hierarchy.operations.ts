@@ -112,6 +112,22 @@ export class HierarchyOperations {
     }
   }
 
+  async read<T>(
+    request: Request,
+    ctx: HierarchyContext,
+    operation: (transaction: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.withTenantContext(
+      {
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        membershipId: ctx.actorMembershipId,
+        operationId: ctx.sessionId,
+      },
+      (transaction) => operation(transaction),
+    );
+  }
+
   private optionalHash(value: string | string[] | undefined): string | null {
     if (!value) return null;
     const raw = Array.isArray(value) ? value.join(',') : value;

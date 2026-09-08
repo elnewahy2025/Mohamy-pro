@@ -131,6 +131,25 @@ export class TeamService {
     );
   }
 
+  async list(request: Request): Promise<TeamResult[]> {
+    const ctx = await this.ops.authorize(request);
+    return this.ops.read(request, ctx, (transaction) =>
+      transaction.team.findMany({
+        where: { tenantId: ctx.tenantId },
+        orderBy: { name: 'asc' },
+        take: 100,
+        select: {
+          id: true,
+          tenantId: true,
+          slug: true,
+          name: true,
+          description: true,
+          status: true,
+        },
+      }),
+    );
+  }
+
   private async requireTeam(
     transaction: Prisma.TransactionClient,
     ctx: HierarchyContext,

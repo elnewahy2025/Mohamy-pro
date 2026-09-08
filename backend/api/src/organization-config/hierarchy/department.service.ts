@@ -142,6 +142,25 @@ export class DepartmentService {
     );
   }
 
+  async list(request: Request): Promise<DepartmentResult[]> {
+    const ctx = await this.ops.authorize(request);
+    return this.ops.read(request, ctx, (transaction) =>
+      transaction.department.findMany({
+        where: { tenantId: ctx.tenantId },
+        orderBy: { name: 'asc' },
+        take: 100,
+        select: {
+          id: true,
+          tenantId: true,
+          branchId: true,
+          slug: true,
+          name: true,
+          status: true,
+        },
+      }),
+    );
+  }
+
   private async requireDepartment(
     transaction: Prisma.TransactionClient,
     ctx: HierarchyContext,

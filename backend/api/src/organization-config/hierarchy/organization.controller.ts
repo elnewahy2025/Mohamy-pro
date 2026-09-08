@@ -1,4 +1,12 @@
-import { Body, Controller, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CsrfGuard } from '../../auth/session/csrf.guard';
@@ -32,6 +40,18 @@ export class OrganizationController {
     @Body() dto: CreateOrganizationDto,
   ): Promise<OrganizationResult> {
     return this.organizations.create(req, dto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'List tenant organizations' })
+  @ApiResponse({ status: 200, description: 'Organization list returned.' })
+  @ApiResponse({ status: 401, description: 'Session is not authenticated.' })
+  @ApiResponse({
+    status: 403,
+    description: 'CSRF token is missing/invalid or permission denied.',
+  })
+  list(@Req() req: Request): Promise<OrganizationResult[]> {
+    return this.organizations.list(req);
   }
 
   @Patch()

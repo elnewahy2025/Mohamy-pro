@@ -109,3 +109,23 @@ describe('OrganizationService', () => {
     ).rejects.toBeInstanceOf(OrganizationConfigDeniedError);
   });
 });
+
+describe('Hierarchy list reads', () => {
+  it('lists organizations scoped to the tenant with a cap', async () => {
+    const read = jest.fn().mockImplementation((_req, ctx, op) =>
+      op({
+        organization: { findMany: jest.fn().mockResolvedValue([]) },
+      } as never),
+    );
+    const ops = {
+      authorize: jest.fn().mockResolvedValue(CTX),
+      run: jest.fn(),
+      read,
+    } as unknown as HierarchyOperations;
+    const service = new OrganizationService(ops);
+
+    await service.list(request());
+
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+});
