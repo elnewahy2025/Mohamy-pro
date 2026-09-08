@@ -2118,3 +2118,66 @@ The stale imported worktree is:
 and MUST NOT be used as the project's source of truth.
 
 **All agents must follow this contract.**
+
+---
+
+# 31. Organization UX Master Plan (APPROVED — NOT YET IMPLEMENTED)
+
+Owner-agreed design for a complete, professional Organization page UX.
+Status: PLAN ONLY. Do not implement until the owner says go. When
+implementing, follow all gates in this contract (backend+frontend
+verification → independent re-audit → explicit commit/push approval).
+
+## 31.1 Locked decisions
+
+1. Logo is user-uploaded (file picker → existing S3 storage service,
+   object ID stored, thumbnail preview).
+2. Departments carry NO contact info (org + branch only).
+3. Exactly ONE ACTIVE organization per tenant (service-level guard, 409 on
+   second create; org tab becomes a profile editor, create form only when
+   none exists).
+4. Hierarchy: 1 org → N branches → each branch N departments → each
+   department N teams. `Team` gains `departmentId` (optional at DB so
+   existing teams survive; required for new teams in UI).
+5. Map link is a plain URL field opening Google Maps in a new tab (embed
+   deferred).
+6. Registration + tax numbers on the Organization, NOW (ZATCA relevance).
+7. Currency: Organization base currency + per-Branch operating currency
+   (defaults to org's). `CurrencyCode` enum expands to SAR, AED, KWD, BHD,
+   QAR, OMR, JOD, EGP, USD. Validated dropdowns, never free text.
+8. Employees directory: `Membership` gains optional `branchId` +
+   `departmentId` (existing members unaffected); new admin directory table
+   shows every member with branch, department, team, roles, status.
+9. HQ flag: one branch marked head office (single-HQ enforced); canonical
+   address for reports/documents.
+10. Headcounts: employee count per branch/department shown in lists
+    (derived from membership links, no extra storage).
+
+## 31.2 Info sets
+
+- Organization: display name, logo, website, primary email, primary phone,
+  HQ address, map link, registration number, tax number, base currency,
+  social links (X, LinkedIn, Facebook, Instagram URLs).
+- Branch: name, phone, email, address, map link, operating currency,
+  working hours, manager name, HQ flag. Inherits (displays, never
+  re-enters) org logo + org name.
+- Department: name, slug, parent branch only. Team: name, description,
+  parent department only.
+
+## 31.3 Explicit non-goals (deferred)
+
+- Branch-level data isolation (admin sees everything; user scoping stays
+  tenant/assignment-based).
+- Map embeds, coordinates, working-hours scheduling logic.
+- Live provider status lights (integrations registry stays intent-based).
+
+## 31.4 Implementation batches (when approved)
+
+- Batch A (backend): one additive migration (org/branch profile fields,
+  team→department link, membership branch/department links, CurrencyCode
+  expansion); single-org guard; HQ-singleton guard; extend hierarchy
+  services with profile fields.
+- Batch B (frontend): org profile card + logo upload, branch profile cards
+  with inherited header, EntityPicker for org/branch/department/team
+  parents, employees directory, headcounts, HQ flag UI.
+- Batch C: gates + re-audit + commit/push per this contract.
