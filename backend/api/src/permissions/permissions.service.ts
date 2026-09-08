@@ -64,10 +64,12 @@ export class PermissionsService {
         `Reconciled built-in role permissions for ${tenantsWired} tenant(s) at startup`,
       );
     } catch (error) {
+      const detail =
+        error instanceof Error ? error.stack ?? error.message : String(error);
       this.logger.error(
-        'Failed to reconcile built-in role permissions at startup',
-        error as Error,
+        `Failed to reconcile built-in role permissions at startup: ${detail}`,
       );
+      console.error(detail);
     }
   }
 
