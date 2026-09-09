@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Request } from 'express';
+import { S3ObjectStorageService } from '../../infrastructure/storage/object-storage.service';
 import { type Prisma } from '@prisma/client';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { OrganizationConfigDeniedError } from '../organization-config.errors';
@@ -8,12 +9,27 @@ import {
   type HierarchyContext,
 } from './hierarchy.operations';
 
-export interface CreateOrganizationInput {
+export interface OrganizationProfileInput {
+  website?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  addressLine1?: string;
+  city?: string;
+  country?: string;
+  postalCode?: string;
+  mapUrl?: string;
+  registrationNumber?: string;
+  taxNumber?: string;
+  baseCurrency?: string;
+  socialLinks?: Record<string, string>;
+}
+
+export interface CreateOrganizationInput extends OrganizationProfileInput {
   slug: string;
   name: string;
 }
 
-export interface UpdateOrganizationInput {
+export interface UpdateOrganizationInput extends OrganizationProfileInput {
   id: string;
   slug?: string;
   name?: string;
@@ -25,6 +41,98 @@ export interface OrganizationResult {
   slug: string;
   name: string;
   status: 'ACTIVE' | 'ARCHIVED';
+  website: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  addressLine1: string | null;
+  city: string | null;
+  country: string | null;
+  postalCode: string | null;
+  mapUrl: string | null;
+  registrationNumber: string | null;
+  taxNumber: string | null;
+  baseCurrency: string;
+  logoObjectKey: string | null;
+  socialLinks: Record<string, string>;
+}
+
+function toOrganizationResult(row: {
+  id: string;
+  tenantId: string;
+  slug: string;
+  name: string;
+  status: 'ACTIVE' | 'ARCHIVED';
+  website: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  addressLine1: string | null;
+  city: string | null;
+  country: string | null;
+  postalCode: string | null;
+  mapUrl: string | null;
+  registrationNumber: string | null;
+  taxNumber: string | null;
+  baseCurrency: string;
+  logoObjectKey: string | null;
+  socialLinks: unknown;
+}): OrganizationResult {
+  return {
+    ...row,
+    socialLinks:
+      row.socialLinks && typeof row.socialLinks === 'object'
+        ? (row.socialLinks as Record<string, string>)
+        : {},
+  };
+}
+
+const ORG_SELECT = {
+  id: true,
+  tenantId: true,
+  slug: true,
+  name: true,
+  status: true,
+  website: true,
+  contactEmail: true,
+  contactPhone: true,
+  addressLine1: true,
+  city: true,
+  country: true,
+  postalCode: true,
+  mapUrl: true,
+  registrationNumber: true,
+  taxNumber: true,
+  baseCurrency: true,
+  logoObjectKey: true,
+  socialLinks: true,
+} as const;
+
+function profileData(input: OrganizationProfileInput): Record<string, unknown> {
+  const data: Record<string, unknown> = {};
+  for (const key of [
+    'website',
+    'contactEmail',
+    'contactPhone',
+    'addressLine1',
+    'city',
+    'country',
+    'postalCode',
+    'mapUrl',
+    'registrationNumber',
+    'taxNumber',
+    'baseCurrency',
+  ] as const) {
+    if (input[key] !== undefined) data[key] = input[key];
+  }
+  if (input.socialLinks !== undefined) {
+    for (const [network, url] of Object.entries(input.socialLinks)) {
+      if (typeof url !== 'string' || url.length > 500) {
+        throw new OrganizationConfigDeniedError('INVALID_SOCIAL_LINKS');
+      }
+      void network;
+    }
+    data.socialLinks = input.socialLinks;
+  }
+  return data;
 }
 
 const TARGET = 'Organization';
@@ -36,7 +144,51 @@ const TARGET = 'Organization';
  */
 @Injectable()
 export class OrganizationService {
-  constructor(private readonly ops: HierarchyOperations) {}
+  constructor(
+    private readonly ops: HierarchyOperations,
+    private readonly storage: S3ObjectStorageService,
+  ) {}
+
+  async uploadLogo(
+    request: Request,
+    file: { buffer: Buffer; mimetype: string; size: number },
+  ): Promise<OrganizationResult> {
+    const ctx = await this.ops.authorize(request);
+    const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+    if (!allowed.includes(file.mimetype)) {
+      throw new OrganizationConfigDeniedError('INVALID_LOGO_TYPE');
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      throw new OrganizationConfigDeniedError('LOGO_TOO_LARGE');
+    }
+    return this.ops.run<OrganizationResult>(
+      request,
+      ctx,
+      AUDIT_EVENT_TYPES.ORGANIZATION_UPDATED,
+      TARGET,
+      async (transaction) => {
+        const current = await transaction.organization.findFirst({
+          where: { tenantId: ctx.tenantId, status: 'ACTIVE' },
+          select: { id: true },
+        });
+        if (!current)
+          throw new OrganizationConfigDeniedError('NO_ORGANIZATION');
+        const key = `logos/${ctx.tenantId}/${current.id}.png`;
+        await this.storage.putObject({
+          tenantId: ctx.tenantId,
+          key,
+          body: file.buffer,
+          contentType: file.mimetype,
+        });
+        const row = await transaction.organization.update({
+          where: { id: current.id },
+          data: { logoObjectKey: key },
+          select: ORG_SELECT,
+        });
+        return toOrganizationResult(row);
+      },
+    );
+  }
 
   async create(
     request: Request,
@@ -48,17 +200,23 @@ export class OrganizationService {
       ctx,
       AUDIT_EVENT_TYPES.ORGANIZATION_CREATED,
       TARGET,
-      (transaction) =>
-        transaction.organization.create({
-          data: { tenantId: ctx.tenantId, slug: input.slug, name: input.name },
-          select: {
-            id: true,
-            tenantId: true,
-            slug: true,
-            name: true,
-            status: true,
+      async (transaction) => {
+        const existing = await transaction.organization.findFirst({
+          where: { tenantId: ctx.tenantId, status: 'ACTIVE' },
+          select: { id: true },
+        });
+        if (existing) throw new OrganizationConfigDeniedError('ORG_EXISTS');
+        const row = await transaction.organization.create({
+          data: {
+            tenantId: ctx.tenantId,
+            slug: input.slug,
+            name: input.name,
+            ...profileData(input),
           },
-        }),
+          select: ORG_SELECT,
+        });
+        return toOrganizationResult(row);
+      },
       { slug: input.slug },
     );
   }
@@ -75,20 +233,16 @@ export class OrganizationService {
       TARGET,
       async (transaction) => {
         const current = await this.requireOrg(transaction, ctx, input.id);
-        return transaction.organization.update({
+        const row = await transaction.organization.update({
           where: { id: current.id },
           data: {
             slug: input.slug ?? current.slug,
             name: input.name ?? current.name,
+            ...profileData(input),
           },
-          select: {
-            id: true,
-            tenantId: true,
-            slug: true,
-            name: true,
-            status: true,
-          },
+          select: ORG_SELECT,
         });
+        return toOrganizationResult(row);
       },
     );
   }
@@ -106,17 +260,12 @@ export class OrganizationService {
       TARGET,
       async (transaction) => {
         const current = await this.requireOrg(transaction, ctx, id);
-        return transaction.organization.update({
+        const row = await transaction.organization.update({
           where: { id: current.id },
           data: { status: 'ARCHIVED' },
-          select: {
-            id: true,
-            tenantId: true,
-            slug: true,
-            name: true,
-            status: true,
-          },
+          select: ORG_SELECT,
         });
+        return toOrganizationResult(row);
       },
       reason ? { reason } : undefined,
     );
@@ -124,20 +273,15 @@ export class OrganizationService {
 
   async list(request: Request): Promise<OrganizationResult[]> {
     const ctx = await this.ops.authorize(request);
-    return this.ops.read(request, ctx, (transaction) =>
+    const rows = await this.ops.read(request, ctx, (transaction) =>
       transaction.organization.findMany({
         where: { tenantId: ctx.tenantId },
         orderBy: { name: 'asc' },
         take: 100,
-        select: {
-          id: true,
-          tenantId: true,
-          slug: true,
-          name: true,
-          status: true,
-        },
+        select: ORG_SELECT,
       }),
     );
+    return rows.map(toOrganizationResult);
   }
 
   private async requireOrg(

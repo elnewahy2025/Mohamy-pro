@@ -243,6 +243,158 @@ export class MembershipAdminService {
     return result;
   }
 
+  async list(request: Request) {
+    const auth = request.auth;
+    if (!auth) {
+      throw new MembershipAdminDeniedError('UNAUTHENTICATED');
+    }
+    const { sessionId, userId, activeTenantId } = auth;
+    if (!activeTenantId) {
+      throw new MembershipAdminDeniedError('TENANT_CONTEXT_REQUIRED');
+    }
+    const tenantId = activeTenantId;
+    const { membershipId: actorMembershipId } =
+      await this.permissions.assertTenantPermission({
+        request,
+        userId,
+        tenantId,
+        permissionKey: PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP,
+        operationId: sessionId,
+      });
+    return this.prisma.withTenantContext(
+      {
+        tenantId,
+        userId,
+        membershipId: actorMembershipId,
+        operationId: sessionId,
+      },
+      async (transaction) =>
+        transaction.membership.findMany({
+          where: { tenantId },
+          orderBy: { createdAt: 'asc' },
+          take: 100,
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            branchId: true,
+            departmentId: true,
+            createdAt: true,
+            user: { select: { emailNormalized: true, displayName: true } },
+          },
+        }),
+    );
+  }
+
+  async place(
+    request: Request,
+    dto: { membershipId: string; branchId?: string; departmentId?: string },
+  ) {
+    const auth = request.auth;
+    if (!auth) {
+      throw new MembershipAdminDeniedError('UNAUTHENTICATED');
+    }
+    const { sessionId, userId, activeTenantId } = auth;
+    const correlationId = getCorrelationId(request);
+    if (!activeTenantId) {
+      throw new MembershipAdminDeniedError('TENANT_CONTEXT_REQUIRED');
+    }
+    const tenantId = activeTenantId;
+    try {
+      await this.mfa.assertRecentMfa(sessionId);
+    } catch (error) {
+      if (error instanceof MfaStepUpRequiredError) {
+        await this.enforceMfaFailureLimit(request, sessionId, userId, tenantId);
+      }
+      throw error;
+    }
+    const { membershipId: actorMembershipId } =
+      await this.permissions.assertTenantPermission({
+        request,
+        userId,
+        tenantId,
+        permissionKey: PERMISSION_KEYS.CAN_MANAGE_MEMBERSHIP,
+        operationId: sessionId,
+      });
+    try {
+      return await this.prisma.withTenantContext(
+        {
+          tenantId,
+          userId,
+          membershipId: actorMembershipId,
+          operationId: sessionId,
+        },
+        async (transaction) => {
+          const membership = await transaction.membership.findFirst({
+            where: { id: dto.membershipId, tenantId },
+          });
+          if (!membership) {
+            throw new MembershipAdminDeniedError('NO_MEMBERSHIP');
+          }
+          if (dto.branchId !== undefined) {
+            const branch = dto.branchId
+              ? await transaction.branch.findFirst({
+                  where: { id: dto.branchId, tenantId },
+                  select: { id: true },
+                })
+              : null;
+            if (dto.branchId && !branch) {
+              throw new MembershipAdminDeniedError('NO_BRANCH');
+            }
+          }
+          if (dto.departmentId !== undefined) {
+            const department = dto.departmentId
+              ? await transaction.department.findFirst({
+                  where: { id: dto.departmentId, tenantId },
+                  select: { id: true },
+                })
+              : null;
+            if (dto.departmentId && !department) {
+              throw new MembershipAdminDeniedError('NO_DEPARTMENT');
+            }
+          }
+          const updated = await transaction.membership.update({
+            where: { id: membership.id },
+            data: {
+              ...(dto.branchId !== undefined
+                ? { branchId: dto.branchId || null }
+                : {}),
+              ...(dto.departmentId !== undefined
+                ? { departmentId: dto.departmentId || null }
+                : {}),
+            },
+            select: { id: true, branchId: true, departmentId: true },
+          });
+          await this.audit.write(
+            {
+              eventType: AUDIT_EVENT_TYPES.MEMBERSHIP_PLACED,
+              outcome: 'SUCCEEDED',
+              actorUserId: userId,
+              actorMembershipId,
+              tenantId,
+              targetType: 'membership',
+              targetId: membership.id,
+              policy: 'CanManageMembership',
+              correlationId,
+              ipHash: this.optionalHash(request.ip),
+              userAgentHash: this.optionalHash(request.headers['user-agent']),
+              metadata: undefined,
+            },
+            transaction,
+          );
+          return updated;
+        },
+      );
+    } catch (error) {
+      if (error instanceof MembershipAdminDeniedError) throw error;
+      this.logger.warn({
+        message: 'Membership placement failed',
+        reason: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
   private optionalHash(value: string | string[] | undefined): string | null {
     if (!value) return null;
     const raw = Array.isArray(value) ? value.join(',') : value;

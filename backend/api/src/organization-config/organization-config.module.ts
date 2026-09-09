@@ -12,9 +12,10 @@ import { TeamController } from './hierarchy/team.controller';
 import { TeamService } from './hierarchy/team.service';
 
 import { AuthModule } from '../auth/auth.module';
+import { StorageModule } from '../infrastructure/storage/storage.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, StorageModule],
   controllers: [
     OrganizationSettingsController,
     OrganizationController,

@@ -473,6 +473,19 @@ model Organization {
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   branches  Branch[]
 
+  website String?
+  contactEmail String?
+  contactPhone String?
+  addressLine1 String?
+  city String?
+  country String?
+  postalCode String?
+  mapUrl String?
+  registrationNumber String?
+  taxNumber String?
+  baseCurrency String @default("EGP")
+  logoObjectKey String?
+  socialLinks Json @default("{}")
   @@unique([id, tenantId])
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -491,6 +504,18 @@ model Branch {
   organization   Organization    @relation(fields: [organizationId, tenantId], references: [id, tenantId], onDelete: Restrict)
   departments    Department[]
 
+  contactPhone String?
+  contactEmail String?
+  addressLine1 String?
+  city String?
+  country String?
+  postalCode String?
+  mapUrl String?
+  operatingCurrency String @default("EGP")
+  workingHours String?
+  managerName String?
+  isHeadOffice Boolean @default(false)
+  memberships Membership[]
   @@unique([id, tenantId])
   @@unique([tenantId, organizationId, slug])
   @@index([tenantId, status])
@@ -508,6 +533,8 @@ model Department {
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   branch    Branch          @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
+  teams Team[]
+  memberships Membership[]
   @@unique([tenantId, branchId, slug])
   @@index([tenantId, status])
 }
@@ -525,6 +552,8 @@ model Team {
   tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   members     TeamMember[]
 
+  departmentId String?
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   @@unique([id, tenantId])
   @@unique([tenantId, slug])
   @@index([tenantId, status])
@@ -571,6 +600,10 @@ model Membership {
   documentAccesses  DocumentAccess[]   @relation("DocumentAccessor")
   documentDownloads DocumentDownload[]
 
+  branchId String?
+  departmentId String?
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   @@unique([userId, tenantId])
   @@unique([id, tenantId])
   @@index([tenantId, status])

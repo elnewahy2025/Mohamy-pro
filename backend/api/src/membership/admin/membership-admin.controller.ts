@@ -1,10 +1,11 @@
-import { Body, Controller, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CsrfGuard } from '../../auth/session/csrf.guard';
 import { SessionGuard } from '../../auth/session/session.guard';
 import {
   MembershipAdminDto,
+  MembershipPlacementDto,
   MembershipReinstateDto,
 } from './membership-admin.dto';
 import {
@@ -96,5 +97,30 @@ export class MembershipAdminController {
     @Body() dto: MembershipReinstateDto,
   ): Promise<MembershipAdminResult> {
     return this.admin.reinstate(req, dto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'List tenant memberships' })
+  @ApiResponse({ status: 200, description: 'Membership list returned.' })
+  @ApiResponse({ status: 401, description: 'Session is not authenticated.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller lacks the required permission.',
+  })
+  list(@Req() req: Request) {
+    return this.admin.list(req);
+  }
+
+  @Patch('placement')
+  @ApiOperation({ summary: 'Assign a membership to a branch/department' })
+  @ApiBody({ type: MembershipPlacementDto })
+  @ApiResponse({ status: 200, description: 'Membership placed.' })
+  @ApiResponse({ status: 401, description: 'Session is not authenticated.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Caller lacks the required permission.',
+  })
+  place(@Req() req: Request, @Body() dto: MembershipPlacementDto) {
+    return this.admin.place(req, dto);
   }
 }

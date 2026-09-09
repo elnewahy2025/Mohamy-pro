@@ -12,10 +12,12 @@ export interface CreateTeamInput {
   slug: string;
   name: string;
   description?: string;
+  departmentId: string;
 }
 
 export interface UpdateTeamInput {
   id: string;
+  departmentId?: string;
   slug?: string;
   name?: string;
   description?: string | null;
@@ -28,9 +30,20 @@ export interface TeamResult {
   name: string;
   description: string | null;
   status: 'ACTIVE' | 'ARCHIVED';
+  departmentId: string | null;
 }
 
 const TARGET = 'Team';
+
+const TEAM_SELECT = {
+  id: true,
+  tenantId: true,
+  slug: true,
+  name: true,
+  description: true,
+  status: true,
+  departmentId: true,
+} as const;
 
 /**
  * Tenant-scoped Team assignment construct (not an alternate security
@@ -48,23 +61,24 @@ export class TeamService {
       ctx,
       AUDIT_EVENT_TYPES.TEAM_CREATED,
       TARGET,
-      (transaction) =>
-        transaction.team.create({
+      async (transaction) => {
+        const department = await transaction.department.findFirst({
+          where: { id: input.departmentId, tenantId: ctx.tenantId },
+          select: { id: true },
+        });
+        if (!department)
+          throw new OrganizationConfigDeniedError('NO_DEPARTMENT');
+        return transaction.team.create({
           data: {
             tenantId: ctx.tenantId,
             slug: input.slug,
             name: input.name,
             description: input.description ?? null,
+            departmentId: input.departmentId,
           },
-          select: {
-            id: true,
-            tenantId: true,
-            slug: true,
-            name: true,
-            description: true,
-            status: true,
-          },
-        }),
+          select: TEAM_SELECT,
+        });
+      },
       { slug: input.slug },
     );
   }
@@ -78,6 +92,14 @@ export class TeamService {
       TARGET,
       async (transaction) => {
         const current = await this.requireTeam(transaction, ctx, input.id);
+        if (input.departmentId !== undefined) {
+          const department = await transaction.department.findFirst({
+            where: { id: input.departmentId, tenantId: ctx.tenantId },
+            select: { id: true },
+          });
+          if (!department)
+            throw new OrganizationConfigDeniedError('NO_DEPARTMENT');
+        }
         return transaction.team.update({
           where: { id: current.id },
           data: {
@@ -87,15 +109,11 @@ export class TeamService {
               input.description === undefined
                 ? current.description
                 : input.description,
+            ...(input.departmentId !== undefined
+              ? { departmentId: input.departmentId }
+              : {}),
           },
-          select: {
-            id: true,
-            tenantId: true,
-            slug: true,
-            name: true,
-            description: true,
-            status: true,
-          },
+          select: TEAM_SELECT,
         });
       },
     );
@@ -117,14 +135,7 @@ export class TeamService {
         return transaction.team.update({
           where: { id: current.id },
           data: { status: 'ARCHIVED' },
-          select: {
-            id: true,
-            tenantId: true,
-            slug: true,
-            name: true,
-            description: true,
-            status: true,
-          },
+          select: TEAM_SELECT,
         });
       },
       reason ? { reason } : undefined,
@@ -138,14 +149,7 @@ export class TeamService {
         where: { tenantId: ctx.tenantId },
         orderBy: { name: 'asc' },
         take: 100,
-        select: {
-          id: true,
-          tenantId: true,
-          slug: true,
-          name: true,
-          description: true,
-          status: true,
-        },
+        select: TEAM_SELECT,
       }),
     );
   }

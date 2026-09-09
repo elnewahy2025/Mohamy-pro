@@ -447,7 +447,8 @@
       "branchId": "Branch ID",
       "key": "Setting key",
       "value": "Value",
-      "entityId": "Entity ID"
+      "entityId": "Entity ID",
+      "departmentId": "Department ID"
     },
     "placeholders": {
       "name": "e.g. Main Office",
@@ -458,7 +459,8 @@
       "branchId": "00000000-0000-4000-8000-000000000000",
       "entityId": "00000000-0000-4000-8000-000000000000",
       "key": "e.g. feature.enabled",
-      "value": "Plain text or JSON"
+      "value": "Plain text or JSON",
+      "departmentId": "00000000-0000-4000-8000-000000000000"
     },
     "result": {
       "title": "Operation completed",
@@ -478,9 +480,59 @@
       "branch": "Branches",
       "department": "Departments",
       "team": "Teams",
-      "settings": "Settings"
+      "settings": "Settings",
+      "directory": "Directory"
     },
-    "load": "Load list"
+    "load": "Load list",
+    "profile": {
+      "websiteLabel": "Website",
+      "websitePlaceholder": "https://example.com",
+      "contactEmailLabel": "Contact email",
+      "contactEmailPlaceholder": "info@example.com",
+      "contactPhoneLabel": "Contact phone",
+      "contactPhonePlaceholder": "+966501234567",
+      "addressLine1Label": "Address",
+      "addressLine1Placeholder": "Street, building, floor",
+      "cityLabel": "City",
+      "cityPlaceholder": "Riyadh",
+      "countryLabel": "Country",
+      "countryPlaceholder": "Saudi Arabia",
+      "postalCodeLabel": "Postal code",
+      "postalCodePlaceholder": "12213",
+      "mapUrlLabel": "Google Maps link",
+      "mapUrlPlaceholder": "https://maps.google.com/?q=…",
+      "registrationNumberLabel": "Commercial registration",
+      "registrationNumberPlaceholder": "CR number",
+      "taxNumberLabel": "Tax number",
+      "taxNumberPlaceholder": "VAT number",
+      "baseCurrencyLabel": "Base currency",
+      "operatingCurrencyLabel": "Operating currency",
+      "workingHoursLabel": "Working hours",
+      "workingHoursPlaceholder": "Sun–Thu 09:00–17:00",
+      "managerNameLabel": "Branch manager",
+      "managerNamePlaceholder": "Full name",
+      "isHeadOfficeLabel": "Head office",
+      "socialXLabel": "X profile",
+      "socialLinkedInLabel": "LinkedIn page",
+      "socialFacebookLabel": "Facebook page",
+      "socialInstagramLabel": "Instagram",
+      "logoLabel": "Organization logo",
+      "logoUpload": "Upload logo",
+      "logoCurrent": "Current logo",
+      "logoFailed": "Logo upload failed.",
+      "inheritedFrom": "Inherited from organization"
+    },
+    "directory": {
+      "heading": "Employees directory",
+      "description": "Every member with branch, department, and status. Click a row to place them.",
+      "members": "Members",
+      "headcount": "{count} employees",
+      "membershipIdLabel": "Membership ID",
+      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "branchLabel": "Branch",
+      "departmentLabel": "Department",
+      "save": "Save placement"
+    }
   },
   "clients": {
     "navLabel": "Clients",

@@ -4412,3 +4412,77 @@ describe('OrgConfigClient lists', () => {
     expect(teams).toEqual([]);
   });
 });
+
+describe('OrgConfigClient profile endpoints', () => {
+  const base = 'http://localhost:3000/api/v1';
+
+  function orgWith(handlers: Record<string, (url: string, init?: RequestInit) => Response>) {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const urlString = String(url);
+      calls.push({ url: urlString, init });
+      if (urlString.endsWith('/auth/csrf')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { csrfToken: 'csrf-org' },
+            meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      for (const suffix of Object.keys(handlers)) {
+        if (urlString.endsWith(suffix)) return handlers[suffix](urlString, init);
+      }
+      return new Response(null, { status: 404 });
+    };
+    return { fetchMock, calls };
+  }
+
+  function enveloped<T>(data: T, status = 200): Response {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        meta: { requestId: 'req-1', timestamp: '2026-01-01T00:00:00.000Z', pagination: null },
+      }),
+      { status, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  it('uploads the logo as multipart without a JSON content type', async () => {
+    const { fetchMock, calls } = orgWith({
+      '/organizations/logo': () =>
+        enveloped({ id: 'o1', logoObjectKey: 'logos/t1/o1.png' }, 201),
+    });
+    const client = new OrgConfigClient(new ApiClient(base, fetchMock));
+
+    const result = await client.uploadLogo(new File(['x'], 'logo.png', { type: 'image/png' }));
+
+    const call = calls.find((c) => c.url.endsWith('/organizations/logo'));
+    expect(call?.init?.method).toBe('POST');
+    expect(call?.init?.body).toBeInstanceOf(FormData);
+    expect(String(call?.init?.headers ?? '')).not.toContain('application/json');
+    expect(result.logoObjectKey).toBe('logos/t1/o1.png');
+  });
+
+  it('lists members and places them via ApiClient', async () => {
+    const { fetchMock, calls } = orgWith({
+      '/membership/members': () => enveloped([{ id: 'm1' }]),
+      '/membership/members/placement': () =>
+        enveloped({ id: 'm1', branchId: 'b1', departmentId: null }),
+    });
+    const client = new ApiClient(base, fetchMock);
+
+    const members = await client.listMembers();
+    const placed = await client.placeMembership({ membershipId: 'm1', branchId: 'b1' });
+
+    expect(members).toHaveLength(1);
+    const placeCall = calls.find((c) => c.url.endsWith('/membership/members/placement'));
+    expect(placeCall?.init?.method).toBe('PATCH');
+    expect(placed.branchId).toBe('b1');
+  });
+});

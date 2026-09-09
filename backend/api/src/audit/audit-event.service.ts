@@ -48,6 +48,7 @@ export const METADATA_ALLOWLIST: Partial<Record<string, string[]>> = {
   'membership.reinstated': ['reason'],
   'membership.expired': [],
   'membership.removed': ['reason'],
+  'membership.placed': [],
   'invitation.revoked': ['reason'],
   'role.assigned': ['roleKey'],
   'permission.denied': ['permissionKey'],

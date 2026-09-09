@@ -8,16 +8,30 @@ import {
   type HierarchyContext,
 } from './hierarchy.operations';
 
-export interface CreateBranchInput {
-  organizationId: string;
-  slug: string;
-  name: string;
+export interface BranchProfileInput {
+  contactPhone?: string;
+  contactEmail?: string;
+  addressLine1?: string;
+  city?: string;
+  country?: string;
+  postalCode?: string;
+  mapUrl?: string;
+  operatingCurrency?: string;
+  workingHours?: string;
+  managerName?: string;
+  isHeadOffice?: boolean;
 }
 
-export interface UpdateBranchInput {
+export interface UpdateBranchInput extends BranchProfileInput {
   id: string;
   slug?: string;
   name?: string;
+}
+
+export interface CreateBranchInput extends BranchProfileInput {
+  organizationId: string;
+  slug: string;
+  name: string;
 }
 
 export interface BranchResult {
@@ -27,6 +41,68 @@ export interface BranchResult {
   slug: string;
   name: string;
   status: 'ACTIVE' | 'ARCHIVED';
+  contactPhone: string | null;
+  contactEmail: string | null;
+  addressLine1: string | null;
+  city: string | null;
+  country: string | null;
+  postalCode: string | null;
+  mapUrl: string | null;
+  operatingCurrency: string;
+  workingHours: string | null;
+  managerName: string | null;
+  isHeadOffice: boolean;
+}
+
+const BRANCH_SELECT = {
+  id: true,
+  tenantId: true,
+  organizationId: true,
+  slug: true,
+  name: true,
+  status: true,
+  contactPhone: true,
+  contactEmail: true,
+  addressLine1: true,
+  city: true,
+  country: true,
+  postalCode: true,
+  mapUrl: true,
+  operatingCurrency: true,
+  workingHours: true,
+  managerName: true,
+  isHeadOffice: true,
+} as const;
+
+function branchProfileData(input: BranchProfileInput): Record<string, unknown> {
+  const data: Record<string, unknown> = {};
+  for (const key of [
+    'contactPhone',
+    'contactEmail',
+    'addressLine1',
+    'city',
+    'country',
+    'postalCode',
+    'mapUrl',
+    'operatingCurrency',
+    'workingHours',
+    'managerName',
+    'isHeadOffice',
+  ] as const) {
+    if (input[key] !== undefined) data[key] = input[key];
+  }
+  return data;
+}
+
+async function clearOtherHeadOffices(
+  transaction: { branch: { updateMany: (args: unknown) => Promise<unknown> } },
+  tenantId: string,
+  exceptId: string,
+): Promise<void> {
+  await transaction.branch.updateMany({
+    where: { tenantId, id: { not: exceptId }, isHeadOffice: true },
+    data: { isHeadOffice: false },
+  });
 }
 
 const TARGET = 'Branch';
@@ -56,22 +132,20 @@ export class BranchService {
           select: { id: true },
         });
         if (!org) throw new OrganizationConfigDeniedError('NO_ORGANIZATION');
-        return transaction.branch.create({
+        const created = await transaction.branch.create({
           data: {
             tenantId: ctx.tenantId,
             organizationId: input.organizationId,
             slug: input.slug,
             name: input.name,
+            ...branchProfileData(input),
           },
-          select: {
-            id: true,
-            tenantId: true,
-            organizationId: true,
-            slug: true,
-            name: true,
-            status: true,
-          },
+          select: BRANCH_SELECT,
         });
+        if (created.isHeadOffice) {
+          await clearOtherHeadOffices(transaction, ctx.tenantId, created.id);
+        }
+        return created;
       },
       { slug: input.slug },
     );
@@ -89,21 +163,19 @@ export class BranchService {
       TARGET,
       async (transaction) => {
         const current = await this.requireBranch(transaction, ctx, input.id);
-        return transaction.branch.update({
+        const updated = await transaction.branch.update({
           where: { id: current.id },
           data: {
             slug: input.slug ?? current.slug,
             name: input.name ?? current.name,
+            ...branchProfileData(input),
           },
-          select: {
-            id: true,
-            tenantId: true,
-            organizationId: true,
-            slug: true,
-            name: true,
-            status: true,
-          },
+          select: BRANCH_SELECT,
         });
+        if (updated.isHeadOffice) {
+          await clearOtherHeadOffices(transaction, ctx.tenantId, updated.id);
+        }
+        return updated;
       },
     );
   }
@@ -124,14 +196,7 @@ export class BranchService {
         return transaction.branch.update({
           where: { id: current.id },
           data: { status: 'ARCHIVED' },
-          select: {
-            id: true,
-            tenantId: true,
-            organizationId: true,
-            slug: true,
-            name: true,
-            status: true,
-          },
+          select: BRANCH_SELECT,
         });
       },
       reason ? { reason } : undefined,
@@ -145,14 +210,7 @@ export class BranchService {
         where: { tenantId: ctx.tenantId },
         orderBy: { name: 'asc' },
         take: 100,
-        select: {
-          id: true,
-          tenantId: true,
-          organizationId: true,
-          slug: true,
-          name: true,
-          status: true,
-        },
+        select: BRANCH_SELECT,
       }),
     );
   }

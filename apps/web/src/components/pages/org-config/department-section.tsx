@@ -11,6 +11,7 @@ import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const departmentSchema = z.object({
   id: z.string().max(64).optional(),
@@ -38,6 +39,7 @@ export function DepartmentSection(): React.ReactNode {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<DepartmentForm>({
     resolver: zodResolver(departmentSchema),
@@ -138,19 +140,24 @@ export function DepartmentSection(): React.ReactNode {
             ...register('id'),
           }}
         />
-        <FormField
+        <EntityPicker
           label={t('orgConfig.labels.branchId')}
+          placeholder={t('orgConfig.placeholders.branchId')}
+          required
           error={
             errors.branchId
               ? t(`form.errors.${errors.branchId.message}`)
               : undefined
           }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.branchId'),
-            ...register('branchId'),
-          }}
+          value={watch('branchId') ?? ''}
+          onChange={(id) => setValue('branchId', id, { shouldValidate: true })}
+          load={async () =>
+            (await client.listBranches()).map((b) => ({
+              id: b.id,
+              label: b.name,
+              sub: b.slug,
+            }))
+          }
         />
         <FormField
           label={t('orgConfig.labels.slug')}

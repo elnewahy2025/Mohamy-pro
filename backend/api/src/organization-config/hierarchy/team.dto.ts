@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateTeamDto {
   @ApiProperty({ example: 'mergers', description: 'Unique slug.' })
@@ -22,6 +28,10 @@ export class CreateTeamDto {
   @IsString()
   @MaxLength(500)
   description?: string;
+
+  @ApiProperty({ format: 'uuid', description: 'Parent department.' })
+  @IsUUID()
+  departmentId!: string;
 }
 
 export class UpdateTeamDto {
@@ -46,6 +56,11 @@ export class UpdateTeamDto {
   @IsString()
   @MaxLength(500)
   description?: string | null;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Parent department.' })
+  @IsOptional()
+  @IsUUID()
+  departmentId?: string;
 }
 
 export class ArchiveTeamDto {

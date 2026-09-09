@@ -216,3 +216,74 @@ describe('MembershipAdminService', () => {
     expect(auditWrite).not.toHaveBeenCalled();
   });
 });
+
+describe('MembershipAdminService placement', () => {
+  it('places a membership on a branch and department in-tenant', async () => {
+    const { service, tenantTx, auditWrite } = makeService({
+      targetStatus: 'ACTIVE',
+    });
+    (tenantTx as any).branch = {
+      findFirst: jest.fn().mockResolvedValue({ id: 'b1' }),
+    };
+    (tenantTx as any).department = {
+      findFirst: jest.fn().mockResolvedValue({ id: 'd1' }),
+    };
+    (tenantTx.membership.update as jest.Mock).mockResolvedValue({
+      id: 'm1',
+      branchId: 'b1',
+      departmentId: 'd1',
+    });
+
+    const updated: any = await service.place(
+      {
+        auth: { userId: 'u1', activeTenantId: 't1', sessionId: 's1' },
+        headers: {},
+        header: () => undefined,
+      } as never,
+      { membershipId: 'm1', branchId: 'b1', departmentId: 'd1' },
+    );
+
+    expect(updated.branchId).toBe('b1');
+    expect(auditWrite).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'membership.placed' }),
+      expect.anything(),
+    );
+  });
+
+  it('rejects placement on out-of-tenant branches', async () => {
+    const { service, tenantTx } = makeService({ targetStatus: 'ACTIVE' });
+    (tenantTx as any).branch = { findFirst: jest.fn().mockResolvedValue(null) };
+
+    const failure = await service
+      .place(
+        {
+          auth: { userId: 'u1', activeTenantId: 't1', sessionId: 's1' },
+          headers: {},
+          header: () => undefined,
+        } as never,
+        { membershipId: 'm1', branchId: 'elsewhere' },
+      )
+      .catch((error: unknown) => error);
+    expect((failure as { internalReason?: string }).internalReason).toBe(
+      'NO_BRANCH',
+    );
+  });
+
+  it('lists memberships scoped to the tenant', async () => {
+    const { service, tenantTx, permissions } = makeService({
+      targetStatus: 'ACTIVE',
+    });
+    (tenantTx.membership as any).findMany = jest
+      .fn()
+      .mockResolvedValue([{ id: 'm1' }]);
+
+    const rows = await service.list({
+      auth: { userId: 'u1', activeTenantId: 't1', sessionId: 's1' },
+    } as never);
+
+    expect(permissions.assertTenantPermission).toHaveBeenCalledWith(
+      expect.objectContaining({ permissionKey: 'CanManageMembership' }),
+    );
+    expect(rows).toHaveLength(1);
+  });
+});

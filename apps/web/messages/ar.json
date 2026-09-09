@@ -447,7 +447,8 @@
       "branchId": "معرّف الفرع",
       "key": "مفتاح الإعداد",
       "value": "القيمة",
-      "entityId": "معرّف الكيان"
+      "entityId": "معرّف الكيان",
+      "departmentId": "معرّف القسم"
     },
     "placeholders": {
       "name": "مثال: المكتب الرئيسي",
@@ -458,7 +459,8 @@
       "branchId": "00000000-0000-4000-8000-000000000000",
       "entityId": "00000000-0000-4000-8000-000000000000",
       "key": "مثال: feature.enabled",
-      "value": "نص عادي أو JSON"
+      "value": "نص عادي أو JSON",
+      "departmentId": "00000000-0000-4000-8000-000000000000"
     },
     "result": {
       "title": "اكتملت العملية",
@@ -478,9 +480,59 @@
       "branch": "الفروع",
       "department": "الأقسام",
       "team": "الفرق",
-      "settings": "الإعدادات"
+      "settings": "الإعدادات",
+      "directory": "الدليل"
     },
-    "load": "تحميل القائمة"
+    "load": "تحميل القائمة",
+    "profile": {
+      "websiteLabel": "الموقع",
+      "websitePlaceholder": "https://example.com",
+      "contactEmailLabel": "بريد التواصل",
+      "contactEmailPlaceholder": "info@example.com",
+      "contactPhoneLabel": "هاتف التواصل",
+      "contactPhonePlaceholder": "+966501234567",
+      "addressLine1Label": "العنوان",
+      "addressLine1Placeholder": "الشارع، المبنى، الدور",
+      "cityLabel": "المدينة",
+      "cityPlaceholder": "الرياض",
+      "countryLabel": "الدولة",
+      "countryPlaceholder": "السعودية",
+      "postalCodeLabel": "الرمز البريدي",
+      "postalCodePlaceholder": "12213",
+      "mapUrlLabel": "رابط خرائط جوجل",
+      "mapUrlPlaceholder": "https://maps.google.com/?q=…",
+      "registrationNumberLabel": "السجل التجاري",
+      "registrationNumberPlaceholder": "رقم السجل",
+      "taxNumberLabel": "الرقم الضريبي",
+      "taxNumberPlaceholder": "الرقم الضريبي",
+      "baseCurrencyLabel": "العملة الأساسية",
+      "operatingCurrencyLabel": "عملة التشغيل",
+      "workingHoursLabel": "ساعات العمل",
+      "workingHoursPlaceholder": "الأحد–الخميس 09:00–17:00",
+      "managerNameLabel": "مدير الفرع",
+      "managerNamePlaceholder": "الاسم الكامل",
+      "isHeadOfficeLabel": "المقر الرئيسي",
+      "socialXLabel": "حساب X",
+      "socialLinkedInLabel": "صفحة لينكدإن",
+      "socialFacebookLabel": "صفحة فيسبوك",
+      "socialInstagramLabel": "إنستغرام",
+      "logoLabel": "شعار المنظمة",
+      "logoUpload": "رفع الشعار",
+      "logoCurrent": "الشعار الحالي",
+      "logoFailed": "فشل رفع الشعار.",
+      "inheritedFrom": "موروث من المنظمة"
+    },
+    "directory": {
+      "heading": "دليل الموظفين",
+      "description": "كل عضو مع الفرع والقسم والحالة. اضغط صفاً لتعيينه.",
+      "members": "الأعضاء",
+      "headcount": "{count} موظفين",
+      "membershipIdLabel": "معرّف العضوية",
+      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "branchLabel": "الفرع",
+      "departmentLabel": "القسم",
+      "save": "حفظ التعيين"
+    }
   },
   "clients": {
     "navLabel": "العملاء",

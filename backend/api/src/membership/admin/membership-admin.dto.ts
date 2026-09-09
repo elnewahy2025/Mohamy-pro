@@ -65,3 +65,27 @@ export class MembershipReinstateDto {
   @MaxLength(200)
   reason?: string;
 }
+
+export class MembershipPlacementDto {
+  @ApiProperty({ description: 'The membership to place.', format: 'uuid' })
+  @IsUUID()
+  membershipId!: string;
+
+  @ApiProperty({
+    description: 'Branch assignment (null clears).',
+    required: false,
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  branchId?: string;
+
+  @ApiProperty({
+    description: 'Department assignment (null clears).',
+    required: false,
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  departmentId?: string;
+}

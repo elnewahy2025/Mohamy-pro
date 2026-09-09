@@ -11,12 +11,14 @@ import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const teamSchema = z.object({
   id: z.string().max(64).optional(),
   slug: z.string().min(1, 'invalid').max(100, 'tooLong'),
   name: z.string().min(1, 'invalid').max(200, 'tooLong'),
   description: z.string().max(500, 'tooLong').optional(),
+  departmentId: z.string().min(1, 'invalidUuid'),
   reason: z.string().max(200, 'tooLong').optional(),
 });
 type TeamForm = z.infer<typeof teamSchema>;
@@ -38,10 +40,18 @@ export function TeamSection(): React.ReactNode {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<TeamForm>({
     resolver: zodResolver(teamSchema),
-    defaultValues: { id: '', slug: '', name: '', description: '', reason: '' },
+    defaultValues: {
+      id: '',
+      slug: '',
+      name: '',
+      description: '',
+      departmentId: '',
+      reason: '',
+    },
   });
 
   async function run(action: ActionKey, form: TeamForm): Promise<void> {
@@ -55,6 +65,7 @@ export function TeamSection(): React.ReactNode {
           slug: form.slug,
           name: form.name,
           description: form.description || undefined,
+          departmentId: form.departmentId,
         });
       } else if (action === 'update') {
         next = await client.updateTeam({
@@ -62,6 +73,7 @@ export function TeamSection(): React.ReactNode {
           slug: form.slug || undefined,
           name: form.name || undefined,
           description: form.description || null,
+          departmentId: form.departmentId || undefined,
         });
       } else {
         next = await client.archiveTeam({
@@ -72,7 +84,14 @@ export function TeamSection(): React.ReactNode {
       setResult(next);
       setStatus('success');
       if (action === 'create')
-        reset({ id: '', slug: '', name: '', description: '', reason: '' });
+        reset({
+          id: '',
+          slug: '',
+          name: '',
+          description: '',
+          departmentId: '',
+          reason: '',
+        });
     } catch (error) {
       setStatus('error');
       setSubmitError(
@@ -176,6 +195,27 @@ export function TeamSection(): React.ReactNode {
             placeholder: t('orgConfig.placeholders.description'),
             ...register('description'),
           }}
+        />
+        <EntityPicker
+          label={t('orgConfig.labels.departmentId')}
+          placeholder={t('orgConfig.placeholders.departmentId')}
+          required
+          error={
+            errors.departmentId
+              ? t(`form.errors.${errors.departmentId.message}`)
+              : undefined
+          }
+          value={watch('departmentId') ?? ''}
+          onChange={(id) =>
+            setValue('departmentId', id, { shouldValidate: true })
+          }
+          load={async () =>
+            (await client.listDepartments()).map((d) => ({
+              id: d.id,
+              label: d.name,
+              sub: d.slug,
+            }))
+          }
         />
         <FormField
           label={t('orgConfig.labels.reason')}

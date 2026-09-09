@@ -7,12 +7,13 @@ import { BranchSection } from '@/components/pages/org-config/branch-section';
 import { DepartmentSection } from '@/components/pages/org-config/department-section';
 import { TeamSection } from '@/components/pages/org-config/team-section';
 import { SettingsSection } from '@/components/pages/org-config/settings-section';
+import { EmployeesDirectorySection } from '@/components/pages/org-config/employees-directory-section';
 import { Button } from '@/components/ui/button';
 
 export function OrgConfigPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<
-    'organization' | 'branch' | 'department' | 'team' | 'settings'
+    'organization' | 'branch' | 'department' | 'team' | 'settings' | 'directory'
   >('organization');
 
   return (
@@ -54,6 +55,12 @@ export function OrgConfigPage(): React.ReactNode {
         >
           {t('orgConfig.sections.settings')}
         </Button>
+        <Button
+          variant={activeTab === 'directory' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('directory')}
+        >
+          {t('orgConfig.sections.directory')}
+        </Button>
       </div>
 
       <div className="settings-stack">
@@ -62,6 +69,7 @@ export function OrgConfigPage(): React.ReactNode {
         {activeTab === 'department' && <DepartmentSection />}
         {activeTab === 'team' && <TeamSection />}
         {activeTab === 'settings' && <SettingsSection />}
+        {activeTab === 'directory' && <EmployeesDirectorySection />}
       </div>
     </section>
   );

@@ -290,6 +290,29 @@ export class ApiClient {
     return envelope.data as T;
   }
 
+  async bodyForm<T>(path: string, form: FormData): Promise<T> {
+    const token = await this.csrfToken();
+    const res = await this.fetcher(`${this.baseUrl}${path}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'X-CSRF-Token': token,
+        'Idempotency-Key': this.idempotencyKey(),
+      },
+      body: form,
+    });
+    const envelope = await this.parseEnvelope(res, `POST ${path}`);
+    if (!res.ok || !envelope.success || !('data' in envelope)) {
+      throw new ApiError(
+        `POST ${path} failed with ${res.status}`,
+        'UPLOAD_FAILED',
+        [],
+        res.status,
+      );
+    }
+    return envelope.data as T;
+  }
+
   async bootstrap(secret: string): Promise<BootstrapResult> {
     return this.body<BootstrapResult>('/bootstrap', 'POST', { secret });
   }
@@ -415,6 +438,20 @@ export class ApiClient {
       request,
     );
   }
+
+  async listMembers(): Promise<MemberRow[]> {
+    return this.body<MemberRow[]>('/membership/members', 'GET');
+  }
+
+  async placeMembership(
+    request: PlaceMemberRequest,
+  ): Promise<PlaceMemberResult> {
+    return this.body<PlaceMemberResult>(
+      '/membership/members/placement',
+      'PATCH',
+      request,
+    );
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -429,6 +466,19 @@ export interface OrganizationResult {
   slug: string;
   name: string;
   status: HierarchyStatus;
+  website: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  addressLine1: string | null;
+  city: string | null;
+  country: string | null;
+  postalCode: string | null;
+  mapUrl: string | null;
+  registrationNumber: string | null;
+  taxNumber: string | null;
+  baseCurrency: string;
+  logoObjectKey: string | null;
+  socialLinks: Record<string, string>;
 }
 
 export interface BranchResult {
@@ -438,6 +488,17 @@ export interface BranchResult {
   slug: string;
   name: string;
   status: HierarchyStatus;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  addressLine1: string | null;
+  city: string | null;
+  country: string | null;
+  postalCode: string | null;
+  mapUrl: string | null;
+  operatingCurrency: string;
+  workingHours: string | null;
+  managerName: string | null;
+  isHeadOffice: boolean;
 }
 
 export interface DepartmentResult {
@@ -456,14 +517,30 @@ export interface TeamResult {
   name: string;
   description: string | null;
   status: HierarchyStatus;
+  departmentId: string | null;
 }
 
-export interface CreateOrganizationRequest {
+export interface OrganizationProfileRequest {
+  website?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  addressLine1?: string;
+  city?: string;
+  country?: string;
+  postalCode?: string;
+  mapUrl?: string;
+  registrationNumber?: string;
+  taxNumber?: string;
+  baseCurrency?: string;
+  socialLinks?: Record<string, string>;
+}
+
+export interface CreateOrganizationRequest extends OrganizationProfileRequest {
   slug: string;
   name: string;
 }
 
-export interface UpdateOrganizationRequest {
+export interface UpdateOrganizationRequest extends OrganizationProfileRequest {
   id: string;
   slug?: string;
   name?: string;
@@ -474,13 +551,27 @@ export interface ArchiveOrganizationRequest {
   reason?: string;
 }
 
-export interface CreateBranchRequest {
+export interface BranchProfileRequest {
+  contactPhone?: string;
+  contactEmail?: string;
+  addressLine1?: string;
+  city?: string;
+  country?: string;
+  postalCode?: string;
+  mapUrl?: string;
+  operatingCurrency?: string;
+  workingHours?: string;
+  managerName?: string;
+  isHeadOffice?: boolean;
+}
+
+export interface CreateBranchRequest extends BranchProfileRequest {
   organizationId: string;
   slug: string;
   name: string;
 }
 
-export interface UpdateBranchRequest {
+export interface UpdateBranchRequest extends BranchProfileRequest {
   id: string;
   slug?: string;
   name?: string;
@@ -512,6 +603,7 @@ export interface CreateTeamRequest {
   slug: string;
   name: string;
   description?: string | null;
+  departmentId: string;
 }
 
 export interface UpdateTeamRequest {
@@ -519,6 +611,29 @@ export interface UpdateTeamRequest {
   slug?: string;
   name?: string;
   description?: string | null;
+  departmentId?: string;
+}
+
+export interface MemberRow {
+  id: string;
+  userId: string;
+  status: string;
+  branchId: string | null;
+  departmentId: string | null;
+  createdAt: string;
+  user: { emailNormalized: string | null; displayName: string | null };
+}
+
+export interface PlaceMemberRequest {
+  membershipId: string;
+  branchId?: string;
+  departmentId?: string;
+}
+
+export interface PlaceMemberResult {
+  id: string;
+  branchId: string | null;
+  departmentId: string | null;
 }
 
 export interface ArchiveTeamRequest {
@@ -563,6 +678,18 @@ export interface SetOrganizationSettingRequest {
 
 const ORG_PREFIX = '/organization-config';
 
+export const CURRENCIES = [
+  'EGP',
+  'USD',
+  'SAR',
+  'AED',
+  'KWD',
+  'BHD',
+  'QAR',
+  'OMR',
+  'JOD',
+] as const;
+
 export class OrgConfigClient {
   constructor(private readonly client = new ApiClient()) {}
 
@@ -592,6 +719,14 @@ export class OrgConfigClient {
       `${ORG_PREFIX}/organizations/archive`,
       'PATCH',
       req,
+    );
+  }
+  uploadLogo(file: File): Promise<OrganizationResult> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.client.bodyForm<OrganizationResult>(
+      `${ORG_PREFIX}/organizations/logo`,
+      form,
     );
   }
   listOrganizations(): Promise<OrganizationResult[]> {

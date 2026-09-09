@@ -48,7 +48,8 @@ function makeOps(
     );
   }
   const ops = { authorize, run } as unknown as HierarchyOperations;
-  const service = new OrganizationService(ops);
+  const storage = { putObject: jest.fn() };
+  const service = new OrganizationService(ops, storage as never);
   return { service, authorize, run };
 }
 
@@ -84,6 +85,7 @@ describe('OrganizationService', () => {
     run.mockImplementation((_req, _ctx, _et, _t, operation) => {
       const tx = {
         organization: {
+          findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn().mockResolvedValue({
             id: 'o1',
             tenantId: CTX.tenantId,
@@ -122,10 +124,63 @@ describe('Hierarchy list reads', () => {
       run: jest.fn(),
       read,
     } as unknown as HierarchyOperations;
-    const service = new OrganizationService(ops);
+    const storage = { putObject: jest.fn() };
+    const service = new OrganizationService(ops, storage as never);
 
     await service.list(request());
 
     expect(read).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('OrganizationService profile guards', () => {
+  function guardedService(orgs: unknown) {
+    const authorize = jest.fn().mockResolvedValue({
+      sessionId: 's1',
+      userId: 'u1',
+      tenantId: 't1',
+      actorMembershipId: 'm1',
+    });
+    const run = jest
+      .fn()
+      .mockImplementation((_req, _ctx, _event, _target, op) =>
+        op({
+          organization: {
+            findFirst: jest.fn().mockResolvedValue(orgs),
+            create: jest.fn(),
+          },
+        }),
+      );
+    const storage = { putObject: jest.fn() };
+    const ops = { authorize, run } as never;
+    return { ops, storage, authorize, run };
+  }
+
+  it('refuses a second active organization', async () => {
+    const { ops, storage } = guardedService({ id: 'existing' });
+    const service = new OrganizationService(ops, storage as never);
+
+    const second = await service
+      .create({} as never, { slug: 'second', name: 'Second' } as never)
+      .catch((error: unknown) => error);
+    expect((second as { internalReason?: string }).internalReason).toBe(
+      'ORG_EXISTS',
+    );
+  });
+
+  it('rejects non-image logo uploads', async () => {
+    const { ops, storage } = guardedService(null);
+    const service = new OrganizationService(ops, storage as never);
+
+    const logo = await service
+      .uploadLogo({} as never, {
+        buffer: Buffer.from('x'),
+        mimetype: 'application/pdf',
+        size: 10,
+      })
+      .catch((error: unknown) => error);
+    expect((logo as { internalReason?: string }).internalReason).toBe(
+      'INVALID_LOGO_TYPE',
+    );
   });
 });
