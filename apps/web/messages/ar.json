@@ -473,7 +473,8 @@
       "get": "عرض",
       "put": "حفظ",
       "notFound": "الإعداد غير موجود",
-      "errorTitle": "حدث خطأ ما"
+      "errorTitle": "حدث خطأ ما",
+      "archiveConfirm": "أرشفة هذه المنظمة؟ لا يمكن التراجع."
     },
     "sections": {
       "organization": "المؤسسة",
@@ -532,7 +533,15 @@
       "branchLabel": "الفرع",
       "departmentLabel": "القسم",
       "save": "حفظ التعيين"
-    }
+    },
+    "orgTabs": {
+      "general": "عام",
+      "contact": "التواصل والموقع",
+      "business": "الأعمال والمالية",
+      "socials": "التواصل الاجتماعي",
+      "danger": "متقدم"
+    },
+    "save": "حفظ التغييرات"
   },
   "clients": {
     "navLabel": "العملاء",

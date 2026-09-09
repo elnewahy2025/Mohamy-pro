@@ -2195,13 +2195,25 @@ existing permissions:
    `CanManageMembership` read) feeding the employees directory. Member
    admin today is actions-only with no list route.
 
-## 31.6 Reuse for other pages (standing direction)
+## 31.6 Reuse for other pages (standing direction + ID rule)
 
 The UX patterns established here — profile cards with inherited headers,
 searchable EntityPicker instead of raw UUID inputs, click-to-fill ID lists,
 cap-first list UIs — are the house standard for ALL remaining page UI work.
 Agents redesigning any other page must apply these same patterns and cite
 this section in their delivery review.
+
+ID visibility rule: normal users never see or type database IDs. IDs appear
+only as muted read-only subtext where technically unavoidable (e.g. an
+entity-ID field pre-filled by a picker), and every ID input is replaced by
+an EntityPicker or a click-to-fill list row. Update/archive actions always
+operate on the selected record's hidden ID, never a pasted UUID.
+
+Dense forms (10+ fields) are split into horizontal pill sub-tabs mirroring
+the top-level tab style at smaller scale: General / Contact & Location /
+Business & Financial / Socials / Danger Zone (destructive actions isolated
+here with a confirm step). Single-entity tabs auto-load on mount; buttons
+are contextual (Create when empty, Save Changes when present).
 
 ## 31.7 Implementation batches (when approved)
 

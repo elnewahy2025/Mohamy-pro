@@ -473,7 +473,8 @@
       "get": "Get",
       "put": "Save",
       "notFound": "Setting not found",
-      "errorTitle": "Something went wrong"
+      "errorTitle": "Something went wrong",
+      "archiveConfirm": "Archive this organization? This cannot be undone."
     },
     "sections": {
       "organization": "Organization",
@@ -532,7 +533,15 @@
       "branchLabel": "Branch",
       "departmentLabel": "Department",
       "save": "Save placement"
-    }
+    },
+    "orgTabs": {
+      "general": "General",
+      "contact": "Contact & location",
+      "business": "Business & financial",
+      "socials": "Social links",
+      "danger": "Advanced"
+    },
+    "save": "Save changes"
   },
   "clients": {
     "navLabel": "Clients",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Building2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -38,7 +38,37 @@ const organizationSchema = z.object({
 });
 type OrganizationForm = z.infer<typeof organizationSchema>;
 
-type ActionKey = 'create' | 'update' | 'archive';
+type SubTab = 'general' | 'contact' | 'business' | 'socials' | 'danger';
+
+const SUB_TABS: SubTab[] = [
+  'general',
+  'contact',
+  'business',
+  'socials',
+  'danger',
+];
+
+const EMPTY_DEFAULTS: OrganizationForm = {
+  id: '',
+  slug: '',
+  name: '',
+  reason: '',
+  website: '',
+  contactEmail: '',
+  contactPhone: '',
+  addressLine1: '',
+  city: '',
+  country: '',
+  postalCode: '',
+  mapUrl: '',
+  registrationNumber: '',
+  taxNumber: '',
+  baseCurrency: 'EGP',
+  socialX: '',
+  socialLinkedIn: '',
+  socialFacebook: '',
+  socialInstagram: '',
+};
 
 export function OrganizationSection(): React.ReactNode {
   const t = useTranslations();
@@ -46,114 +76,24 @@ export function OrganizationSection(): React.ReactNode {
   const [client] = useState(() => new OrgConfigClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<OrganizationResult | null>(null);
-  const [items, setItems] = useState<OrganizationResult[]>([]);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [subTab, setSubTab] = useState<SubTab>('general');
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<OrganizationForm>({
     resolver: zodResolver(organizationSchema),
-    defaultValues: {
-      id: '',
-      slug: '',
-      name: '',
-      reason: '',
-      website: '',
-      contactEmail: '',
-      contactPhone: '',
-      addressLine1: '',
-      city: '',
-      country: '',
-      postalCode: '',
-      mapUrl: '',
-      registrationNumber: '',
-      taxNumber: '',
-      baseCurrency: 'EGP',
-      socialX: '',
-      socialLinkedIn: '',
-      socialFacebook: '',
-      socialInstagram: '',
-    },
+    defaultValues: EMPTY_DEFAULTS,
   });
 
-  async function run(action: ActionKey, form: OrganizationForm): Promise<void> {
-    setSubmitting(true);
-    setStatus('idle');
-    setSubmitError(null);
-    try {
-      let next: OrganizationResult;
-      const socialLinks: Record<string, string> = {};
-      if (form.socialX) socialLinks.x = form.socialX;
-      if (form.socialLinkedIn) socialLinks.linkedin = form.socialLinkedIn;
-      if (form.socialFacebook) socialLinks.facebook = form.socialFacebook;
-      if (form.socialInstagram) socialLinks.instagram = form.socialInstagram;
-      const profile = {
-        website: form.website || undefined,
-        contactEmail: form.contactEmail || undefined,
-        contactPhone: form.contactPhone || undefined,
-        addressLine1: form.addressLine1 || undefined,
-        city: form.city || undefined,
-        country: form.country || undefined,
-        postalCode: form.postalCode || undefined,
-        mapUrl: form.mapUrl || undefined,
-        registrationNumber: form.registrationNumber || undefined,
-        taxNumber: form.taxNumber || undefined,
-        baseCurrency: form.baseCurrency || undefined,
-        socialLinks:
-          Object.keys(socialLinks).length > 0 ? socialLinks : undefined,
-      };
-      if (action === 'create') {
-        next = await client.createOrganization({
-          slug: form.slug,
-          name: form.name,
-          ...profile,
-        });
-      } else if (action === 'update') {
-        next = await client.updateOrganization({
-          id: form.id as string,
-          slug: form.slug || undefined,
-          name: form.name || undefined,
-          ...profile,
-        });
-      } else {
-        next = await client.archiveOrganization({
-          id: form.id as string,
-          reason: form.reason || undefined,
-        });
-      }
-      setResult(next);
-      setStatus('success');
-      if (action === 'create') {
-        setItems((prev) => [next, ...prev]);
-        reset({ id: '', slug: '', name: '', reason: '' });
-      }
-    } catch (error) {
-      setStatus('error');
-      setSubmitError(
-        error instanceof ApiError
-          ? error
-          : new ApiError(
-              error instanceof Error ? error.message : 'Unknown error',
-              'INTERNAL',
-              [],
-              0,
-            ),
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function trigger(action: ActionKey): Promise<void> {
-    await handleSubmit((form) => run(action, form))();
-  }
-
   function fillForm(item: OrganizationResult): void {
+    setResult(item);
     setValue('id', item.id);
     setValue('slug', item.slug);
     setValue('name', item.name);
@@ -174,13 +114,12 @@ export function OrganizationSection(): React.ReactNode {
     setValue('socialInstagram', item.socialLinks?.instagram ?? '');
   }
 
-  async function runList(): Promise<void> {
+  async function runLoad(): Promise<void> {
     setSubmitting(true);
     setStatus('idle');
     setSubmitError(null);
     try {
       const rows = await client.listOrganizations();
-      setItems(rows);
       if (rows.length === 1) fillForm(rows[0]);
       setStatus('success');
     } catch (error) {
@@ -200,6 +139,144 @@ export function OrganizationSection(): React.ReactNode {
     }
   }
 
+  useEffect(() => {
+    if (user) void runLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  function profilePayload(form: OrganizationForm) {
+    const socialLinks: Record<string, string> = {};
+    if (form.socialX) socialLinks.x = form.socialX;
+    if (form.socialLinkedIn) socialLinks.linkedin = form.socialLinkedIn;
+    if (form.socialFacebook) socialLinks.facebook = form.socialFacebook;
+    if (form.socialInstagram) socialLinks.instagram = form.socialInstagram;
+    return {
+      website: form.website || undefined,
+      contactEmail: form.contactEmail || undefined,
+      contactPhone: form.contactPhone || undefined,
+      addressLine1: form.addressLine1 || undefined,
+      city: form.city || undefined,
+      country: form.country || undefined,
+      postalCode: form.postalCode || undefined,
+      mapUrl: form.mapUrl || undefined,
+      registrationNumber: form.registrationNumber || undefined,
+      taxNumber: form.taxNumber || undefined,
+      baseCurrency: form.baseCurrency || undefined,
+      socialLinks:
+        Object.keys(socialLinks).length > 0 ? socialLinks : undefined,
+    };
+  }
+
+  async function fail(error: unknown): Promise<void> {
+    setStatus('error');
+    setSubmitError(
+      error instanceof ApiError
+        ? error
+        : new ApiError(
+            error instanceof Error ? error.message : 'Unknown error',
+            'INTERNAL',
+            [],
+            0,
+          ),
+    );
+    setSubmitting(false);
+  }
+
+  async function runSave(): Promise<void> {
+    const form = getValues();
+    setSubmitting(true);
+    setStatus('idle');
+    setSubmitError(null);
+    try {
+      let next: OrganizationResult;
+      if (form.id) {
+        next = await client.updateOrganization({
+          id: form.id,
+          slug: form.slug || undefined,
+          name: form.name || undefined,
+          ...profilePayload(form),
+        });
+      } else {
+        next = await client.createOrganization({
+          slug: form.slug,
+          name: form.name,
+          ...profilePayload(form),
+        });
+      }
+      fillForm(next);
+      setStatus('success');
+    } catch (error) {
+      await fail(error);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function runArchive(): Promise<void> {
+    const id = getValues('id');
+    if (!id) return;
+    if (!window.confirm(t('orgConfig.result.archiveConfirm'))) return;
+    setSubmitting(true);
+    setStatus('idle');
+    setSubmitError(null);
+    try {
+      await client.archiveOrganization({
+        id,
+        reason: getValues('reason') || undefined,
+      });
+      reset(EMPTY_DEFAULTS);
+      setResult(null);
+      setStatus('success');
+    } catch (error) {
+      await fail(error);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const exists = result !== null;
+
+  function textField(
+    name:
+      | 'slug'
+      | 'name'
+      | 'website'
+      | 'contactEmail'
+      | 'contactPhone'
+      | 'addressLine1'
+      | 'city'
+      | 'country'
+      | 'postalCode'
+      | 'mapUrl'
+      | 'registrationNumber'
+      | 'taxNumber'
+      | 'socialX'
+      | 'socialLinkedIn'
+      | 'socialFacebook'
+      | 'socialInstagram'
+      | 'reason',
+    labelKey: string,
+    placeholderKey: string,
+    required = false,
+  ): React.ReactNode {
+    const message = errors[name]?.message;
+    return (
+      <FormField
+        label={t(labelKey)}
+        error={message ? t(`form.errors.${message}`) : undefined}
+        inputProps={{
+          type: 'text',
+          autoComplete: 'off',
+          placeholder: t(placeholderKey),
+          required,
+          ...register(name),
+        }}
+      />
+    );
+  }
+
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
@@ -211,278 +288,167 @@ export function OrganizationSection(): React.ReactNode {
           <p>{t('orgConfig.entity.organization.description')}</p>
         </div>
       </div>
-      <div className="form-grid">
-        <FormField
-          label={t('orgConfig.labels.entityId')}
-          error={errors.id ? undefined : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.entityId'),
-            ...register('id'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.labels.slug')}
-          error={
-            errors.slug ? t(`form.errors.${errors.slug.message}`) : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.slug'),
-            ...register('slug'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.labels.name')}
-          error={
-            errors.name ? t(`form.errors.${errors.name.message}`) : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.name'),
-            ...register('name'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.websiteLabel')}
-          error={
-            errors.website
-              ? t(`form.errors.${errors.website.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.websitePlaceholder'),
-            ...register('website'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.contactEmailLabel')}
-          error={
-            errors.contactEmail
-              ? t(`form.errors.${errors.contactEmail.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.contactEmailPlaceholder'),
-            ...register('contactEmail'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.contactPhoneLabel')}
-          error={
-            errors.contactPhone
-              ? t(`form.errors.${errors.contactPhone.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.contactPhonePlaceholder'),
-            ...register('contactPhone'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.addressLine1Label')}
-          error={
-            errors.addressLine1
-              ? t(`form.errors.${errors.addressLine1.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.addressLine1Placeholder'),
-            ...register('addressLine1'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.cityLabel')}
-          error={
-            errors.city ? t(`form.errors.${errors.city.message}`) : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.cityPlaceholder'),
-            ...register('city'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.countryLabel')}
-          error={
-            errors.country
-              ? t(`form.errors.${errors.country.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.countryPlaceholder'),
-            ...register('country'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.postalCodeLabel')}
-          error={
-            errors.postalCode
-              ? t(`form.errors.${errors.postalCode.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.postalCodePlaceholder'),
-            ...register('postalCode'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.mapUrlLabel')}
-          error={
-            errors.mapUrl
-              ? t(`form.errors.${errors.mapUrl.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.mapUrlPlaceholder'),
-            ...register('mapUrl'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.registrationNumberLabel')}
-          error={
-            errors.registrationNumber
-              ? t(`form.errors.${errors.registrationNumber.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.registrationNumberPlaceholder'),
-            ...register('registrationNumber'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.taxNumberLabel')}
-          error={
-            errors.taxNumber
-              ? t(`form.errors.${errors.taxNumber.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.taxNumberPlaceholder'),
-            ...register('taxNumber'),
-          }}
-        />
-        <FormSelect
-          label={t('orgConfig.profile.baseCurrencyLabel')}
-          options={CURRENCIES.map((c) => ({ label: c, value: c }))}
-          selectProps={{
-            ...register('baseCurrency'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.socialXLabel')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: 'https://…',
-            ...register('socialX'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.socialLinkedInLabel')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: 'https://…',
-            ...register('socialLinkedIn'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.socialFacebookLabel')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: 'https://…',
-            ...register('socialFacebook'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.socialInstagramLabel')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: 'https://…',
-            ...register('socialInstagram'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.labels.reason')}
-          error={
-            errors.reason
-              ? t(`form.errors.${errors.reason.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.reason'),
-            ...register('reason'),
-          }}
-        />
-        <LogoUploadField
-          currentKey={result?.logoObjectKey ?? items[0]?.logoObjectKey ?? null}
-          onUploaded={(next) => {
-            setResult(next);
-            setItems((prev) => prev.map((o) => (o.id === next.id ? next : o)));
-          }}
-        />
+
+      {result ? (
+        <p className="form-field-hint">
+          {result.slug} — {result.name} [{result.status}]
+        </p>
+      ) : null}
+
+      <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2 flex-wrap">
+        {SUB_TABS.map((tab) => (
+          <Button
+            key={tab}
+            type="button"
+            variant={subTab === tab ? 'default' : 'ghost'}
+            onClick={() => setSubTab(tab)}
+          >
+            {t(`orgConfig.orgTabs.${tab}`)}
+          </Button>
+        ))}
       </div>
-      <div className="form-actions form-actions-row">
-        <Button
-          type="button"
-          variant="default"
-          onClick={() => void trigger('create')}
-          disabled={submitting || authLoading || !user}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.create')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('update')}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.update')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('archive')}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void runList()}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.load')}
-        </Button>
-      </div>
+
+      {subTab === 'general' && (
+        <div className="form-grid">
+          {textField(
+            'slug',
+            'orgConfig.labels.slug',
+            'orgConfig.placeholders.slug',
+            true,
+          )}
+          {textField(
+            'name',
+            'orgConfig.labels.name',
+            'orgConfig.placeholders.name',
+            true,
+          )}
+          <LogoUploadField
+            currentKey={result?.logoObjectKey ?? null}
+            onUploaded={(next) => fillForm(next)}
+          />
+        </div>
+      )}
+
+      {subTab === 'contact' && (
+        <div className="form-grid">
+          {textField(
+            'contactEmail',
+            'orgConfig.profile.contactEmailLabel',
+            'orgConfig.profile.contactEmailPlaceholder',
+          )}
+          {textField(
+            'contactPhone',
+            'orgConfig.profile.contactPhoneLabel',
+            'orgConfig.profile.contactPhonePlaceholder',
+          )}
+          {textField(
+            'addressLine1',
+            'orgConfig.profile.addressLine1Label',
+            'orgConfig.profile.addressLine1Placeholder',
+          )}
+          {textField(
+            'city',
+            'orgConfig.profile.cityLabel',
+            'orgConfig.profile.cityPlaceholder',
+          )}
+          {textField(
+            'country',
+            'orgConfig.profile.countryLabel',
+            'orgConfig.profile.countryPlaceholder',
+          )}
+          {textField(
+            'postalCode',
+            'orgConfig.profile.postalCodeLabel',
+            'orgConfig.profile.postalCodePlaceholder',
+          )}
+          {textField(
+            'mapUrl',
+            'orgConfig.profile.mapUrlLabel',
+            'orgConfig.profile.mapUrlPlaceholder',
+          )}
+        </div>
+      )}
+
+      {subTab === 'business' && (
+        <div className="form-grid">
+          {textField(
+            'registrationNumber',
+            'orgConfig.profile.registrationNumberLabel',
+            'orgConfig.profile.registrationNumberPlaceholder',
+          )}
+          {textField(
+            'taxNumber',
+            'orgConfig.profile.taxNumberLabel',
+            'orgConfig.profile.taxNumberPlaceholder',
+          )}
+          <FormSelect
+            label={t('orgConfig.profile.baseCurrencyLabel')}
+            options={CURRENCIES.map((c) => ({ label: c, value: c }))}
+            selectProps={{
+              ...register('baseCurrency'),
+            }}
+          />
+        </div>
+      )}
+
+      {subTab === 'socials' && (
+        <div className="form-grid">
+          {textField('socialX', 'orgConfig.profile.socialXLabel', 'https://…')}
+          {textField(
+            'socialLinkedIn',
+            'orgConfig.profile.socialLinkedInLabel',
+            'https://…',
+          )}
+          {textField(
+            'socialFacebook',
+            'orgConfig.profile.socialFacebookLabel',
+            'https://…',
+          )}
+          {textField(
+            'socialInstagram',
+            'orgConfig.profile.socialInstagramLabel',
+            'https://…',
+          )}
+        </div>
+      )}
+
+      {subTab === 'danger' && (
+        <div className="form-grid">
+          {textField(
+            'reason',
+            'orgConfig.labels.reason',
+            'orgConfig.placeholders.reason',
+          )}
+          <div className="form-actions form-actions-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void runArchive()}
+              disabled={submitting || !exists}
+            >
+              {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {subTab !== 'danger' && (
+        <div className="form-actions form-actions-row mt-6">
+          <Button
+            type="button"
+            variant="default"
+            onClick={() => void handleSubmit(() => runSave())()}
+            disabled={submitting || authLoading || !user}
+          >
+            {submitting
+              ? t('orgConfig.submitting')
+              : exists
+                ? t('orgConfig.save')
+                : t('orgConfig.create')}
+          </Button>
+        </div>
+      )}
+
       <OperationResult
         status={status}
         successLabel={t('orgConfig.result.title')}
@@ -492,30 +458,7 @@ export function OrganizationSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={
-          result
-            ? [
-                { label: t('orgConfig.result.id'), value: result.id },
-                { label: t('orgConfig.result.status'), value: result.status },
-              ]
-            : undefined
-        }
       />
-      {items.length > 0 && (
-        <ul className="mt-4 space-y-2">
-          {items.map((item) => (
-            <li key={item.id} className="text-sm">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => fillForm(item)}
-              >
-                {item.slug} — {item.name} [{item.status}]
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
     </form>
   );
 }
