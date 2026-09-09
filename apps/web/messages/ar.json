@@ -149,7 +149,7 @@
       "retentionDays": "مثال: 90",
       "name": "مثال: تدريب الاستعادة Q3",
       "targetRef": "مثال: فرع أو نقطة استعادة",
-      "drillId": "00000000-0000-4000-8000-000000000000",
+      "drillId": "ابحث أو أدخل المعرّف...",
       "checkName": "مثال: restore",
       "evidence": "ما الذي تحققت منه؟"
     },
@@ -202,7 +202,7 @@
       "key": "مثال: EMAIL",
       "url": "https://example.com/hook",
       "events": "case.created, invoice.issued",
-      "webhookId": "00000000-0000-4000-8000-000000000000"
+      "webhookId": "ابحث أو أدخل المعرّف..."
     },
     "result": {
       "title": "اكتملت العملية",
@@ -295,7 +295,7 @@
       "title": "تبديل مساحة العمل النشطة",
       "description": "انقل الجلسة الحالية إلى مؤسسة أخرى أنت عضو فيها.",
       "tenantIdLabel": "معرّف المؤسسة المستهدفة",
-      "tenantIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "tenantIdPlaceholder": "ابحث أو أدخل المعرّف...",
       "submit": "تبديل مساحة العمل",
       "submitting": "جارٍ التبديل…",
       "successTitle": "تم تبديل مساحة العمل",
@@ -330,7 +330,7 @@
       "title": "إدارة عضويات المؤسسة",
       "description": "علّق أو أنهِ أو أزل أو أعد تنشيط عضوية في المؤسسة النشطة.",
       "membershipIdLabel": "معرّف العضوية",
-      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "membershipIdPlaceholder": "ابحث أو أدخل المعرّف...",
       "reasonLabel": "السبب",
       "reasonPlaceholder": "سبب إداري اختياري",
       "activeUntilLabel": "نشطة حتى",
@@ -361,11 +361,11 @@
       "descriptionLabel": "الوصف",
       "descriptionPlaceholder": "وصف اختياري",
       "roleIdLabel": "معرّف الدور",
-      "roleIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "roleIdPlaceholder": "ابحث أو أدخل المعرّف...",
       "permissionKeysLabel": "مفاتيح الصلاحيات",
       "permissionKeysPlaceholder": "CanViewTenant, CanManageCases",
       "membershipIdLabel": "معرّف العضوية",
-      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "membershipIdPlaceholder": "ابحث أو أدخل المعرّف...",
       "list": "عرض الأدوار",
       "create": "إنشاء دور",
       "grant": "منح الصلاحيات",
@@ -455,12 +455,12 @@
       "slug": "main-office",
       "reason": "سبب أرشفة اختياري",
       "description": "وصف اختياري",
-      "organizationId": "00000000-0000-4000-8000-000000000000",
-      "branchId": "00000000-0000-4000-8000-000000000000",
-      "entityId": "00000000-0000-4000-8000-000000000000",
+      "organizationId": "ابحث أو أدخل المعرّف...",
+      "branchId": "ابحث أو أدخل المعرّف...",
+      "entityId": "ابحث أو أدخل المعرّف...",
       "key": "مثال: feature.enabled",
       "value": "نص عادي أو JSON",
-      "departmentId": "00000000-0000-4000-8000-000000000000"
+      "departmentId": "ابحث أو أدخل المعرّف..."
     },
     "result": {
       "title": "اكتملت العملية",
@@ -530,7 +530,7 @@
       "members": "الأعضاء",
       "headcount": "{count} موظفين",
       "membershipIdLabel": "معرّف العضوية",
-      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "membershipIdPlaceholder": "ابحث أو أدخل المعرّف...",
       "branchLabel": "الفرع",
       "departmentLabel": "القسم",
       "save": "حفظ التعيين"
@@ -603,7 +603,7 @@
       "notes": "ملاحظات داخلية (اختياري)",
       "reason": "السبب (اختياري)",
       "clientType": "INDIVIDUAL أو ORGANIZATION",
-      "clientId": "00000000-0000-4000-8000-000000000000",
+      "clientId": "ابحث أو أدخل المعرّف...",
       "contactType": "EMAIL و PHONE و FAX و WEBSITE و MOBILE",
       "contactValue": "name@example.com",
       "contactLabel": "التسمية (اختياري)",
@@ -618,7 +618,7 @@
       "search": "البحث بالاسم",
       "status": "ACTIVE أو ARCHIVED",
       "clientTypeFilter": "INDIVIDUAL أو ORGANIZATION",
-      "entityId": "00000000-0000-4000-8000-000000000000"
+      "entityId": "ابحث أو أدخل المعرّف..."
     },
     "result": {
       "title": "اكتملت العملية",
@@ -676,7 +676,7 @@
       "partyEmail": "البريد الإلكتروني"
     },
     "placeholders": {
-      "id": "00000000-0000-4000-8000-000000000000",
+      "id": "ابحث أو أدخل المعرّف...",
       "clientId": "معرّف العميل (اختياري)",
       "reason": "السبب (اختياري)",
       "statusFilter": "PENDING أو IN_REVIEW أو COMPLETED",
@@ -747,7 +747,7 @@
       "roleLabel": "تسمية الدور"
     },
     "placeholders": {
-      "id": "00000000-0000-4000-8000-000000000000",
+      "id": "ابحث أو أدخل المعرّف...",
       "partyType": "PERSON أو ORGANIZATION",
       "name": "مثال: أحمد حسن",
       "legalName": "الاسم القانوني (اختياري)",
@@ -758,8 +758,8 @@
       "search": "البحث بالاسم المعروض",
       "status": "ACTIVE أو ARCHIVED",
       "partyTypeFilter": "PERSON أو ORGANIZATION",
-      "fromPartyId": "00000000-0000-4000-8000-000000000000",
-      "toPartyId": "00000000-0000-4000-8000-000000000000",
+      "fromPartyId": "ابحث أو أدخل المعرّف...",
+      "toPartyId": "ابحث أو أدخل المعرّف...",
       "relationshipType": "مثال: زوج، شركة تابعة",
       "roleKey": "مدَّعٍ، مدَّعى عليه، شاهد…"
     },
@@ -788,6 +788,11 @@
   },
   "cases": {
     "navLabel": "القضايا",
+    "tabs": {
+      "general": "عام",
+      "classification": "تصنيف",
+      "dates": "تواريخ"
+    },
     "eyebrow": "المرحلة 8 · إدارة القضايا",
     "title": "إدارة القضايا القانونية التي تعمل عليها.",
     "description": "أنشئ وأدرِ القضايا، وتابع حالتها وأولويتها، واربط الأطراف والأدوار المعنية بها.",
@@ -839,13 +844,14 @@
       "membershipId": "معرّف العضوية",
       "subjectMembershipId": "معرّف عضوية المستفيد",
       "reason": "السبب",
-      "endsAt": "ينتهي في"
+      "endsAt": "ينتهي في",
+      "search": "بحث"
     },
     "placeholders": {
-      "id": "00000000-0000-4000-8000-000000000000",
+      "id": "انقر لاختيار قضية",
       "caseNumber": "مثال: C-2026-001",
       "internalNumber": "الرقم الداخلي (اختياري)",
-      "clientId": "00000000-0000-4000-8000-000000000000",
+      "clientId": "انقر لاختيار عميل",
       "practiceArea": "مثال: تقاضٍ",
       "caseType": "مثال: مدني",
       "status": "OPEN أو ON_HOLD أو CLOSED",
@@ -854,11 +860,11 @@
       "openDate": "YYYY-MM-DD",
       "closeDate": "YYYY-MM-DD",
       "partyIds": "معرّفات الأطراف مفصولة بفواصل",
-      "partyId": "00000000-0000-4000-8000-000000000000",
-      "roleId": "00000000-0000-4000-8000-000000000000",
+      "partyId": "انقر لاختيار طرف",
+      "roleId": "انقر لاختيار دور",
       "search": "البحث برقم القضية",
-      "membershipId": "00000000-0000-4000-8000-000000000000",
-      "subjectMembershipId": "00000000-0000-4000-8000-000000000000",
+      "membershipId": "أدخل معرّف العضوية",
+      "subjectMembershipId": "ابحث أو أدخل المعرّف...",
       "reason": "مثال: معالجة عطل إنتاجي",
       "endsAt": "YYYY-MM-DDTHH:mm (بحد أقصى 24 ساعة)"
     },
@@ -907,7 +913,7 @@
       "payload": "الحمولة (JSON)"
     },
     "placeholders": {
-      "caseId": "00000000-0000-4000-8000-000000000000",
+      "caseId": "ابحث أو أدخل المعرّف...",
       "eventType": "CASE_CREATED أو CLIENT_ADDED أو PARTY_ADDED أو STATUS_CHANGED…",
       "payload": "'{'\"status\": \"OPEN\"'}' أو اتركه فارغاً"
     },
@@ -967,12 +973,12 @@
       "address": "العنوان"
     },
     "placeholders": {
-      "id": "00000000-0000-4000-8000-000000000000",
+      "id": "ابحث أو أدخل المعرّف...",
       "code": "مثال: AE",
       "name": "مثال: الإمارات",
-      "countryId": "00000000-0000-4000-8000-000000000000",
-      "jurisdictionId": "00000000-0000-4000-8000-000000000000",
-      "courtId": "00000000-0000-4000-8000-000000000000",
+      "countryId": "ابحث أو أدخل المعرّف...",
+      "jurisdictionId": "ابحث أو أدخل المعرّف...",
+      "courtId": "ابحث أو أدخل المعرّف...",
       "courtType": "مثال: مدني",
       "department": "القسم (اختياري)",
       "city": "مثال: دبي",
@@ -1229,11 +1235,11 @@
       "reason": "السبب"
     },
     "placeholders": {
-      "caseId": "00000000-0000-4000-8000-000000000000",
-      "clientId": "00000000-0000-4000-8000-000000000000",
-      "invoiceId": "00000000-0000-4000-8000-000000000000",
-      "paymentId": "00000000-0000-4000-8000-000000000000",
-      "creditId": "00000000-0000-4000-8000-000000000000",
+      "caseId": "ابحث أو أدخل المعرّف...",
+      "clientId": "ابحث أو أدخل المعرّف...",
+      "invoiceId": "ابحث أو أدخل المعرّف...",
+      "paymentId": "ابحث أو أدخل المعرّف...",
+      "creditId": "ابحث أو أدخل المعرّف...",
       "kind": "FIXED أو HOURLY أو RETAINER أو MILESTONE",
       "description": "مثال: رسوم قيد الدعوى",
       "amount": "مثال: 150.0000",
@@ -1317,11 +1323,11 @@
       "fileSize": "حجم الملف"
     },
     "placeholders": {
-      "threadId": "00000000-0000-4000-8000-000000000000",
-      "caseId": "00000000-0000-4000-8000-000000000000",
-      "clientId": "00000000-0000-4000-8000-000000000000",
-      "taskId": "00000000-0000-4000-8000-000000000000",
-      "messageId": "00000000-0000-4000-8000-000000000000",
+      "threadId": "ابحث أو أدخل المعرّف...",
+      "caseId": "ابحث أو أدخل المعرّف...",
+      "clientId": "ابحث أو أدخل المعرّف...",
+      "taskId": "ابحث أو أدخل المعرّف...",
+      "messageId": "ابحث أو أدخل المعرّف...",
       "subject": "مثال: تذكير بالجلسة",
       "channel": "EMAIL أو SMS أو WHATSAPP أو PHONE أو INTERNAL أو PORTAL",
       "direction": "INBOUND أو OUTBOUND",
@@ -1387,11 +1393,11 @@
       "to": "إلى"
     },
     "placeholders": {
-      "connectionId": "00000000-0000-4000-8000-000000000000",
+      "connectionId": "ابحث أو أدخل المعرّف...",
       "provider": "GOOGLE أو MICROSOFT",
       "accountRef": "مثال: calendar@example.com",
       "localType": "HEARING أو DEADLINE أو TASK",
-      "localId": "00000000-0000-4000-8000-000000000000",
+      "localId": "ابحث أو أدخل المعرّف...",
       "resolution": "LOCAL_WINS أو REMOTE_WINS",
       "reason": "مثال: نقل المزود للحدث",
       "externalId": "معرّف حدث المزود إن وجد",
@@ -1482,7 +1488,7 @@
       "maxRows": "الحد الأقصى للصفوف"
     },
     "placeholders": {
-      "jobId": "00000000-0000-4000-8000-000000000000",
+      "jobId": "ابحث أو أدخل المعرّف...",
       "entityType": "CASE أو CLIENT أو PARTY أو TASK",
       "content": "caseNumber,clientId\nC-001,…",
       "storageObjectId": "مرجع ملف مخزن اختياري",
@@ -1535,7 +1541,7 @@
       "channels": "IN_APP فقط حتى تصل المزودات",
       "audience": "ASSIGNEES أو ALL_MEMBERS",
       "escalationHours": "مثال: 24",
-      "escalateTo": "00000000-0000-4000-8000-000000000000",
+      "escalateTo": "ابحث أو أدخل المعرّف...",
       "channel": "IN_APP",
       "quietStart": "HH:MM مثال: 22:00",
       "quietEnd": "HH:MM مثال: 07:00"
@@ -1579,7 +1585,7 @@
       "runAt": "وقت التشغيل"
     },
     "placeholders": {
-      "definitionId": "00000000-0000-4000-8000-000000000000",
+      "definitionId": "ابحث أو أدخل المعرّف...",
       "name": "مثال: القضايا المفتوحة حسب الحالة",
       "dataSource": "CASE أو CLIENT أو PARTY أو TASK أو INVOICE أو PAYMENT أو HEARING أو DEADLINE أو DOCUMENT",
       "columns": "caseNumber, status",
@@ -1667,7 +1673,7 @@
       "reason": "سبب الرفض"
     },
     "placeholders": {
-      "requestId": "00000000-0000-4000-8000-000000000000",
+      "requestId": "ابحث أو أدخل المعرّف...",
       "fullName": "مثال: ليلى حداد",
       "clientType": "INDIVIDUAL أو ORGANIZATION",
       "matterSummary": "ما الذي يحتاجه العميل المحتمل؟",
@@ -1721,7 +1727,7 @@
       "retainYears": "1 - 30",
       "name": "مثال: تقاضٍ في القضية X",
       "reason": "لماذا تم التحفظ أو الرفع؟",
-      "holdId": "00000000-0000-4000-8000-000000000000",
+      "holdId": "ابحث أو أدخل المعرّف...",
       "targetId": "UUID هدف اختياري"
     },
     "result": {
@@ -1764,7 +1770,7 @@
       "taskType": "مثال: CASE_BRIEF",
       "refs": "KIND:id مثال: CASE:00000000-0000-4000-8000-000000000000",
       "promptHint": "تلميح اختياري للمزود",
-      "requestId": "00000000-0000-4000-8000-000000000000",
+      "requestId": "ابحث أو أدخل المعرّف...",
       "reason": "لماذا تم الرفض؟"
     },
     "result": {
@@ -1785,3 +1791,4 @@
     }
   }
 }
+

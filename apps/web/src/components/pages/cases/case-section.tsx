@@ -39,6 +39,9 @@ type CaseForm = z.infer<typeof caseSchema>;
 
 type ActionKey = 'create' | 'update';
 
+type SubTab = 'general' | 'classification' | 'dates';
+const SUB_TABS: SubTab[] = ['general', 'classification', 'dates'];
+
 export function CaseSection({
   selected,
 }: {
@@ -52,6 +55,7 @@ export function CaseSection({
   const [result, setResult] = useState<CaseResult | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [subTab, setSubTab] = useState<SubTab>('general');
 
   const {
     register,
@@ -184,135 +188,147 @@ export function CaseSection({
           <p>{t('cases.entity.case.description')}</p>
         </div>
       </div>
-      {result ? (
-        <p className="form-field-hint">
-          {result.caseNumber} [{result.status}]
-        </p>
-      ) : null}
-      <div className="form-grid">
-        <FormField
-          label={t('cases.labels.caseNumber')}
-          error={
-            errors.caseNumber
-              ? t(`form.errors.${errors.caseNumber.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.caseNumber'),
-            ...register('caseNumber'),
-          }}
-        />
-        <FormField
-          label={t('cases.labels.internalNumber')}
-          error={
-            errors.internalNumber
-              ? t(`form.errors.${errors.internalNumber.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.internalNumber'),
-            ...register('internalNumber'),
-          }}
-        />
-        <EntityPicker
-          label={t('cases.labels.clientId')}
-          placeholder={t('cases.placeholders.clientId')}
-          required
-          error={
-            errors.clientId
-              ? t(`form.errors.${errors.clientId.message}`)
-              : undefined
-          }
-          value={watch('clientId') ?? ''}
-          onChange={(id) => setValue('clientId', id, { shouldValidate: true })}
-          load={async (search) =>
-            (
-              await clientsClient.listClients(search ? { search } : {})
-            ).data.map((c) => ({
-              id: c.id,
-              label: c.displayName,
-              sub: c.clientType,
-            }))
-          }
-        />
-        <FormField
-          label={t('cases.labels.practiceArea')}
-          error={
-            errors.practiceArea
-              ? t(`form.errors.${errors.practiceArea.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.practiceArea'),
-            ...register('practiceArea'),
-          }}
-        />
-        <FormField
-          label={t('cases.labels.caseType')}
-          error={
-            errors.caseType
-              ? t(`form.errors.${errors.caseType.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.caseType'),
-            ...register('caseType'),
-          }}
-        />
-        <FormSelect
-          label={t('cases.labels.status')}
-          selectProps={register('status')}
-          options={[
-            { label: t('common.enums.OPEN'), value: 'OPEN' },
-            { label: t('common.enums.ON_HOLD'), value: 'ON_HOLD' },
-            { label: t('common.enums.CLOSED'), value: 'CLOSED' },
-          ]}
-        />
-        <FormField
-          label={t('cases.labels.priority')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.priority'),
-            ...register('priority'),
-          }}
-        />
-        <FormField
-          label={t('cases.labels.openDate')}
-          inputProps={{
-            type: 'date',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.openDate'),
-            ...register('openDate'),
-          }}
-        />
-        <FormField
-          label={t('cases.labels.closeDate')}
-          inputProps={{
-            type: 'date',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.closeDate'),
-            ...register('closeDate'),
-          }}
-        />
-        <FormField
-          label={t('cases.labels.partyIds')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.partyIds'),
-            ...register('partyIds'),
-          }}
-        />
+
+      <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2 flex-wrap">
+        {SUB_TABS.map((tab) => (
+          <Button
+            key={tab}
+            type="button"
+            variant={subTab === tab ? 'default' : 'ghost'}
+            onClick={() => setSubTab(tab)}
+          >
+            {t(`cases.tabs.${tab}`)}
+          </Button>
+        ))}
       </div>
+
+      {subTab === 'general' && (
+        <div className="form-grid">
+          <FormField
+            label={t('cases.labels.caseNumber')}
+            error={
+              errors.caseNumber
+                ? t(`form.errors.${errors.caseNumber.message}`)
+                : undefined
+            }
+            inputProps={{
+              type: 'text',
+              autoComplete: 'off',
+              placeholder: t('cases.placeholders.caseNumber'),
+              ...register('caseNumber'),
+            }}
+          />
+          <FormField
+            label={t('cases.labels.internalNumber')}
+            error={
+              errors.internalNumber
+                ? t(`form.errors.${errors.internalNumber.message}`)
+                : undefined
+            }
+            inputProps={{
+              type: 'text',
+              autoComplete: 'off',
+              placeholder: t('cases.placeholders.internalNumber'),
+              ...register('internalNumber'),
+            }}
+          />
+          <EntityPicker
+            label={t('cases.labels.clientId')}
+            placeholder={t('cases.placeholders.clientId')}
+            required
+            error={
+              errors.clientId
+                ? t(`form.errors.${errors.clientId.message}`)
+                : undefined
+            }
+            value={watch('clientId') ?? ''}
+            onChange={(id) => setValue('clientId', id, { shouldValidate: true })}
+            load={async (search) =>
+              (
+                await clientsClient.listClients(search ? { search } : {})
+              ).data.map((c) => ({
+                id: c.id,
+                label: c.displayName,
+                sub: c.clientType,
+              }))
+            }
+          />
+        </div>
+      )}
+
+      {subTab === 'classification' && (
+        <div className="form-grid">
+          <FormField
+            label={t('cases.labels.practiceArea')}
+            error={
+              errors.practiceArea
+                ? t(`form.errors.${errors.practiceArea.message}`)
+                : undefined
+            }
+            inputProps={{
+              type: 'text',
+              autoComplete: 'off',
+              placeholder: t('cases.placeholders.practiceArea'),
+              ...register('practiceArea'),
+            }}
+          />
+          <FormField
+            label={t('cases.labels.caseType')}
+            error={
+              errors.caseType
+                ? t(`form.errors.${errors.caseType.message}`)
+                : undefined
+            }
+            inputProps={{
+              type: 'text',
+              autoComplete: 'off',
+              placeholder: t('cases.placeholders.caseType'),
+              ...register('caseType'),
+            }}
+          />
+          <FormSelect
+            label={t('cases.labels.status')}
+            selectProps={register('status')}
+            options={[
+              { label: t('common.enums.OPEN'), value: 'OPEN' },
+              { label: t('common.enums.ON_HOLD'), value: 'ON_HOLD' },
+              { label: t('common.enums.CLOSED'), value: 'CLOSED' },
+            ]}
+          />
+          <FormField
+            label={t('cases.labels.priority')}
+            inputProps={{
+              type: 'text',
+              autoComplete: 'off',
+              placeholder: t('cases.placeholders.priority'),
+              ...register('priority'),
+            }}
+          />
+        </div>
+      )}
+
+      {subTab === 'dates' && (
+        <div className="form-grid">
+          <FormField
+            label={t('cases.labels.openDate')}
+            inputProps={{
+              type: 'date',
+              autoComplete: 'off',
+              placeholder: t('cases.placeholders.openDate'),
+              ...register('openDate'),
+            }}
+          />
+          <FormField
+            label={t('cases.labels.closeDate')}
+            inputProps={{
+              type: 'date',
+              autoComplete: 'off',
+              placeholder: t('cases.placeholders.closeDate'),
+              ...register('closeDate'),
+            }}
+          />
+        </div>
+      )}
       <div className="form-actions form-actions-row">
         <Button
           type="button"

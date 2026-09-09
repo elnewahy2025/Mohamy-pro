@@ -59,7 +59,7 @@ export function CaseDetailSection({
   }, [selected]);
 
   return (
-    <form className="settings-card" noValidate>
+    <div className="settings-card">
       <div className="settings-card-heading">
         <span className="settings-icon" aria-hidden="true">
           <Eye size={18} />
@@ -69,70 +69,62 @@ export function CaseDetailSection({
           <p>{t('cases.entity.case.description')}</p>
         </div>
       </div>
-      {detail ? (
-        <p className="form-field-hint">
-          {detail.caseNumber} [{detail.status}]
-        </p>
-      ) : selected ? (
-        <p className="form-field-hint">
-          {selected.caseNumber} [{selected.status}]
-        </p>
-      ) : null}
-      <div className="form-actions form-actions-row">
-        <Button
-          type="button"
-          variant="default"
-          onClick={() => selected && void run(selected.id)}
-          disabled={submitting || authLoading || !user || !selected}
-        >
-          {submitting ? t('cases.submitting') : t('cases.getDetail')}
-        </Button>
-      </div>
-      <OperationResult
-        status={status}
-        successLabel={t('cases.result.title')}
-        errorTitle={t('cases.result.errorTitle')}
-        onError={submitError?.message}
-        errorCode={submitError?.code}
-        errorDetails={submitError?.details}
-        requestId={submitError?.requestId}
-        ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={
-          detail
-            ? [
-                {
-                  label: t('cases.result.caseNumber'),
-                  value: detail.caseNumber,
-                },
-                { label: t('cases.result.status'), value: detail.status },
-                { label: t('cases.result.priority'), value: detail.priority },
-                {
-                  label: t('cases.result.client'),
-                  value: detail.client.displayName,
-                },
-              ]
-            : undefined
-        }
-      />
-      {detail && detail.parties.length > 0 ? (
-        <div className="operation-result-details" style={{ marginTop: '1rem' }}>
-          {detail.parties.map((entry) => (
-            <div
-              key={entry.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-              }}
-            >
-              <span>{entry.party.displayName}</span>
-              <span>
-                {entry.role.label} · {entry.party.partyType}
-              </span>
+      {submitting ? (
+        <p className="form-field-hint">{t('common.loading')}</p>
+      ) : detail ? (
+        <div className="mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="settings-card-heading">
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>
+              {detail.caseNumber}
+            </h3>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <span className="form-field-hint">{t('cases.labels.clientName')}</span>
+              <p>{detail.client.displayName}</p>
             </div>
-          ))}
+            <div>
+              <span className="form-field-hint">{t('cases.labels.status')}</span>
+              <p>{detail.status}</p>
+            </div>
+            <div>
+              <span className="form-field-hint">{t('cases.labels.priority')}</span>
+              <p>{detail.priority}</p>
+            </div>
+          </div>
+          
+          {detail.parties.length > 0 ? (
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                {t('cases.entity.party.title')}
+              </h4>
+              <div className="operation-result-details">
+                {detail.parties.map((entry) => (
+                  <div
+                    key={entry.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                      padding: '0.5rem 0',
+                      borderBottom: '1px solid var(--line)'
+                    }}
+                  >
+                    <span>{entry.party.displayName}</span>
+                    <span style={{ color: 'var(--muted)' }}>
+                      {entry.role.label} · {entry.party.partyType}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
+      ) : submitError ? (
+        <p className="form-field-error" style={{ marginTop: '1rem' }}>
+          {submitError.message}
+        </p>
       ) : null}
-    </form>
+    </div>
   );
 }

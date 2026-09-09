@@ -1525,6 +1525,12 @@ export interface CaseAssignmentResult {
   id: string;
   membershipId: string;
   assignedAt: string;
+  membership?: {
+    user?: {
+      displayName: string | null;
+      emailNormalized: string | null;
+    }
+  }
 }
 
 export interface AssignCaseMemberRequest {

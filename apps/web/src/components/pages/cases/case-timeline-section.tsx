@@ -168,30 +168,15 @@ export function CaseTimelineSection({
           {selected.caseNumber} [{selected.status}]
         </p>
       ) : null}
-      <form
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (selected) void runList({ caseId: selected.id });
-        }}
-      >
-        <div className="form-actions form-actions-row">
-          <Button
-            type="submit"
-            variant="default"
-            disabled={submitting || authLoading || !user || !selected}
-          >
-            {submitting
-              ? t('casesTimeline.submitting')
-              : t('casesTimeline.list')}
-          </Button>
-          {timeline && page > 1 ? (
+      {timeline && totalPages > 1 ? (
+        <div className="form-actions form-actions-row mt-4 mb-4">
+          {page > 1 ? (
             <Button
               type="button"
               variant="outline"
               onClick={() =>
                 void runList(
-                  { caseId: timeline.data[0]?.caseId ?? '' },
+                  { caseId: timeline.data[0]?.caseId ?? selected?.id ?? '' },
                   page - 1,
                 )
               }
@@ -200,13 +185,16 @@ export function CaseTimelineSection({
               {t('casesTimeline.pagination.prev')}
             </Button>
           ) : null}
-          {timeline && page < totalPages ? (
+          <span style={{ margin: 'auto 1rem' }}>
+             {page} / {totalPages}
+          </span>
+          {page < totalPages ? (
             <Button
               type="button"
               variant="outline"
               onClick={() =>
                 void runList(
-                  { caseId: timeline.data[0]?.caseId ?? '' },
+                  { caseId: timeline.data[0]?.caseId ?? selected?.id ?? '' },
                   page + 1,
                 )
               }
@@ -216,31 +204,7 @@ export function CaseTimelineSection({
             </Button>
           ) : null}
         </div>
-      </form>
-      <OperationResult
-        status={listStatus}
-        successLabel={t('casesTimeline.result.title')}
-        errorTitle={t('casesTimeline.result.errorTitle')}
-        onError={submitError?.message}
-        errorCode={submitError?.code}
-        errorDetails={submitError?.details}
-        requestId={submitError?.requestId}
-        ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={
-          timeline
-            ? [
-                {
-                  label: t('casesTimeline.result.total'),
-                  value: String(timeline.pagination.total),
-                },
-                {
-                  label: t('casesTimeline.result.page'),
-                  value: `${page} / ${totalPages}`,
-                },
-              ]
-            : undefined
-        }
-      />
+      ) : null}
       {timeline && timeline.data.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
           {timeline.data.map((event: CaseTimelineEvent) => {

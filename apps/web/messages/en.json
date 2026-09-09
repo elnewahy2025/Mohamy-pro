@@ -149,7 +149,7 @@
       "retentionDays": "e.g. 90",
       "name": "e.g. Q3 restore drill",
       "targetRef": "e.g. restore branch or point",
-      "drillId": "00000000-0000-4000-8000-000000000000",
+      "drillId": "Search or enter ID...",
       "checkName": "e.g. restore",
       "evidence": "What did you verify?"
     },
@@ -202,7 +202,7 @@
       "key": "e.g. EMAIL",
       "url": "https://example.com/hook",
       "events": "case.created, invoice.issued",
-      "webhookId": "00000000-0000-4000-8000-000000000000"
+      "webhookId": "Search or enter ID..."
     },
     "result": {
       "title": "Operation completed",
@@ -295,7 +295,7 @@
       "title": "Switch active workspace",
       "description": "Move the current session to another tenant you are a member of.",
       "tenantIdLabel": "Target tenant ID",
-      "tenantIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "tenantIdPlaceholder": "Search or enter ID...",
       "submit": "Switch workspace",
       "submitting": "Switching…",
       "successTitle": "Workspace switched",
@@ -330,7 +330,7 @@
       "title": "Manage tenant memberships",
       "description": "Suspend, expire, remove, or reinstate a membership in the active tenant.",
       "membershipIdLabel": "Membership ID",
-      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "membershipIdPlaceholder": "Search or enter ID...",
       "reasonLabel": "Reason",
       "reasonPlaceholder": "Optional administrative reason",
       "activeUntilLabel": "Active until",
@@ -361,11 +361,11 @@
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Optional description",
       "roleIdLabel": "Role ID",
-      "roleIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "roleIdPlaceholder": "Search or enter ID...",
       "permissionKeysLabel": "Permission keys",
       "permissionKeysPlaceholder": "CanViewTenant, CanManageCases",
       "membershipIdLabel": "Membership ID",
-      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "membershipIdPlaceholder": "Search or enter ID...",
       "list": "List roles",
       "create": "Create role",
       "grant": "Grant permissions",
@@ -455,12 +455,12 @@
       "slug": "main-office",
       "reason": "Optional archival reason",
       "description": "Optional description",
-      "organizationId": "00000000-0000-4000-8000-000000000000",
-      "branchId": "00000000-0000-4000-8000-000000000000",
-      "entityId": "00000000-0000-4000-8000-000000000000",
+      "organizationId": "Search or enter ID...",
+      "branchId": "Search or enter ID...",
+      "entityId": "Search or enter ID...",
       "key": "e.g. feature.enabled",
       "value": "Plain text or JSON",
-      "departmentId": "00000000-0000-4000-8000-000000000000"
+      "departmentId": "Search or enter ID..."
     },
     "result": {
       "title": "Operation completed",
@@ -530,7 +530,7 @@
       "members": "Members",
       "headcount": "{count} employees",
       "membershipIdLabel": "Membership ID",
-      "membershipIdPlaceholder": "00000000-0000-4000-8000-000000000000",
+      "membershipIdPlaceholder": "Search or enter ID...",
       "branchLabel": "Branch",
       "departmentLabel": "Department",
       "save": "Save placement"
@@ -603,7 +603,7 @@
       "notes": "Optional internal notes",
       "reason": "Optional reason",
       "clientType": "INDIVIDUAL or ORGANIZATION",
-      "clientId": "00000000-0000-4000-8000-000000000000",
+      "clientId": "Search or enter ID...",
       "contactType": "EMAIL, PHONE, FAX, WEBSITE, MOBILE",
       "contactValue": "name@example.com",
       "contactLabel": "Optional label",
@@ -618,7 +618,7 @@
       "search": "Search by name",
       "status": "ACTIVE or ARCHIVED",
       "clientTypeFilter": "INDIVIDUAL or ORGANIZATION",
-      "entityId": "00000000-0000-4000-8000-000000000000"
+      "entityId": "Search or enter ID..."
     },
     "result": {
       "title": "Operation completed",
@@ -676,7 +676,7 @@
       "partyEmail": "Email"
     },
     "placeholders": {
-      "id": "00000000-0000-4000-8000-000000000000",
+      "id": "Search or enter ID...",
       "clientId": "Optional client ID",
       "reason": "Optional reason",
       "statusFilter": "PENDING, IN_REVIEW or COMPLETED",
@@ -747,7 +747,7 @@
       "roleLabel": "Role label"
     },
     "placeholders": {
-      "id": "00000000-0000-4000-8000-000000000000",
+      "id": "Search or enter ID...",
       "partyType": "PERSON or ORGANIZATION",
       "name": "e.g. Ahmed Hassan",
       "legalName": "Optional legal name",
@@ -758,8 +758,8 @@
       "search": "Search by display name",
       "status": "ACTIVE or ARCHIVED",
       "partyTypeFilter": "PERSON or ORGANIZATION",
-      "fromPartyId": "00000000-0000-4000-8000-000000000000",
-      "toPartyId": "00000000-0000-4000-8000-000000000000",
+      "fromPartyId": "Search or enter ID...",
+      "toPartyId": "Search or enter ID...",
       "relationshipType": "e.g. spouse, subsidiary",
       "roleKey": "plaintiff, defendant, witness…"
     },
@@ -788,6 +788,11 @@
   },
   "cases": {
     "navLabel": "Cases",
+    "tabs": {
+      "general": "General",
+      "classification": "Classification",
+      "dates": "Dates"
+    },
     "eyebrow": "Phase 8 · Matter / Case management",
     "title": "Manage the legal matters you work on.",
     "description": "Create and manage cases (matters), track their status and priority, and link the parties and roles involved.",
@@ -839,13 +844,14 @@
       "membershipId": "Membership ID",
       "subjectMembershipId": "Subject membership ID",
       "reason": "Reason",
-      "endsAt": "Expires at"
+      "endsAt": "Expires at",
+      "search": "Search"
     },
     "placeholders": {
-      "id": "00000000-0000-4000-8000-000000000000",
+      "id": "Click to select a case",
       "caseNumber": "e.g. C-2026-001",
       "internalNumber": "Optional internal number",
-      "clientId": "00000000-0000-4000-8000-000000000000",
+      "clientId": "Click to select a client",
       "practiceArea": "e.g. Litigation",
       "caseType": "e.g. Civil",
       "status": "OPEN, ON_HOLD or CLOSED",
@@ -854,11 +860,11 @@
       "openDate": "YYYY-MM-DD",
       "closeDate": "YYYY-MM-DD",
       "partyIds": "Comma-separated party IDs",
-      "partyId": "00000000-0000-4000-8000-000000000000",
-      "roleId": "00000000-0000-4000-8000-000000000000",
+      "partyId": "Click to select a party",
+      "roleId": "Click to select a role",
       "search": "Search by case number",
-      "membershipId": "00000000-0000-4000-8000-000000000000",
-      "subjectMembershipId": "00000000-0000-4000-8000-000000000000",
+      "membershipId": "Enter membership ID",
+      "subjectMembershipId": "Search or enter ID...",
       "reason": "e.g. Production outage triage",
       "endsAt": "YYYY-MM-DDTHH:mm (max 24h)"
     },
@@ -907,7 +913,7 @@
       "payload": "Payload (JSON)"
     },
     "placeholders": {
-      "caseId": "00000000-0000-4000-8000-000000000000",
+      "caseId": "Search or enter ID...",
       "eventType": "CASE_CREATED, CLIENT_ADDED, PARTY_ADDED, STATUS_CHANGED, …",
       "payload": "'{'\"status\": \"OPEN\"'}' or omit"
     },
@@ -967,12 +973,12 @@
       "address": "Address"
     },
     "placeholders": {
-      "id": "00000000-0000-4000-8000-000000000000",
+      "id": "Search or enter ID...",
       "code": "e.g. AE",
       "name": "e.g. UAE",
-      "countryId": "00000000-0000-4000-8000-000000000000",
-      "jurisdictionId": "00000000-0000-4000-8000-000000000000",
-      "courtId": "00000000-0000-4000-8000-000000000000",
+      "countryId": "Search or enter ID...",
+      "jurisdictionId": "Search or enter ID...",
+      "courtId": "Search or enter ID...",
       "courtType": "e.g. Civil",
       "department": "Optional department",
       "city": "e.g. Dubai",
@@ -1229,11 +1235,11 @@
       "reason": "Reason"
     },
     "placeholders": {
-      "caseId": "00000000-0000-4000-8000-000000000000",
-      "clientId": "00000000-0000-4000-8000-000000000000",
-      "invoiceId": "00000000-0000-4000-8000-000000000000",
-      "paymentId": "00000000-0000-4000-8000-000000000000",
-      "creditId": "00000000-0000-4000-8000-000000000000",
+      "caseId": "Search or enter ID...",
+      "clientId": "Search or enter ID...",
+      "invoiceId": "Search or enter ID...",
+      "paymentId": "Search or enter ID...",
+      "creditId": "Search or enter ID...",
       "kind": "FIXED, HOURLY, RETAINER or MILESTONE",
       "description": "e.g. Court filing fee",
       "amount": "e.g. 150.0000",
@@ -1317,11 +1323,11 @@
       "fileSize": "File size"
     },
     "placeholders": {
-      "threadId": "00000000-0000-4000-8000-000000000000",
-      "caseId": "00000000-0000-4000-8000-000000000000",
-      "clientId": "00000000-0000-4000-8000-000000000000",
-      "taskId": "00000000-0000-4000-8000-000000000000",
-      "messageId": "00000000-0000-4000-8000-000000000000",
+      "threadId": "Search or enter ID...",
+      "caseId": "Search or enter ID...",
+      "clientId": "Search or enter ID...",
+      "taskId": "Search or enter ID...",
+      "messageId": "Search or enter ID...",
       "subject": "e.g. Hearing reminder",
       "channel": "EMAIL, SMS, WHATSAPP, PHONE, INTERNAL or PORTAL",
       "direction": "INBOUND or OUTBOUND",
@@ -1387,11 +1393,11 @@
       "to": "To"
     },
     "placeholders": {
-      "connectionId": "00000000-0000-4000-8000-000000000000",
+      "connectionId": "Search or enter ID...",
       "provider": "GOOGLE or MICROSOFT",
       "accountRef": "e.g. calendar@example.com",
       "localType": "HEARING, DEADLINE or TASK",
-      "localId": "00000000-0000-4000-8000-000000000000",
+      "localId": "Search or enter ID...",
       "resolution": "LOCAL_WINS or REMOTE_WINS",
       "reason": "e.g. remote moved the event",
       "externalId": "Provider event ID, if known",
@@ -1482,7 +1488,7 @@
       "maxRows": "Max rows"
     },
     "placeholders": {
-      "jobId": "00000000-0000-4000-8000-000000000000",
+      "jobId": "Search or enter ID...",
       "entityType": "CASE, CLIENT, PARTY or TASK",
       "content": "caseNumber,clientId\nC-001,…",
       "storageObjectId": "Optional stored file reference",
@@ -1535,7 +1541,7 @@
       "channels": "IN_APP only until providers land",
       "audience": "ASSIGNEES or ALL_MEMBERS",
       "escalationHours": "e.g. 24",
-      "escalateTo": "00000000-0000-4000-8000-000000000000",
+      "escalateTo": "Search or enter ID...",
       "channel": "IN_APP",
       "quietStart": "HH:MM, e.g. 22:00",
       "quietEnd": "HH:MM, e.g. 07:00"
@@ -1579,7 +1585,7 @@
       "runAt": "Run at"
     },
     "placeholders": {
-      "definitionId": "00000000-0000-4000-8000-000000000000",
+      "definitionId": "Search or enter ID...",
       "name": "e.g. Open cases by status",
       "dataSource": "CASE, CLIENT, PARTY, TASK, INVOICE, PAYMENT, HEARING, DEADLINE or DOCUMENT",
       "columns": "caseNumber, status",
@@ -1667,7 +1673,7 @@
       "reason": "Rejection reason"
     },
     "placeholders": {
-      "requestId": "00000000-0000-4000-8000-000000000000",
+      "requestId": "Search or enter ID...",
       "fullName": "e.g. Layla Haddad",
       "clientType": "INDIVIDUAL or ORGANIZATION",
       "matterSummary": "What does the prospect need?",
@@ -1721,7 +1727,7 @@
       "retainYears": "1 - 30",
       "name": "e.g. Matter X litigation",
       "reason": "Why is this held or released?",
-      "holdId": "00000000-0000-4000-8000-000000000000",
+      "holdId": "Search or enter ID...",
       "targetId": "Optional target UUID"
     },
     "result": {
@@ -1764,7 +1770,7 @@
       "taskType": "e.g. CASE_BRIEF",
       "refs": "KIND:id, e.g. CASE:00000000-0000-4000-8000-000000000000",
       "promptHint": "Optional hint for the provider",
-      "requestId": "00000000-0000-4000-8000-000000000000",
+      "requestId": "Search or enter ID...",
       "reason": "Why is this rejected?"
     },
     "result": {
@@ -1785,3 +1791,4 @@
     }
   }
 }
+

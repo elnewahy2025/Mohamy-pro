@@ -1,28 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
 import { ListChecks } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import {
-  ApiError,
   ConflictChecksClient,
-  type ConflictCheckListResult,
   type ConflictCheckListRow,
-  type ConflictCheckStatus,
 } from '@/lib/api';
-import { useAuth } from '@/auth/auth-provider';
-import { Button } from '@/components/ui/button';
-import { FormField } from '@/components/forms/form-field';
-import { FormSelect } from '@/components/forms/form-select';
-import { OperationResult } from '@/components/forms/operation-result';
-
-const filterSchema = z.object({
-  status: z.string().max(50, 'tooLong').optional(),
-});
-type FilterForm = z.infer<typeof filterSchema>;
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 export function ConflictCheckListSection({
   onSelect,
@@ -30,74 +15,10 @@ export function ConflictCheckListSection({
   onSelect: (check: ConflictCheckListRow | null) => void;
 }): React.ReactNode {
   const t = useTranslations();
-  const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new ConflictChecksClient());
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [list, setList] = useState<ConflictCheckListResult | null>(null);
-  const [submitError, setSubmitError] = useState<ApiError | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [filters, setFilters] = useState<FilterForm>({ status: '' });
-  const [page, setPage] = useState(1);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FilterForm>({
-    resolver: zodResolver(filterSchema),
-    defaultValues: { status: '' },
-  });
-
-  useEffect(() => {
-    if (user) void runList(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  async function runList(targetPage = page): Promise<void> {
-    setSubmitting(true);
-    setStatus('idle');
-    setSubmitError(null);
-    try {
-      const result = await client.list({
-        page: targetPage,
-        limit: 20,
-        status: (filters.status || undefined) as
-          ConflictCheckStatus | undefined,
-      });
-      setList(result);
-      setPage(targetPage);
-      setStatus('success');
-    } catch (error) {
-      setStatus('error');
-      setSubmitError(
-        error instanceof ApiError
-          ? error
-          : new ApiError(
-              error instanceof Error ? error.message : 'Unknown error',
-              'INTERNAL',
-              [],
-              0,
-            ),
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function search(): Promise<void> {
-    await handleSubmit((form) => {
-      setFilters({ status: form.status ?? '' });
-    })();
-    setPage(1);
-    await runList(1);
-  }
-
-  const totalPages = list
-    ? Math.max(1, Math.ceil(list.pagination.total / list.pagination.limit))
-    : 1;
 
   return (
-    <form className="settings-card" noValidate>
+    <div className="settings-card">
       <div className="settings-card-heading">
         <span className="settings-icon" aria-hidden="true">
           <ListChecks size={18} />
@@ -107,96 +28,34 @@ export function ConflictCheckListSection({
           <p>{t('conflictChecks.entity.list.description')}</p>
         </div>
       </div>
-      <div className="form-grid">
-        <FormSelect
-          label={t('conflictChecks.labels.status')}
-          selectProps={register('status')}
-          options={[
-            { label: t('common.enums.PENDING'), value: 'PENDING' },
-            { label: t('common.enums.IN_REVIEW'), value: 'IN_REVIEW' },
-            { label: t('common.enums.COMPLETED'), value: 'COMPLETED' },
-          ]}
+      <div className="form-grid mt-6">
+        <EntityPicker
+          label={t('conflictChecks.sections.list') || 'Search Conflict Checks'}
+          placeholder={t('common.search')}
+          value=""
+          onChange={(id, option) => {
+            if (option?.data) {
+              onSelect(option.data);
+            }
+          }}
+          load={async (search) => {
+            const result = await client.list({
+              page: 1,
+              limit: 50,
+            });
+            // Client-side filtering since API doesn't support text search for checks
+            const filtered = result.data.filter(c => 
+              !search || c.decision?.toLowerCase().includes(search.toLowerCase()) || c.status?.toLowerCase().includes(search.toLowerCase())
+            );
+            return filtered.map((c) => ({
+              id: c.id,
+              label: `Check: ${c.status} · ${c.decision || 'No decision'}`,
+              sub: `${c.partyCount} parties`,
+              data: c,
+            }));
+          }}
         />
       </div>
-      <div className="form-actions form-actions-row">
-        <Button
-          type="button"
-          variant="default"
-          onClick={() => void search()}
-          disabled={submitting || authLoading || !user}
-        >
-          {submitting
-            ? t('conflictChecks.submitting')
-            : t('conflictChecks.result.list')}
-        </Button>
-        {list && page > 1 ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void runList(page - 1)}
-            disabled={submitting}
-          >
-            {t('conflictChecks.pagination.prev')}
-          </Button>
-        ) : null}
-        {list && page < totalPages ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void runList(page + 1)}
-            disabled={submitting}
-          >
-            {t('conflictChecks.pagination.next')}
-          </Button>
-        ) : null}
-      </div>
-      <OperationResult
-        status={status}
-        successLabel={t('conflictChecks.result.title')}
-        errorTitle={t('conflictChecks.result.errorTitle')}
-        onError={submitError?.message}
-        errorCode={submitError?.code}
-        errorDetails={submitError?.details}
-        requestId={submitError?.requestId}
-        ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={
-          list
-            ? [
-                {
-                  label: t('conflictChecks.result.total'),
-                  value: String(list.pagination.total),
-                },
-                {
-                  label: t('conflictChecks.result.page'),
-                  value: `${page} / ${totalPages}`,
-                },
-              ]
-            : undefined
-        }
-      />
-      {list && list.data.length > 0 ? (
-        <div className="operation-result-details" style={{ marginTop: '1rem' }}>
-          {list.data.map((item: ConflictCheckListRow) => (
-            <div
-              key={item.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-              }}
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onSelect(item)}
-              >
-                {item.status} · {item.decision} · {item.partyCount}{' '}
-                {t('conflictChecks.result.parties').toLowerCase()}
-              </Button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </form>
+    </div>
   );
 }

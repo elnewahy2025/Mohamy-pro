@@ -46,6 +46,10 @@ export function CaseAssignmentSection({
   useEffect(() => {
     if (selected) {
       assignForm.setValue('caseId', selected.id, { shouldValidate: true });
+      // Use setTimeout to ensure the form value is set before reading it in runList
+      setTimeout(() => { void runList(); }, 0);
+    } else {
+      setAssignees([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
@@ -60,8 +64,9 @@ export function CaseAssignmentSection({
         membershipId: form.membershipId,
       });
       setAssigned(result);
-      assignForm.reset({ caseId: '', membershipId: '' });
+      assignForm.reset({ caseId: selected?.id ?? '', membershipId: '' });
       setStatus('success');
+      void runList(); // Refresh list after assign
     } catch (error) {
       setStatus('error');
       setSubmitError(
@@ -135,7 +140,7 @@ export function CaseAssignmentSection({
   }
 
   return (
-    <form className="settings-card" noValidate>
+    <div className="settings-card">
       <div className="settings-card-heading">
         <span className="settings-icon" aria-hidden="true">
           <Users size={18} />
@@ -145,83 +150,67 @@ export function CaseAssignmentSection({
           <p>{t('cases.entity.assignments.description')}</p>
         </div>
       </div>
-      <div className="form-grid">
-        <EntityPicker
-          label={t('cases.labels.id')}
-          placeholder={t('cases.placeholders.id')}
-          required
-          error={
-            assignForm.formState.errors.caseId
-              ? t(`form.errors.${assignForm.formState.errors.caseId.message}`)
-              : undefined
-          }
-          value={assignForm.watch('caseId') ?? ''}
-          onChange={(id) =>
-            assignForm.setValue('caseId', id, { shouldValidate: true })
-          }
-          load={async (search) =>
-            (await client.list(search ? { search } : {})).data.map((c) => ({
-              id: c.id,
-              label: c.caseNumber,
-              sub: c.status,
-            }))
-          }
-        />
-        <FormField
-          label={t('cases.labels.membershipId')}
-          error={
-            assignForm.formState.errors.membershipId
-              ? t(
-                  `form.errors.${assignForm.formState.errors.membershipId.message}`,
-                )
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.membershipId'),
-            ...assignForm.register('membershipId'),
-          }}
-        />
-      </div>
-      <div className="form-actions form-actions-row">
-        <Button
-          type="button"
-          variant="default"
-          onClick={() => void assignForm.handleSubmit(runAssign)()}
-          disabled={submitting || authLoading || !user}
-        >
-          {submitting ? t('cases.submitting') : t('cases.assign')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void runList()}
-          disabled={submitting}
-        >
-          {submitting ? t('cases.submitting') : t('cases.result.list')}
-        </Button>
-      </div>
-      <OperationResult
-        status={status}
-        successLabel={t('cases.result.title')}
-        errorTitle={t('cases.result.errorTitle')}
-        onError={submitError?.message}
-        errorCode={submitError?.code}
-        errorDetails={submitError?.details}
-        requestId={submitError?.requestId}
-        ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={
-          assigned
-            ? [
-                {
-                  label: t('cases.result.assignedAt'),
-                  value: assigned.assignedAt.slice(0, 10),
-                },
-              ]
-            : undefined
-        }
-      />
+      
+      <form noValidate onSubmit={(e) => { e.preventDefault(); void assignForm.handleSubmit(runAssign)(); }}>
+        <div className="form-grid">
+          {/* Hide Case ID picker since it's redundant when stacked under the selected case, but keep it in the DOM for the form */}
+          <div style={{ display: 'none' }}>
+            <EntityPicker
+              label={t('cases.labels.id')}
+              placeholder={t('cases.placeholders.id')}
+              required
+              error={
+                assignForm.formState.errors.caseId
+                  ? t(`form.errors.${assignForm.formState.errors.caseId.message}`)
+                  : undefined
+              }
+              value={assignForm.watch('caseId') ?? ''}
+              onChange={(id) =>
+                assignForm.setValue('caseId', id, { shouldValidate: true })
+              }
+              load={async (search) =>
+                (await client.list(search ? { search } : {})).data.map((c) => ({
+                  id: c.id,
+                  label: c.caseNumber,
+                  sub: c.status,
+                }))
+              }
+            />
+          </div>
+          <FormField
+            label={t('cases.labels.membershipId')}
+            error={
+              assignForm.formState.errors.membershipId
+                ? t(
+                    `form.errors.${assignForm.formState.errors.membershipId.message}`,
+                  )
+                : undefined
+            }
+            inputProps={{
+              type: 'text',
+              autoComplete: 'off',
+              placeholder: t('cases.placeholders.membershipId'),
+              ...assignForm.register('membershipId'),
+            }}
+          />
+        </div>
+        <div className="form-actions form-actions-row">
+          <Button
+            type="submit"
+            variant="default"
+            disabled={submitting || authLoading || !user}
+          >
+            {submitting ? t('cases.submitting') : t('cases.assign')}
+          </Button>
+        </div>
+      </form>
+      
+      {submitError && (
+        <p className="form-field-error" style={{ marginTop: '1rem' }}>
+          {submitError.message}
+        </p>
+      )}
+
       {assignees.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
           {assignees.map((entry) => (
@@ -231,15 +220,22 @@ export function CaseAssignmentSection({
                 display: 'flex',
                 justifyContent: 'space-between',
                 gap: '0.5rem',
+                alignItems: 'center',
+                padding: '0.5rem 0',
+                borderBottom: '1px solid var(--line)'
               }}
             >
               <span>
-                <code>{entry.membershipId}</code>
+                <strong>
+                  {entry.membership?.user?.displayName || entry.membership?.user?.emailNormalized || 'Unknown User'}
+                </strong>
+                {/* Keep ID around only for debugging/fallback if requested, but we hide it for normal users. We won't show it at all to keep it clean. */}
               </span>
               <span>
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => void runUnassign(entry.membershipId)}
                   disabled={submitting}
                 >
@@ -249,7 +245,9 @@ export function CaseAssignmentSection({
             </div>
           ))}
         </div>
-      ) : null}
-    </form>
+      ) : (
+        !submitting && <p className="form-field-hint" style={{ marginTop: '1rem' }}>No assignees</p>
+      )}
+    </div>
   );
 }

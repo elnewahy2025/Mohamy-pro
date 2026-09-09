@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTranslations } from 'next-intl';
 
 import { HearingsClient, type HearingResult } from '@/lib/api';
-import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { FormSelect } from '@/components/forms/form-select';
+import { EntityPicker } from '@/components/forms/entity-picker';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const outcomeSchema = z.object({
@@ -20,34 +20,30 @@ const outcomeSchema = z.object({
 });
 type OutcomeForm = z.infer<typeof outcomeSchema>;
 
-export function HearingOutcomeSection() {
+interface Props {
+  hearingId?: string;
+}
+
+export function HearingOutcomeSection({ hearingId }: Props) {
   const t = useTranslations();
-  const { user } = useAuth();
   
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [created, setCreated] = useState<HearingResult | null>(null);
   
-  const [hearings, setHearings] = useState<HearingResult[]>([]);
-
-  useEffect(() => {
-    if (user) {
-      const client = new HearingsClient();
-      client.listHearings().then(setHearings).catch(() => {});
-    }
-  }, [user]);
+  const client = new HearingsClient();
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<OutcomeForm>({
     resolver: zodResolver(outcomeSchema),
-    defaultValues: { hearingId: '', status: 'COMPLETED', outcome: '' },
+    defaultValues: { hearingId: hearingId || '', status: 'COMPLETED', outcome: '' },
   });
 
   async function runCreate(form: OutcomeForm): Promise<void> {
     try {
-      const client = new HearingsClient();
       setStatus('submitting');
       setCreated(null);
       const result = await client.recordOutcome(form.hearingId, {
@@ -68,16 +64,30 @@ export function HearingOutcomeSection() {
 
       <form onSubmit={handleSubmit(runCreate)} className="space-y-6 mt-6">
         <div className="form-grid">
-          <FormSelect
-            label={t('hearings.labels.caseId')}
-            error={errors.hearingId ? t(`form.errors.${errors.hearingId.message}`) : undefined}
-            options={hearings.filter(h => h.status === 'SCHEDULED').map(h => ({
-              label: `${new Date(h.date).toLocaleDateString()} - ${h.hearingType || 'Hearing'}`,
-              value: h.id
-            }))}
-            selectProps={{
-              ...register('hearingId'),
-            }}
+          <Controller
+            name="hearingId"
+            control={control}
+            render={({ field }) => (
+              <EntityPicker
+                label={t('hearings.labels.caseId')} // Typically this might be 'hearingId', but keeping existing i18n key for now if that's what was used
+                placeholder={t('common.search')}
+                required
+                error={errors.hearingId ? t(`form.errors.${errors.hearingId.message}`) : undefined}
+                value={field.value}
+                onChange={field.onChange}
+                load={async (search) => {
+                  const items = await client.listHearings();
+                  // For a real app, `search` should be passed to the API if supported, or filtered here
+                  return items
+                    .filter(h => h.status === 'SCHEDULED')
+                    .filter(h => !search || (h.hearingType && h.hearingType.toLowerCase().includes(search.toLowerCase())))
+                    .map((h) => ({
+                      id: h.id,
+                      label: `${new Date(h.date).toLocaleDateString()} - ${h.hearingType || 'Hearing'}`,
+                    }));
+                }}
+              />
+            )}
           />
           <FormSelect
             label={t('hearings.labels.status')}

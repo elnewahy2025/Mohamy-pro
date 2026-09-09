@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm as useRHForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm as useRHForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTranslations } from 'next-intl';
@@ -11,13 +11,10 @@ import {
   CasesClient,
   LegalConfigClient,
   type HearingResult,
-  type CaseListRow,
-  type CourtResult,
 } from '@/lib/api';
-import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
-import { FormSelect } from '@/components/forms/form-select';
+import { EntityPicker } from '@/components/forms/entity-picker';
 import { OperationResult } from '@/components/forms/operation-result';
 
 const hearingSchema = z.object({
@@ -32,24 +29,15 @@ type HearingForm = z.infer<typeof hearingSchema>;
 
 export function HearingSection() {
   const t = useTranslations();
-  const { user } = useAuth();
   
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [created, setCreated] = useState<HearingResult | null>(null);
   
-  const [cases, setCases] = useState<CaseListRow[]>([]);
-  const [courts, setCourts] = useState<CourtResult[]>([]);
-
-  useEffect(() => {
-    if (user) {
-      const casesClient = new CasesClient();
-      const configClient = new LegalConfigClient();
-      casesClient.list().then(res => setCases(res.data)).catch(() => {});
-      configClient.listCourts().then(setCourts).catch(() => {});
-    }
-  }, [user]);
+  const casesClient = new CasesClient();
+  const configClient = new LegalConfigClient();
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors },
@@ -85,27 +73,57 @@ export function HearingSection() {
 
       <form onSubmit={handleSubmit(runCreate)} className="space-y-6 mt-6">
         <div className="form-grid">
-          <FormSelect
-            label={t('hearings.labels.caseId')}
-            error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
-            options={cases.map(c => ({ label: c.caseNumber, value: c.id }))}
-            selectProps={{
-              ...register('caseId'),
-            }}
+          <Controller
+            name="caseId"
+            control={control}
+            render={({ field }) => (
+              <EntityPicker
+                label={t('hearings.labels.caseId')}
+                placeholder={t('common.search')}
+                required
+                error={errors.caseId ? t(`form.errors.${errors.caseId.message}`) : undefined}
+                value={field.value || ''}
+                onChange={field.onChange}
+                load={async (search) => {
+                  return (await casesClient.list(search ? { search } : {})).data.map((c) => ({
+                    id: c.id,
+                    label: c.caseNumber,
+                    sub: c.status,
+                  }));
+                }}
+              />
+            )}
           />
-          <FormSelect
-            label={t('hearings.labels.courtId')}
-            error={errors.courtId ? t(`form.errors.${errors.courtId.message}`) : undefined}
-            options={[{ label: 'No Court', value: '' }, ...courts.map(c => ({ label: c.name, value: c.id }))]}
-            selectProps={{
-              ...register('courtId'),
-            }}
+          
+          <Controller
+            name="courtId"
+            control={control}
+            render={({ field }) => (
+              <EntityPicker
+                label={t('hearings.labels.courtId')}
+                placeholder={t('common.search')}
+                error={errors.courtId ? t(`form.errors.${errors.courtId.message}`) : undefined}
+                value={field.value || ''}
+                onChange={field.onChange}
+                load={async (search) => {
+                  const courts = await configClient.listCourts();
+                  return courts
+                    .filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()))
+                    .map((c) => ({
+                      id: c.id,
+                      label: c.name,
+                    }));
+                }}
+              />
+            )}
           />
+
           <FormField
             label={t('hearings.labels.date')}
             error={errors.date ? t(`form.errors.${errors.date.message}`) : undefined}
             inputProps={{
               type: 'date',
+              required: true,
               ...register('date'),
             }}
           />

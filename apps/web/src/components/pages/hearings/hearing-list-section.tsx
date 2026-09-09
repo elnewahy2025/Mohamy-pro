@@ -3,25 +3,22 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/auth/auth-provider';
-import { HearingsClient, CasesClient, type HearingResult, type CaseListRow } from '@/lib/api';
-import { FormSelect } from '@/components/forms/form-select';
+import { HearingsClient, CasesClient, type HearingResult } from '@/lib/api';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
-export function HearingListSection() {
+interface Props {
+  onSelect?: (id: string, label: string) => void;
+}
+
+export function HearingListSection({ onSelect }: Props) {
   const t = useTranslations();
   const { user } = useAuth();
   
   const [hearings, setHearings] = useState<HearingResult[]>([]);
-  const [cases, setCases] = useState<CaseListRow[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>('');
   
   const client = new HearingsClient();
   const casesClient = new CasesClient();
-
-  useEffect(() => {
-    if (user) {
-      casesClient.list().then(res => setCases(res.data)).catch(() => {});
-    }
-  }, [user, casesClient]);
 
   useEffect(() => {
     if (user) {
@@ -35,12 +32,17 @@ export function HearingListSection() {
       <p>{t('hearings.description')}</p>
 
       <div className="form-grid mb-6">
-        <FormSelect
+        <EntityPicker
           label={t('hearings.labels.caseId')}
-          options={[{ label: 'All Cases', value: '' }, ...cases.map(c => ({ label: c.caseNumber, value: c.id }))]}
-          selectProps={{
-            value: selectedCaseId,
-            onChange: (e) => setSelectedCaseId(e.target.value),
+          placeholder={t('common.search')}
+          value={selectedCaseId}
+          onChange={(val) => setSelectedCaseId(val)}
+          load={async (search) => {
+            return (await casesClient.list(search ? { search } : {})).data.map((c) => ({
+              id: c.id,
+              label: c.caseNumber,
+              sub: c.status,
+            }));
           }}
         />
       </div>
@@ -50,7 +52,16 @@ export function HearingListSection() {
           <p className="text-sm text-gray-500">No hearings found.</p>
         ) : (
           hearings.map((h) => (
-            <div key={h.id} className="p-4 border rounded-md">
+            <div 
+              key={h.id} 
+              className={`p-4 border rounded-md ${onSelect ? 'cursor-pointer hover:border-teal-500 hover:shadow-sm transition-all' : ''}`}
+              onClick={() => {
+                if (onSelect) {
+                  const label = `${new Date(h.date).toLocaleDateString()} - ${h.hearingType || 'Hearing'}`;
+                  onSelect(h.id, label);
+                }
+              }}
+            >
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <h4 className="font-medium text-gray-900">{h.hearingType || 'Hearing'}</h4>

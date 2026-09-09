@@ -386,7 +386,21 @@ export class CaseService {
       }
       return tx.caseAssignment.findMany({
         where: { caseId, tenantId: ctx.tenantId, revokedAt: null },
-        select: { id: true, membershipId: true, assignedAt: true },
+        select: { 
+          id: true, 
+          membershipId: true, 
+          assignedAt: true,
+          membership: {
+            select: {
+              user: {
+                select: {
+                  displayName: true,
+                  emailNormalized: true,
+                }
+              }
+            }
+          }
+        },
         orderBy: { assignedAt: 'asc' },
       });
     });
