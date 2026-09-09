@@ -144,7 +144,6 @@ export function SettingsSection(): React.ReactNode {
     }
     if (success.kind === 'put') {
       return [
-        { label: t('orgConfig.result.id'), value: success.result.id },
         {
           label: t('orgConfig.result.version'),
           value: String(success.result.version),

@@ -301,27 +301,29 @@ export function BranchSection(): React.ReactNode {
 
       {subTab === 'general' && (
         <div className="form-grid">
-          <EntityPicker
-            label={t('orgConfig.labels.organizationId')}
-            placeholder={t('orgConfig.placeholders.organizationId')}
-            required
-            error={
-              errors.organizationId
-                ? t(`form.errors.${errors.organizationId.message}`)
-                : undefined
-            }
-            value={watch('organizationId') ?? ''}
-            onChange={(id) =>
-              setValue('organizationId', id, { shouldValidate: true })
-            }
-            load={async () =>
-              (await client.listOrganizations()).map((o) => ({
-                id: o.id,
-                label: o.name,
-                sub: o.slug,
-              }))
-            }
-          />
+          {orgs.length === 1 ? null : (
+            <EntityPicker
+              label={t('orgConfig.labels.organizationId')}
+              placeholder={t('orgConfig.placeholders.organizationId')}
+              required
+              error={
+                errors.organizationId
+                  ? t(`form.errors.${errors.organizationId.message}`)
+                  : undefined
+              }
+              value={watch('organizationId') ?? ''}
+              onChange={(id) =>
+                setValue('organizationId', id, { shouldValidate: true })
+              }
+              load={async () =>
+                (await client.listOrganizations()).map((o) => ({
+                  id: o.id,
+                  label: o.name,
+                  sub: o.slug,
+                }))
+              }
+            />
+          )}
           {textField(
             'slug',
             'orgConfig.labels.slug',
