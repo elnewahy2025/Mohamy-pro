@@ -160,15 +160,6 @@ export function TeamSection(): React.ReactNode {
       ) : null}
       <div className="form-grid">
         <FormField
-          label={t('orgConfig.labels.entityId')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.entityId'),
-            ...register('id'),
-          }}
-        />
-        <FormField
           label={t('orgConfig.labels.slug')}
           error={
             errors.slug ? t(`form.errors.${errors.slug.message}`) : undefined
@@ -267,14 +258,6 @@ export function TeamSection(): React.ReactNode {
         >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void runList()}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.load')}
-        </Button>
       </div>
       <OperationResult
         status={status}
@@ -287,10 +270,7 @@ export function TeamSection(): React.ReactNode {
         ariaLiveLabel={t('identity.result.successAriaLive')}
         fields={
           result
-            ? [
-                { label: t('orgConfig.result.id'), value: result.id },
-                { label: t('orgConfig.result.status'), value: result.status },
-              ]
+            ? [{ label: t('orgConfig.result.status'), value: result.status }]
             : undefined
         }
       />

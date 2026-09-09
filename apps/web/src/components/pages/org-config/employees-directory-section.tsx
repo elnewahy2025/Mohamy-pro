@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   ApiClient,
@@ -37,6 +37,11 @@ export function EmployeesDirectorySection(): React.ReactNode {
     departments.find((d) => d.id === id)?.name ?? '—';
   const headcount = (branch: string): number =>
     members.filter((m) => m.branchId === branch).length;
+
+  useEffect(() => {
+    if (user) void runLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function runLoad(): Promise<void> {
     setSubmitting(true);

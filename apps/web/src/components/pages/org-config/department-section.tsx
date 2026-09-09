@@ -141,15 +141,6 @@ export function DepartmentSection(): React.ReactNode {
         </p>
       ) : null}
       <div className="form-grid">
-        <FormField
-          label={t('orgConfig.labels.entityId')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.entityId'),
-            ...register('id'),
-          }}
-        />
         <EntityPicker
           label={t('orgConfig.labels.branchId')}
           placeholder={t('orgConfig.placeholders.branchId')}
@@ -233,14 +224,6 @@ export function DepartmentSection(): React.ReactNode {
         >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void runList()}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.load')}
-        </Button>
       </div>
       <OperationResult
         status={status}
@@ -253,10 +236,7 @@ export function DepartmentSection(): React.ReactNode {
         ariaLiveLabel={t('identity.result.successAriaLive')}
         fields={
           result
-            ? [
-                { label: t('orgConfig.result.id'), value: result.id },
-                { label: t('orgConfig.result.status'), value: result.status },
-              ]
+            ? [{ label: t('orgConfig.result.status'), value: result.status }]
             : undefined
         }
       />
