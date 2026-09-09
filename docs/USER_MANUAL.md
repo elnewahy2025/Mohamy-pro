@@ -420,23 +420,23 @@ permissionKeys `CanViewTenant, CanAccessAssignedCases`; assign needs a role ID
 and membership ID (both UUIDs). Tenant switch: tenantId
 `3fa85f64-5717-4562-b3fc-2c963f66afa6`. Bootstrap: the server-issued secret.
 
-**Organization.** Organization: slug `riyadh-hq`, name `Riyadh HQ`. Branch:
-organizationId `<org id>`, slug `jeddah-branch`, name `Jeddah Branch`.
+**Organization.** Organization: slug `cairo-hq`, name `Cairo HQ`. Branch:
+organizationId `<org id>`, slug `alexandria-branch`, name `Alexandria Branch`.
 Department: branchId `<branch id>`, slug `litigation`, name `Litigation`.
 Team: slug `appeals-squad`, name `Appeals Squad`, description `Appeals team`.
 Settings: key `working.days`, value `["Sun","Mon","Tue","Wed","Thu"]`.
 
-**Legal config.** Country: code `SA`, name `Saudi Arabia` → jurisdiction:
-countryId `<country id>`, name `Riyadh General` → court: jurisdictionId
-`<jurisdiction id>`, name `Commercial Court Riyadh`, courtType `COMMERCIAL`,
+**Legal config.** Country: code `EG`, name `Egypt` → jurisdiction:
+countryId `<country id>`, name `Cairo General` → court: jurisdictionId
+`<jurisdiction id>`, name `Cairo Commercial Court`, courtType `COMMERCIAL`,
 department `Third Circuit` → location: courtId `<court id>`, name
-`Main Building`, city `Riyadh`, address `King Fahd Rd`.
+`Main Building`, city `Cairo`, address `Corniche El Nil`.
 
 **Clients.** Client: clientType `ORGANIZATION`, name `Al Noor Trading Co.`,
 legalName `Al Noor Trading Company LLC`, source `referral`, notes `VIP`.
-Contact: clientId `<client id>`, type `MOBILE`, value `+966501234567`, label
-`Office`, isPrimary `true`. Address: type `REGISTERED`, line1 `King Fahd Rd,
-Tower A, Floor 12`, city `Riyadh`, country `SA`, postalCode `12213`.
+Contact: clientId `<client id>`, type `MOBILE`, value `+201012345678`, label
+`Office`, isPrimary `true`. Address: type `REGISTERED`, line1 `Corniche El Nil,
+Tower A, Floor 12`, city `Cairo`, country `EG`, postalCode `11511`.
 List: search `Noor`, status `ACTIVE`.
 
 **Parties.** Party: partyType `ORGANIZATION`, displayName `Al Noor Trading`,

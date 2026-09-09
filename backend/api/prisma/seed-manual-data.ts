@@ -57,14 +57,14 @@ async function main() {
     const T = tenant.id;
 
     const org = await tx.organization.create({
-      data: { tenantId: T, slug: 'riyadh-hq', name: 'Riyadh HQ' },
+      data: { tenantId: T, slug: 'cairo-hq', name: 'Cairo HQ' },
     });
     const branch = await tx.branch.create({
       data: {
         tenantId: T,
         organizationId: org.id,
-        slug: 'jeddah-branch',
-        name: 'Jeddah Branch',
+        slug: 'alexandria-branch',
+        name: 'Alexandria Branch',
       },
     });
     await tx.department.create({
@@ -93,16 +93,16 @@ async function main() {
     });
 
     const country =
-      (await tx.country.findFirst({ where: { code: 'SA' } })) ??
-      (await tx.country.create({ data: { code: 'SA', name: 'Saudi Arabia' } }));
+      (await tx.country.findFirst({ where: { code: 'EG' } })) ??
+      (await tx.country.create({ data: { code: 'EG', name: 'Egypt' } }));
     const jurisdiction = await tx.jurisdiction.create({
-      data: { tenantId: T, countryId: country.id, name: 'Riyadh General' },
+      data: { tenantId: T, countryId: country.id, name: 'Cairo General' },
     });
     const court = await tx.court.create({
       data: {
         tenantId: T,
         jurisdictionId: jurisdiction.id,
-        name: 'Commercial Court Riyadh',
+        name: 'Cairo Commercial Court',
         courtType: 'COMMERCIAL',
         department: 'Third Circuit',
       },
@@ -112,8 +112,8 @@ async function main() {
         tenantId: T,
         courtId: court.id,
         name: 'Main Building',
-        city: 'Riyadh',
-        address: 'King Fahd Rd',
+        city: 'Cairo',
+        address: 'Corniche El Nil',
       },
     });
 
@@ -134,7 +134,7 @@ async function main() {
         tenantId: T,
         clientId: client.id,
         type: 'MOBILE',
-        value: '+966501234567',
+        value: '+201012345678',
         label: 'Office',
         isPrimary: true,
       },
@@ -144,10 +144,10 @@ async function main() {
         tenantId: T,
         clientId: client.id,
         type: 'REGISTERED',
-        line1: 'King Fahd Rd, Tower A, Floor 12',
-        city: 'Riyadh',
-        country: 'SA',
-        postalCode: '12213',
+        line1: 'Corniche El Nil, Tower A, Floor 12',
+        city: 'Cairo',
+        country: 'EG',
+        postalCode: '11511',
         isPrimary: true,
       },
     });

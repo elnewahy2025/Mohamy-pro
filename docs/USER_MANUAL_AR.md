@@ -428,24 +428,24 @@
 العضوية (كلاهما UUID). تبديل المساحة: معرّف المستأجر
 `3fa85f64-5717-4562-b3fc-2c963f66afa6`. التهيئة: السر الصادر من الخادم.
 
-**المنظمة.** المنظمة: الرمز `riyadh-hq`، الاسم `Riyadh HQ`. الفرع: معرّف
-المنظمة `<org id>`، الرمز `jeddah-branch`، الاسم `Jeddah Branch`. القسم:
+**المنظمة.** المنظمة: الرمز `cairo-hq`، الاسم `Cairo HQ`. الفرع: معرّف
+المنظمة `<org id>`، الرمز `alexandria-branch`، الاسم `Alexandria Branch`. القسم:
 معرّف الفرع `<branch id>`، الرمز `litigation`، الاسم `Litigation`. الفريق:
 الرمز `appeals-squad`، الاسم `Appeals Squad`، الوصف `Appeals team`.
 الإعدادات: المفتاح `working.days`، القيمة `["Sun","Mon","Tue","Wed","Thu"]`.
 
-**الإعداد القانوني.** الدولة: الرمز `SA`، الاسم `Saudi Arabia` ← الولاية:
-معرّف الدولة `<country id>`، الاسم `Riyadh General` ← المحكمة: معرّف
-الولاية `<jurisdiction id>`، الاسم `Commercial Court Riyadh`، النوع
+**الإعداد القانوني.** الدولة: الرمز `EG`، الاسم `Egypt` ← الولاية:
+معرّف الدولة `<country id>`، الاسم `Cairo General` ← المحكمة: معرّف
+الولاية `<jurisdiction id>`، الاسم `Cairo Commercial Court`، النوع
 `COMMERCIAL`، الدائرة `Third Circuit` ← الموقع: معرّف المحكمة `<court
-id>`، الاسم `Main Building`، المدينة `Riyadh`، العنوان `King Fahd Rd`.
+id>`، الاسم `Main Building`، المدينة `Cairo`، العنوان `Corniche El Nil`.
 
 **العملاء.** العميل: النوع `ORGANIZATION`، الاسم `Al Noor Trading Co.`،
 الاسم القانوني `Al Noor Trading Company LLC`، المصدر `referral`، الملاحظات
 `VIP`. جهة الاتصال: معرّف العميل `<client id>`، النوع `MOBILE`، القيمة
-`+966501234567`، التسمية `Office`، أساسي `true`. العنوان: النوع
-`REGISTERED`، السطر 1 `King Fahd Rd, Tower A, Floor 12`، المدينة `Riyadh`،
-الدولة `SA`، البريدي `12213`. العرض: بحث `Noor`، الحالة `ACTIVE`.
+`+201012345678`، التسمية `Office`، أساسي `true`. العنوان: النوع
+`REGISTERED`، السطر 1 `Corniche El Nil, Tower A, Floor 12`، المدينة `Cairo`،
+الدولة `EG`، البريدي `11511`. العرض: بحث `Noor`، الحالة `ACTIVE`.
 
 **الأطراف.** الطرف: النوع `ORGANIZATION`، الاسم المعروض `Al Noor Trading`،
 معرّف العميل `<client id>`. العلاقة: من الطرف `<id A>`، إلى الطرف `<id
