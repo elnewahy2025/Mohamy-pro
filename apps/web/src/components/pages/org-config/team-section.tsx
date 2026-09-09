@@ -153,6 +153,11 @@ export function TeamSection(): React.ReactNode {
           <p>{t('orgConfig.entity.team.description')}</p>
         </div>
       </div>
+      {result ? (
+        <p className="form-field-hint">
+          {result.slug} — {result.name} [{result.status}]
+        </p>
+      ) : null}
       <div className="form-grid">
         <FormField
           label={t('orgConfig.labels.entityId')}
@@ -241,24 +246,24 @@ export function TeamSection(): React.ReactNode {
         <Button
           type="button"
           variant="default"
-          onClick={() => void trigger('create')}
+          onClick={() => void trigger(result ? 'update' : 'create')}
           disabled={submitting || authLoading || !user}
         >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.create')}
+          {submitting
+            ? t('orgConfig.submitting')
+            : result
+              ? t('orgConfig.save')
+              : t('orgConfig.create')}
         </Button>
         <Button
           type="button"
           variant="outline"
-          onClick={() => void trigger('update')}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.update')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('archive')}
-          disabled={submitting}
+          onClick={() => {
+            if (!result) return;
+            if (!window.confirm(t('orgConfig.result.archiveConfirm'))) return;
+            void trigger('archive');
+          }}
+          disabled={submitting || !result}
         >
           {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
         </Button>
@@ -296,7 +301,14 @@ export function TeamSection(): React.ReactNode {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => setValue('id', item.id)}
+                onClick={() => {
+                  setValue('id', item.id);
+                  setValue('slug', item.slug);
+                  setValue('name', item.name);
+                  setValue('description', item.description ?? '');
+                  setValue('departmentId', item.departmentId ?? '');
+                  setResult(item);
+                }}
               >
                 {item.slug} — {item.name} [{item.status}]
               </Button>

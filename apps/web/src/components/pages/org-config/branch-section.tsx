@@ -2,19 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { MapPin } from 'lucide-react';
+import { MapPin, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { ApiError, OrgConfigClient, type BranchResult } from '@/lib/api';
+import {
+  ApiError,
+  OrgConfigClient,
+  CURRENCIES,
+  type BranchResult,
+  type OrganizationResult,
+} from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
+import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
 import { EntityPicker } from '@/components/forms/entity-picker';
-import type { OrganizationResult } from '@/lib/api';
-import { FormSelect } from '@/components/forms/form-select';
-import { CURRENCIES } from '@/lib/api';
 
 const branchSchema = z.object({
   id: z.string().max(64).optional(),
@@ -36,7 +40,28 @@ const branchSchema = z.object({
 });
 type BranchForm = z.infer<typeof branchSchema>;
 
-type ActionKey = 'create' | 'update' | 'archive';
+type SubTab = 'general' | 'contact' | 'business' | 'danger';
+
+const SUB_TABS: SubTab[] = ['general', 'contact', 'business', 'danger'];
+
+const EMPTY_DEFAULTS: BranchForm = {
+  id: '',
+  organizationId: '',
+  slug: '',
+  name: '',
+  reason: '',
+  contactPhone: '',
+  contactEmail: '',
+  addressLine1: '',
+  city: '',
+  country: '',
+  postalCode: '',
+  mapUrl: '',
+  operatingCurrency: 'EGP',
+  workingHours: '',
+  managerName: '',
+  isHeadOffice: false,
+};
 
 export function BranchSection(): React.ReactNode {
   const t = useTranslations();
@@ -48,6 +73,7 @@ export function BranchSection(): React.ReactNode {
   const [orgs, setOrgs] = useState<OrganizationResult[]>([]);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [subTab, setSubTab] = useState<SubTab>('general');
 
   const {
     register,
@@ -55,139 +81,185 @@ export function BranchSection(): React.ReactNode {
     reset,
     setValue,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<BranchForm>({
     resolver: zodResolver(branchSchema),
-    defaultValues: {
-      id: '',
-      organizationId: '',
-      slug: '',
-      name: '',
-      reason: '',
-      contactPhone: '',
-      contactEmail: '',
-      addressLine1: '',
-      city: '',
-      country: '',
-      postalCode: '',
-      mapUrl: '',
-      operatingCurrency: 'EGP',
-      workingHours: '',
-      managerName: '',
-      isHeadOffice: false,
-    },
+    defaultValues: EMPTY_DEFAULTS,
   });
 
-  async function run(action: ActionKey, form: BranchForm): Promise<void> {
-    setSubmitting(true);
-    setStatus('idle');
-    setSubmitError(null);
-    try {
-      let next: BranchResult;
-      const profile = {
-        contactPhone: form.contactPhone || undefined,
-        contactEmail: form.contactEmail || undefined,
-        addressLine1: form.addressLine1 || undefined,
-        city: form.city || undefined,
-        country: form.country || undefined,
-        postalCode: form.postalCode || undefined,
-        mapUrl: form.mapUrl || undefined,
-        operatingCurrency: form.operatingCurrency || undefined,
-        workingHours: form.workingHours || undefined,
-        managerName: form.managerName || undefined,
-        isHeadOffice: form.isHeadOffice,
-      };
-      if (action === 'create') {
-        next = await client.createBranch({
-          organizationId: form.organizationId,
-          slug: form.slug,
-          name: form.name,
-          ...profile,
-        });
-      } else if (action === 'update') {
-        next = await client.updateBranch({
-          id: form.id as string,
-          slug: form.slug || undefined,
-          name: form.name || undefined,
-          ...profile,
-        });
-      } else {
-        next = await client.archiveBranch({
-          id: form.id as string,
-          reason: form.reason || undefined,
-        });
-      }
-      setResult(next);
-      setStatus('success');
-      if (action === 'create') {
-        setItems((prev) => [next, ...prev]);
-        reset();
-      }
-    } catch (error) {
-      setStatus('error');
-      setSubmitError(
-        error instanceof ApiError
-          ? error
-          : new ApiError(
-              error instanceof Error ? error.message : 'Unknown error',
-              'INTERNAL',
-              [],
-              0,
-            ),
-      );
-    } finally {
-      setSubmitting(false);
-    }
+  function fillForm(item: BranchResult): void {
+    setResult(item);
+    setValue('id', item.id);
+    setValue('organizationId', item.organizationId);
+    setValue('slug', item.slug);
+    setValue('name', item.name);
+    setValue('contactPhone', item.contactPhone ?? '');
+    setValue('contactEmail', item.contactEmail ?? '');
+    setValue('addressLine1', item.addressLine1 ?? '');
+    setValue('city', item.city ?? '');
+    setValue('country', item.country ?? '');
+    setValue('postalCode', item.postalCode ?? '');
+    setValue('mapUrl', item.mapUrl ?? '');
+    setValue('operatingCurrency', item.operatingCurrency ?? 'EGP');
+    setValue('workingHours', item.workingHours ?? '');
+    setValue('managerName', item.managerName ?? '');
+    setValue('isHeadOffice', item.isHeadOffice ?? false);
   }
 
-  async function trigger(action: ActionKey): Promise<void> {
-    await handleSubmit((form) => run(action, form))();
+  async function fail(error: unknown): Promise<void> {
+    setStatus('error');
+    setSubmitError(
+      error instanceof ApiError
+        ? error
+        : new ApiError(
+            error instanceof Error ? error.message : 'Unknown error',
+            'INTERNAL',
+            [],
+            0,
+          ),
+    );
+    setSubmitting(false);
   }
-
-  const selectedOrgId = watch('organizationId');
-  const selectedOrg = orgs.find((o) => o.id === selectedOrgId) ?? null;
-
-  useEffect(() => {
-    if (!user) return;
-    void client
-      .listOrganizations()
-      .then((rows) => {
-        setOrgs(rows);
-        if (rows.length === 1 && !selectedOrgId) {
-          setValue('organizationId', rows[0].id, { shouldValidate: true });
-        }
-      })
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  useEffect(() => {
-    if (user) void runList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
 
   async function runList(): Promise<void> {
     setSubmitting(true);
     setStatus('idle');
     setSubmitError(null);
     try {
-      setItems(await client.listBranches());
+      const [rows, orgRows] = await Promise.all([
+        client.listBranches(),
+        client.listOrganizations().catch(() => []),
+      ]);
+      setItems(rows);
+      setOrgs(orgRows);
+      if (rows.length === 1) fillForm(rows[0]);
       setStatus('success');
     } catch (error) {
-      setStatus('error');
-      setSubmitError(
-        error instanceof ApiError
-          ? error
-          : new ApiError(
-              error instanceof Error ? error.message : 'Unknown error',
-              'INTERNAL',
-              [],
-              0,
-            ),
-      );
+      await fail(error);
+      return;
     } finally {
       setSubmitting(false);
     }
+  }
+
+  useEffect(() => {
+    if (user) void runList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  function profilePayload(form: BranchForm) {
+    return {
+      contactPhone: form.contactPhone || undefined,
+      contactEmail: form.contactEmail || undefined,
+      addressLine1: form.addressLine1 || undefined,
+      city: form.city || undefined,
+      country: form.country || undefined,
+      postalCode: form.postalCode || undefined,
+      mapUrl: form.mapUrl || undefined,
+      operatingCurrency: form.operatingCurrency || undefined,
+      workingHours: form.workingHours || undefined,
+      managerName: form.managerName || undefined,
+      isHeadOffice: form.isHeadOffice,
+    };
+  }
+
+  async function runSave(): Promise<void> {
+    const form = getValues();
+    setSubmitting(true);
+    setStatus('idle');
+    setSubmitError(null);
+    try {
+      let next: BranchResult;
+      if (form.id) {
+        next = await client.updateBranch({
+          id: form.id,
+          slug: form.slug || undefined,
+          name: form.name || undefined,
+          ...profilePayload(form),
+        });
+      } else {
+        next = await client.createBranch({
+          organizationId: form.organizationId,
+          slug: form.slug,
+          name: form.name,
+          ...profilePayload(form),
+        });
+      }
+      fillForm(next);
+      setItems((prev) =>
+        prev.some((b) => b.id === next.id)
+          ? prev.map((b) => (b.id === next.id ? next : b))
+          : [next, ...prev],
+      );
+      setStatus('success');
+    } catch (error) {
+      await fail(error);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function runArchive(): Promise<void> {
+    const id = getValues('id');
+    if (!id) return;
+    if (!window.confirm(t('orgConfig.result.archiveConfirm'))) return;
+    setSubmitting(true);
+    setStatus('idle');
+    setSubmitError(null);
+    try {
+      await client.archiveBranch({
+        id,
+        reason: getValues('reason') || undefined,
+      });
+      reset(EMPTY_DEFAULTS);
+      setResult(null);
+      await runList();
+    } catch (error) {
+      await fail(error);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const exists = result !== null;
+  const selectedOrgId = watch('organizationId');
+  const selectedOrg = orgs.find((o) => o.id === selectedOrgId) ?? null;
+
+  function textField(
+    name:
+      | 'slug'
+      | 'name'
+      | 'contactPhone'
+      | 'contactEmail'
+      | 'addressLine1'
+      | 'city'
+      | 'country'
+      | 'postalCode'
+      | 'mapUrl'
+      | 'workingHours'
+      | 'managerName'
+      | 'reason',
+    labelKey: string,
+    placeholderKey: string,
+    required = false,
+  ): React.ReactNode {
+    const message = errors[name]?.message;
+    return (
+      <FormField
+        label={t(labelKey)}
+        error={message ? t(`form.errors.${message}`) : undefined}
+        inputProps={{
+          type: 'text',
+          autoComplete: 'off',
+          placeholder: t(placeholderKey),
+          required,
+          ...register(name),
+        }}
+      />
+    );
   }
 
   return (
@@ -201,252 +273,179 @@ export function BranchSection(): React.ReactNode {
           <p>{t('orgConfig.entity.branch.description')}</p>
         </div>
       </div>
+
+      {result ? (
+        <p className="form-field-hint">
+          {result.isHeadOffice ? '★ ' : ''}
+          {result.slug} — {result.name} [{result.status}]
+        </p>
+      ) : null}
       {selectedOrg ? (
         <p className="form-field-hint">
           {t('orgConfig.profile.inheritedFrom')}: {selectedOrg.name}
         </p>
       ) : null}
-      <div className="form-grid">
-        <FormField
-          label={t('orgConfig.labels.entityId')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.entityId'),
-            ...register('id'),
-          }}
-        />
-        <EntityPicker
-          label={t('orgConfig.labels.organizationId')}
-          placeholder={t('orgConfig.placeholders.organizationId')}
-          required
-          error={
-            errors.organizationId
-              ? t(`form.errors.${errors.organizationId.message}`)
-              : undefined
-          }
-          value={watch('organizationId') ?? ''}
-          onChange={(id) =>
-            setValue('organizationId', id, { shouldValidate: true })
-          }
-          load={async () =>
-            (await client.listOrganizations()).map((o) => ({
-              id: o.id,
-              label: o.name,
-              sub: o.slug,
-            }))
-          }
-        />
-        <FormField
-          label={t('orgConfig.labels.slug')}
-          error={
-            errors.slug ? t(`form.errors.${errors.slug.message}`) : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.slug'),
-            ...register('slug'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.labels.name')}
-          error={
-            errors.name ? t(`form.errors.${errors.name.message}`) : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.name'),
-            ...register('name'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.contactPhoneLabel')}
-          error={
-            errors.contactPhone
-              ? t(`form.errors.${errors.contactPhone.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.contactPhonePlaceholder'),
-            ...register('contactPhone'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.contactEmailLabel')}
-          error={
-            errors.contactEmail
-              ? t(`form.errors.${errors.contactEmail.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.contactEmailPlaceholder'),
-            ...register('contactEmail'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.addressLine1Label')}
-          error={
-            errors.addressLine1
-              ? t(`form.errors.${errors.addressLine1.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.addressLine1Placeholder'),
-            ...register('addressLine1'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.cityLabel')}
-          error={
-            errors.city ? t(`form.errors.${errors.city.message}`) : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.cityPlaceholder'),
-            ...register('city'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.countryLabel')}
-          error={
-            errors.country
-              ? t(`form.errors.${errors.country.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.countryPlaceholder'),
-            ...register('country'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.postalCodeLabel')}
-          error={
-            errors.postalCode
-              ? t(`form.errors.${errors.postalCode.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.postalCodePlaceholder'),
-            ...register('postalCode'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.mapUrlLabel')}
-          error={
-            errors.mapUrl
-              ? t(`form.errors.${errors.mapUrl.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.mapUrlPlaceholder'),
-            ...register('mapUrl'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.workingHoursLabel')}
-          error={
-            errors.workingHours
-              ? t(`form.errors.${errors.workingHours.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.workingHoursPlaceholder'),
-            ...register('workingHours'),
-          }}
-        />
-        <FormField
-          label={t('orgConfig.profile.managerNameLabel')}
-          error={
-            errors.managerName
-              ? t(`form.errors.${errors.managerName.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.profile.managerNamePlaceholder'),
-            ...register('managerName'),
-          }}
-        />
-        <FormSelect
-          label={t('orgConfig.profile.operatingCurrencyLabel')}
-          options={CURRENCIES.map((c) => ({ label: c, value: c }))}
-          selectProps={{
-            ...register('operatingCurrency'),
-          }}
-        />
-        <label className="form-field">
-          <span className="form-field-label">
-            {t('orgConfig.profile.isHeadOfficeLabel')}
-          </span>
-          <input type="checkbox" {...register('isHeadOffice')} />
-        </label>
-        <FormField
-          label={t('orgConfig.labels.reason')}
-          error={
-            errors.reason
-              ? t(`form.errors.${errors.reason.message}`)
-              : undefined
-          }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('orgConfig.placeholders.reason'),
-            ...register('reason'),
-          }}
-        />
+
+      <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2 flex-wrap">
+        {SUB_TABS.map((tab) => (
+          <Button
+            key={tab}
+            type="button"
+            variant={subTab === tab ? 'default' : 'ghost'}
+            onClick={() => setSubTab(tab)}
+          >
+            {t(`orgConfig.orgTabs.${tab}`)}
+          </Button>
+        ))}
       </div>
-      <div className="form-actions form-actions-row">
-        <Button
-          type="button"
-          variant="default"
-          onClick={() => void trigger('create')}
-          disabled={submitting || authLoading || !user}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.create')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('update')}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.update')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('archive')}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void runList()}
-          disabled={submitting}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.load')}
-        </Button>
-      </div>
+
+      {subTab === 'general' && (
+        <div className="form-grid">
+          <EntityPicker
+            label={t('orgConfig.labels.organizationId')}
+            placeholder={t('orgConfig.placeholders.organizationId')}
+            required
+            error={
+              errors.organizationId
+                ? t(`form.errors.${errors.organizationId.message}`)
+                : undefined
+            }
+            value={watch('organizationId') ?? ''}
+            onChange={(id) =>
+              setValue('organizationId', id, { shouldValidate: true })
+            }
+            load={async () =>
+              (await client.listOrganizations()).map((o) => ({
+                id: o.id,
+                label: o.name,
+                sub: o.slug,
+              }))
+            }
+          />
+          {textField(
+            'slug',
+            'orgConfig.labels.slug',
+            'orgConfig.placeholders.slug',
+            true,
+          )}
+          {textField(
+            'name',
+            'orgConfig.labels.name',
+            'orgConfig.placeholders.name',
+            true,
+          )}
+        </div>
+      )}
+
+      {subTab === 'contact' && (
+        <div className="form-grid">
+          {textField(
+            'contactPhone',
+            'orgConfig.profile.contactPhoneLabel',
+            'orgConfig.profile.contactPhonePlaceholder',
+          )}
+          {textField(
+            'contactEmail',
+            'orgConfig.profile.contactEmailLabel',
+            'orgConfig.profile.contactEmailPlaceholder',
+          )}
+          {textField(
+            'addressLine1',
+            'orgConfig.profile.addressLine1Label',
+            'orgConfig.profile.addressLine1Placeholder',
+          )}
+          {textField(
+            'city',
+            'orgConfig.profile.cityLabel',
+            'orgConfig.profile.cityPlaceholder',
+          )}
+          {textField(
+            'country',
+            'orgConfig.profile.countryLabel',
+            'orgConfig.profile.countryPlaceholder',
+          )}
+          {textField(
+            'postalCode',
+            'orgConfig.profile.postalCodeLabel',
+            'orgConfig.profile.postalCodePlaceholder',
+          )}
+          {textField(
+            'mapUrl',
+            'orgConfig.profile.mapUrlLabel',
+            'orgConfig.profile.mapUrlPlaceholder',
+          )}
+        </div>
+      )}
+
+      {subTab === 'business' && (
+        <div className="form-grid">
+          <FormSelect
+            label={t('orgConfig.profile.operatingCurrencyLabel')}
+            options={CURRENCIES.map((c) => ({ label: c, value: c }))}
+            selectProps={{
+              ...register('operatingCurrency'),
+            }}
+          />
+          {textField(
+            'workingHours',
+            'orgConfig.profile.workingHoursLabel',
+            'orgConfig.profile.workingHoursPlaceholder',
+          )}
+          {textField(
+            'managerName',
+            'orgConfig.profile.managerNameLabel',
+            'orgConfig.profile.managerNamePlaceholder',
+          )}
+          <label className="form-field">
+            <span className="form-field-label">
+              {t('orgConfig.profile.isHeadOfficeLabel')}
+            </span>
+            <input type="checkbox" {...register('isHeadOffice')} />
+          </label>
+        </div>
+      )}
+
+      {subTab === 'danger' && (
+        <div className="form-grid">
+          <p className="security-note" role="note">
+            <ShieldCheck aria-hidden="true" size={16} />
+            {t('orgConfig.dangerWarning')}
+          </p>
+          {textField(
+            'reason',
+            'orgConfig.labels.reason',
+            'orgConfig.placeholders.reason',
+          )}
+          <div className="form-actions form-actions-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void runArchive()}
+              disabled={submitting || !exists}
+            >
+              {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {subTab !== 'danger' && (
+        <div className="form-actions form-actions-row mt-6">
+          <Button
+            type="button"
+            variant="default"
+            onClick={() => void handleSubmit(() => runSave())()}
+            disabled={submitting || authLoading || !user}
+          >
+            {submitting
+              ? t('orgConfig.submitting')
+              : exists
+                ? t('orgConfig.save')
+                : t('orgConfig.create')}
+          </Button>
+        </div>
+      )}
+
       <OperationResult
         status={status}
         successLabel={t('orgConfig.result.title')}
@@ -456,23 +455,16 @@ export function BranchSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={
-          result
-            ? [
-                { label: t('orgConfig.result.id'), value: result.id },
-                { label: t('orgConfig.result.status'), value: result.status },
-              ]
-            : undefined
-        }
       />
-      {items.length > 0 && (
+
+      {items.length > 1 && (
         <ul className="mt-4 space-y-2">
           {items.map((item) => (
             <li key={item.id} className="text-sm">
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => setValue('id', item.id)}
+                onClick={() => fillForm(item)}
               >
                 {item.isHeadOffice ? '★ ' : ''}
                 {item.slug} — {item.name} [{item.status}]
