@@ -521,7 +521,8 @@
       "logoUpload": "رفع الشعار",
       "logoCurrent": "الشعار الحالي",
       "logoFailed": "فشل رفع الشعار.",
-      "inheritedFrom": "موروث من المنظمة"
+      "inheritedFrom": "موروث من المنظمة",
+      "urlPlaceholder": "https://…"
     },
     "directory": {
       "heading": "دليل الموظفين",

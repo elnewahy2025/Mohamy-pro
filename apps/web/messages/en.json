@@ -521,7 +521,8 @@
       "logoUpload": "Upload logo",
       "logoCurrent": "Current logo",
       "logoFailed": "Logo upload failed.",
-      "inheritedFrom": "Inherited from organization"
+      "inheritedFrom": "Inherited from organization",
+      "urlPlaceholder": "https://…"
     },
     "directory": {
       "heading": "Employees directory",
