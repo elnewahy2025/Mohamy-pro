@@ -246,18 +246,20 @@ export function TeamSection(): React.ReactNode {
               ? t('orgConfig.save')
               : t('orgConfig.create')}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            if (!result) return;
-            if (!window.confirm(t('orgConfig.result.archiveConfirm'))) return;
-            void trigger('archive');
-          }}
-          disabled={submitting || !result}
-        >
-          {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
-        </Button>
+        {result ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!result) return;
+              if (!window.confirm(t('orgConfig.result.archiveConfirm'))) return;
+              void trigger('archive');
+            }}
+            disabled={submitting || !result}
+          >
+            {submitting ? t('orgConfig.submitting') : t('orgConfig.archive')}
+          </Button>
+        ) : null}{' '}
       </div>
       <OperationResult
         status={status}

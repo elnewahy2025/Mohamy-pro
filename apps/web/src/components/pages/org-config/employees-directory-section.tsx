@@ -28,6 +28,7 @@ export function EmployeesDirectorySection(): React.ReactNode {
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [membershipId, setMembershipId] = useState('');
+  const [memberLabel, setMemberLabel] = useState('');
   const [branchId, setBranchId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
 
@@ -151,6 +152,11 @@ export function EmployeesDirectorySection(): React.ReactNode {
                 variant="ghost"
                 onClick={() => {
                   setMembershipId(member.id);
+                  setMemberLabel(
+                    member.user.displayName ??
+                      member.user.emailNormalized ??
+                      '',
+                  );
                   setBranchId(member.branchId ?? '');
                   setDepartmentId(member.departmentId ?? '');
                 }}
@@ -180,16 +186,11 @@ export function EmployeesDirectorySection(): React.ReactNode {
         </ul>
       )}
 
-      <FormField
-        label={t('orgConfig.directory.membershipIdLabel')}
-        inputProps={{
-          type: 'text',
-          autoComplete: 'off',
-          placeholder: t('orgConfig.directory.membershipIdPlaceholder'),
-          value: membershipId,
-          onChange: (event) => setMembershipId(event.target.value),
-        }}
-      />
+      {membershipId ? (
+        <p className="form-field-hint">
+          {t('orgConfig.directory.membershipIdLabel')}: {memberLabel || '…'}
+        </p>
+      ) : null}
       <EntityPicker
         label={t('orgConfig.directory.branchLabel')}
         placeholder={t('orgConfig.placeholders.branchId')}

@@ -33,7 +33,30 @@ export function EntityPicker({
   const [options, setOptions] = useState<EntityOption[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [picked, setPicked] = useState<EntityOption | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!value) {
+      setPicked(null);
+      setQuery('');
+      return;
+    }
+    if (picked?.id === value) return;
+    let cancelled = false;
+    void load('')
+      .then((rows) => {
+        if (cancelled) return;
+        const match = rows.find((row) => row.id === value) ?? null;
+        setPicked(match);
+        setQuery(match ? match.label : '');
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -52,12 +75,14 @@ export function EntityPicker({
 
   function pick(option: EntityOption): void {
     onChange(option.id);
+    setPicked(option);
     setQuery(option.label);
     setOpen(false);
   }
 
   function clear(): void {
     onChange('');
+    setPicked(null);
     setQuery('');
     setOpen(false);
   }
@@ -113,8 +138,8 @@ export function EntityPicker({
           ) : null}
         </ul>
       ) : null}
-      {value && !open ? (
-        <p className="form-field-hint">{query || value.slice(0, 8)}…</p>
+      {value && !open && picked ? (
+        <p className="form-field-hint">{picked.label}</p>
       ) : null}
     </div>
   );
