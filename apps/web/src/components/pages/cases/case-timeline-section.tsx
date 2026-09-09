@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { History } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -9,6 +9,7 @@ import { z } from 'zod';
 import {
   ApiError,
   CasesClient,
+  type CaseListRow,
   type CaseTimelineEvent,
   type CaseTimelineEventType,
   type CaseTimelineListResult,
@@ -24,18 +25,26 @@ const listSchema = z.object({
 type ListForm = z.infer<typeof listSchema>;
 
 const appendSchema = z.object({
-  caseId: z.string().min(1, 'invalid').max(100, 'tooLong'),
+  caseId: z.string().max(100, 'tooLong').optional(),
   eventType: z.string().min(1, 'invalid').max(64, 'tooLong'),
   payload: z.string().max(2000, 'tooLong').optional(),
 });
 type AppendForm = z.infer<typeof appendSchema>;
 
-export function CaseTimelineSection(): React.ReactNode {
+export function CaseTimelineSection({
+  selected,
+}: {
+  selected: CaseListRow | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new CasesClient());
-  const [listStatus, setListStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [appendStatus, setAppendStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [listStatus, setListStatus] = useState<'idle' | 'success' | 'error'>(
+    'idle',
+  );
+  const [appendStatus, setAppendStatus] = useState<
+    'idle' | 'success' | 'error'
+  >('idle');
   const [timeline, setTimeline] = useState<CaseTimelineListResult | null>(null);
   const [appended, setAppended] = useState<CaseTimelineEvent | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
@@ -61,12 +70,21 @@ export function CaseTimelineSection(): React.ReactNode {
     defaultValues: { caseId: '', eventType: '', payload: '' },
   });
 
+  useEffect(() => {
+    if (selected) void runList({ caseId: selected.id });
+    else setTimeline(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
   async function runList(form: ListForm, targetPage = page): Promise<void> {
     setSubmitting(true);
     setListStatus('idle');
     setSubmitError(null);
     try {
-      const result = await client.getTimeline(form.caseId, { page: targetPage, limit: 20 });
+      const result = await client.getTimeline(form.caseId, {
+        page: targetPage,
+        limit: 20,
+      });
       setTimeline(result);
       setPage(targetPage);
       setListStatus('success');
@@ -75,7 +93,12 @@ export function CaseTimelineSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -91,8 +114,14 @@ export function CaseTimelineSection(): React.ReactNode {
       if (form.payload && form.payload.trim()) {
         payload = JSON.parse(form.payload) as Record<string, unknown>;
       }
+      if (!selected) {
+        setAppendStatus('error');
+        setSubmitError(new ApiError('No case selected', 'NO_CASE', [], 0));
+        setSubmitting(false);
+        return;
+      }
       const result = await client.appendTimelineEvent({
-        caseId: form.caseId,
+        caseId: selected.id,
         eventType: form.eventType as CaseTimelineEventType,
         payload,
       });
@@ -104,7 +133,12 @@ export function CaseTimelineSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -112,42 +146,72 @@ export function CaseTimelineSection(): React.ReactNode {
   }
 
   const totalPages = timeline
-    ? Math.max(1, Math.ceil(timeline.pagination.total / timeline.pagination.limit))
+    ? Math.max(
+        1,
+        Math.ceil(timeline.pagination.total / timeline.pagination.limit),
+      )
     : 1;
 
   return (
     <div className="settings-card">
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><History size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <History size={18} />
+        </span>
         <div>
           <h2>{t('casesTimeline.sections.timeline.heading')}</h2>
           <p>{t('casesTimeline.sections.timeline.description')}</p>
         </div>
       </div>
-      <form noValidate onSubmit={(e) => { e.preventDefault(); void handleSubmitList((f) => void runList(f))(); }}>
-        <div className="form-grid">
-          <FormField
-            label={t('casesTimeline.labels.caseId')}
-            error={listErrors.caseId ? t(`form.errors.${listErrors.caseId.message}`) : undefined}
-            inputProps={{
-              type: 'text',
-              autoComplete: 'off',
-              placeholder: t('casesTimeline.placeholders.caseId'),
-              ...registerList('caseId'),
-            }}
-          />
-        </div>
+      {selected ? (
+        <p className="form-field-hint">
+          {selected.caseNumber} [{selected.status}]
+        </p>
+      ) : null}
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (selected) void runList({ caseId: selected.id });
+        }}
+      >
         <div className="form-actions form-actions-row">
-          <Button type="submit" variant="default" disabled={submitting || authLoading || !user}>
-            {submitting ? t('casesTimeline.submitting') : t('casesTimeline.list')}
+          <Button
+            type="submit"
+            variant="default"
+            disabled={submitting || authLoading || !user || !selected}
+          >
+            {submitting
+              ? t('casesTimeline.submitting')
+              : t('casesTimeline.list')}
           </Button>
           {timeline && page > 1 ? (
-            <Button type="button" variant="outline" onClick={() => void runList({ caseId: timeline.data[0]?.caseId ?? '' }, page - 1)} disabled={submitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                void runList(
+                  { caseId: timeline.data[0]?.caseId ?? '' },
+                  page - 1,
+                )
+              }
+              disabled={submitting}
+            >
               {t('casesTimeline.pagination.prev')}
             </Button>
           ) : null}
           {timeline && page < totalPages ? (
-            <Button type="button" variant="outline" onClick={() => void runList({ caseId: timeline.data[0]?.caseId ?? '' }, page + 1)} disabled={submitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                void runList(
+                  { caseId: timeline.data[0]?.caseId ?? '' },
+                  page + 1,
+                )
+              }
+              disabled={submitting}
+            >
               {t('casesTimeline.pagination.next')}
             </Button>
           ) : null}
@@ -162,10 +226,20 @@ export function CaseTimelineSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={timeline ? [
-          { label: t('casesTimeline.result.total'), value: String(timeline.pagination.total) },
-          { label: t('casesTimeline.result.page'), value: `${page} / ${totalPages}` },
-        ] : undefined}
+        fields={
+          timeline
+            ? [
+                {
+                  label: t('casesTimeline.result.total'),
+                  value: String(timeline.pagination.total),
+                },
+                {
+                  label: t('casesTimeline.result.page'),
+                  value: `${page} / ${totalPages}`,
+                },
+              ]
+            : undefined
+        }
       />
       {timeline && timeline.data.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
@@ -173,31 +247,39 @@ export function CaseTimelineSection(): React.ReactNode {
             const key = `casesTimeline.events.${event.eventType}`;
             const label = t.has(key) ? t(key) : event.eventType;
             return (
-              <div key={event.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+              <div
+                key={event.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '0.5rem',
+                }}
+              >
                 <span>{label}</span>
                 <span>
-                  {new Date(event.occurredAt).toISOString()} · <code>{event.eventType}</code> · <code>{event.id}</code>
+                  {new Date(event.occurredAt).toISOString()} ·{' '}
+                  <code>{event.eventType}</code>
                 </span>
               </div>
             );
           })}
         </div>
       ) : null}
-      <form noValidate onSubmit={(e) => { e.preventDefault(); void handleSubmitAppend(runAppend)(); }}>
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleSubmitAppend(runAppend)();
+        }}
+      >
         <div className="form-grid" style={{ marginTop: '1rem' }}>
           <FormField
-            label={t('casesTimeline.labels.appendCaseId')}
-            error={appendErrors.caseId ? t(`form.errors.${appendErrors.caseId.message}`) : undefined}
-            inputProps={{
-              type: 'text',
-              autoComplete: 'off',
-              placeholder: t('casesTimeline.placeholders.caseId'),
-              ...registerAppend('caseId'),
-            }}
-          />
-          <FormField
             label={t('casesTimeline.labels.eventType')}
-            error={appendErrors.eventType ? t(`form.errors.${appendErrors.eventType.message}`) : undefined}
+            error={
+              appendErrors.eventType
+                ? t(`form.errors.${appendErrors.eventType.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               autoComplete: 'off',
@@ -207,7 +289,11 @@ export function CaseTimelineSection(): React.ReactNode {
           />
           <FormField
             label={t('casesTimeline.labels.payload')}
-            error={appendErrors.payload ? t(`form.errors.${appendErrors.payload.message}`) : undefined}
+            error={
+              appendErrors.payload
+                ? t(`form.errors.${appendErrors.payload.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               autoComplete: 'off',
@@ -217,8 +303,14 @@ export function CaseTimelineSection(): React.ReactNode {
           />
         </div>
         <div className="form-actions form-actions-row">
-          <Button type="submit" variant="default" disabled={submitting || authLoading || !user}>
-            {submitting ? t('casesTimeline.submitting') : t('casesTimeline.append')}
+          <Button
+            type="submit"
+            variant="default"
+            disabled={submitting || authLoading || !user || !selected}
+          >
+            {submitting
+              ? t('casesTimeline.submitting')
+              : t('casesTimeline.append')}
           </Button>
         </div>
       </form>
@@ -231,11 +323,21 @@ export function CaseTimelineSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={appended ? [
-          { label: t('casesTimeline.result.id'), value: appended.id },
-          { label: t('casesTimeline.result.eventType'), value: appended.eventType },
-          { label: t('casesTimeline.result.occurredAt'), value: appended.occurredAt },
-        ] : undefined}
+        fields={
+          appended
+            ? [
+                { label: t('casesTimeline.result.id'), value: appended.id },
+                {
+                  label: t('casesTimeline.result.eventType'),
+                  value: appended.eventType,
+                },
+                {
+                  label: t('casesTimeline.result.occurredAt'),
+                  value: appended.occurredAt,
+                },
+              ]
+            : undefined
+        }
       />
     </div>
   );

@@ -1,12 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { ApiError, CasesClient, type CaseAssignmentResult } from '@/lib/api';
+import {
+  ApiError,
+  CasesClient,
+  type CaseAssignmentResult,
+  type CaseListRow,
+} from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
@@ -19,7 +24,11 @@ const assignSchema = z.object({
 });
 type AssignForm = z.infer<typeof assignSchema>;
 
-export function CaseAssignmentSection(): React.ReactNode {
+export function CaseAssignmentSection({
+  selected,
+}: {
+  selected: CaseListRow | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new CasesClient());
@@ -33,6 +42,13 @@ export function CaseAssignmentSection(): React.ReactNode {
     resolver: zodResolver(assignSchema),
     defaultValues: { caseId: '', membershipId: '' },
   });
+
+  useEffect(() => {
+    if (selected) {
+      assignForm.setValue('caseId', selected.id, { shouldValidate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
 
   async function runAssign(form: AssignForm): Promise<void> {
     setSubmitting(true);
@@ -197,7 +213,12 @@ export function CaseAssignmentSection(): React.ReactNode {
         ariaLiveLabel={t('identity.result.successAriaLive')}
         fields={
           assigned
-            ? [{ label: t('cases.result.id'), value: assigned.id }]
+            ? [
+                {
+                  label: t('cases.result.assignedAt'),
+                  value: assigned.assignedAt.slice(0, 10),
+                },
+              ]
             : undefined
         }
       />

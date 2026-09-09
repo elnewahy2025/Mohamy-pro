@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link as LinkIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -11,6 +11,7 @@ import {
   ApiError,
   CasesClient,
   PartyClient,
+  type CaseListRow,
   type CasePartyResult,
 } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
@@ -32,7 +33,11 @@ const removeSchema = z.object({
 });
 type RemoveForm = z.infer<typeof removeSchema>;
 
-export function CasePartySection(): React.ReactNode {
+export function CasePartySection({
+  selected,
+}: {
+  selected: CaseListRow | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new CasesClient());
@@ -55,6 +60,14 @@ export function CasePartySection(): React.ReactNode {
     resolver: zodResolver(removeSchema),
     defaultValues: { caseId: '', partyId: '' },
   });
+
+  useEffect(() => {
+    if (selected) {
+      addForm.setValue('caseId', selected.id, { shouldValidate: true });
+      removeForm.setValue('caseId', selected.id, { shouldValidate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
 
   async function runAdd(form: AddForm): Promise<void> {
     setSubmitting(true);

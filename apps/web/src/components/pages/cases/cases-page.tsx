@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { CaseListRow } from '@/lib/api';
 import { useTranslations } from 'next-intl';
 import { CaseSection } from '@/components/pages/cases/case-section';
 import { CaseListSection } from '@/components/pages/cases/case-list-section';
@@ -13,7 +14,16 @@ import { Button } from '@/components/ui/button';
 
 export function CasesPage(): React.ReactNode {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<'list' | 'create' | 'parties' | 'details' | 'timeline' | 'assignments' | 'breakglass'>('list');
+  const [activeTab, setActiveTab] = useState<
+    | 'list'
+    | 'create'
+    | 'parties'
+    | 'details'
+    | 'timeline'
+    | 'assignments'
+    | 'breakglass'
+  >('list');
+  const [selected, setSelected] = useState<CaseListRow | null>(null);
 
   return (
     <section className="page-section content-page">
@@ -22,46 +32,46 @@ export function CasesPage(): React.ReactNode {
         <h1>{t('cases.title')}</h1>
         <p>{t('cases.description')}</p>
       </div>
-      
+
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
-        <Button 
-          variant={activeTab === 'list' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'list' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('list')}
         >
           {t('cases.sections.list')}
         </Button>
-        <Button 
-          variant={activeTab === 'create' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'create' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('create')}
         >
           {t('cases.sections.case')}
         </Button>
-        <Button 
-          variant={activeTab === 'parties' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'parties' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('parties')}
         >
           {t('cases.sections.party')}
         </Button>
-        <Button 
-          variant={activeTab === 'details' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'details' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('details')}
         >
           {t('cases.sections.details')}
         </Button>
-        <Button 
-          variant={activeTab === 'timeline' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'timeline' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('timeline')}
         >
           {t('casesTimeline.title')}
         </Button>
-        <Button 
-          variant={activeTab === 'assignments' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'assignments' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('assignments')}
         >
           {t('cases.sections.assignments')}
         </Button>
-        <Button 
-          variant={activeTab === 'breakglass' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'breakglass' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('breakglass')}
         >
           {t('cases.sections.breakglass')}
@@ -69,13 +79,19 @@ export function CasesPage(): React.ReactNode {
       </div>
 
       <div className="settings-stack">
-        {activeTab === 'list' && <CaseListSection />}
-        {activeTab === 'create' && <CaseSection />}
-        {activeTab === 'parties' && <CasePartySection />}
-        {activeTab === 'details' && <CaseDetailSection />}
-        {activeTab === 'timeline' && <CaseTimelineSection />}
-        {activeTab === 'assignments' && <CaseAssignmentSection />}
-        {activeTab === 'breakglass' && <CaseBreakGlassSection />}
+        {activeTab === 'list' && <CaseListSection onSelect={setSelected} />}
+        {activeTab === 'create' && <CaseSection selected={selected} />}
+        {activeTab === 'parties' && <CasePartySection selected={selected} />}
+        {activeTab === 'details' && <CaseDetailSection selected={selected} />}
+        {activeTab === 'timeline' && (
+          <CaseTimelineSection selected={selected} />
+        )}
+        {activeTab === 'assignments' && (
+          <CaseAssignmentSection selected={selected} />
+        )}
+        {activeTab === 'breakglass' && (
+          <CaseBreakGlassSection selected={selected} />
+        )}
       </div>
     </section>
   );

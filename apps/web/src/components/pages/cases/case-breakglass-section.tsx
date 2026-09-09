@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Siren } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -11,6 +11,7 @@ import {
   BreakGlassClient,
   CasesClient,
   type BreakGlassActivationResult,
+  type CaseListRow,
 } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,11 @@ const activateSchema = z.object({
 });
 type ActivateForm = z.infer<typeof activateSchema>;
 
-export function CaseBreakGlassSection(): React.ReactNode {
+export function CaseBreakGlassSection({
+  selected,
+}: {
+  selected: CaseListRow | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new BreakGlassClient());
@@ -56,6 +61,12 @@ export function CaseBreakGlassSection(): React.ReactNode {
     },
   });
 
+  useEffect(() => {
+    if (selected) {
+      setValue('caseId', selected.id, { shouldValidate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
   async function fail(error: unknown): Promise<void> {
     setStatus('error');
     setSubmitError(

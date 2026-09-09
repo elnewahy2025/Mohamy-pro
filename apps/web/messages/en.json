@@ -872,7 +872,8 @@
       "total": "Total",
       "page": "Page",
       "list": "Search",
-      "errorTitle": "Something went wrong"
+      "errorTitle": "Something went wrong",
+      "assignedAt": "Assigned"
     },
     "pagination": {
       "prev": "Previous",
@@ -889,7 +890,8 @@
     "assign": "Assign member",
     "unassign": "Unassign",
     "activate": "Activate break-glass",
-    "revokeGrant": "Revoke grant"
+    "revokeGrant": "Revoke grant",
+    "save": "Save changes"
   },
   "casesTimeline": {
     "eyebrow": "Phase 10 · Case timeline",

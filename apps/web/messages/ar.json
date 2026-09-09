@@ -872,7 +872,8 @@
       "total": "الإجمالي",
       "page": "الصفحة",
       "list": "بحث",
-      "errorTitle": "حدث خطأ ما"
+      "errorTitle": "حدث خطأ ما",
+      "assignedAt": "أُسند في"
     },
     "pagination": {
       "prev": "السابق",
@@ -889,7 +890,8 @@
     "assign": "إسناد عضو",
     "unassign": "سحب الإسناد",
     "activate": "تفعيل الوصول الطارئ",
-    "revokeGrant": "سحب المنح"
+    "revokeGrant": "سحب المنح",
+    "save": "حفظ التغييرات"
   },
   "casesTimeline": {
     "eyebrow": "المرحلة 10 · الجدول الزمني للقضية",

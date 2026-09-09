@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Briefcase } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -10,6 +10,7 @@ import {
   ApiError,
   CasesClient,
   ClientsClient,
+  type CaseListRow,
   type CasePriority,
   type CaseResult,
   type CaseStatus,
@@ -38,7 +39,11 @@ type CaseForm = z.infer<typeof caseSchema>;
 
 type ActionKey = 'create' | 'update';
 
-export function CaseSection(): React.ReactNode {
+export function CaseSection({
+  selected,
+}: {
+  selected: CaseListRow | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new CasesClient());
@@ -147,6 +152,27 @@ export function CaseSection(): React.ReactNode {
     await handleSubmit((form) => run(action, form))();
   }
 
+  function fillForm(item: CaseListRow): void {
+    setValue('id', item.id);
+    setValue('caseNumber', item.caseNumber);
+    setValue('internalNumber', item.internalNumber ?? '');
+    setValue('clientId', item.clientId);
+    setValue('practiceArea', item.practiceArea ?? '');
+    setValue('caseType', item.caseType ?? '');
+    setValue('status', item.status);
+    setValue('priority', item.priority);
+    setValue('openDate', item.openDate ? item.openDate.slice(0, 10) : '');
+    setValue('closeDate', item.closeDate ? item.closeDate.slice(0, 10) : '');
+  }
+
+  useEffect(() => {
+    if (selected) {
+      fillForm(selected);
+      setResult(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
@@ -158,16 +184,12 @@ export function CaseSection(): React.ReactNode {
           <p>{t('cases.entity.case.description')}</p>
         </div>
       </div>
+      {result ? (
+        <p className="form-field-hint">
+          {result.caseNumber} [{result.status}]
+        </p>
+      ) : null}
       <div className="form-grid">
-        <FormField
-          label={t('cases.labels.id')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('cases.placeholders.id'),
-            ...register('id'),
-          }}
-        />
         <FormField
           label={t('cases.labels.caseNumber')}
           error={
@@ -295,18 +317,14 @@ export function CaseSection(): React.ReactNode {
         <Button
           type="button"
           variant="default"
-          onClick={() => void trigger('create')}
+          onClick={() => void trigger(result ? 'update' : 'create')}
           disabled={submitting || authLoading || !user}
         >
-          {submitting ? t('cases.submitting') : t('cases.create')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('update')}
-          disabled={submitting}
-        >
-          {submitting ? t('cases.submitting') : t('cases.update')}
+          {submitting
+            ? t('cases.submitting')
+            : result
+              ? t('cases.save')
+              : t('cases.create')}
         </Button>
       </div>
       <OperationResult
@@ -321,7 +339,6 @@ export function CaseSection(): React.ReactNode {
         fields={
           result
             ? [
-                { label: t('cases.result.id'), value: result.id },
                 {
                   label: t('cases.result.caseNumber'),
                   value: result.caseNumber,
