@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ListFilter } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -27,7 +27,11 @@ const filterSchema = z.object({
 });
 type FilterForm = z.infer<typeof filterSchema>;
 
-export function PartyListSection(): React.ReactNode {
+export function PartyListSection({
+  onSelect,
+}: {
+  onSelect: (party: PartyResult | null) => void;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new PartyClient());
@@ -35,7 +39,11 @@ export function PartyListSection(): React.ReactNode {
   const [list, setList] = useState<PartyListResult | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [filters, setFilters] = useState<FilterForm>({ search: '', status: '', partyType: '' });
+  const [filters, setFilters] = useState<FilterForm>({
+    search: '',
+    status: '',
+    partyType: '',
+  });
   const [page, setPage] = useState(1);
 
   const {
@@ -46,6 +54,11 @@ export function PartyListSection(): React.ReactNode {
     resolver: zodResolver(filterSchema),
     defaultValues: { search: '', status: '', partyType: '' },
   });
+
+  useEffect(() => {
+    if (user) void runList(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function runList(targetPage = page): Promise<void> {
     setSubmitting(true);
@@ -67,7 +80,12 @@ export function PartyListSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -76,7 +94,11 @@ export function PartyListSection(): React.ReactNode {
 
   async function search(): Promise<void> {
     await handleSubmit((form) => {
-      setFilters({ search: form.search ?? '', status: form.status ?? '', partyType: form.partyType ?? '' });
+      setFilters({
+        search: form.search ?? '',
+        status: form.status ?? '',
+        partyType: form.partyType ?? '',
+      });
     })();
     setPage(1);
     await runList(1);
@@ -89,7 +111,9 @@ export function PartyListSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><ListFilter size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <ListFilter size={18} />
+        </span>
         <div>
           <h2>{t('parties.sections.list')}</h2>
           <p>{t('parties.entity.list.description')}</p>
@@ -98,7 +122,11 @@ export function PartyListSection(): React.ReactNode {
       <div className="form-grid">
         <FormField
           label={t('parties.labels.search')}
-          error={errors.search ? t(`form.errors.${errors.search.message}`) : undefined}
+          error={
+            errors.search
+              ? t(`form.errors.${errors.search.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -124,16 +152,31 @@ export function PartyListSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void search()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void search()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('parties.submitting') : t('parties.result.list')}
         </Button>
         {list && page > 1 ? (
-          <Button type="button" variant="outline" onClick={() => void runList(page - 1)} disabled={submitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void runList(page - 1)}
+            disabled={submitting}
+          >
             {t('parties.pagination.prev')}
           </Button>
         ) : null}
         {list && page < totalPages ? (
-          <Button type="button" variant="outline" onClick={() => void runList(page + 1)} disabled={submitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void runList(page + 1)}
+            disabled={submitting}
+          >
             {t('parties.pagination.next')}
           </Button>
         ) : null}
@@ -147,18 +190,41 @@ export function PartyListSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={list ? [
-          { label: t('parties.result.total'), value: String(list.pagination.total) },
-          { label: t('parties.result.page'), value: `${page} / ${totalPages}` },
-        ] : undefined}
+        fields={
+          list
+            ? [
+                {
+                  label: t('parties.result.total'),
+                  value: String(list.pagination.total),
+                },
+                {
+                  label: t('parties.result.page'),
+                  value: `${page} / ${totalPages}`,
+                },
+              ]
+            : undefined
+        }
       />
       {list && list.data.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
           {list.data.map((item: PartyResult) => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-              <span>{item.displayName}</span>
+            <div
+              key={item.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+              }}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onSelect(item)}
+              >
+                {item.displayName}
+              </Button>
               <span>
-                {item.partyType} · {item.status} · <code>{item.id}</code>
+                {item.partyType} · {item.status}
               </span>
             </div>
           ))}

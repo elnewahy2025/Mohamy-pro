@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -34,7 +34,11 @@ type PartyForm = z.infer<typeof partySchema>;
 
 type ActionKey = 'create' | 'update' | 'archive';
 
-export function PartySection(): React.ReactNode {
+export function PartySection({
+  selected,
+}: {
+  selected: PartyResult | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new PartyClient());
@@ -129,6 +133,22 @@ export function PartySection(): React.ReactNode {
     await handleSubmit((form) => run(action, form))();
   }
 
+  function fillForm(item: PartyResult): void {
+    setResult(item);
+    setValue('id', item.id);
+    setValue('partyType', item.partyType);
+    setValue('name', item.name ?? '');
+    setValue('legalName', item.legalName ?? '');
+    setValue('displayName', item.displayName);
+    setValue('clientId', item.clientId ?? '');
+    setValue('notes', item.notes ?? '');
+  }
+
+  useEffect(() => {
+    if (selected) fillForm(selected);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
@@ -140,16 +160,12 @@ export function PartySection(): React.ReactNode {
           <p>{t('parties.entity.party.description')}</p>
         </div>
       </div>
+      {result ? (
+        <p className="form-field-hint">
+          {result.displayName} [{result.status}]
+        </p>
+      ) : null}
       <div className="form-grid">
-        <FormField
-          label={t('parties.labels.id')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('parties.placeholders.id'),
-            ...register('id'),
-          }}
-        />
         <FormSelect
           label={t('parties.labels.partyType')}
           selectProps={register('partyType')}
@@ -249,27 +265,28 @@ export function PartySection(): React.ReactNode {
         <Button
           type="button"
           variant="default"
-          onClick={() => void trigger('create')}
+          onClick={() => void trigger(result ? 'update' : 'create')}
           disabled={submitting || authLoading || !user}
         >
-          {submitting ? t('parties.submitting') : t('parties.create')}
+          {submitting
+            ? t('parties.submitting')
+            : result
+              ? t('parties.save')
+              : t('parties.create')}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('update')}
-          disabled={submitting}
-        >
-          {submitting ? t('parties.submitting') : t('parties.update')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('archive')}
-          disabled={submitting}
-        >
-          {submitting ? t('parties.submitting') : t('parties.archive')}
-        </Button>
+        {result ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!window.confirm(t('parties.result.archiveConfirm'))) return;
+              void trigger('archive');
+            }}
+            disabled={submitting}
+          >
+            {submitting ? t('parties.submitting') : t('parties.archive')}
+          </Button>
+        ) : null}
       </div>
       <OperationResult
         status={status}
@@ -283,7 +300,6 @@ export function PartySection(): React.ReactNode {
         fields={
           result
             ? [
-                { label: t('parties.result.id'), value: result.id },
                 { label: t('parties.result.name'), value: result.displayName },
                 { label: t('parties.result.status'), value: result.status },
               ]

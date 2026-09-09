@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { PartyResult } from '@/lib/api';
 import { useTranslations } from 'next-intl';
 import { PartySection } from '@/components/pages/parties/party-section';
 import { PartyListSection } from '@/components/pages/parties/party-list-section';
@@ -9,7 +10,10 @@ import { Button } from '@/components/ui/button';
 
 export function PartiesPage(): React.ReactNode {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<'list' | 'create' | 'relationship'>('list');
+  const [activeTab, setActiveTab] = useState<
+    'list' | 'create' | 'relationship'
+  >('list');
+  const [selected, setSelected] = useState<PartyResult | null>(null);
 
   return (
     <section className="page-section content-page">
@@ -20,20 +24,20 @@ export function PartiesPage(): React.ReactNode {
       </div>
 
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
-        <Button 
-          variant={activeTab === 'list' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'list' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('list')}
         >
           {t('parties.sections.list')}
         </Button>
-        <Button 
-          variant={activeTab === 'create' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'create' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('create')}
         >
           {t('parties.sections.party')}
         </Button>
-        <Button 
-          variant={activeTab === 'relationship' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'relationship' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('relationship')}
         >
           {t('parties.sections.relationship')}
@@ -41,9 +45,11 @@ export function PartiesPage(): React.ReactNode {
       </div>
 
       <div className="settings-stack">
-        {activeTab === 'list' && <PartyListSection />}
-        {activeTab === 'create' && <PartySection />}
-        {activeTab === 'relationship' && <PartyRelationshipSection />}
+        {activeTab === 'list' && <PartyListSection onSelect={setSelected} />}
+        {activeTab === 'create' && <PartySection selected={selected} />}
+        {activeTab === 'relationship' && (
+          <PartyRelationshipSection selected={selected} />
+        )}
       </div>
     </section>
   );

@@ -771,7 +771,8 @@
       "total": "Total",
       "page": "Page",
       "list": "Search",
-      "errorTitle": "Something went wrong"
+      "errorTitle": "Something went wrong",
+      "archiveConfirm": "Archive this party? This cannot be undone."
     },
     "pagination": {
       "prev": "Previous",
@@ -781,7 +782,8 @@
       "list": "Party list",
       "party": "Create party",
       "relationship": "Party relationships"
-    }
+    },
+    "save": "Save changes"
   },
   "cases": {
     "navLabel": "Cases",
