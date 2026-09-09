@@ -49,7 +49,12 @@ function makeOps(
   }
   const ops = { authorize, run } as unknown as HierarchyOperations;
   const storage = { putObject: jest.fn() };
-  const service = new OrganizationService(ops, storage as never);
+  const prisma = { withMembershipSelectionContext: jest.fn() };
+  const service = new OrganizationService(
+    ops,
+    storage as never,
+    prisma as never,
+  );
   return { service, authorize, run };
 }
 
@@ -125,7 +130,12 @@ describe('Hierarchy list reads', () => {
       read,
     } as unknown as HierarchyOperations;
     const storage = { putObject: jest.fn() };
-    const service = new OrganizationService(ops, storage as never);
+    const prisma = { withMembershipSelectionContext: jest.fn() };
+    const service = new OrganizationService(
+      ops,
+      storage as never,
+      prisma as never,
+    );
 
     await service.list(request());
 
@@ -158,7 +168,12 @@ describe('OrganizationService profile guards', () => {
 
   it('refuses a second active organization', async () => {
     const { ops, storage } = guardedService({ id: 'existing' });
-    const service = new OrganizationService(ops, storage as never);
+    const prisma = { withMembershipSelectionContext: jest.fn() };
+    const service = new OrganizationService(
+      ops,
+      storage as never,
+      prisma as never,
+    );
 
     const second = await service
       .create({} as never, { slug: 'second', name: 'Second' } as never)
@@ -170,7 +185,12 @@ describe('OrganizationService profile guards', () => {
 
   it('rejects non-image logo uploads', async () => {
     const { ops, storage } = guardedService(null);
-    const service = new OrganizationService(ops, storage as never);
+    const prisma = { withMembershipSelectionContext: jest.fn() };
+    const service = new OrganizationService(
+      ops,
+      storage as never,
+      prisma as never,
+    );
 
     const logo = await service
       .uploadLogo({} as never, {
@@ -182,5 +202,79 @@ describe('OrganizationService profile guards', () => {
     expect((logo as { internalReason?: string }).internalReason).toBe(
       'INVALID_LOGO_TYPE',
     );
+  });
+});
+
+describe('OrganizationService context', () => {
+  it('returns org identity, logo URL, and caller branch', async () => {
+    const authorize = jest.fn();
+    const storage = {
+      getDownloadUrl: jest.fn().mockResolvedValue('https://cdn/logo.png'),
+    };
+    const tx = {
+      organization: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'o1',
+          name: 'Cairo HQ Org',
+          slug: 'cairo-hq',
+          logoObjectKey: 'logos/t1/o1.png',
+          baseCurrency: 'EGP',
+        }),
+      },
+      membership: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'm1', branchId: 'b1' }),
+      },
+      branch: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'b1', name: 'Alexandria Branch' }),
+      },
+    };
+    const prisma = {
+      withMembershipSelectionContext: jest.fn((_ctx: unknown, cb: any) =>
+        cb(tx),
+      ),
+    };
+    const ops = { authorize } as never;
+    const service = new OrganizationService(
+      ops,
+      storage as never,
+      prisma as never,
+    );
+
+    const result = await service.context({
+      auth: { userId: 'u1', activeTenantId: 't1', sessionId: 's1' },
+    } as never);
+
+    expect(result.organization?.logoUrl).toBe('https://cdn/logo.png');
+    expect(result.branch?.name).toBe('Alexandria Branch');
+  });
+
+  it('returns nulls when nothing is set up', async () => {
+    const ops = { authorize: jest.fn() } as never;
+    const storage = { getDownloadUrl: jest.fn() };
+    const tx = {
+      organization: { findFirst: jest.fn().mockResolvedValue(null) },
+      membership: { findFirst: jest.fn().mockResolvedValue(null) },
+      branch: { findFirst: jest.fn() },
+    };
+    const prisma = {
+      withMembershipSelectionContext: jest.fn((_ctx: unknown, cb: any) =>
+        cb(tx),
+      ),
+    };
+    const service = new OrganizationService(
+      ops,
+      storage as never,
+      prisma as never,
+    );
+
+    const result = await service.context({
+      auth: { userId: 'u1', activeTenantId: 't1', sessionId: 's1' },
+    } as never);
+
+    expect(result.organization).toBeNull();
+    expect(result.branch).toBeNull();
+    expect(storage.getDownloadUrl).not.toHaveBeenCalled();
   });
 });

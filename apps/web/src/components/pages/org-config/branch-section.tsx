@@ -161,6 +161,11 @@ export function BranchSection(): React.ReactNode {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  useEffect(() => {
+    if (user) void runList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   async function runList(): Promise<void> {
     setSubmitting(true);
     setStatus('idle');

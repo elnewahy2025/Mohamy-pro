@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Request } from 'express';
 import { S3ObjectStorageService } from '../../infrastructure/storage/object-storage.service';
+import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { type Prisma } from '@prisma/client';
 import { AUDIT_EVENT_TYPES } from '../../audit/audit-constants';
 import { OrganizationConfigDeniedError } from '../organization-config.errors';
@@ -147,7 +148,78 @@ export class OrganizationService {
   constructor(
     private readonly ops: HierarchyOperations,
     private readonly storage: S3ObjectStorageService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  async context(request: Request): Promise<{
+    organization: {
+      id: string;
+      name: string;
+      slug: string;
+      logoUrl: string | null;
+      baseCurrency: string;
+    } | null;
+    branch: { id: string; name: string } | null;
+  }> {
+    const auth = request.auth;
+    if (!auth) throw new OrganizationConfigDeniedError('UNAUTHENTICATED');
+    if (!auth.activeTenantId)
+      throw new OrganizationConfigDeniedError('TENANT_CONTEXT_REQUIRED');
+    const tenantId: string = auth.activeTenantId;
+    return this.prisma.withMembershipSelectionContext(
+      { userId: auth.userId, operationId: auth.sessionId },
+      async (transaction) => {
+        const [org, membership] = await Promise.all([
+          transaction.organization.findFirst({
+            where: { tenantId, status: 'ACTIVE' },
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              logoObjectKey: true,
+              baseCurrency: true,
+            },
+          }),
+          transaction.membership.findFirst({
+            where: { userId: auth.userId, tenantId },
+            select: { id: true, branchId: true },
+          }),
+        ]);
+        let logoUrl: string | null = null;
+        if (org?.logoObjectKey) {
+          try {
+            logoUrl = await this.storage.getDownloadUrl(
+              tenantId,
+              org.logoObjectKey,
+              3600,
+            );
+          } catch {
+            logoUrl = null;
+          }
+        }
+        let branch: { id: string; name: string } | null = null;
+        if (membership?.branchId) {
+          const row = await transaction.branch.findFirst({
+            where: { id: membership.branchId, tenantId },
+            select: { id: true, name: true },
+          });
+          if (row) branch = row;
+        }
+        return {
+          organization: org
+            ? {
+                id: org.id,
+                name: org.name,
+                slug: org.slug,
+                logoUrl,
+                baseCurrency: org.baseCurrency,
+              }
+            : null,
+          branch,
+        };
+      },
+    );
+  }
 
   async uploadLogo(
     request: Request,

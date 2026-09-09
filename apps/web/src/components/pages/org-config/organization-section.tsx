@@ -76,6 +76,7 @@ export function OrganizationSection(): React.ReactNode {
   const [client] = useState(() => new OrgConfigClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<OrganizationResult | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [subTab, setSubTab] = useState<SubTab>('general');
@@ -119,8 +120,12 @@ export function OrganizationSection(): React.ReactNode {
     setStatus('idle');
     setSubmitError(null);
     try {
-      const rows = await client.listOrganizations();
+      const [rows, ctx] = await Promise.all([
+        client.listOrganizations(),
+        client.context().catch(() => null),
+      ]);
       if (rows.length === 1) fillForm(rows[0]);
+      if (ctx?.organization?.logoUrl) setLogoUrl(ctx.organization.logoUrl);
       setStatus('success');
     } catch (error) {
       setStatus('error');
@@ -281,7 +286,18 @@ export function OrganizationSection(): React.ReactNode {
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
         <span className="settings-icon" aria-hidden="true">
-          <Building2 size={18} />
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt=""
+              width={22}
+              height={22}
+              style={{ borderRadius: '6px', objectFit: 'cover' }}
+            />
+          ) : (
+            <Building2 size={18} />
+          )}
         </span>
         <div>
           <h2>{t('orgConfig.sections.organization')}</h2>
@@ -324,7 +340,16 @@ export function OrganizationSection(): React.ReactNode {
           )}
           <LogoUploadField
             currentKey={result?.logoObjectKey ?? null}
-            onUploaded={(next) => fillForm(next)}
+            onUploaded={(next) => {
+              fillForm(next);
+              void client
+                .context()
+                .then((ctx) => {
+                  if (ctx?.organization?.logoUrl)
+                    setLogoUrl(ctx.organization.logoUrl);
+                })
+                .catch(() => {});
+            }}
           />
         </div>
       )}
@@ -393,7 +418,11 @@ export function OrganizationSection(): React.ReactNode {
 
       {subTab === 'socials' && (
         <div className="form-grid">
-          {textField('socialX', 'orgConfig.profile.socialXLabel', 'orgConfig.profile.urlPlaceholder')}
+          {textField(
+            'socialX',
+            'orgConfig.profile.socialXLabel',
+            'orgConfig.profile.urlPlaceholder',
+          )}
           {textField(
             'socialLinkedIn',
             'orgConfig.profile.socialLinkedInLabel',

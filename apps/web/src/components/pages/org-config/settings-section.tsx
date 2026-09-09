@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Settings2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -96,6 +96,11 @@ export function SettingsSection(): React.ReactNode {
       setSubmitting(false);
     }
   }
+
+  useEffect(() => {
+    if (user) void listSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function listSettings(): Promise<void> {
     setSubmitting(true);

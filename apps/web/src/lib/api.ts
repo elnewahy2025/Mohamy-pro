@@ -678,6 +678,17 @@ export interface SetOrganizationSettingRequest {
 
 const ORG_PREFIX = '/organization-config';
 
+export interface OrgContext {
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl: string | null;
+    baseCurrency: string;
+  } | null;
+  branch: { id: string; name: string } | null;
+}
+
 export const CURRENCIES = [
   'EGP',
   'USD',
@@ -727,6 +738,12 @@ export class OrgConfigClient {
     return this.client.bodyForm<OrganizationResult>(
       `${ORG_PREFIX}/organizations/logo`,
       form,
+    );
+  }
+  context(): Promise<OrgContext> {
+    return this.client.body<OrgContext>(
+      `${ORG_PREFIX}/organizations/context`,
+      'GET',
     );
   }
   listOrganizations(): Promise<OrganizationResult[]> {

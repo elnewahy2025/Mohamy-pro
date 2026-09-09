@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Layers } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -94,6 +94,11 @@ export function DepartmentSection(): React.ReactNode {
   async function trigger(action: ActionKey): Promise<void> {
     await handleSubmit((form) => run(action, form))();
   }
+
+  useEffect(() => {
+    if (user) void runList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   async function runList(): Promise<void> {
     setSubmitting(true);

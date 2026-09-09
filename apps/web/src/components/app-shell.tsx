@@ -7,6 +7,7 @@ import { Link, usePathname, useRouter } from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/auth-provider';
 import { Sidebar } from '@/components/navigation/sidebar';
+import { OrgBrand } from '@/components/navigation/org-brand';
 
 export function AppShell({
   children,
@@ -108,6 +109,7 @@ export function AppShell({
               <small>{t('productTagline')}</small>
             </span>
           </Link>
+          <OrgBrand />
           <div className="topbar-actions">
             <span className="language-label">{t('common.language')}</span>
             <div

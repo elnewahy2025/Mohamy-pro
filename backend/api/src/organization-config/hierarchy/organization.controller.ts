@@ -87,6 +87,14 @@ export class OrganizationController {
     return this.organizations.archive(req, dto.id, dto.reason);
   }
 
+  @Get('context')
+  @ApiOperation({ summary: 'Caller organization identity and branch' })
+  @ApiResponse({ status: 200, description: 'Context returned.' })
+  @ApiResponse({ status: 401, description: 'Session is not authenticated.' })
+  context(@Req() req: Request) {
+    return this.organizations.context(req);
+  }
+
   @Post('logo')
   @UseInterceptors(
     FileInterceptor('file', {
