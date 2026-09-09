@@ -3,7 +3,10 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  CasesClient,
+  ClientsClient,
   ComplianceClient,
+  DocumentsClient,
   type ApiError,
   type LegalHoldResult,
 } from '@/lib/api';
@@ -11,11 +14,16 @@ import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
+import { FormSelect } from '@/components/forms/form-select';
 
 export function HoldsSection() {
   const t = useTranslations();
   const { user } = useAuth();
   const [client] = useState(() => new ComplianceClient());
+  const [casesClient] = useState(() => new CasesClient());
+  const [clientsClient] = useState(() => new ClientsClient());
+  const [documentsClient] = useState(() => new DocumentsClient());
   const [status, setStatus] = useState<
     'idle' | 'submitting' | 'success' | 'error'
   >('idle');
@@ -26,6 +34,7 @@ export function HoldsSection() {
   const [targetType, setTargetType] = useState('');
   const [targetId, setTargetId] = useState('');
   const [holdId, setHoldId] = useState('');
+  const [holdLabel, setHoldLabel] = useState('');
   const [resultId, setResultId] = useState<string | null>(null);
 
   async function runLoad(): Promise<void> {
@@ -106,30 +115,61 @@ export function HoldsSection() {
           required: true,
         }}
       />
-      <FormField
+      <FormSelect
         label={t('compliance.labels.targetType')}
-        inputProps={{
+        options={[
+          { label: '—', value: '' },
+          { label: 'AUDIT_EVENT', value: 'AUDIT_EVENT' },
+          { label: 'CASE', value: 'CASE' },
+          { label: 'CLIENT', value: 'CLIENT' },
+          { label: 'DOCUMENT', value: 'DOCUMENT' },
+        ]}
+        selectProps={{
           value: targetType,
-          onChange: (e) => setTargetType(e.target.value),
-          placeholder: t('compliance.placeholders.targetType'),
+          onChange: (e) => {
+            setTargetType(e.target.value);
+            setTargetId('');
+          },
         }}
       />
-      <FormField
-        label={t('compliance.labels.targetId')}
-        inputProps={{
-          value: targetId,
-          onChange: (e) => setTargetId(e.target.value),
-          placeholder: t('compliance.placeholders.targetId'),
-        }}
-      />
-      <FormField
-        label={t('compliance.labels.holdId')}
-        inputProps={{
-          value: holdId,
-          onChange: (e) => setHoldId(e.target.value),
-          placeholder: t('compliance.placeholders.holdId'),
-        }}
-      />
+      {targetType === '' || targetType === 'AUDIT_EVENT' ? null : (
+        <EntityPicker
+          label={t('compliance.labels.targetId')}
+          placeholder={t('compliance.placeholders.targetId')}
+          value={targetId}
+          onChange={setTargetId}
+          load={async (search) => {
+            if (targetType === 'CASE') {
+              return (
+                await casesClient.list(search ? { search } : {})
+              ).data.map((c) => ({
+                id: c.id,
+                label: c.caseNumber,
+                sub: c.status,
+              }));
+            }
+            if (targetType === 'CLIENT') {
+              return (
+                await clientsClient.listClients(search ? { search } : {})
+              ).data.map((c) => ({
+                id: c.id,
+                label: c.displayName,
+                sub: c.clientType,
+              }));
+            }
+            return (await documentsClient.listDocuments()).map((d) => ({
+              id: d.id,
+              label: d.title,
+              sub: d.status,
+            }));
+          }}
+        />
+      )}
+      {holdId ? (
+        <p className="form-field-hint">
+          {t('compliance.labels.holdId')}: {holdLabel || '…'}
+        </p>
+      ) : null}
       <div className="form-actions form-actions-row mt-6">
         <Button
           type="button"
@@ -169,7 +209,7 @@ export function HoldsSection() {
           fields={[
             {
               label: t('compliance.result.id'),
-              value: resultId ?? String(items.length),
+              value: String(items.length),
             },
           ]}
         />
@@ -179,7 +219,16 @@ export function HoldsSection() {
         <ul className="mt-4 space-y-2">
           {items.map((item) => (
             <li key={item.id} className="text-sm">
-              [{item.status}] {item.name}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setHoldId(item.id);
+                  setHoldLabel(item.name);
+                }}
+              >
+                [{item.status}] {item.name}
+              </Button>
             </li>
           ))}
         </ul>

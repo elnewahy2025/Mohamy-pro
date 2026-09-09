@@ -6,16 +6,13 @@ import { Scale } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import {
-  ApiError,
-  LegalConfigClient,
-  type CourtResult,
-} from '@/lib/api';
+import { ApiError, LegalConfigClient, type CourtResult } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { FormSelect } from '@/components/forms/form-select';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const courtSchema = z.object({
   jurisdictionId: z.string().min(1, 'invalid').max(100, 'tooLong'),
@@ -39,10 +36,17 @@ export function CourtSection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<CourtForm>({
     resolver: zodResolver(courtSchema),
-    defaultValues: { jurisdictionId: '', name: '', courtType: '', department: '' },
+    defaultValues: {
+      jurisdictionId: '',
+      name: '',
+      courtType: '',
+      department: '',
+    },
   });
 
   async function runCreate(form: CourtForm): Promise<void> {
@@ -64,7 +68,12 @@ export function CourtSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -84,7 +93,12 @@ export function CourtSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -94,26 +108,41 @@ export function CourtSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Scale size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Scale size={18} />
+        </span>
         <div>
           <h2>{t('legalConfig.sections.court.heading')}</h2>
           <p>{t('legalConfig.sections.court.description')}</p>
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <EntityPicker
           label={t('legalConfig.labels.jurisdictionId')}
-          error={errors.jurisdictionId ? t(`form.errors.${errors.jurisdictionId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('legalConfig.placeholders.jurisdictionId'),
-            ...register('jurisdictionId'),
-          }}
+          placeholder={t('legalConfig.placeholders.jurisdictionId')}
+          required
+          error={
+            errors.jurisdictionId
+              ? t(`form.errors.${errors.jurisdictionId.message}`)
+              : undefined
+          }
+          value={watch('jurisdictionId') ?? ''}
+          onChange={(id) =>
+            setValue('jurisdictionId', id, { shouldValidate: true })
+          }
+          load={async () =>
+            (await client.listJurisdictions()).map((j) => ({
+              id: j.id,
+              label: j.name,
+              sub: undefined,
+            }))
+          }
         />
         <FormField
           label={t('legalConfig.labels.name')}
-          error={errors.name ? t(`form.errors.${errors.name.message}`) : undefined}
+          error={
+            errors.name ? t(`form.errors.${errors.name.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -132,7 +161,11 @@ export function CourtSection(): React.ReactNode {
         />
         <FormField
           label={t('legalConfig.labels.department')}
-          error={errors.department ? t(`form.errors.${errors.department.message}`) : undefined}
+          error={
+            errors.department
+              ? t(`form.errors.${errors.department.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -142,10 +175,20 @@ export function CourtSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void handleSubmit(runCreate)()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void handleSubmit(runCreate)()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('legalConfig.submitting') : t('legalConfig.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void runList()} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runList()}
+          disabled={submitting}
+        >
           {submitting ? t('legalConfig.submitting') : t('legalConfig.list')}
         </Button>
       </div>
@@ -158,10 +201,14 @@ export function CourtSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={created ? [
-          { label: t('legalConfig.result.id'), value: created.id },
-          { label: t('legalConfig.result.name'), value: created.name },
-        ] : undefined}
+        fields={
+          created
+            ? [
+                { label: t('legalConfig.result.id'), value: created.id },
+                { label: t('legalConfig.result.name'), value: created.name },
+              ]
+            : undefined
+        }
       />
       {list && list.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
@@ -169,8 +216,18 @@ export function CourtSection(): React.ReactNode {
             {t('legalConfig.result.count')}: {list.length}
           </div>
           {list.map((item: CourtResult) => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-              <span>{item.name}{item.courtType ? ` — ${item.courtType}` : ''}</span>
+            <div
+              key={item.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+              }}
+            >
+              <span>
+                {item.name}
+                {item.courtType ? ` — ${item.courtType}` : ''}
+              </span>
               <span>
                 {item.status} · <code>{item.id}</code>
               </span>

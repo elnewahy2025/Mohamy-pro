@@ -15,6 +15,7 @@ import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const courtLocationSchema = z.object({
   courtId: z.string().min(1, 'invalid').max(100, 'tooLong'),
@@ -40,6 +41,8 @@ export function CourtLocationSection(): React.ReactNode {
     handleSubmit,
     reset,
     getValues,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<CourtLocationForm>({
     resolver: zodResolver(courtLocationSchema),
@@ -122,19 +125,24 @@ export function CourtLocationSection(): React.ReactNode {
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <EntityPicker
           label={t('legalConfig.labels.courtId')}
+          placeholder={t('legalConfig.placeholders.courtId')}
+          required
           error={
             errors.courtId
               ? t(`form.errors.${errors.courtId.message}`)
               : undefined
           }
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('legalConfig.placeholders.courtId'),
-            ...register('courtId'),
-          }}
+          value={watch('courtId') ?? ''}
+          onChange={(id) => setValue('courtId', id, { shouldValidate: true })}
+          load={async () =>
+            (await client.listCourts()).map((c) => ({
+              id: c.id,
+              label: c.name,
+              sub: c.courtType ?? undefined,
+            }))
+          }
         />
         <FormField
           label={t('legalConfig.labels.name')}
@@ -193,15 +201,18 @@ export function CourtLocationSection(): React.ReactNode {
           {submitting ? t('legalConfig.submitting') : t('legalConfig.list')}
         </Button>
       </div>
-      <FormField
+      <EntityPicker
         label={`${t('legalConfig.labels.courtId')} — ${t('legalConfig.list')}`}
-        inputProps={{
-          type: 'text',
-          autoComplete: 'off',
-          placeholder: t('legalConfig.placeholders.courtId'),
-          value: listCourtId,
-          onChange: (e) => setListCourtId(e.target.value),
-        }}
+        placeholder={t('legalConfig.placeholders.courtId')}
+        value={listCourtId}
+        onChange={setListCourtId}
+        load={async () =>
+          (await client.listCourts()).map((c) => ({
+            id: c.id,
+            label: c.name,
+            sub: c.courtType ?? undefined,
+          }))
+        }
       />
       <OperationResult
         status={status}

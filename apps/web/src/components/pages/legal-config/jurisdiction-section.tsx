@@ -15,6 +15,7 @@ import { useAuth } from '@/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/forms/form-field';
 import { OperationResult } from '@/components/forms/operation-result';
+import { EntityPicker } from '@/components/forms/entity-picker';
 
 const jurisdictionSchema = z.object({
   countryId: z.string().min(1, 'invalid').max(100, 'tooLong'),
@@ -36,6 +37,8 @@ export function JurisdictionSection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<JurisdictionForm>({
     resolver: zodResolver(jurisdictionSchema),
@@ -47,7 +50,10 @@ export function JurisdictionSection(): React.ReactNode {
     setStatus('idle');
     setSubmitError(null);
     try {
-      const next = await client.createJurisdiction({ countryId: form.countryId, name: form.name });
+      const next = await client.createJurisdiction({
+        countryId: form.countryId,
+        name: form.name,
+      });
       setCreated(next);
       setStatus('success');
       reset({ countryId: '', name: '' });
@@ -56,7 +62,12 @@ export function JurisdictionSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -76,7 +87,12 @@ export function JurisdictionSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -86,26 +102,39 @@ export function JurisdictionSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Landmark size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Landmark size={18} />
+        </span>
         <div>
           <h2>{t('legalConfig.sections.jurisdiction.heading')}</h2>
           <p>{t('legalConfig.sections.jurisdiction.description')}</p>
         </div>
       </div>
       <div className="form-grid">
-        <FormField
+        <EntityPicker
           label={t('legalConfig.labels.countryId')}
-          error={errors.countryId ? t(`form.errors.${errors.countryId.message}`) : undefined}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('legalConfig.placeholders.countryId'),
-            ...register('countryId'),
-          }}
+          placeholder={t('legalConfig.placeholders.countryId')}
+          required
+          error={
+            errors.countryId
+              ? t(`form.errors.${errors.countryId.message}`)
+              : undefined
+          }
+          value={watch('countryId') ?? ''}
+          onChange={(id) => setValue('countryId', id, { shouldValidate: true })}
+          load={async () =>
+            (await client.listCountries()).map((c) => ({
+              id: c.id,
+              label: c.name,
+              sub: c.code,
+            }))
+          }
         />
         <FormField
           label={t('legalConfig.labels.name')}
-          error={errors.name ? t(`form.errors.${errors.name.message}`) : undefined}
+          error={
+            errors.name ? t(`form.errors.${errors.name.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -115,10 +144,20 @@ export function JurisdictionSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void handleSubmit(runCreate)()} disabled={submitting || authLoading || !user}>
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void handleSubmit(runCreate)()}
+          disabled={submitting || authLoading || !user}
+        >
           {submitting ? t('legalConfig.submitting') : t('legalConfig.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void runList()} disabled={submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runList()}
+          disabled={submitting}
+        >
           {submitting ? t('legalConfig.submitting') : t('legalConfig.list')}
         </Button>
       </div>
@@ -131,10 +170,14 @@ export function JurisdictionSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={created ? [
-          { label: t('legalConfig.result.id'), value: created.id },
-          { label: t('legalConfig.result.name'), value: created.name },
-        ] : undefined}
+        fields={
+          created
+            ? [
+                { label: t('legalConfig.result.id'), value: created.id },
+                { label: t('legalConfig.result.name'), value: created.name },
+              ]
+            : undefined
+        }
       />
       {list && list.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
@@ -142,7 +185,14 @@ export function JurisdictionSection(): React.ReactNode {
             {t('legalConfig.result.count')}: {list.length}
           </div>
           {list.map((item: JurisdictionResult) => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div
+              key={item.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+              }}
+            >
               <span>{item.name}</span>
               <span>
                 {item.status} · <code>{item.id}</code>

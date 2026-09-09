@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 
 export function LegalConfigPage(): React.ReactNode {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<'country' | 'jurisdiction' | 'court' | 'location'>('country');
+  const [activeTab, setActiveTab] = useState<
+    'country' | 'jurisdiction' | 'court' | 'location'
+  >('country');
 
   return (
     <section className="page-section content-page">
@@ -21,26 +23,26 @@ export function LegalConfigPage(): React.ReactNode {
       </div>
 
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
-        <Button 
-          variant={activeTab === 'country' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'country' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('country')}
         >
           {t('legalConfig.sections.country.heading')}
         </Button>
-        <Button 
-          variant={activeTab === 'jurisdiction' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'jurisdiction' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('jurisdiction')}
         >
           {t('legalConfig.sections.jurisdiction.heading')}
         </Button>
-        <Button 
-          variant={activeTab === 'court' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'court' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('court')}
         >
           {t('legalConfig.sections.court.heading')}
         </Button>
-        <Button 
-          variant={activeTab === 'location' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'location' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('location')}
         >
           {t('legalConfig.sections.courtLocation.heading')}
