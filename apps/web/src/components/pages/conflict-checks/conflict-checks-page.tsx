@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { ConflictCheckListRow } from '@/lib/api';
 import { useTranslations } from 'next-intl';
 import { ConflictCheckSection } from '@/components/pages/conflict-checks/conflict-check-section';
 import { ConflictCheckListSection } from '@/components/pages/conflict-checks/conflict-check-list-section';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 export function ConflictChecksPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
+  const [selected, setSelected] = useState<ConflictCheckListRow | null>(null);
 
   return (
     <section className="page-section content-page">
@@ -19,14 +21,14 @@ export function ConflictChecksPage(): React.ReactNode {
       </div>
 
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
-        <Button 
-          variant={activeTab === 'list' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'list' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('list')}
         >
           {t('conflictChecks.sections.list')}
         </Button>
-        <Button 
-          variant={activeTab === 'create' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'create' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('create')}
         >
           {t('conflictChecks.sections.check')}
@@ -34,8 +36,10 @@ export function ConflictChecksPage(): React.ReactNode {
       </div>
 
       <div className="settings-stack">
-        {activeTab === 'list' && <ConflictCheckListSection />}
-        {activeTab === 'create' && <ConflictCheckSection />}
+        {activeTab === 'list' && (
+          <ConflictCheckListSection onSelect={setSelected} />
+        )}
+        {activeTab === 'create' && <ConflictCheckSection selected={selected} />}
       </div>
     </section>
   );

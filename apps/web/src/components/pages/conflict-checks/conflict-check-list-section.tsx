@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ListChecks } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -24,7 +24,11 @@ const filterSchema = z.object({
 });
 type FilterForm = z.infer<typeof filterSchema>;
 
-export function ConflictCheckListSection(): React.ReactNode {
+export function ConflictCheckListSection({
+  onSelect,
+}: {
+  onSelect: (check: ConflictCheckListRow | null) => void;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new ConflictChecksClient());
@@ -44,6 +48,11 @@ export function ConflictCheckListSection(): React.ReactNode {
     defaultValues: { status: '' },
   });
 
+  useEffect(() => {
+    if (user) void runList(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   async function runList(targetPage = page): Promise<void> {
     setSubmitting(true);
     setStatus('idle');
@@ -52,7 +61,8 @@ export function ConflictCheckListSection(): React.ReactNode {
       const result = await client.list({
         page: targetPage,
         limit: 20,
-        status: (filters.status || undefined) as ConflictCheckStatus | undefined,
+        status: (filters.status || undefined) as
+          ConflictCheckStatus | undefined,
       });
       setList(result);
       setPage(targetPage);
@@ -62,7 +72,12 @@ export function ConflictCheckListSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -84,7 +99,9 @@ export function ConflictCheckListSection(): React.ReactNode {
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><ListChecks size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <ListChecks size={18} />
+        </span>
         <div>
           <h2>{t('conflictChecks.sections.list')}</h2>
           <p>{t('conflictChecks.entity.list.description')}</p>
@@ -102,16 +119,33 @@ export function ConflictCheckListSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void search()} disabled={submitting || authLoading || !user}>
-          {submitting ? t('conflictChecks.submitting') : t('conflictChecks.result.list')}
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void search()}
+          disabled={submitting || authLoading || !user}
+        >
+          {submitting
+            ? t('conflictChecks.submitting')
+            : t('conflictChecks.result.list')}
         </Button>
         {list && page > 1 ? (
-          <Button type="button" variant="outline" onClick={() => void runList(page - 1)} disabled={submitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void runList(page - 1)}
+            disabled={submitting}
+          >
             {t('conflictChecks.pagination.prev')}
           </Button>
         ) : null}
         {list && page < totalPages ? (
-          <Button type="button" variant="outline" onClick={() => void runList(page + 1)} disabled={submitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void runList(page + 1)}
+            disabled={submitting}
+          >
             {t('conflictChecks.pagination.next')}
           </Button>
         ) : null}
@@ -125,21 +159,40 @@ export function ConflictCheckListSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={list ? [
-          { label: t('conflictChecks.result.total'), value: String(list.pagination.total) },
-          { label: t('conflictChecks.result.page'), value: `${page} / ${totalPages}` },
-        ] : undefined}
+        fields={
+          list
+            ? [
+                {
+                  label: t('conflictChecks.result.total'),
+                  value: String(list.pagination.total),
+                },
+                {
+                  label: t('conflictChecks.result.page'),
+                  value: `${page} / ${totalPages}`,
+                },
+              ]
+            : undefined
+        }
       />
       {list && list.data.length > 0 ? (
         <div className="operation-result-details" style={{ marginTop: '1rem' }}>
           {list.data.map((item: ConflictCheckListRow) => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-              <span>
-                {item.status} · {item.decision} · {item.partyCount} {t('conflictChecks.result.parties').toLowerCase()}
-              </span>
-              <span>
-                <code>{item.id}</code>
-              </span>
+            <div
+              key={item.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+              }}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onSelect(item)}
+              >
+                {item.status} · {item.decision} · {item.partyCount}{' '}
+                {t('conflictChecks.result.parties').toLowerCase()}
+              </Button>
             </div>
           ))}
         </div>

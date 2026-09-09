@@ -21,7 +21,7 @@ House standard per AGENTS.md §31.6. Every page gets, as applicable:
 
 1. [x] Clients — tabs: list, client, contact, address (shared selection, contact/address lists added backend-side)
 2. [x] Parties — tabs: list, party, relationship (shared selection, relationship pickers)
-3. [ ] Conflict-checks — tabs: list, check
+3. [x] Conflict-checks — tabs: list, check (shared selection, status-driven actions)
 4. [ ] Cases — tabs: list, case, parties, details, timeline, assignments, breakglass
 5. [ ] Hearings — tabs: list, schedule, outcome
 6. [ ] Deadlines — tabs: list, schedule, rules

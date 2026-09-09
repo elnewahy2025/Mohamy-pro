@@ -693,7 +693,8 @@
       "total": "Total",
       "page": "Page",
       "list": "Search",
-      "errorTitle": "Something went wrong"
+      "errorTitle": "Something went wrong",
+      "archiveConfirm": "Block this check? This cannot be undone."
     },
     "pagination": {
       "prev": "Previous",

@@ -693,7 +693,8 @@
       "total": "الإجمالي",
       "page": "الصفحة",
       "list": "بحث",
-      "errorTitle": "حدث خطأ ما"
+      "errorTitle": "حدث خطأ ما",
+      "archiveConfirm": "حظر هذا الفحص؟ لا يمكن التراجع."
     },
     "pagination": {
       "prev": "السابق",

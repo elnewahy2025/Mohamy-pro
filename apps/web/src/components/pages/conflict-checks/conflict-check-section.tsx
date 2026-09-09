@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ShieldAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -10,6 +10,7 @@ import {
   ApiError,
   ClientsClient,
   ConflictChecksClient,
+  type ConflictCheckListRow,
   type ConflictCheckResult,
 } from '@/lib/api';
 import { useAuth } from '@/auth/auth-provider';
@@ -37,7 +38,11 @@ type ConflictCheckForm = z.infer<typeof conflictCheckSchema>;
 
 type ActionKey = 'request' | 'startReview' | 'decideAllow' | 'decideBlock';
 
-export function ConflictCheckSection(): React.ReactNode {
+export function ConflictCheckSection({
+  selected,
+}: {
+  selected: ConflictCheckListRow | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new ConflictChecksClient());
@@ -130,6 +135,16 @@ export function ConflictCheckSection(): React.ReactNode {
     await handleSubmit((form) => run(action, form))();
   }
 
+  useEffect(() => {
+    if (!selected) return;
+    setValue('id', selected.id, { shouldValidate: true });
+    void client
+      .get(selected.id)
+      .then(setResult)
+      .catch(() => setResult(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
@@ -141,16 +156,12 @@ export function ConflictCheckSection(): React.ReactNode {
           <p>{t('conflictChecks.entity.check.description')}</p>
         </div>
       </div>
+      {result ? (
+        <p className="form-field-hint">
+          {result.status} · {result.decision}
+        </p>
+      ) : null}
       <div className="form-grid">
-        <FormField
-          label={t('conflictChecks.labels.id')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('conflictChecks.placeholders.id'),
-            ...register('id'),
-          }}
-        />
         <EntityPicker
           label={t('conflictChecks.labels.clientId')}
           placeholder={t('conflictChecks.placeholders.clientId')}
@@ -263,36 +274,46 @@ export function ConflictCheckSection(): React.ReactNode {
         className="form-actions form-actions-row"
         style={{ marginTop: '0.5rem' }}
       >
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('startReview')}
-          disabled={submitting}
-        >
-          {submitting
-            ? t('conflictChecks.submitting')
-            : t('conflictChecks.startReview')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('decideAllow')}
-          disabled={submitting}
-        >
-          {submitting
-            ? t('conflictChecks.submitting')
-            : t('conflictChecks.decideAllow')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('decideBlock')}
-          disabled={submitting}
-        >
-          {submitting
-            ? t('conflictChecks.submitting')
-            : t('conflictChecks.decideBlock')}
-        </Button>
+        {!result || result.status === 'PENDING' ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void trigger('startReview')}
+            disabled={submitting || !result}
+          >
+            {submitting
+              ? t('conflictChecks.submitting')
+              : t('conflictChecks.startReview')}
+          </Button>
+        ) : null}
+        {result && result.status === 'IN_REVIEW' ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void trigger('decideAllow')}
+              disabled={submitting}
+            >
+              {submitting
+                ? t('conflictChecks.submitting')
+                : t('conflictChecks.decideAllow')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (!window.confirm(t('conflictChecks.result.archiveConfirm')))
+                  return;
+                void trigger('decideBlock');
+              }}
+              disabled={submitting}
+            >
+              {submitting
+                ? t('conflictChecks.submitting')
+                : t('conflictChecks.decideBlock')}
+            </Button>
+          </>
+        ) : null}
       </div>
       <OperationResult
         status={status}
