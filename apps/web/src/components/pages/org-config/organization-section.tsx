@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Building2 } from 'lucide-react';
+import { Building2, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -414,6 +414,10 @@ export function OrganizationSection(): React.ReactNode {
 
       {subTab === 'danger' && (
         <div className="form-grid">
+          <p className="security-note" role="note">
+            <ShieldCheck aria-hidden="true" size={16} />
+            {t('orgConfig.dangerWarning')}
+          </p>
           {textField(
             'reason',
             'orgConfig.labels.reason',

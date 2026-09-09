@@ -542,7 +542,8 @@
       "socials": "Social links",
       "danger": "Advanced"
     },
-    "save": "Save changes"
+    "save": "Save changes",
+    "dangerWarning": "Archiving hides this organization everywhere: branches, departments, teams, and every record linked to it stay in the database but become unusable until it is restored by support. Only archive when the whole tenant is being retired."
   },
   "clients": {
     "navLabel": "Clients",
