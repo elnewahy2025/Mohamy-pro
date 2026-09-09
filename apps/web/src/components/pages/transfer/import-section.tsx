@@ -25,7 +25,9 @@ export function ImportSection() {
   const t = useTranslations();
   const { user } = useAuth();
   const [client] = useState(() => new TransferClient());
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'submitting' | 'success' | 'error'
+  >('idle');
   const [job, setJob] = useState<ImportJobResult | null>(null);
 
   const {
@@ -34,7 +36,12 @@ export function ImportSection() {
     formState: { errors },
   } = useRHForm<ImportForm>({
     resolver: zodResolver(importSchema),
-    defaultValues: { entityType: 'CASE', content: '', storageObjectId: '', idempotencyKey: '' },
+    defaultValues: {
+      entityType: 'CASE',
+      content: '',
+      storageObjectId: '',
+      idempotencyKey: '',
+    },
   });
 
   async function runCreate(form: ImportForm): Promise<void> {
@@ -54,7 +61,9 @@ export function ImportSection() {
     }
   }
 
-  async function runStep(step: 'validate' | 'approve' | 'rollback'): Promise<void> {
+  async function runStep(
+    step: 'validate' | 'approve' | 'rollback',
+  ): Promise<void> {
     if (!job) return;
     try {
       setStatus('submitting');
@@ -88,15 +97,26 @@ export function ImportSection() {
         <div className="form-grid">
           <FormSelect
             label={t('transfer.labels.entityType')}
-            error={errors.entityType ? t(`form.errors.${errors.entityType.message}`) : undefined}
-            options={['CASE', 'CLIENT', 'PARTY', 'TASK'].map((v) => ({ label: v, value: v }))}
+            error={
+              errors.entityType
+                ? t(`form.errors.${errors.entityType.message}`)
+                : undefined
+            }
+            options={['CASE', 'CLIENT', 'PARTY', 'TASK'].map((v) => ({
+              label: v,
+              value: v,
+            }))}
             selectProps={{
               ...register('entityType'),
             }}
           />
           <FormField
             label={t('transfer.labels.content')}
-            error={errors.content ? t(`form.errors.${errors.content.message}`) : undefined}
+            error={
+              errors.content
+                ? t(`form.errors.${errors.content.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('transfer.placeholders.content'),
@@ -105,7 +125,11 @@ export function ImportSection() {
           />
           <FormField
             label={t('transfer.labels.storageObjectId')}
-            error={errors.storageObjectId ? t(`form.errors.${errors.storageObjectId.message}`) : undefined}
+            error={
+              errors.storageObjectId
+                ? t(`form.errors.${errors.storageObjectId.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('transfer.placeholders.storageObjectId'),
@@ -114,7 +138,11 @@ export function ImportSection() {
           />
           <FormField
             label={t('transfer.labels.idempotencyKey')}
-            error={errors.idempotencyKey ? t(`form.errors.${errors.idempotencyKey.message}`) : undefined}
+            error={
+              errors.idempotencyKey
+                ? t(`form.errors.${errors.idempotencyKey.message}`)
+                : undefined
+            }
             inputProps={{
               type: 'text',
               placeholder: t('transfer.placeholders.idempotencyKey'),
@@ -125,16 +153,39 @@ export function ImportSection() {
 
         <div className="form-actions form-actions-row">
           <Button type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? t('transfer.submitting') : t('transfer.create')}
+            {status === 'submitting'
+              ? t('transfer.submitting')
+              : t('transfer.create')}
           </Button>
-          <Button type="button" variant="outline" disabled={status === 'submitting' || !job} onClick={() => runStep('validate')}>
-            {status === 'submitting' ? t('transfer.submitting') : t('transfer.validate')}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={status === 'submitting' || !job}
+            onClick={() => runStep('validate')}
+          >
+            {status === 'submitting'
+              ? t('transfer.submitting')
+              : t('transfer.validate')}
           </Button>
-          <Button type="button" variant="outline" disabled={status === 'submitting' || !job} onClick={() => runStep('approve')}>
-            {status === 'submitting' ? t('transfer.submitting') : t('transfer.approve')}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={status === 'submitting' || !job}
+            onClick={() => runStep('approve')}
+          >
+            {status === 'submitting'
+              ? t('transfer.submitting')
+              : t('transfer.approve')}
           </Button>
-          <Button type="button" variant="outline" disabled={status === 'submitting' || !job} onClick={() => runStep('rollback')}>
-            {status === 'submitting' ? t('transfer.submitting') : t('transfer.rollback')}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={status === 'submitting' || !job}
+            onClick={() => runStep('rollback')}
+          >
+            {status === 'submitting'
+              ? t('transfer.submitting')
+              : t('transfer.rollback')}
           </Button>
         </div>
 
@@ -143,10 +194,14 @@ export function ImportSection() {
             status={status}
             successLabel={t('transfer.result.title')}
             errorTitle={t('transfer.result.errorTitle')}
-            fields={job ? [
-              { label: t('transfer.result.id'), value: job.id },
-              { label: t('transfer.result.status'), value: job.status },
-            ] : undefined}
+            fields={
+              job
+                ? [
+                    { label: t('transfer.result.id'), value: job.id },
+                    { label: t('transfer.result.status'), value: job.status },
+                  ]
+                : undefined
+            }
           />
         )}
       </form>

@@ -24,6 +24,7 @@ export function WebhooksSection() {
   const [url, setUrl] = useState('');
   const [events, setEvents] = useState('');
   const [webhookId, setWebhookId] = useState('');
+  const [webhookLabel, setWebhookLabel] = useState('');
   const [secret, setSecret] = useState<string | null>(null);
 
   async function runLoad(): Promise<void> {
@@ -103,14 +104,11 @@ export function WebhooksSection() {
           placeholder: t('integrations.placeholders.events'),
         }}
       />
-      <FormField
-        label={t('integrations.labels.webhookId')}
-        inputProps={{
-          value: webhookId,
-          onChange: (e) => setWebhookId(e.target.value),
-          placeholder: t('integrations.placeholders.webhookId'),
-        }}
-      />
+      {webhookId ? (
+        <p className="form-field-hint">
+          {t('integrations.labels.webhookId')}: {webhookLabel || '…'}
+        </p>
+      ) : null}
       <div className="form-actions form-actions-row mt-6">
         <Button
           type="button"
@@ -160,7 +158,16 @@ export function WebhooksSection() {
         <ul className="mt-4 space-y-2">
           {items.map((item) => (
             <li key={item.id} className="text-sm">
-              [{item.status}] {item.url} — {item.events.join(', ')}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setWebhookId(item.id);
+                  setWebhookLabel(item.url);
+                }}
+              >
+                [{item.status}] {item.url} — {item.events.join(', ')}
+              </Button>
             </li>
           ))}
         </ul>
