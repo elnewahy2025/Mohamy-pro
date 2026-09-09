@@ -393,21 +393,21 @@ export function OrganizationSection(): React.ReactNode {
 
       {subTab === 'socials' && (
         <div className="form-grid">
-          {textField('socialX', 'orgConfig.profile.socialXLabel', 'https://…')}
+          {textField('socialX', 'orgConfig.profile.socialXLabel', 'orgConfig.profile.urlPlaceholder')}
           {textField(
             'socialLinkedIn',
             'orgConfig.profile.socialLinkedInLabel',
-            'https://…',
+            'orgConfig.profile.urlPlaceholder',
           )}
           {textField(
             'socialFacebook',
             'orgConfig.profile.socialFacebookLabel',
-            'https://…',
+            'orgConfig.profile.urlPlaceholder',
           )}
           {textField(
             'socialInstagram',
             'orgConfig.profile.socialInstagramLabel',
-            'https://…',
+            'orgConfig.profile.urlPlaceholder',
           )}
         </div>
       )}
