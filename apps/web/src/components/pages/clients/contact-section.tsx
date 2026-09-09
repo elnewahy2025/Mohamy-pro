@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Contact } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -9,6 +9,7 @@ import { z } from 'zod';
 import {
   ApiError,
   ClientsClient,
+  type ClientResult,
   type ClientContactResult,
   type ContactType,
 } from '@/lib/api';
@@ -32,12 +33,17 @@ type ContactForm = z.infer<typeof contactSchema>;
 
 type ActionKey = 'create' | 'update' | 'remove';
 
-export function ContactSection(): React.ReactNode {
+export function ContactSection({
+  selected,
+}: {
+  selected: ClientResult | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new ClientsClient());
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [result, setResult] = useState<ClientContactResult | null>(null);
+  const [items, setItems] = useState<ClientContactResult[]>([]);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -92,9 +98,11 @@ export function ContactSection(): React.ReactNode {
       }
       setResult(next);
       setStatus('success');
+      if (form.clientId) void runList(form.clientId);
       if (action === 'create') {
+        const keepClientId = form.clientId;
         reset({
-          clientId: '',
+          clientId: keepClientId,
           id: '',
           type: 'EMAIL',
           value: '',
@@ -102,6 +110,7 @@ export function ContactSection(): React.ReactNode {
           isPrimary: 'false',
           reason: '',
         });
+        if (keepClientId) void runList(keepClientId);
       }
     } catch (error) {
       setStatus('error');
@@ -124,6 +133,24 @@ export function ContactSection(): React.ReactNode {
     await handleSubmit((form) => run(action, form))();
   }
 
+  async function runList(clientId: string): Promise<void> {
+    try {
+      setItems(await client.listContacts(clientId));
+    } catch {
+      setItems([]);
+    }
+  }
+
+  useEffect(() => {
+    if (selected) {
+      setValue('clientId', selected.id, { shouldValidate: true });
+      void runList(selected.id);
+    } else {
+      setItems([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
@@ -135,6 +162,12 @@ export function ContactSection(): React.ReactNode {
           <p>{t('clients.entity.contact.description')}</p>
         </div>
       </div>
+      {selected ? (
+        <p className="form-field-hint">{selected.displayName}</p>
+      ) : null}
+      {selected ? (
+        <p className="form-field-hint">{selected.displayName}</p>
+      ) : null}
       <div className="form-grid">
         <EntityPicker
           label={t('clients.labels.clientId')}
@@ -156,15 +189,6 @@ export function ContactSection(): React.ReactNode {
               }),
             )
           }
-        />
-        <FormField
-          label={t('clients.labels.entityId')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('clients.placeholders.entityId'),
-            ...register('id'),
-          }}
         />
         <FormSelect
           label={t('clients.labels.contactType')}
@@ -229,27 +253,28 @@ export function ContactSection(): React.ReactNode {
         <Button
           type="button"
           variant="default"
-          onClick={() => void trigger('create')}
+          onClick={() => void trigger(result ? 'update' : 'create')}
           disabled={submitting || authLoading || !user}
         >
-          {submitting ? t('clients.submitting') : t('clients.create')}
+          {submitting
+            ? t('clients.submitting')
+            : result
+              ? t('clients.save')
+              : t('clients.create')}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('update')}
-          disabled={submitting}
-        >
-          {submitting ? t('clients.submitting') : t('clients.update')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void trigger('remove')}
-          disabled={submitting}
-        >
-          {submitting ? t('clients.submitting') : t('clients.remove')}
-        </Button>
+        {result ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!window.confirm(t('clients.result.archiveConfirm'))) return;
+              void trigger('remove');
+            }}
+            disabled={submitting}
+          >
+            {submitting ? t('clients.submitting') : t('clients.remove')}
+          </Button>
+        ) : null}
       </div>
       <OperationResult
         status={status}
@@ -273,6 +298,52 @@ export function ContactSection(): React.ReactNode {
             : undefined
         }
       />
+      {items.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {items.map((item) => (
+            <li key={item.id} className="text-sm">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setValue('id', item.id);
+                  setValue('type', item.type);
+                  setValue('value', item.value);
+                  setValue('label', item.label ?? '');
+                  setValue('isPrimary', item.isPrimary ? 'true' : 'false');
+                  setResult(item);
+                }}
+              >
+                {item.type} — {item.value.slice(0, 40)}
+                {item.isPrimary ? ' ★' : ''}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {items.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {items.map((item) => (
+            <li key={item.id} className="text-sm">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setValue('id', item.id);
+                  setValue('type', item.type);
+                  setValue('value', item.value);
+                  setValue('label', item.label ?? '');
+                  setValue('isPrimary', item.isPrimary ? 'true' : 'false');
+                  setResult(item);
+                }}
+              >
+                {item.type} — {item.value.slice(0, 40)}
+                {item.isPrimary ? ' ★' : ''}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
     </form>
   );
 }

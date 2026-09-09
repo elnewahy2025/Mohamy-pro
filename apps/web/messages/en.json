@@ -629,7 +629,8 @@
       "total": "Total",
       "page": "Page",
       "list": "Search",
-      "errorTitle": "Something went wrong"
+      "errorTitle": "Something went wrong",
+      "archiveConfirm": "Archive this client? This cannot be undone."
     },
     "pagination": {
       "prev": "Previous",
@@ -640,7 +641,8 @@
       "client": "Create client",
       "contact": "Client contacts",
       "address": "Client addresses"
-    }
+    },
+    "save": "Save changes"
   },
   "conflictChecks": {
     "navLabel": "Conflict checks",

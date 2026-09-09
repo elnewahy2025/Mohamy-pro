@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import type { ClientResult } from '@/lib/api';
 import { ClientSection } from '@/components/pages/clients/client-section';
 import { ClientListSection } from '@/components/pages/clients/client-list-section';
 import { ContactSection } from '@/components/pages/clients/contact-section';
@@ -10,7 +11,10 @@ import { Button } from '@/components/ui/button';
 
 export function ClientsPage(): React.ReactNode {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<'list' | 'create' | 'contact' | 'address'>('list');
+  const [activeTab, setActiveTab] = useState<
+    'list' | 'create' | 'contact' | 'address'
+  >('list');
+  const [selected, setSelected] = useState<ClientResult | null>(null);
 
   return (
     <section className="page-section content-page">
@@ -21,26 +25,26 @@ export function ClientsPage(): React.ReactNode {
       </div>
 
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
-        <Button 
-          variant={activeTab === 'list' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'list' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('list')}
         >
           {t('clients.sections.list')}
         </Button>
-        <Button 
-          variant={activeTab === 'create' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'create' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('create')}
         >
           {t('clients.sections.client')}
         </Button>
-        <Button 
-          variant={activeTab === 'contact' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'contact' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('contact')}
         >
           {t('clients.sections.contact')}
         </Button>
-        <Button 
-          variant={activeTab === 'address' ? 'default' : 'ghost'} 
+        <Button
+          variant={activeTab === 'address' ? 'default' : 'ghost'}
           onClick={() => setActiveTab('address')}
         >
           {t('clients.sections.address')}
@@ -48,10 +52,10 @@ export function ClientsPage(): React.ReactNode {
       </div>
 
       <div className="settings-stack">
-        {activeTab === 'list' && <ClientListSection />}
-        {activeTab === 'create' && <ClientSection />}
-        {activeTab === 'contact' && <ContactSection />}
-        {activeTab === 'address' && <AddressSection />}
+        {activeTab === 'list' && <ClientListSection onSelect={setSelected} />}
+        {activeTab === 'create' && <ClientSection selected={selected} />}
+        {activeTab === 'contact' && <ContactSection selected={selected} />}
+        {activeTab === 'address' && <AddressSection selected={selected} />}
       </div>
     </section>
   );

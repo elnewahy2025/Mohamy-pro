@@ -19,7 +19,7 @@ House standard per AGENTS.md §31.6. Every page gets, as applicable:
 
 ## Queue (in order)
 
-1. [ ] Clients — tabs: list, client, contact, address
+1. [x] Clients — tabs: list, client, contact, address (shared selection, contact/address lists added backend-side)
 2. [ ] Parties — tabs: list, party, relationship
 3. [ ] Conflict-checks — tabs: list, check
 4. [ ] Cases — tabs: list, case, parties, details, timeline, assignments, breakglass

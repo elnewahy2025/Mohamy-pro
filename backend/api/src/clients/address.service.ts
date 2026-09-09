@@ -103,6 +103,22 @@ export class ClientAddressService {
     );
   }
 
+  async list(
+    request: Request,
+    clientId: string,
+  ): Promise<ClientAddressResult[]> {
+    const ctx = await this.ops.authorize(request);
+    return this.ops.read(request, ctx, async (transaction) => {
+      await this.ops.requireClientInTenant(transaction, ctx, clientId);
+      return transaction.clientAddress.findMany({
+        where: { tenantId: ctx.tenantId, clientId },
+        orderBy: { createdAt: 'asc' },
+        take: 100,
+        select: SELECT,
+      });
+    });
+  }
+
   async update(
     request: Request,
     input: UpdateClientAddressInput,

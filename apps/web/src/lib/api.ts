@@ -1055,6 +1055,12 @@ export class ClientsClient {
       { reason: req.reason ?? undefined },
     );
   }
+  listContacts(clientId: string): Promise<ClientContactResult[]> {
+    return this.client.body<ClientContactResult[]>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(clientId)}/contacts`,
+      'GET',
+    );
+  }
 
   // Addresses
   createAddress(req: CreateClientAddressRequest): Promise<ClientAddressResult> {
@@ -1076,6 +1082,13 @@ export class ClientsClient {
       `${CLIENTS_PREFIX}/${encodeURIComponent(req.clientId)}/addresses/${encodeURIComponent(req.id)}`,
       'DELETE',
       { reason: req.reason ?? undefined },
+    );
+  }
+
+  listAddresses(clientId: string): Promise<ClientAddressResult[]> {
+    return this.client.body<ClientAddressResult[]>(
+      `${CLIENTS_PREFIX}/${encodeURIComponent(clientId)}/addresses`,
+      'GET',
     );
   }
 }

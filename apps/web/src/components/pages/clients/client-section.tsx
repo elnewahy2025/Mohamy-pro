@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -31,7 +31,11 @@ type ClientForm = z.infer<typeof clientSchema>;
 
 type ActionKey = 'create' | 'update' | 'archive';
 
-export function ClientSection(): React.ReactNode {
+export function ClientSection({
+  selected,
+}: {
+  selected: ClientResult | null;
+}): React.ReactNode {
   const t = useTranslations();
   const { isLoading: authLoading, user } = useAuth();
   const [client] = useState(() => new ClientsClient());
@@ -44,6 +48,7 @@ export function ClientSection(): React.ReactNode {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
@@ -104,7 +109,12 @@ export function ClientSection(): React.ReactNode {
       setSubmitError(
         error instanceof ApiError
           ? error
-          : new ApiError(error instanceof Error ? error.message : 'Unknown error', 'INTERNAL', [], 0),
+          : new ApiError(
+              error instanceof Error ? error.message : 'Unknown error',
+              'INTERNAL',
+              [],
+              0,
+            ),
       );
     } finally {
       setSubmitting(false);
@@ -115,25 +125,38 @@ export function ClientSection(): React.ReactNode {
     await handleSubmit((form) => run(action, form))();
   }
 
+  function fillForm(item: ClientResult): void {
+    setResult(item);
+    setValue('id', item.id);
+    setValue('clientType', item.clientType);
+    setValue('name', item.name);
+    setValue('legalName', item.legalName ?? '');
+    setValue('source', item.source ?? '');
+    setValue('notes', item.notes ?? '');
+  }
+
+  useEffect(() => {
+    if (selected) fillForm(selected);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
   return (
     <form className="settings-card" noValidate>
       <div className="settings-card-heading">
-        <span className="settings-icon" aria-hidden="true"><Users size={18} /></span>
+        <span className="settings-icon" aria-hidden="true">
+          <Users size={18} />
+        </span>
         <div>
           <h2>{t('clients.sections.client')}</h2>
           <p>{t('clients.entity.client.description')}</p>
         </div>
       </div>
+      {result ? (
+        <p className="form-field-hint">
+          {result.displayName} [{result.status}]
+        </p>
+      ) : null}
       <div className="form-grid">
-        <FormField
-          label={t('clients.labels.entityId')}
-          inputProps={{
-            type: 'text',
-            autoComplete: 'off',
-            placeholder: t('clients.placeholders.entityId'),
-            ...register('id'),
-          }}
-        />
         <FormSelect
           label={t('clients.labels.clientType')}
           selectProps={register('clientType')}
@@ -144,7 +167,9 @@ export function ClientSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.name')}
-          error={errors.name ? t(`form.errors.${errors.name.message}`) : undefined}
+          error={
+            errors.name ? t(`form.errors.${errors.name.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -154,7 +179,11 @@ export function ClientSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.legalName')}
-          error={errors.legalName ? t(`form.errors.${errors.legalName.message}`) : undefined}
+          error={
+            errors.legalName
+              ? t(`form.errors.${errors.legalName.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -164,7 +193,11 @@ export function ClientSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.source')}
-          error={errors.source ? t(`form.errors.${errors.source.message}`) : undefined}
+          error={
+            errors.source
+              ? t(`form.errors.${errors.source.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -174,7 +207,9 @@ export function ClientSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.notes')}
-          error={errors.notes ? t(`form.errors.${errors.notes.message}`) : undefined}
+          error={
+            errors.notes ? t(`form.errors.${errors.notes.message}`) : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -184,7 +219,11 @@ export function ClientSection(): React.ReactNode {
         />
         <FormField
           label={t('clients.labels.reason')}
-          error={errors.reason ? t(`form.errors.${errors.reason.message}`) : undefined}
+          error={
+            errors.reason
+              ? t(`form.errors.${errors.reason.message}`)
+              : undefined
+          }
           inputProps={{
             type: 'text',
             autoComplete: 'off',
@@ -194,15 +233,31 @@ export function ClientSection(): React.ReactNode {
         />
       </div>
       <div className="form-actions form-actions-row">
-        <Button type="button" variant="default" onClick={() => void trigger('create')} disabled={submitting || authLoading || !user}>
-          {submitting ? t('clients.submitting') : t('clients.create')}
+        <Button
+          type="button"
+          variant="default"
+          onClick={() => void trigger(result ? 'update' : 'create')}
+          disabled={submitting || authLoading || !user}
+        >
+          {submitting
+            ? t('clients.submitting')
+            : result
+              ? t('clients.save')
+              : t('clients.create')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('update')} disabled={submitting}>
-          {submitting ? t('clients.submitting') : t('clients.update')}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => void trigger('archive')} disabled={submitting}>
-          {submitting ? t('clients.submitting') : t('clients.archive')}
-        </Button>
+        {result ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!window.confirm(t('clients.result.archiveConfirm'))) return;
+              void trigger('archive');
+            }}
+            disabled={submitting}
+          >
+            {submitting ? t('clients.submitting') : t('clients.archive')}
+          </Button>
+        ) : null}
       </div>
       <OperationResult
         status={status}
@@ -213,11 +268,14 @@ export function ClientSection(): React.ReactNode {
         errorDetails={submitError?.details}
         requestId={submitError?.requestId}
         ariaLiveLabel={t('identity.result.successAriaLive')}
-        fields={result ? [
-          { label: t('clients.result.id'), value: result.id },
-          { label: t('clients.result.name'), value: result.displayName },
-          { label: t('clients.result.status'), value: result.status },
-        ] : undefined}
+        fields={
+          result
+            ? [
+                { label: t('clients.result.name'), value: result.displayName },
+                { label: t('clients.result.status'), value: result.status },
+              ]
+            : undefined
+        }
       />
     </form>
   );

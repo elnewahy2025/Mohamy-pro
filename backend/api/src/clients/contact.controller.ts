@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   Patch,
   Post,
@@ -34,6 +35,14 @@ import { ClientIdDto } from './client.dto';
 @UseGuards(SessionGuard, CsrfGuard)
 export class ClientContactController {
   constructor(private readonly contacts: ClientContactService) {}
+
+  @Get()
+  async list(
+    @Req() req: Request,
+    @Param() params: ClientIdDto,
+  ): Promise<ClientContactResult[]> {
+    return this.contacts.list(req, params.id);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a client contact channel' })

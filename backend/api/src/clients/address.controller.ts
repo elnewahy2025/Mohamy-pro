@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   Patch,
   Post,
@@ -34,6 +35,14 @@ import { ClientIdDto } from './client.dto';
 @UseGuards(SessionGuard, CsrfGuard)
 export class ClientAddressController {
   constructor(private readonly addresses: ClientAddressService) {}
+
+  @Get()
+  async list(
+    @Req() req: Request,
+    @Param() params: ClientIdDto,
+  ): Promise<ClientAddressResult[]> {
+    return this.addresses.list(req, params.id);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a client address' })
