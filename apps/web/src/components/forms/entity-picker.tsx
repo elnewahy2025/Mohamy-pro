@@ -131,7 +131,8 @@ export function EntityPicker({
     // Instant load for empty query or if the query is just the currently picked item's label
     if (
       (query === '' || (picked && query === picked.label)) &&
-      initialOptions !== null
+      initialOptions !== null &&
+      (preload || initialOptions.length > 0)
     ) {
       setOptions(initialOptions);
       setLoading(false);
@@ -139,7 +140,7 @@ export function EntityPicker({
       return;
     }
 
-    if (query.trim().length < minChars) {
+    if (query.trim() !== '' && query.trim().length < minChars) {
       setOptions([]);
       setLoading(false);
       setHighlight(-1);
@@ -272,7 +273,7 @@ export function EntityPicker({
               >
                 {t('common.loading')}
               </li>
-            ) : query.trim().length < minChars ? (
+            ) : query.trim() !== '' && query.trim().length < minChars ? (
               <li
                 className="entity-picker-option"
                 style={{
