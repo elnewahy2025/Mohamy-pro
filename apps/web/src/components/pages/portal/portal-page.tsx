@@ -15,6 +15,18 @@ export function PortalPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('cases');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    cases: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'cases', label: t('portal.sections.cases.heading') },
     { key: 'documents', label: t('portal.sections.documents.heading') },
@@ -36,7 +48,7 @@ export function PortalPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -44,11 +56,21 @@ export function PortalPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'cases' && <PortalCasesSection />}
-        {activeTab === 'documents' && <PortalDocumentsSection />}
-        {activeTab === 'agenda' && <PortalAgendaSection />}
-        {activeTab === 'messages' && <PortalMessagesSection />}
-        {activeTab === 'invoices' && <PortalInvoicesSection />}
+        <div className={activeTab === 'cases' ? 'block' : 'hidden'}>
+          {mountedTabs.cases && <PortalCasesSection />}
+        </div>
+        <div className={activeTab === 'documents' ? 'block' : 'hidden'}>
+          {mountedTabs.documents && <PortalDocumentsSection />}
+        </div>
+        <div className={activeTab === 'agenda' ? 'block' : 'hidden'}>
+          {mountedTabs.agenda && <PortalAgendaSection />}
+        </div>
+        <div className={activeTab === 'messages' ? 'block' : 'hidden'}>
+          {mountedTabs.messages && <PortalMessagesSection />}
+        </div>
+        <div className={activeTab === 'invoices' ? 'block' : 'hidden'}>
+          {mountedTabs.invoices && <PortalInvoicesSection />}
+        </div>
       </div>
     </section>
   );

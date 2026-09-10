@@ -14,6 +14,18 @@ export function LegalConfigPage(): React.ReactNode {
     'country' | 'jurisdiction' | 'court' | 'location'
   >('country');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    country: true,
+  });
+
+  const handleTabChange = (tab: 'country' | 'jurisdiction' | 'court' | 'location') => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   return (
     <section className="page-section content-page">
       <div className="page-heading">
@@ -25,35 +37,43 @@ export function LegalConfigPage(): React.ReactNode {
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
         <Button
           variant={activeTab === 'country' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('country')}
+          onClick={() => handleTabChange('country')}
         >
           {t('legalConfig.sections.country.heading')}
         </Button>
         <Button
           variant={activeTab === 'jurisdiction' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('jurisdiction')}
+          onClick={() => handleTabChange('jurisdiction')}
         >
           {t('legalConfig.sections.jurisdiction.heading')}
         </Button>
         <Button
           variant={activeTab === 'court' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('court')}
+          onClick={() => handleTabChange('court')}
         >
           {t('legalConfig.sections.court.heading')}
         </Button>
         <Button
           variant={activeTab === 'location' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('location')}
+          onClick={() => handleTabChange('location')}
         >
           {t('legalConfig.sections.courtLocation.heading')}
         </Button>
       </div>
 
       <div className="settings-stack">
-        {activeTab === 'country' && <CountrySection />}
-        {activeTab === 'jurisdiction' && <JurisdictionSection />}
-        {activeTab === 'court' && <CourtSection />}
-        {activeTab === 'location' && <CourtLocationSection />}
+        <div className={activeTab === 'country' ? 'block' : 'hidden'}>
+          {mountedTabs.country && <CountrySection />}
+        </div>
+        <div className={activeTab === 'jurisdiction' ? 'block' : 'hidden'}>
+          {mountedTabs.jurisdiction && <JurisdictionSection />}
+        </div>
+        <div className={activeTab === 'court' ? 'block' : 'hidden'}>
+          {mountedTabs.court && <CourtSection />}
+        </div>
+        <div className={activeTab === 'location' ? 'block' : 'hidden'}>
+          {mountedTabs.location && <CourtLocationSection />}
+        </div>
       </div>
     </section>
   );

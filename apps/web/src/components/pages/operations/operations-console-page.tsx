@@ -13,6 +13,18 @@ export function OperationsConsolePage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('status');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    status: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'status', label: t('operations.sections.status.heading') },
     { key: 'policy', label: t('operations.sections.policy.heading') },
@@ -32,7 +44,7 @@ export function OperationsConsolePage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -40,9 +52,15 @@ export function OperationsConsolePage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'status' && <StatusSection />}
-        {activeTab === 'policy' && <PolicySection />}
-        {activeTab === 'drills' && <DrillsSection />}
+        <div className={activeTab === 'status' ? 'block' : 'hidden'}>
+          {mountedTabs.status && <StatusSection />}
+        </div>
+        <div className={activeTab === 'policy' ? 'block' : 'hidden'}>
+          {mountedTabs.policy && <PolicySection />}
+        </div>
+        <div className={activeTab === 'drills' ? 'block' : 'hidden'}>
+          {mountedTabs.drills && <DrillsSection />}
+        </div>
       </div>
     </section>
   );

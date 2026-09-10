@@ -12,6 +12,18 @@ export function IntakePage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('submit');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    submit: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'submit', label: t('intake.sections.submit.heading') },
     { key: 'triage', label: t('intake.sections.triage.heading') },
@@ -30,7 +42,7 @@ export function IntakePage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -38,8 +50,12 @@ export function IntakePage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'submit' && <SubmitSection />}
-        {activeTab === 'triage' && <TriageSection />}
+        <div className={activeTab === 'submit' ? 'block' : 'hidden'}>
+          {mountedTabs.submit && <SubmitSection />}
+        </div>
+        <div className={activeTab === 'triage' ? 'block' : 'hidden'}>
+          {mountedTabs.triage && <TriageSection />}
+        </div>
       </div>
     </section>
   );

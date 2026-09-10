@@ -16,6 +16,20 @@ export function OrgConfigPage(): React.ReactNode {
     'organization' | 'branch' | 'department' | 'team' | 'settings' | 'directory'
   >('organization');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    organization: true,
+  });
+
+  const handleTabChange = (
+    tab: 'organization' | 'branch' | 'department' | 'team' | 'settings' | 'directory',
+  ) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   return (
     <section className="page-section content-page">
       <div className="page-heading">
@@ -27,49 +41,61 @@ export function OrgConfigPage(): React.ReactNode {
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
         <Button
           variant={activeTab === 'organization' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('organization')}
+          onClick={() => handleTabChange('organization')}
         >
           {t('orgConfig.sections.organization')}
         </Button>
         <Button
           variant={activeTab === 'branch' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('branch')}
+          onClick={() => handleTabChange('branch')}
         >
           {t('orgConfig.sections.branch')}
         </Button>
         <Button
           variant={activeTab === 'department' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('department')}
+          onClick={() => handleTabChange('department')}
         >
           {t('orgConfig.sections.department')}
         </Button>
         <Button
           variant={activeTab === 'team' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('team')}
+          onClick={() => handleTabChange('team')}
         >
           {t('orgConfig.sections.team')}
         </Button>
         <Button
           variant={activeTab === 'settings' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('settings')}
+          onClick={() => handleTabChange('settings')}
         >
           {t('orgConfig.sections.settings')}
         </Button>
         <Button
           variant={activeTab === 'directory' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('directory')}
+          onClick={() => handleTabChange('directory')}
         >
           {t('orgConfig.sections.directory')}
         </Button>
       </div>
 
       <div className="settings-stack">
-        {activeTab === 'organization' && <OrganizationSection />}
-        {activeTab === 'branch' && <BranchSection />}
-        {activeTab === 'department' && <DepartmentSection />}
-        {activeTab === 'team' && <TeamSection />}
-        {activeTab === 'settings' && <SettingsSection />}
-        {activeTab === 'directory' && <EmployeesDirectorySection />}
+        <div className={activeTab === 'organization' ? 'block' : 'hidden'}>
+          {mountedTabs.organization && <OrganizationSection />}
+        </div>
+        <div className={activeTab === 'branch' ? 'block' : 'hidden'}>
+          {mountedTabs.branch && <BranchSection />}
+        </div>
+        <div className={activeTab === 'department' ? 'block' : 'hidden'}>
+          {mountedTabs.department && <DepartmentSection />}
+        </div>
+        <div className={activeTab === 'team' ? 'block' : 'hidden'}>
+          {mountedTabs.team && <TeamSection />}
+        </div>
+        <div className={activeTab === 'settings' ? 'block' : 'hidden'}>
+          {mountedTabs.settings && <SettingsSection />}
+        </div>
+        <div className={activeTab === 'directory' ? 'block' : 'hidden'}>
+          {mountedTabs.directory && <EmployeesDirectorySection />}
+        </div>
       </div>
     </section>
   );

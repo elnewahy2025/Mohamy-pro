@@ -13,6 +13,18 @@ export function TransferPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('import');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    import: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'import', label: t('transfer.sections.import.heading') },
     { key: 'jobs', label: t('transfer.sections.jobs.heading') },
@@ -32,7 +44,7 @@ export function TransferPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -40,9 +52,15 @@ export function TransferPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'import' && <ImportSection />}
-        {activeTab === 'jobs' && <ImportJobsSection />}
-        {activeTab === 'export' && <ExportSection />}
+        <div className={activeTab === 'import' ? 'block' : 'hidden'}>
+          {mountedTabs.import && <ImportSection />}
+        </div>
+        <div className={activeTab === 'jobs' ? 'block' : 'hidden'}>
+          {mountedTabs.jobs && <ImportJobsSection />}
+        </div>
+        <div className={activeTab === 'export' ? 'block' : 'hidden'}>
+          {mountedTabs.export && <ExportSection />}
+        </div>
       </div>
     </section>
   );

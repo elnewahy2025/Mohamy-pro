@@ -149,9 +149,10 @@ export function CasePartySection({
               : undefined
           }
           value={watchedCaseId ?? ''}
-          onChange={(id) =>
-            addForm.setValue('caseId', id, { shouldValidate: true })
-          }
+          onChange={(id) => {
+            addForm.setValue('caseId', id, { shouldValidate: true });
+            removeForm.setValue('caseId', id, { shouldValidate: true });
+          }}
           load={async (search) =>
             (await client.list(search ? { search } : {})).data.map((c) => ({
               id: c.id,
@@ -160,6 +161,12 @@ export function CasePartySection({
             }))
           }
         />
+      </div>
+
+      <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem', fontSize: '1rem', fontWeight: 600 }}>
+        {t('cases.addParty')}
+      </h3>
+      <div className="form-grid">
         <EntityPicker
           minChars={2}
           preload={false}
@@ -217,6 +224,7 @@ export function CasePartySection({
           {submitting ? t('cases.submitting') : t('cases.addParty')}
         </Button>
       </div>
+
       <OperationResult
         status={status}
         successLabel={t('cases.result.title')}
@@ -239,23 +247,11 @@ export function CasePartySection({
               : undefined
         }
       />
-      <div className="form-grid" style={{ marginTop: '1rem' }}>
-        <EntityPicker
-          label={t('cases.labels.id')}
-          placeholder={t('cases.placeholders.id')}
-          required
-          value={removeForm.watch('caseId') ?? ''}
-          onChange={(id) =>
-            removeForm.setValue('caseId', id, { shouldValidate: true })
-          }
-          load={async (search) =>
-            (await client.list(search ? { search } : {})).data.map((c) => ({
-              id: c.id,
-              label: c.caseNumber,
-              sub: c.status,
-            }))
-          }
-        />
+
+      <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem', fontSize: '1rem', fontWeight: 600 }}>
+        {t('cases.removeParty')}
+      </h3>
+      <div className="form-grid">
         <EntityPicker
           minChars={2}
           preload={false}

@@ -12,6 +12,18 @@ export function AiPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('request');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    request: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'request', label: t('ai.sections.request.heading') },
     { key: 'review', label: t('ai.sections.review.heading') },
@@ -30,7 +42,7 @@ export function AiPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -38,8 +50,12 @@ export function AiPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'request' && <RequestSection />}
-        {activeTab === 'review' && <ReviewSection />}
+        <div className={activeTab === 'request' ? 'block' : 'hidden'}>
+          {mountedTabs.request && <RequestSection />}
+        </div>
+        <div className={activeTab === 'review' ? 'block' : 'hidden'}>
+          {mountedTabs.review && <ReviewSection />}
+        </div>
       </div>
     </section>
   );

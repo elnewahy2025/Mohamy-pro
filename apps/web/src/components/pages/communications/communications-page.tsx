@@ -16,6 +16,18 @@ export function CommunicationsPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('inbox');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    inbox: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'threads', label: t('communications.sections.threads.heading') },
     { key: 'compose', label: t('communications.sections.compose.heading') },
@@ -38,7 +50,7 @@ export function CommunicationsPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -46,12 +58,24 @@ export function CommunicationsPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'threads' && <ThreadsSection />}
-        {activeTab === 'compose' && <ComposeSection />}
-        {activeTab === 'inbox' && <InboxSection />}
-        {activeTab === 'delivery' && <DeliverySection />}
-        {activeTab === 'attachments' && <AttachmentsSection />}
-        {activeTab === 'consent' && <ConsentSection />}
+        <div className={activeTab === 'threads' ? 'block' : 'hidden'}>
+          {mountedTabs.threads && <ThreadsSection />}
+        </div>
+        <div className={activeTab === 'compose' ? 'block' : 'hidden'}>
+          {mountedTabs.compose && <ComposeSection />}
+        </div>
+        <div className={activeTab === 'inbox' ? 'block' : 'hidden'}>
+          {mountedTabs.inbox && <InboxSection />}
+        </div>
+        <div className={activeTab === 'delivery' ? 'block' : 'hidden'}>
+          {mountedTabs.delivery && <DeliverySection />}
+        </div>
+        <div className={activeTab === 'attachments' ? 'block' : 'hidden'}>
+          {mountedTabs.attachments && <AttachmentsSection />}
+        </div>
+        <div className={activeTab === 'consent' ? 'block' : 'hidden'}>
+          {mountedTabs.consent && <ConsentSection />}
+        </div>
       </div>
     </section>
   );

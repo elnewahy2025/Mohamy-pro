@@ -13,6 +13,18 @@ export function IntegrationsPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('connections');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    connections: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     {
       key: 'connections',
@@ -35,7 +47,7 @@ export function IntegrationsPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -43,9 +55,15 @@ export function IntegrationsPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'connections' && <ConnectionsSection />}
-        {activeTab === 'webhooks' && <WebhooksSection />}
-        {activeTab === 'catalog' && <CatalogSection />}
+        <div className={activeTab === 'connections' ? 'block' : 'hidden'}>
+          {mountedTabs.connections && <ConnectionsSection />}
+        </div>
+        <div className={activeTab === 'webhooks' ? 'block' : 'hidden'}>
+          {mountedTabs.webhooks && <WebhooksSection />}
+        </div>
+        <div className={activeTab === 'catalog' ? 'block' : 'hidden'}>
+          {mountedTabs.catalog && <CatalogSection />}
+        </div>
       </div>
     </section>
   );

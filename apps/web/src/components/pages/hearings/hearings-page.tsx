@@ -13,10 +13,22 @@ export function HearingsPage(): React.ReactNode {
   const [selectedHearingId, setSelectedHearingId] = useState<string>('');
   const [selectedHearingLabel, setSelectedHearingLabel] = useState<string>('');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    list: true,
+  });
+
+  const handleTabChange = (tab: 'list' | 'schedule' | 'outcome') => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   function handleSelectHearing(id: string, label: string) {
     setSelectedHearingId(id);
     setSelectedHearingLabel(label);
-    setActiveTab('outcome'); // Usually selecting a hearing means you want to view/edit it (e.g. record outcome)
+    handleTabChange('outcome'); // Usually selecting a hearing means you want to view/edit it (e.g. record outcome)
   }
 
   return (
@@ -37,7 +49,7 @@ export function HearingsPage(): React.ReactNode {
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
         <Button 
           variant={activeTab === 'list' ? 'default' : 'ghost'} 
-          onClick={() => setActiveTab('list')}
+          onClick={() => handleTabChange('list')}
         >
           {t('hearings.sections.list')}
         </Button>
@@ -46,23 +58,29 @@ export function HearingsPage(): React.ReactNode {
           onClick={() => {
             setSelectedHearingId('');
             setSelectedHearingLabel('');
-            setActiveTab('schedule');
+            handleTabChange('schedule');
           }}
         >
           {t('hearings.sections.schedule')}
         </Button>
         <Button 
           variant={activeTab === 'outcome' ? 'default' : 'ghost'} 
-          onClick={() => setActiveTab('outcome')}
+          onClick={() => handleTabChange('outcome')}
         >
           {t('hearings.sections.outcome')}
         </Button>
       </div>
 
       <div className="tab-content">
-        {activeTab === 'list' && <HearingListSection onSelect={handleSelectHearing} />}
-        {activeTab === 'schedule' && <HearingSection />}
-        {activeTab === 'outcome' && <HearingOutcomeSection hearingId={selectedHearingId} />}
+        <div className={activeTab === 'list' ? 'block' : 'hidden'}>
+          {mountedTabs.list && <HearingListSection onSelect={handleSelectHearing} />}
+        </div>
+        <div className={activeTab === 'schedule' ? 'block' : 'hidden'}>
+          {mountedTabs.schedule && <HearingSection />}
+        </div>
+        <div className={activeTab === 'outcome' ? 'block' : 'hidden'}>
+          {mountedTabs.outcome && <HearingOutcomeSection hearingId={selectedHearingId} />}
+        </div>
       </div>
     </section>
   );

@@ -13,6 +13,18 @@ export function ReportsPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('definitions');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    definitions: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'definitions', label: t('reports.sections.definitions.heading') },
     { key: 'run', label: t('reports.sections.run.heading') },
@@ -32,7 +44,7 @@ export function ReportsPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -40,9 +52,15 @@ export function ReportsPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'definitions' && <DefinitionsSection />}
-        {activeTab === 'run' && <RunSection />}
-        {activeTab === 'schedules' && <SchedulesSection />}
+        <div className={activeTab === 'definitions' ? 'block' : 'hidden'}>
+          {mountedTabs.definitions && <DefinitionsSection />}
+        </div>
+        <div className={activeTab === 'run' ? 'block' : 'hidden'}>
+          {mountedTabs.run && <RunSection />}
+        </div>
+        <div className={activeTab === 'schedules' ? 'block' : 'hidden'}>
+          {mountedTabs.schedules && <SchedulesSection />}
+        </div>
       </div>
     </section>
   );

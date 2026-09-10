@@ -13,6 +13,18 @@ export function NotificationsPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('inbox');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    inbox: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'inbox', label: t('notifications.sections.inbox.heading') },
     { key: 'preferences', label: t('notifications.sections.preferences.heading') },
@@ -32,7 +44,7 @@ export function NotificationsPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -40,9 +52,15 @@ export function NotificationsPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'inbox' && <InboxSection />}
-        {activeTab === 'preferences' && <PreferencesSection />}
-        {activeTab === 'rules' && <RulesSection />}
+        <div className={activeTab === 'inbox' ? 'block' : 'hidden'}>
+          {mountedTabs.inbox && <InboxSection />}
+        </div>
+        <div className={activeTab === 'preferences' ? 'block' : 'hidden'}>
+          {mountedTabs.preferences && <PreferencesSection />}
+        </div>
+        <div className={activeTab === 'rules' ? 'block' : 'hidden'}>
+          {mountedTabs.rules && <RulesSection />}
+        </div>
       </div>
     </section>
   );

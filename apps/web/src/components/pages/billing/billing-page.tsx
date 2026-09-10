@@ -28,6 +28,18 @@ export function BillingPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('invoice');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    invoice: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'fee', label: t('billing.sections.fee.heading') },
     { key: 'expense', label: t('billing.sections.expense.heading') },
@@ -53,7 +65,7 @@ export function BillingPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -61,15 +73,33 @@ export function BillingPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'fee' && <FeeSection />}
-        {activeTab === 'expense' && <ExpenseSection />}
-        {activeTab === 'invoice' && <InvoiceSection />}
-        {activeTab === 'lifecycle' && <InvoiceLifecycleSection />}
-        {activeTab === 'payment' && <PaymentSection />}
-        {activeTab === 'credit' && <CreditSection />}
-        {activeTab === 'ledger' && <LedgerSection />}
-        {activeTab === 'balance' && <BalanceSection />}
-        {activeTab === 'tax' && <TaxSection />}
+        <div className={activeTab === 'fee' ? 'block' : 'hidden'}>
+          {mountedTabs.fee && <FeeSection />}
+        </div>
+        <div className={activeTab === 'expense' ? 'block' : 'hidden'}>
+          {mountedTabs.expense && <ExpenseSection />}
+        </div>
+        <div className={activeTab === 'invoice' ? 'block' : 'hidden'}>
+          {mountedTabs.invoice && <InvoiceSection />}
+        </div>
+        <div className={activeTab === 'lifecycle' ? 'block' : 'hidden'}>
+          {mountedTabs.lifecycle && <InvoiceLifecycleSection />}
+        </div>
+        <div className={activeTab === 'payment' ? 'block' : 'hidden'}>
+          {mountedTabs.payment && <PaymentSection />}
+        </div>
+        <div className={activeTab === 'credit' ? 'block' : 'hidden'}>
+          {mountedTabs.credit && <CreditSection />}
+        </div>
+        <div className={activeTab === 'ledger' ? 'block' : 'hidden'}>
+          {mountedTabs.ledger && <LedgerSection />}
+        </div>
+        <div className={activeTab === 'balance' ? 'block' : 'hidden'}>
+          {mountedTabs.balance && <BalanceSection />}
+        </div>
+        <div className={activeTab === 'tax' ? 'block' : 'hidden'}>
+          {mountedTabs.tax && <TaxSection />}
+        </div>
       </div>
     </section>
   );

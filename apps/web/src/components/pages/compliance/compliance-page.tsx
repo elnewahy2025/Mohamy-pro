@@ -13,6 +13,18 @@ export function CompliancePage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('audit');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    audit: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'audit', label: t('compliance.sections.audit.heading') },
     { key: 'retention', label: t('compliance.sections.retention.heading') },
@@ -32,7 +44,7 @@ export function CompliancePage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -40,9 +52,15 @@ export function CompliancePage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'audit' && <AuditSection />}
-        {activeTab === 'retention' && <RetentionSection />}
-        {activeTab === 'holds' && <HoldsSection />}
+        <div className={activeTab === 'audit' ? 'block' : 'hidden'}>
+          {mountedTabs.audit && <AuditSection />}
+        </div>
+        <div className={activeTab === 'retention' ? 'block' : 'hidden'}>
+          {mountedTabs.retention && <RetentionSection />}
+        </div>
+        <div className={activeTab === 'holds' ? 'block' : 'hidden'}>
+          {mountedTabs.holds && <HoldsSection />}
+        </div>
       </div>
     </section>
   );

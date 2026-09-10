@@ -16,6 +16,18 @@ export function ClientsPage(): React.ReactNode {
   >('list');
   const [selected, setSelected] = useState<ClientResult | null>(null);
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    list: true,
+  });
+
+  const handleTabChange = (tab: 'list' | 'create' | 'contact' | 'address') => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   return (
     <section className="page-section content-page">
       <div className="page-heading">
@@ -27,35 +39,43 @@ export function ClientsPage(): React.ReactNode {
       <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
         <Button
           variant={activeTab === 'list' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('list')}
+          onClick={() => handleTabChange('list')}
         >
           {t('clients.sections.list')}
         </Button>
         <Button
           variant={activeTab === 'create' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('create')}
+          onClick={() => handleTabChange('create')}
         >
           {t('clients.sections.client')}
         </Button>
         <Button
           variant={activeTab === 'contact' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('contact')}
+          onClick={() => handleTabChange('contact')}
         >
           {t('clients.sections.contact')}
         </Button>
         <Button
           variant={activeTab === 'address' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('address')}
+          onClick={() => handleTabChange('address')}
         >
           {t('clients.sections.address')}
         </Button>
       </div>
 
       <div className="settings-stack">
-        {activeTab === 'list' && <ClientListSection onSelect={setSelected} />}
-        {activeTab === 'create' && <ClientSection selected={selected} />}
-        {activeTab === 'contact' && <ContactSection selected={selected} />}
-        {activeTab === 'address' && <AddressSection selected={selected} />}
+        <div className={activeTab === 'list' ? 'block' : 'hidden'}>
+          {mountedTabs.list && <ClientListSection onSelect={setSelected} />}
+        </div>
+        <div className={activeTab === 'create' ? 'block' : 'hidden'}>
+          {mountedTabs.create && <ClientSection selected={selected} />}
+        </div>
+        <div className={activeTab === 'contact' ? 'block' : 'hidden'}>
+          {mountedTabs.contact && <ContactSection selected={selected} />}
+        </div>
+        <div className={activeTab === 'address' ? 'block' : 'hidden'}>
+          {mountedTabs.address && <AddressSection selected={selected} />}
+        </div>
       </div>
     </section>
   );

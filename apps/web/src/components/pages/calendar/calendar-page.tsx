@@ -15,6 +15,18 @@ export function CalendarPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('agenda');
 
+  // Track which tabs have been visited so we can lazily mount them and keep them alive
+  const [mountedTabs, setMountedTabs] = useState<Record<string, boolean>>({
+    agenda: true,
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    if (!mountedTabs[tab]) {
+      setMountedTabs((prev) => ({ ...prev, [tab]: true }));
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'connections', label: t('calendar.sections.connections.heading') },
     { key: 'sync', label: t('calendar.sections.sync.heading') },
@@ -36,7 +48,7 @@ export function CalendarPage(): React.ReactNode {
           <Button
             key={tab.key}
             variant={activeTab === tab.key ? 'default' : 'ghost'}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
           >
             {tab.label}
           </Button>
@@ -44,11 +56,21 @@ export function CalendarPage(): React.ReactNode {
       </div>
 
       <div className="tab-content">
-        {activeTab === 'connections' && <ConnectionsSection />}
-        {activeTab === 'sync' && <SyncSection />}
-        {activeTab === 'mappings' && <MappingsSection />}
-        {activeTab === 'conflicts' && <ConflictsSection />}
-        {activeTab === 'agenda' && <AgendaSection />}
+        <div className={activeTab === 'connections' ? 'block' : 'hidden'}>
+          {mountedTabs.connections && <ConnectionsSection />}
+        </div>
+        <div className={activeTab === 'sync' ? 'block' : 'hidden'}>
+          {mountedTabs.sync && <SyncSection />}
+        </div>
+        <div className={activeTab === 'mappings' ? 'block' : 'hidden'}>
+          {mountedTabs.mappings && <MappingsSection />}
+        </div>
+        <div className={activeTab === 'conflicts' ? 'block' : 'hidden'}>
+          {mountedTabs.conflicts && <ConflictsSection />}
+        </div>
+        <div className={activeTab === 'agenda' ? 'block' : 'hidden'}>
+          {mountedTabs.agenda && <AgendaSection />}
+        </div>
       </div>
     </section>
   );
