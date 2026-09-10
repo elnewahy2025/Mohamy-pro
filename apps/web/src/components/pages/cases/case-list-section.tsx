@@ -3,10 +3,7 @@
 import { useState } from 'react';
 import { ListFilter } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  CasesClient,
-  type CaseListRow,
-} from '@/lib/api';
+import { CasesClient, type CaseListRow } from '@/lib/api';
 import { EntityPicker } from '@/components/forms/entity-picker';
 
 export function CaseListSection({

@@ -72,30 +72,51 @@ export function CaseDetailSection({
       {submitting ? (
         <p className="form-field-hint">{t('common.loading')}</p>
       ) : detail ? (
-        <div className="mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div
+          className="mt-4"
+          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+        >
           <div className="settings-card-heading">
             <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>
               {detail.caseNumber}
             </h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '1rem',
+            }}
+          >
             <div>
-              <span className="form-field-hint">{t('cases.labels.clientName')}</span>
+              <span className="form-field-hint">
+                {t('cases.labels.clientName')}
+              </span>
               <p>{detail.client.displayName}</p>
             </div>
             <div>
-              <span className="form-field-hint">{t('cases.labels.status')}</span>
+              <span className="form-field-hint">
+                {t('cases.labels.status')}
+              </span>
               <p>{detail.status}</p>
             </div>
             <div>
-              <span className="form-field-hint">{t('cases.labels.priority')}</span>
+              <span className="form-field-hint">
+                {t('cases.labels.priority')}
+              </span>
               <p>{detail.priority}</p>
             </div>
           </div>
-          
+
           {detail.parties.length > 0 ? (
             <div style={{ marginTop: '1rem' }}>
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+              <h4
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  marginBottom: '0.5rem',
+                }}
+              >
                 {t('cases.entity.party.title')}
               </h4>
               <div className="operation-result-details">
@@ -107,7 +128,7 @@ export function CaseDetailSection({
                       justifyContent: 'space-between',
                       gap: '0.5rem',
                       padding: '0.5rem 0',
-                      borderBottom: '1px solid var(--line)'
+                      borderBottom: '1px solid var(--line)',
                     }}
                   >
                     <span>{entry.party.displayName}</span>

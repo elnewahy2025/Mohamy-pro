@@ -186,7 +186,7 @@ export function CaseTimelineSection({
             </Button>
           ) : null}
           <span style={{ margin: 'auto 1rem' }}>
-             {page} / {totalPages}
+            {page} / {totalPages}
           </span>
           {page < totalPages ? (
             <Button

@@ -161,6 +161,8 @@ export function CasePartySection({
           }
         />
         <EntityPicker
+          minChars={2}
+          preload={false}
           label={t('cases.labels.partyId')}
           placeholder={t('cases.placeholders.partyId')}
           required
@@ -226,11 +228,7 @@ export function CasePartySection({
         ariaLiveLabel={t('identity.result.successAriaLive')}
         fields={
           added
-            ? [
-                { label: t('cases.result.id'), value: added.id },
-                { label: t('cases.labels.partyId'), value: added.partyId },
-                { label: t('cases.labels.roleId'), value: added.roleId },
-              ]
+            ? [{ label: t('cases.result.title'), value: t('cases.addParty') }]
             : removed
               ? [
                   {
@@ -259,6 +257,8 @@ export function CasePartySection({
           }
         />
         <EntityPicker
+          minChars={2}
+          preload={false}
           label={t('cases.labels.partyId')}
           placeholder={t('cases.placeholders.partyId')}
           required

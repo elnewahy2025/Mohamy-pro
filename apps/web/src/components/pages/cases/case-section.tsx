@@ -233,6 +233,8 @@ export function CaseSection({
             }}
           />
           <EntityPicker
+            minChars={2}
+            preload={false}
             label={t('cases.labels.clientId')}
             placeholder={t('cases.placeholders.clientId')}
             required
@@ -242,7 +244,9 @@ export function CaseSection({
                 : undefined
             }
             value={watch('clientId') ?? ''}
-            onChange={(id) => setValue('clientId', id, { shouldValidate: true })}
+            onChange={(id) =>
+              setValue('clientId', id, { shouldValidate: true })
+            }
             load={async (search) =>
               (
                 await clientsClient.listClients(search ? { search } : {})

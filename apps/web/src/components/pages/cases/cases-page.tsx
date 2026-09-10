@@ -15,10 +15,7 @@ import { Button } from '@/components/ui/button';
 export function CasesPage(): React.ReactNode {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<
-    | 'list'
-    | 'create'
-    | 'parties'
-    | 'breakglass'
+    'list' | 'create' | 'parties' | 'breakglass'
   >('list');
   const [selected, setSelected] = useState<CaseListRow | null>(null);
 
@@ -59,7 +56,8 @@ export function CasesPage(): React.ReactNode {
 
       {selected && activeTab !== 'list' && (
         <div className="mb-4 p-3 bg-slate-50 border rounded text-sm text-slate-700 font-medium">
-          {selected.caseNumber} — {selected.client.displayName} [{selected.status}]
+          {selected.caseNumber} — {selected.client.displayName} [
+          {selected.status}]
         </div>
       )}
 
@@ -68,11 +66,11 @@ export function CasesPage(): React.ReactNode {
           <div className="flex flex-col gap-6">
             <CaseListSection onSelect={setSelected} />
             {selected && (
-               <div className="flex flex-col gap-6 mt-4">
-                 <CaseDetailSection selected={selected} />
-                 <CaseAssignmentSection selected={selected} />
-                 <CaseTimelineSection selected={selected} />
-               </div>
+              <div className="flex flex-col gap-6 mt-4">
+                <CaseDetailSection selected={selected} />
+                <CaseAssignmentSection selected={selected} />
+                <CaseTimelineSection selected={selected} />
+              </div>
             )}
           </div>
         )}

@@ -47,7 +47,9 @@ export function CaseAssignmentSection({
     if (selected) {
       assignForm.setValue('caseId', selected.id, { shouldValidate: true });
       // Use setTimeout to ensure the form value is set before reading it in runList
-      setTimeout(() => { void runList(); }, 0);
+      setTimeout(() => {
+        void runList();
+      }, 0);
     } else {
       setAssignees([]);
     }
@@ -150,8 +152,14 @@ export function CaseAssignmentSection({
           <p>{t('cases.entity.assignments.description')}</p>
         </div>
       </div>
-      
-      <form noValidate onSubmit={(e) => { e.preventDefault(); void assignForm.handleSubmit(runAssign)(); }}>
+
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void assignForm.handleSubmit(runAssign)();
+        }}
+      >
         <div className="form-grid">
           {/* Hide Case ID picker since it's redundant when stacked under the selected case, but keep it in the DOM for the form */}
           <div style={{ display: 'none' }}>
@@ -161,7 +169,9 @@ export function CaseAssignmentSection({
               required
               error={
                 assignForm.formState.errors.caseId
-                  ? t(`form.errors.${assignForm.formState.errors.caseId.message}`)
+                  ? t(
+                      `form.errors.${assignForm.formState.errors.caseId.message}`,
+                    )
                   : undefined
               }
               value={assignForm.watch('caseId') ?? ''}
@@ -204,7 +214,7 @@ export function CaseAssignmentSection({
           </Button>
         </div>
       </form>
-      
+
       {submitError && (
         <p className="form-field-error" style={{ marginTop: '1rem' }}>
           {submitError.message}
@@ -222,12 +232,14 @@ export function CaseAssignmentSection({
                 gap: '0.5rem',
                 alignItems: 'center',
                 padding: '0.5rem 0',
-                borderBottom: '1px solid var(--line)'
+                borderBottom: '1px solid var(--line)',
               }}
             >
               <span>
                 <strong>
-                  {entry.membership?.user?.displayName || entry.membership?.user?.emailNormalized || 'Unknown User'}
+                  {entry.membership?.user?.displayName ||
+                    entry.membership?.user?.emailNormalized ||
+                    'Unknown User'}
                 </strong>
                 {/* Keep ID around only for debugging/fallback if requested, but we hide it for normal users. We won't show it at all to keep it clean. */}
               </span>
@@ -246,7 +258,11 @@ export function CaseAssignmentSection({
           ))}
         </div>
       ) : (
-        !submitting && <p className="form-field-hint" style={{ marginTop: '1rem' }}>No assignees</p>
+        !submitting && (
+          <p className="form-field-hint" style={{ marginTop: '1rem' }}>
+            No assignees
+          </p>
+        )
       )}
     </div>
   );
